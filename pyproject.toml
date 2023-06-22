@@ -30,11 +30,14 @@ classifiers = [  #! Update me
 
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
+reactivex = "^4.0.4"
+loguru = "^0.7.0"
+dynaconf = "^3.1.12"
 
 [tool.poetry.dev-dependencies]
 bandit = "^1.7.1"
-black = {version = "^21.10b0", allow-prereleases = true}
+black = {version = "^23.3.0"}
 darglint = "^1.8.1"
 isort = {extras = ["colors"], version = "^5.10.1"}
 mypy = "^0.910"
@@ -49,9 +52,6 @@ coverage = "^6.1.2"
 coverage-badge = "^1.1.0"
 pytest-html = "^3.1.1"
 pytest-cov = "^3.0.0"
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
 
 [tool.black]
 # https://github.com/psf/black
@@ -90,7 +90,7 @@ color_output = true
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
-python_version = 3.9
+python_version = 3.10
 pretty = true
 show_traceback = true
 color_output = true
