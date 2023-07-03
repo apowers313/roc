@@ -19,12 +19,10 @@ poetry-remove:
 #* Installation
 .PHONY: install
 install:
+	poetry config virtualenvs.in-project true
 	poetry lock -n && poetry export --without-hashes > requirements.txt
 	poetry install -n
 	-poetry run mypy --install-types --non-interactive ./
-
-.PHONY: pre-commit-install
-pre-commit-install:
 	poetry run pre-commit install
 
 #* Formatters
