@@ -52,12 +52,12 @@ coverage = "^6.1.2"
 coverage-badge = "^1.1.0"
 pytest-html = "^3.1.1"
 pytest-cov = "^3.0.0"
+sphinx = "^7.0.1"
 
 [tool.black]
 # https://github.com/psf/black
-target-version = ["py39"]
+target-version = ["py310"]
 line-length = 120
-color = true
 
 exclude = '''
 /(
