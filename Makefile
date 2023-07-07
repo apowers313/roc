@@ -14,15 +14,21 @@ poetry-download:
 
 .PHONY: poetry-remove
 poetry-remove:
-	curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/install-poetry.py | $(PYTHON) - --uninstall
+	curl -sSL https://install.python-poetry.org | $(PYTHON) - --uninstall
 
 #* Installation
+.PHONY: setup
+setup: install pre-commit-install
+
 .PHONY: install
 install:
 	poetry config virtualenvs.in-project true
 	poetry lock -n && poetry export --without-hashes > requirements.txt
 	poetry install -n
 	-poetry run mypy --install-types --non-interactive ./
+
+.PHONY: pre-commit-install
+pre-commit-install:
 	poetry run pre-commit install
 
 #* Formatters
