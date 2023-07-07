@@ -7,7 +7,7 @@ class Component(ABC):
         self._type = type
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Getter for the name of the component
 
         Returns:
@@ -21,7 +21,7 @@ class Component(ABC):
         return self._name
 
     @property
-    def type(self):
+    def type(self) -> str:
         """Getter for the type of the component
 
         Returns:
