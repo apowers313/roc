@@ -1,6 +1,9 @@
+import pytest
+
 from roc.graphdb import GraphDB
 
 
+@pytest.mark.skip(reason="skip until mocks are added")
 def test_graphdb_connect():
     db = GraphDB()
     db.connect()
