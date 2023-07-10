@@ -10,7 +10,7 @@ class PerceptionEvent(Event[PerceptionData]):
     pass
 
 
-perception_bus = EventBus[PerceptionData]()
+perception_bus = EventBus[PerceptionData]("perception")
 
 
 class PerceptionComponent(Component):

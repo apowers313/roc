@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Set, TypeVar
 
 from abc import ABC, abstractmethod
 
@@ -30,9 +30,20 @@ class BusConnection(Generic[EventData]):
         self.attached_bus.subject.on_next(e)
 
 
+eventbus_names: set[str] = set()
+
+
 class EventBus(Generic[EventData]):
-    def __init__(self):
+    def __init__(self, name):
+        if name in eventbus_names:
+            raise Exception(f"Duplicate EventBus name: {name}")
+        self.name = name
+        eventbus_names.add(name)
         self.subject = rx.Subject[Event[EventData]]()
 
     def connect(self, component: Component) -> BusConnection[EventData]:
         return BusConnection[EventData](self, component)
+
+    @staticmethod
+    def clear_names() -> None:
+        eventbus_names.clear()
