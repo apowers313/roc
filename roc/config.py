@@ -1,10 +1,12 @@
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from dynaconf import Dynaconf, Validator
 
+ValType = TypeVar("ValType")
 
-class DefaultSetting(Validator):
-    def __init__(self, name: str, val: Any, *, must_exist: bool = True):
+
+class DefaultSetting(Validator, Generic[ValType]):
+    def __init__(self, name: str, val: ValType, *, must_exist: bool = True):
         super().__init__(name, default=val, apply_default_on_none=True, must_exist=must_exist)
 
 
@@ -12,11 +14,14 @@ settings = Dynaconf(
     envvar_prefix="ROC",
     settings_files=["settings.toml", ".secrets.toml"],
     validators=[
-        DefaultSetting("db_host", "127.0.0.1"),
-        DefaultSetting("db_port", 7687),
-        DefaultSetting("log_level", "trace"),
+        DefaultSetting[str]("db_host", "127.0.0.1"),
+        DefaultSetting[int]("db_port", 7687),
+        DefaultSetting[int]("node_cache_size", 2**12),
+        DefaultSetting[int]("edge_cache_size", 2**12),
+        DefaultSetting[str]("log_level", "trace"),
     ],
 )
+
 
 # `envvar_prefix` = export envvars with `export DYNACONF_FOO=bar`.
 # `settings_files` = Load these files in the order.
