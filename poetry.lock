@@ -175,6 +175,23 @@ wrapt = [
 ]
 
 [[package]]
+name = "asttokens"
+version = "2.2.1"
+description = "Annotate AST trees with source code positions"
+optional = false
+python-versions = "*"
+files = [
+    {file = "asttokens-2.2.1-py2.py3-none-any.whl", hash = "sha256:6b0ac9e93fb0335014d382b8fa9b3afa7df546984258005da0b9e7095b3deb1c"},
+    {file = "asttokens-2.2.1.tar.gz", hash = "sha256:4622110b2a6f30b77e1473affaa97e711bc2f07d3f10848420ff1898edbe94f3"},
+]
+
+[package.dependencies]
+six = "*"
+
+[package.extras]
+test = ["astroid", "pytest"]
+
+[[package]]
 name = "async-timeout"
 version = "4.0.2"
 description = "Timeout context manager for asyncio programs"
@@ -357,6 +374,17 @@ colorama = ["colorama (>=0.4.3)"]
 d = ["aiohttp (>=3.7.4)"]
 jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
 uvloop = ["uvloop (>=0.15.2)"]
+
+[[package]]
+name = "cachetools"
+version = "5.3.1"
+description = "Extensible memoizing collections and decorators"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "cachetools-5.3.1-py3-none-any.whl", hash = "sha256:95ef631eeaea14ba2e36f06437f36463aac3a096799e876ee55e5cdccb102590"},
+    {file = "cachetools-5.3.1.tar.gz", hash = "sha256:dce83f2d9b4e1f732a8cd44af8e8fab2dbe46201467fc98b3ef8f269092bf62b"},
+]
 
 [[package]]
 name = "certifi"
@@ -841,6 +869,20 @@ files = [
 test = ["pytest (>=6)"]
 
 [[package]]
+name = "executing"
+version = "1.2.0"
+description = "Get the currently executing AST node of a frame, and other information"
+optional = false
+python-versions = "*"
+files = [
+    {file = "executing-1.2.0-py2.py3-none-any.whl", hash = "sha256:0314a69e37426e3608aada02473b4161d4caf5a4b244d1d0c48072b8fee7bacc"},
+    {file = "executing-1.2.0.tar.gz", hash = "sha256:19da64c18d2d851112f09c287f8d3dbbdf725ab0e569077efb6cdcbd3497c107"},
+]
+
+[package.extras]
+tests = ["asttokens", "littleutils", "pytest", "rich"]
+
+[[package]]
 name = "filelock"
 version = "3.12.2"
 description = "A platform independent file lock."
@@ -1031,12 +1073,12 @@ torch-pyg = ["torch (>=1.13.1,<2.0.0)"]
 
 [[package]]
 name = "gym"
-version = "0.26.2"
+version = "0.23.0"
 description = "Gym: A universal API for reinforcement learning environments"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 files = [
-    {file = "gym-0.26.2.tar.gz", hash = "sha256:e0d882f4b54f0c65f203104c24ab8a38b039f1289986803c7d02cdbe214fbcc4"},
+    {file = "gym-0.23.0.tar.gz", hash = "sha256:dbd3d0c50fc1260b57e6f12ba792152b73551730512623b7653d6dfb2f7a105d"},
 ]
 
 [package.dependencies]
@@ -1046,15 +1088,14 @@ numpy = ">=1.18.0"
 
 [package.extras]
 accept-rom-license = ["autorom[accept-rom-license] (>=0.4.2,<0.5.0)"]
-all = ["ale-py (>=0.8.0,<0.9.0)", "box2d-py (==2.3.5)", "imageio (>=2.14.1)", "lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (==2.2)", "mujoco_py (>=2.1,<2.2)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pytest (==7.0.1)", "swig (==4.*)"]
-atari = ["ale-py (>=0.8.0,<0.9.0)"]
-box2d = ["box2d-py (==2.3.5)", "pygame (==2.1.0)", "swig (==4.*)"]
+all = ["ale-py (>=0.7.4,<0.8.0)", "box2d-py (==2.3.5)", "box2d-py (==2.3.5)", "lz4 (>=3.1.0)", "lz4 (>=3.1.0)", "mujoco_py (>=1.50,<2.0)", "opencv-python (>=3.0)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "scipy (>=1.4.1)", "scipy (>=1.4.1)"]
+atari = ["ale-py (>=0.7.4,<0.8.0)"]
+box2d = ["box2d-py (==2.3.5)", "pygame (==2.1.0)"]
 classic-control = ["pygame (==2.1.0)"]
-mujoco = ["imageio (>=2.14.1)", "mujoco (==2.2)"]
-mujoco-py = ["mujoco_py (>=2.1,<2.2)"]
-other = ["lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "opencv-python (>=3.0)"]
-testing = ["box2d-py (==2.3.5)", "imageio (>=2.14.1)", "lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (==2.2)", "mujoco_py (>=2.1,<2.2)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pytest (==7.0.1)", "swig (==4.*)"]
-toy-text = ["pygame (==2.1.0)"]
+mujoco = ["mujoco_py (>=1.50,<2.0)"]
+nomujoco = ["box2d-py (==2.3.5)", "lz4 (>=3.1.0)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "pygame (==2.1.0)", "scipy (>=1.4.1)"]
+other = ["lz4 (>=3.1.0)", "opencv-python (>=3.0)"]
+toy-text = ["pygame (==2.1.0)", "scipy (>=1.4.1)"]
 
 [[package]]
 name = "gym-notices"
@@ -1066,6 +1107,23 @@ files = [
     {file = "gym-notices-0.0.8.tar.gz", hash = "sha256:ad25e200487cafa369728625fe064e88ada1346618526102659b4640f2b4b911"},
     {file = "gym_notices-0.0.8-py3-none-any.whl", hash = "sha256:e5f82e00823a166747b4c2a07de63b6560b1acb880638547e0cabf825a01e463"},
 ]
+
+[[package]]
+name = "icecream"
+version = "2.1.3"
+description = "Never use print() to debug again; inspect variables, expressions, and program execution with a single, simple function call."
+optional = false
+python-versions = "*"
+files = [
+    {file = "icecream-2.1.3-py2.py3-none-any.whl", hash = "sha256:757aec31ad4488b949bc4f499d18e6e5973c40cc4d4fc607229e78cfaec94c34"},
+    {file = "icecream-2.1.3.tar.gz", hash = "sha256:0aa4a7c3374ec36153a1d08f81e3080e83d8ac1eefd97d2f4fe9544e8f9b49de"},
+]
+
+[package.dependencies]
+asttokens = ">=2.0.1"
+colorama = ">=0.3.9"
+executing = ">=0.3.1"
+pygments = ">=2.2.0"
 
 [[package]]
 name = "identify"
@@ -1562,6 +1620,26 @@ extra = ["lxml (>=4.6)", "pydot (>=1.4.2)", "pygraphviz (>=1.9)", "sympy (>=1.10
 test = ["codecov (>=2.1)", "pytest (>=7.2)", "pytest-cov (>=4.0)"]
 
 [[package]]
+name = "nle"
+version = "0.9.0"
+description = "The NetHack Learning Environment (NLE): a reinforcement learning environment based on NetHack"
+optional = false
+python-versions = ">=3.5"
+files = [
+    {file = "nle-0.9.0.tar.gz", hash = "sha256:a98644bdd547017cdde9fdf589b245da98ff8753327285e949d506d9006f10d4"},
+]
+
+[package.dependencies]
+gym = ">=0.15,<=0.23"
+numpy = ">=1.16"
+pybind11 = ">=2.2"
+
+[package.extras]
+agent = ["torch (>=1.3.1)"]
+all = ["black (>=19.10b0)", "cmake_format (>=0.6.10)", "flake8 (>=3.7)", "flake8-bugbear (>=20.1)", "memory-profiler (>=0.60.0)", "pre-commit (>=2.0.1)", "pytest (>=6.2.5)", "pytest-benchmark (>=3.4.1)", "sphinx (>=2.4.4)", "sphinx-rtd-theme (==0.4.3)", "torch (>=1.3.1)"]
+dev = ["black (>=19.10b0)", "cmake_format (>=0.6.10)", "flake8 (>=3.7)", "flake8-bugbear (>=20.1)", "memory-profiler (>=0.60.0)", "pre-commit (>=2.0.1)", "pytest (>=6.2.5)", "pytest-benchmark (>=3.4.1)", "sphinx (>=2.4.4)", "sphinx-rtd-theme (==0.4.3)"]
+
+[[package]]
 name = "nodeenv"
 version = "1.8.0"
 description = "Node.js virtual environment builder"
@@ -1745,6 +1823,20 @@ files = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
     {file = "py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719"},
 ]
+
+[[package]]
+name = "pybind11"
+version = "2.10.4"
+description = "Seamless operability between C++11 and Python"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "pybind11-2.10.4-py3-none-any.whl", hash = "sha256:ec9be0c45061c829648d7e8c98a7d041768b768c934acd15196e0f1943d9a818"},
+    {file = "pybind11-2.10.4.tar.gz", hash = "sha256:0bb621d3c45a049aa5923debb87c5c0e2668227905c55ebe8af722608d8ed927"},
+]
+
+[package.extras]
+global = ["pybind11-global (==2.10.4)"]
 
 [[package]]
 name = "pycparser"
@@ -2440,6 +2532,17 @@ files = [
 ]
 
 [[package]]
+name = "types-cachetools"
+version = "5.3.0.5"
+description = "Typing stubs for cachetools"
+optional = false
+python-versions = "*"
+files = [
+    {file = "types-cachetools-5.3.0.5.tar.gz", hash = "sha256:67fa46d51a650896770aee0ba80f0e61dc4a7d1373198eec1bc0622263eaa256"},
+    {file = "types_cachetools-5.3.0.5-py3-none-any.whl", hash = "sha256:c0c5fa00199017d974c935bf043c467d5204e4f835141e489b48765b5ac1d960"},
+]
+
+[[package]]
 name = "typing-extensions"
 version = "4.7.1"
 description = "Backported and Experimental Type Hints for Python 3.7+"
@@ -2691,4 +2794,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "7816154a2173a84a0b51706f17b69e30b42c83948ad288621a72ec9654b886ef"
+content-hash = "4e964f0175af09b282bddb8592306a11eec65fa70660a7fc8641b5b91cdbf2d8"
