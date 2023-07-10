@@ -15,6 +15,14 @@
 
 Reinforcement Learning of Concepts
 
+
+## Dev Notes
+* make setup
+* poetry run play
+* make check-codestyle
+
+Template junk:
+====
 </div>
 
 ## Very first steps
