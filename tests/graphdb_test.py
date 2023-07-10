@@ -59,30 +59,3 @@ def test_edge_save():
 
 def test_node_connect():
     pass
-
-
-# from functools import lru_cache
-
-
-# @lru_cache
-# class Foo:
-#     def __init__(self, id):
-#         self.id = id
-#         self.data = None
-
-#     def set_data(self, data):
-#         self.data = data
-
-
-# def test_graphdb_node_cache():
-#     f1 = Foo(1)
-#     f2 = Foo(1)
-#     assert id(f1) == id(f2)
-#     assert f1.data == None
-#     assert f2.data == None
-#     f1.set_data("blah")
-#     assert f1.data == "blah"
-#     assert f2.data == "blah"
-#     f3 = Foo(2)
-#     assert id(f3) != id(f1)
-#     assert id(f3) != id(f2)
