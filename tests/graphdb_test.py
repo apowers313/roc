@@ -9,10 +9,9 @@ from icecream import ic
 from roc.graphdb import Edge, GraphDB, Node
 
 
-def test_node_cache():
+def test_node_cache(clear_cache):
     cc = Node.get_cache_control()
     db = GraphDB()
-    db.connect()
     assert cc.info().hits == 0
     assert cc.info().misses == 0
     n1 = Node.get(0)
@@ -27,7 +26,6 @@ def test_node_cache():
 # @pytest.mark.skip(reason="skip until mocks are added")
 def test_graphdb_connect():
     db = GraphDB()
-    db.connect()
     res = list(
         db.raw_query(
             """
