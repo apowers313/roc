@@ -27,6 +27,9 @@ class GraphDB:
             >>> db.connect()
         """
         self.db = Memgraph(host=self.host, port=self.port)
+        # TODO
+        global db
+        db = self
 
     @overload
     def raw_query(self, query: str, *, fetch: Literal[True]) -> Iterator[dict[str, Any]]:
@@ -47,8 +50,9 @@ class GraphDB:
             return None
 
 
+# TODO
 db = GraphDB()
-cache_size = 2**8
+db.connect()
 
 
 RefType = TypeVar("RefType")
@@ -66,7 +70,7 @@ class CacheControl(Generic[RefType]):
         self.cache: Cache[int, RefType] = cache_fn.cache
         self.key: Callable[[Any, Any], tuple[Any]] = cache_fn.cache_key
         self.lock: Lock | None = cache_fn.cache_lock
-        self.clear: Callable[[None], None] = cache_fn.cache_clear
+        self.clear: Callable[[], None] = cache_fn.cache_clear
         self.info: Callable[[], CacheInfo] = cache_fn.cache_info
 
 
@@ -87,14 +91,14 @@ class Edge:
 
     @staticmethod
     def load(id: int) -> Edge:
-        edge_list = [e for e in db.raw_query(f"MATCH [e] WHERE id(e) = {id}", fetch=True)]
+        edge_list = [e for e in db.raw_query(f"MATCH [e] WHERE id(e) = {id} RETURN e", fetch=True)]
         # reveal_type(edge_list)
         if not len(edge_list) == 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
         e = edge_list[0]
         # reveal_type(e)
-        return Edge(id, e["start"], e["end"], data=e["properties"], label=e["label"])
+        return Edge(id, e["_start_node_id"], e["_end_node_id"], data=e["_properties"], label=e["_type"])
 
     @property
     def src(self) -> Node:
@@ -146,18 +150,19 @@ class Node:
 
     @staticmethod
     def load(id: int) -> Node:
-        node_list = [n for n in db.raw_query(f"MATCH (n) WHERE id(n) = {id}", fetch=True)]
+        node_list = [n for n in db.raw_query(f"MATCH (n) WHERE id(n) = {id} RETURN n", fetch=True)]
         # reveal_type(node_list)
         if not len(node_list) == 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
-        n = node_list[0]
+        n = node_list[0]["n"]
+        print(n)
         # reveal_type(n)
         return Node(
             id,
             EdgeList([]),  # TODO: edges
-            data=n["properties"],
-            labels=n["labels"],
+            data=n._properties,
+            labels=n._labels,
         )
 
     @cached(cache=LRUCache(settings.node_cache_size), info=True)
