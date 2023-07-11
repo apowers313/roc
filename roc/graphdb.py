@@ -14,22 +14,15 @@ from roc.config import settings
 
 
 class GraphDB:
+    def __new__(cls):
+        if not hasattr(cls, "instance"):
+            cls.instance = super().__new__(cls)
+        return cls.instance
+
     def __init__(self):
         self.host = settings.db_host
         self.port = settings.db_port
-        self.db = None
-
-    def connect(self):
-        """Connects to the database. The host and port for the database are specified through the config variables 'db_host' and 'db_port' (respectively).
-
-        Example:
-            >>> db = GraphDB()
-            >>> db.connect()
-        """
         self.db = Memgraph(host=self.host, port=self.port)
-        # TODO
-        global db
-        db = self
 
     @overload
     def raw_query(self, query: str, *, fetch: Literal[True]) -> Iterator[dict[str, Any]]:
@@ -48,11 +41,6 @@ class GraphDB:
         else:
             self.db.execute(query)
             return None
-
-
-# TODO
-db = GraphDB()
-db.connect()
 
 
 RefType = TypeVar("RefType")
@@ -76,7 +64,13 @@ class CacheControl(Generic[RefType]):
 
 class Edge:
     def __init__(
-        self, id: int, src_id: int, dst_id: int, *, data: dict[Any, Any] | None = None, label: str | None = None
+        self,
+        id: int,
+        src_id: int,
+        dst_id: int,
+        *,
+        data: dict[Any, Any] | None = None,
+        label: str | None = None,
     ):
         self.id = id
         self.label = label
@@ -91,6 +85,7 @@ class Edge:
 
     @staticmethod
     def load(id: int) -> Edge:
+        db = GraphDB()
         edge_list = [e for e in db.raw_query(f"MATCH [e] WHERE id(e) = {id} RETURN e", fetch=True)]
         # reveal_type(edge_list)
         if not len(edge_list) == 1:
@@ -141,7 +136,12 @@ class EdgeList(Mapping[int, Edge]):
 
 class Node:
     def __init__(
-        self, id: int, edges: EdgeList, *, data: dict[Any, Any] | None = None, labels: list[str] | None = None
+        self,
+        id: int,
+        edges: EdgeList,
+        *,
+        data: dict[Any, Any] | None = None,
+        labels: list[str] | None = None,
     ):
         self.id = id
         self.data = data
@@ -150,6 +150,7 @@ class Node:
 
     @staticmethod
     def load(id: int) -> Node:
+        db = GraphDB()
         node_list = [n for n in db.raw_query(f"MATCH (n) WHERE id(n) = {id} RETURN n", fetch=True)]
         # reveal_type(node_list)
         if not len(node_list) == 1:

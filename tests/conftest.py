@@ -21,7 +21,7 @@ load_json(got_data, "node0", "db/got/node_0.json")
 
 
 @pytest.fixture
-def fake_db(mocker):
+def mock_node0(mocker):
     ret = iter(
         [
             [{"n": got_data["node0"], "e": got_data["edge1"]}],
