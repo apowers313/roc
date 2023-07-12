@@ -1,8 +1,11 @@
 import json
+import warnings
 
 import pytest
 
 from roc.graphdb import Edge, GraphDB, Node
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
 def load_json(d: dict[str, object], k: str, file: str) -> None:

@@ -59,6 +59,7 @@ pytest-html = "^3.1.1"
 pytest-cov = "^4.1.0"
 sphinx = "^7.0.1"
 pytest-mock = "^3.11.1"
+pytest-describe = "^2.1.0"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
@@ -129,6 +130,7 @@ warn_unused_ignores = true
 # Directories that are not visited by pytest collector:
 norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
 doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore::gqlalchemy.exceptions.GQLAlchemySubclassNotFoundWarning"]
 
 # Extra options:
 addopts = [
@@ -136,7 +138,7 @@ addopts = [
   "--tb=short",
   "--doctest-modules",
   "--doctest-continue-on-failure",
-  "--disable-warnings",
+  "-rA",
   "-s",
 ]
 

@@ -157,7 +157,6 @@ class Node:
             raise Exception(f"Couldn't find edge ID: {id}")
 
         n = node_list[0]["n"]
-        print(n)
         # reveal_type(n)
         return Node(
             id,
