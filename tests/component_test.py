@@ -1,7 +1,8 @@
 from roc.component import Component
 
 
-def test_component_exists():
-    c = Component("myname", "mytype")
-    assert c.name == "myname"
-    assert c.type == "mytype"
+class TestComponent:
+    def test_component_exists(self):
+        c = Component("myname", "mytype")
+        assert c.name == "myname"
+        assert c.type == "mytype"
