@@ -18,15 +18,11 @@ def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
     print(f"\nmock raw query: '{query}'")
 
     try:
-        return db_query_mapping[query]
+        # ret = db_query_mapping[query]()
+        # print("returning", list(ret))
+        return db_query_mapping[query]()
     except KeyError:
         raise NotImplementedError(f"mock raw query not implemented: '{query}'")
-
-
-@pytest.fixture
-def mock_db(mocker):
-    if not LIVE_DB:
-        mocker.patch.object(GraphDB, "raw_query", new=mock_raw_query)
 
 
 @pytest.fixture
