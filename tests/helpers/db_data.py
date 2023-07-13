@@ -88,15 +88,3 @@ add_db_query(node0_query, node0_res)
 add_db_query(edge0_query, edge0_res)
 add_db_query(edge1_query, edge1_res)
 add_db_query(edge11_query, edge11_res)
-
-
-def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
-    query = normalize_whitespace(query)
-    print(f"\nmock raw query: '{query}'")
-
-    try:
-        # ret = db_query_mapping[query]()
-        # print("returning", list(ret))
-        return db_query_mapping[query]()
-    except KeyError:
-        raise NotImplementedError(f"mock raw query not implemented: '{query}'")
