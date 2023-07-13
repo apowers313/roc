@@ -85,7 +85,7 @@ class Edge:
     @staticmethod
     def load(id: int) -> Edge:
         db = GraphDB()
-        edge_list = [e for e in db.raw_query(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1", fetch=True)]
+        edge_list = list(db.raw_query(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1", fetch=True))
         if not len(edge_list) == 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
@@ -146,18 +146,19 @@ class Node:
     @staticmethod
     def load(id: int) -> Node:
         db = GraphDB()
-        res = [
-            n
-            for n in db.raw_query(
+        print("doing query")
+        res = list(
+            db.raw_query(
                 f"""
-                MATCH (n)-[e]-(m) WHERE id(n) = {id}
-                RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
-                """,
+            MATCH (n)-[e]-(m) WHERE id(n) = {id}
+            RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
+            """,
                 fetch=True,
             )
-        ]
+        )
+
         if not len(res) >= 1:
-            raise Exception(f"Couldn't find edge ID: {id}")
+            raise Exception(f"Couldn't find node ID: {id}")
 
         n = res[0]["n"]
         edges = list(map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res))
