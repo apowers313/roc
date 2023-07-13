@@ -33,8 +33,7 @@ class GraphDB:
         ...
 
     def raw_query(self, query: str, *, fetch: bool = True) -> Iterator[dict[str, Any]] | None:
-        if not self.db:
-            raise Exception("database not connected")
+        print(f"raw_query: '{query}'")
 
         if fetch:
             return self.db.execute_and_fetch(query)  # type: ignore
@@ -70,11 +69,11 @@ class Edge:
         dst_id: int,
         *,
         data: dict[Any, Any] | None = None,
-        label: str | None = None,
+        type: str | None = None,
     ):
         self.id = id
-        self.label = label
-        self.data = data
+        self.type = type
+        self.data = data or {}
         self.src_id = src_id
         self.dst_id = dst_id
 
@@ -86,14 +85,15 @@ class Edge:
     @staticmethod
     def load(id: int) -> Edge:
         db = GraphDB()
-        edge_list = [e for e in db.raw_query(f"MATCH [e] WHERE id(e) = {id} RETURN e", fetch=True)]
-        # reveal_type(edge_list)
+        edge_list = [e for e in db.raw_query(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1", fetch=True)]
         if not len(edge_list) == 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
-        e = edge_list[0]
-        # reveal_type(e)
-        return Edge(id, e["_start_node_id"], e["_end_node_id"], data=e["_properties"], label=e["_type"])
+        e = edge_list[0]["e"]
+        props = None
+        if hasattr(e, "_properties"):
+            props = e._properties
+        return Edge(id, e._start_node_id, e._end_node_id, data=props, type=e._type)
 
     @property
     def src(self) -> Node:
@@ -109,11 +109,10 @@ class Edge:
 
 
 class EdgeList(Mapping[int, Edge]):
-    __edges: list[Callable[[None], Edge]]
-
     def __init__(self, ids: list[int]):
-        for i in range(len(ids)):
-            self.__edges[i] = functools.partial(Edge.get, id)
+        self.__edges: list[Callable[[], Edge]] = []
+        for id in ids:
+            self.__edges.append(functools.partial(Edge.get, id))
 
     def __iter__(self):
         if not self.__edges:
@@ -122,15 +121,9 @@ class EdgeList(Mapping[int, Edge]):
         return iter(self.__edges)
 
     def __getitem__(self, key):
-        if not key in self.__edges:
-            raise KeyError(f"Key not found: {key}")
-
         return self.__edges[key]()
 
     def __len__(self):
-        if not self.__edges:
-            return 0
-
         return len(self.__edges)
 
 
@@ -138,29 +131,43 @@ class Node:
     def __init__(
         self,
         id: int,
-        edges: EdgeList,
+        src_edges: EdgeList,
+        dst_edges: EdgeList,
         *,
         data: dict[Any, Any] | None = None,
-        labels: list[str] | None = None,
+        labels: set[str] | None = None,
     ):
         self.id = id
-        self.data = data
-        self.labels = labels
-        self.edge_list = None
+        self.data = data or {}
+        self.labels = labels or set()
+        self.src_edges = src_edges
+        self.dst_edges = dst_edges
 
     @staticmethod
     def load(id: int) -> Node:
         db = GraphDB()
-        node_list = [n for n in db.raw_query(f"MATCH (n) WHERE id(n) = {id} RETURN n", fetch=True)]
-        # reveal_type(node_list)
-        if not len(node_list) == 1:
+        res = [
+            n
+            for n in db.raw_query(
+                f"""
+                MATCH (n)-[e]-(m) WHERE id(n) = {id}
+                RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
+                """,
+                fetch=True,
+            )
+        ]
+        if not len(res) >= 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
-        n = node_list[0]["n"]
+        n = res[0]["n"]
+        edges = list(map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res))
+        src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
+        dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
         # reveal_type(n)
         return Node(
             id,
-            EdgeList([]),  # TODO: edges
+            EdgeList(src_edges),
+            EdgeList(dst_edges),
             data=n._properties,
             labels=n._labels,
         )

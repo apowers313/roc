@@ -1,12 +1,5 @@
 from typing import Any, cast
 
-# from gqlalchemy.exceptions import GQLAlchemySubclassNotFoundWarning
-import warnings
-
-# warnings.filterwarnings("ignore", category=GQLAlchemySubclassNotFoundWarning, module="dynconf")
-warnings.filterwarnings("ignore", module="gqlalchemy")
-
-
 from collections import namedtuple
 
 import pytest
@@ -15,32 +8,45 @@ from icecream import ic
 
 from roc.graphdb import Edge, GraphDB, Node
 
+# from gqlalchemy.exceptions import GQLAlchemySubclassNotFoundWarning
+# import warnings
+
+# warnings.filterwarnings("ignore", category=GQLAlchemySubclassNotFoundWarning, module="dynconf")
+# warnings.filterwarnings("ignore", module="gqlalchemy")
+
 
 class TestGraphDB:
-    # @pytest.mark.skip(reason="skip until mocks are added")
-    def test_graphdb_connect(self):
+    @pytest.mark.skip(reason="add assertions")
+    def test_graphdb_connect(self, mock_db):
         db = GraphDB()
         res = list(
             db.raw_query(
                 """
-            MATCH (n)-[e]-(m) WHERE id(n) = 0
-            RETURN n, e
-            """,
+                MATCH (n)-[e]-(m) WHERE id(n) = 0
+                RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
+                """,
                 fetch=True,
             )
         )
         assert len(res) == 3
-        # print("!!! RES:", res)
-        # print("!!! REPR:", repr(res))
+        print("!!! RES:", res)
+        print("!!! REPR:", repr(res))
         # assert res != None
-        # for row in res:
-        #     print("!!! ROW:", repr(row))
+        for row in res:
+            print("!!! ROW:", repr(row))
 
 
 class TestNode:
-    def test_node_cache(self, clear_cache):
+    def test_node_get(self, mock_db):
+        n = Node.get(0)
+        assert n.id == 0
+        assert len(n.src_edges) == 2
+        assert len(n.dst_edges) == 1
+        assert n.data == {"name": "Waymar Royce"}
+        assert n.labels == {"Character"}
+
+    def test_node_cache(self, clear_cache, mock_db):
         cc = Node.get_cache_control()
-        db = GraphDB()
         assert cc.info().hits == 0
         assert cc.info().misses == 0
         n1 = Node.get(0)
@@ -61,15 +67,43 @@ class TestNode:
         assert ci.currsize == 0
         assert isinstance(cc.cache, Cache)
 
+    @pytest.mark.skip("pending")
     def test_node_save(self):
         pass
 
+    @pytest.mark.skip("pending")
     def test_node_connect(self):
         pass
 
 
+class TestEdgeList:
+    def test_get_edge(self, mock_db):
+        n = Node.get(0)
+        e0 = n.src_edges[0]
+        e1 = n.src_edges[1]
+        e11 = n.dst_edges[0]
+        # Edge 0
+        assert e0.id == 0
+        assert e0.data == {}
+        assert e0.type == "LOYAL_TO"
+        assert e0.src_id == 0
+        assert e0.dst_id == 6
+        # Edge 1
+        assert e1.id == 1
+        assert e1.data == {}
+        assert e1.type == "VICTIM_IN"
+        assert e1.src_id == 0
+        assert e1.dst_id == 453
+        # Edge 11
+        assert e11.id == 11
+        assert e11.data == {"count": 1, "method": "Ice sword"}
+        assert e11.type == "KILLED"
+        assert e11.src_id == 2
+        assert e11.dst_id == 0
+
+
 class TestEdge:
-    def test_edge_cache_control(clear_cache):
+    def test_edge_cache_control(self, clear_cache):
         cc = Edge.get_cache_control()
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
@@ -79,5 +113,10 @@ class TestEdge:
         assert ci.currsize == 0
         assert isinstance(cc.cache, Cache)
 
+    @pytest.mark.skip("pending")
+    def test_edge_cache(self):
+        pass
+
+    @pytest.mark.skip("pending")
     def test_edge_save(self):
         pass

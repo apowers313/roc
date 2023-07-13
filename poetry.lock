@@ -2042,20 +2042,6 @@ pytest = ">=4.6"
 testing = ["fields", "hunter", "process-tests", "pytest-xdist", "six", "virtualenv"]
 
 [[package]]
-name = "pytest-describe"
-version = "2.1.0"
-description = "Describe-style plugin for pytest"
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "pytest-describe-2.1.0.tar.gz", hash = "sha256:0630c95ac4942ab8dcd8e766236f86436b4984896db0c059fc234fef66fe9732"},
-    {file = "pytest_describe-2.1.0-py3-none-any.whl", hash = "sha256:3ea587839363a91ea24e35e442dae46b56bd91d670e63b755e002b0adfc7a7b2"},
-]
-
-[package.dependencies]
-pytest = ">=4.6,<8"
-
-[[package]]
 name = "pytest-html"
 version = "3.2.0"
 description = "pytest plugin for generating HTML reports"
@@ -2825,4 +2811,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a2927b761a99074b9f6694d68cae80321e015592335775972161dc50e23bc427"
+content-hash = "a7e7431c0b530af694a06a790478cdadc86e2aac3ea77e19c2c3bc1c8d9ecb8f"
