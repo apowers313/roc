@@ -59,7 +59,6 @@ pytest-html = "^3.1.1"
 pytest-cov = "^4.1.0"
 sphinx = "^7.0.1"
 pytest-mock = "^3.11.1"
-pytest-describe = "^2.1.0"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
@@ -131,6 +130,9 @@ warn_unused_ignores = true
 norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
 doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
 filterwarnings = ["ignore::DeprecationWarning", "ignore::gqlalchemy.exceptions.GQLAlchemySubclassNotFoundWarning"]
+#markers = [
+#  "pending: tests that haven't been written yet"
+#]
 
 # Extra options:
 addopts = [
@@ -140,6 +142,8 @@ addopts = [
   "--doctest-continue-on-failure",
   "-rA",
   "-s",
+  "-m",
+  "not pending",
 ]
 
 [tool.coverage.run]

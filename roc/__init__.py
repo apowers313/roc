@@ -1,4 +1,3 @@
-# type: ignore[attr-defined]
 """Reinforcement Learning of Concepts"""
 
 import sys

@@ -1,38 +1,32 @@
+from types import SimpleNamespace
+from typing import Any, Literal, Type
+
 import json
-import warnings
+import re
+from collections.abc import Iterator
 
 import pytest
+from helpers.db_data import db_query_mapping, normalize_whitespace
 
 from roc.graphdb import Edge, GraphDB, Node
 
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+LIVE_DB = False
 
 
-def load_json(d: dict[str, object], k: str, file: str) -> None:
-    with open("tests/data/" + file) as f:
-        j = json.load(f)
-        o = type("JSON", (), j)
-        d[k] = o
+def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
+    query = normalize_whitespace(query)
+    print(f"\nmock raw query: '{query}'")
 
-
-got_data: dict[str, object] = dict()
-
-load_json(got_data, "edge0", "db/got/edge_0.json")
-load_json(got_data, "edge1", "db/got/edge_1.json")
-load_json(got_data, "edge11", "db/got/edge_11.json")
-load_json(got_data, "node0", "db/got/node_0.json")
+    try:
+        return db_query_mapping[query]
+    except KeyError:
+        raise NotImplementedError(f"mock raw query not implemented: '{query}'")
 
 
 @pytest.fixture
-def mock_node0(mocker):
-    ret = iter(
-        [
-            [{"n": got_data["node0"], "e": got_data["edge1"]}],
-            {{"n": got_data["node0"], "e": got_data["edge0"]}},
-            {{"n": got_data["node0"], "e": got_data["edge11"]}},
-        ]
-    )
-    mocker.patch.object(GraphDB, "raw_query", return_value=ret)
+def mock_db(mocker):
+    if not LIVE_DB:
+        mocker.patch.object(GraphDB, "raw_query", new=mock_raw_query)
 
 
 @pytest.fixture
