@@ -1,11 +1,9 @@
 from typing import Any, cast
 
 from collections import namedtuple
-from unittest import mock
 
 import pytest
 from cachetools import Cache
-from helpers.db_data import mock_raw_query
 from icecream import ic
 
 from roc.graphdb import Edge, GraphDB, Node
@@ -39,8 +37,7 @@ class TestGraphDB:
 
 
 class TestNode:
-    @mock.patch.object(GraphDB, "raw_query", new=mock_raw_query)
-    def test_node_get(self):
+    def test_node_get(self, mock_db):
         n = Node.get(0)
         assert n.id == 0
         assert len(n.src_edges) == 2
@@ -48,8 +45,7 @@ class TestNode:
         assert n.data == {"name": "Waymar Royce"}
         assert n.labels == {"Character"}
 
-    @mock.patch.object(GraphDB, "raw_query", new=mock_raw_query)
-    def test_node_cache(self, clear_cache):
+    def test_node_cache(self, mock_db):
         cc = Node.get_cache_control()
         assert cc.info().hits == 0
         assert cc.info().misses == 0
@@ -81,8 +77,7 @@ class TestNode:
 
 
 class TestEdgeList:
-    @mock.patch.object(GraphDB, "raw_query", new=mock_raw_query)
-    def test_get_edge(self, clear_cache):
+    def test_get_edge(self, mock_db):
         n = Node.get(0)
         e0 = n.src_edges[0]
         e1 = n.src_edges[1]
