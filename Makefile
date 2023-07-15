@@ -71,6 +71,14 @@ update-dev-deps:
 	poetry add -D bandit@latest darglint@latest "isort[colors]@latest" mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
 	poetry add -D --allow-prereleases black@latest
 
+# Coverage
+.PHONY: coverage
+coverage:
+	poetry run pytest -cov
+
+.PHONY: doc-coverage
+	poetry run interrogate
+
 #* Docker
 # Example: make docker-build VERSION=latest
 # Example: make docker-build IMAGE=some_name VERSION=0.1.0
@@ -108,6 +116,14 @@ ipynbcheckpoints-remove:
 .PHONY: pytestcache-remove
 pytestcache-remove:
 	find . | grep -E ".pytest_cache" | xargs rm -rf
+
+.PHONY: docs
+docs:
+	cd docs && make html
+
+.PHONY: edit-docs
+edit-docs:
+	poetry run sphinx-autobuild --host 0.0.0.0 --port 9000 docs docs/_build/html
 
 .PHONY: build-remove
 build-remove:

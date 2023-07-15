@@ -6,10 +6,11 @@
 Welcome to ROC's documentation!
 ===============================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+.. autosummary::
+   :toctree: _autosummary
+   :recursive:
 
+   roc
 
 
 Indices and tables

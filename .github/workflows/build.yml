@@ -24,6 +24,7 @@ jobs:
       with:
         path: .venv
         key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
+
     - name: Install dependencies
       run: |
         poetry config virtualenvs.in-project true
@@ -40,3 +41,31 @@ jobs:
     - name: Run safety checks
       run: |
         make check-safety
+
+  docs:
+    needs: test
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v3
+
+      - name: Install poetry
+        run: make poetry-download
+
+      - name: Install dependencies
+        run: |
+          make install
+
+      - name: Sphinx build
+        run: |
+          make docs
+
+      - name: Deploy
+        uses: JamesIves/github-pages-deploy-action@3.7.1
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: gh-pages
+          FOLDER: docs/_build/html
+          CLEAN: true
