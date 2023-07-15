@@ -16,8 +16,8 @@ settings = Dynaconf(
     validators=[
         DefaultSetting[str]("db_host", "127.0.0.1"),
         DefaultSetting[int]("db_port", 7687),
-        DefaultSetting[int]("node_cache_size", 2**12),
-        DefaultSetting[int]("edge_cache_size", 2**12),
+        DefaultSetting[int]("node_cache_size", 2**11),
+        DefaultSetting[int]("edge_cache_size", 2**11),
         DefaultSetting[str]("log_level", "trace"),
     ],
 )
