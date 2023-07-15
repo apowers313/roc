@@ -187,7 +187,7 @@ class TestEdge:
         assert ci.currsize == 0
         assert isinstance(cc.cache, Cache)
 
-    def test_src(self):
+    def test_src(self, mock_db):
         n0 = Node.get(0)
         n2 = Node.get(2)
         e0 = n0.src_edges[0]
@@ -200,7 +200,7 @@ class TestEdge:
         assert id(e1.src) == id(n0)
         assert id(e11.src) == id(n2)
 
-    def test_dst(self):
+    def test_dst(self, mock_db):
         n0 = Node.get(0)
         n6 = Node.get(6)
         n453 = Node.get(453)
