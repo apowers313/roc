@@ -23,6 +23,21 @@ class GraphDB:
         self.host = settings.db_host
         self.port = settings.db_port
         self.db = Memgraph(host=self.host, port=self.port)
+        self._record_callback: Callable[[str, Iterator[Any], str], None] | None = None
+
+    @property
+    def record_callback(self):
+        print("getting record_callback", self._record_callback)
+        return self._record_callback
+
+    @record_callback.setter
+    def record_callback(self, val):
+        print("setting record_callback:", self._record_callback, val)
+        self._record_callback = val
+
+    def set_record_callback(self, cb: Callable[[str, Iterator[Any], str], None]) -> None:
+        print("!!! SETTING RECORD CALLBACK", cb)
+        self.record_callback = cb
 
     @overload
     def raw_query(self, query: str, *, fetch: Literal[True]) -> Iterator[dict[str, Any]]:
@@ -32,11 +47,19 @@ class GraphDB:
     def raw_query(self, query: str, *, fetch: Literal[False]) -> None:
         ...
 
-    def raw_query(self, query: str, *, fetch: bool = True) -> Iterator[dict[str, Any]] | None:
+    def raw_query(
+        self, query: str, *, fetch: bool = True, debug_tag: str = "unknown"
+    ) -> Iterator[dict[str, Any]] | None:
         print(f"raw_query: '{query}'")
 
         if fetch:
-            return self.db.execute_and_fetch(query)  # type: ignore
+            print("self.__record_callback", self.record_callback)
+            if self.record_callback:
+                print("local record query")
+                self.record_callback(query, self.db.execute_and_fetch(query), debug_tag)
+
+            ret = self.db.execute_and_fetch(query)
+            return ret  # type: ignore
         else:
             self.db.execute(query)
             return None
@@ -108,6 +131,23 @@ class Edge:
         return CacheControl[Edge](Edge.get)
 
 
+class EdgeFetchIterator:
+    def __init__(self, edgeFetchList: list[Callable[[], Edge]]):
+        self.__edgeFetchList = edgeFetchList
+        self.cur = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.cur >= len(self.__edgeFetchList):
+            raise StopIteration
+
+        fetcher = self.__edgeFetchList[self.cur]
+        self.cur = self.cur + 1
+        return fetcher()
+
+
 class EdgeList(Mapping[int, Edge]):
     def __init__(self, ids: list[int]):
         self.__edges: list[Callable[[], Edge]] = []
@@ -115,10 +155,7 @@ class EdgeList(Mapping[int, Edge]):
             self.__edges.append(functools.partial(Edge.get, id))
 
     def __iter__(self):
-        if not self.__edges:
-            return iter([])
-
-        return iter(self.__edges)
+        return EdgeFetchIterator(self.__edges)
 
     def __getitem__(self, key):
         return self.__edges[key]()
