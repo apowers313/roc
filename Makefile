@@ -44,8 +44,8 @@ formatting: codestyle
 #* Linting
 .PHONY: test
 test:
-	PYTHONPATH=$(PYTHONPATH) poetry run pytest -c pyproject.toml --cov-report=html --cov=roc tests/
-	poetry run coverage-badge -o assets/images/coverage.svg -f
+	PYTHONPATH=$(PYTHONPATH) poetry run pytest -c pyproject.toml
+#	poetry run coverage-badge -o assets/images/coverage.svg -f
 
 .PHONY: check-codestyle
 check-codestyle:
@@ -71,10 +71,19 @@ update-dev-deps:
 	poetry add -D bandit@latest darglint@latest "isort[colors]@latest" mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
 	poetry add -D --allow-prereleases black@latest
 
+# Docs
+.PHONY: docs
+docs:
+	cd docs && make html
+
+.PHONY: edit-docs
+edit-docs:
+	poetry run sphinx-autobuild --host 0.0.0.0 --port 9000 docs docs/_build/html
+
 # Coverage
 .PHONY: coverage
 coverage:
-	poetry run pytest -cov
+	poetry run pytest -c pyproject.toml --cov-report=lcov
 
 .PHONY: doc-coverage
 	poetry run interrogate
@@ -116,14 +125,6 @@ ipynbcheckpoints-remove:
 .PHONY: pytestcache-remove
 pytestcache-remove:
 	find . | grep -E ".pytest_cache" | xargs rm -rf
-
-.PHONY: docs
-docs:
-	cd docs && make html
-
-.PHONY: edit-docs
-edit-docs:
-	poetry run sphinx-autobuild --host 0.0.0.0 --port 9000 docs docs/_build/html
 
 .PHONY: build-remove
 build-remove:
