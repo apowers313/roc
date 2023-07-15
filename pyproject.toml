@@ -143,6 +143,8 @@ addopts = [
   "--tb=short",
   "--doctest-modules",
   "--doctest-continue-on-failure",
+  "--cov=roc",
+  "--cov-report=html",
   "-rA",
   "-s",
   "-m",
