@@ -2,7 +2,15 @@ from abc import ABC, abstractmethod
 
 
 class Component(ABC):
+    """An abstract component class for building pieces of ROC that will talk to each other."""
+
     def __init__(self, name: str, type: str):
+        """Component constructor.
+
+        Args:
+            name (str): Name of the component. Mostly used for eventing.
+            type (str): Type of the component. Will be set by the concrete class. Mostly used for eventing.
+        """
         self._name = name
         self._type = type
 
