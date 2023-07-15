@@ -11,8 +11,8 @@ from helpers.db_data import db_query_mapping, normalize_whitespace
 
 from roc.graphdb import Edge, GraphDB, Node
 
-LIVE_DB = True
-RECORD_DB = True
+LIVE_DB = False
+RECORD_DB = False
 
 
 def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
