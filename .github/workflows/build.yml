@@ -3,6 +3,15 @@ name: Test
 on: [push, pull_request]
 
 jobs:
+  lint:
+    - name: Run safety checks
+      run: |
+        make check-safety
+
+    - name: Run style checks
+      run: |
+        make check-codestyle
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -30,42 +39,83 @@ jobs:
         poetry config virtualenvs.in-project true
         poetry install
 
-    - name: Run style checks
-      run: |
-        make check-codestyle
-
     - name: Run tests
       run: |
         make test
-
-    - name: Run safety checks
-      run: |
-        make check-safety
 
   docs:
     needs: test
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v3
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4.6.1
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Install poetry
-        run: make poetry-download
+    - name: Install poetry
+      run: make poetry-download
 
-      - name: Install dependencies
-        run: |
-          make install
+    - name: Set up cache
+      uses: actions/cache@v3.3.1
+      with:
+        path: .venv
+        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
 
-      - name: Sphinx build
-        run: |
-          make docs
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.in-project true
+        poetry install
 
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@3.7.1
-        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-        with:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BRANCH: gh-pages
-          FOLDER: docs/_build/html
-          CLEAN: true
+    - name: Sphinx build
+      run: |
+        make docs
+
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@3.7.1
+      if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        BRANCH: gh-pages
+        FOLDER: docs/_build/html
+        CLEAN: true
+
+  coverage:
+    needs: test
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4.6.1
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install poetry
+      run: make poetry-download
+
+    - name: Set up cache
+      uses: actions/cache@v3.3.1
+      with:
+        path: .venv
+        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
+
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.in-project true
+        poetry install
+
+    - name: Publish Coverage
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        file: coverage.lcov
