@@ -121,8 +121,7 @@ def record_raw_query(query: str, res: Iterator[Any]) -> None:
 
 def clear_current_test_record() -> None:
     rec = get_current_test_record()
-    for k in rec.keys():
-        del rec[k]
+    rec.clear()
 
 
 prev_test = ""
