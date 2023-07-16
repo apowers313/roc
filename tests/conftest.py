@@ -7,9 +7,9 @@ from collections.abc import Iterator
 from unittest import mock
 
 import pytest
-from helpers.db_data import db_query_mapping, normalize_whitespace
-from helpers.db_record import do_recording
+from helpers.db_record import clear_current_test_record, do_recording, get_query_record
 
+from roc.event import EventBus
 from roc.graphdb import Edge, GraphDB, Node
 
 LIVE_DB = False
@@ -20,15 +20,7 @@ if RECORD_DB:
 
 
 def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
-    query = normalize_whitespace(query)
-    print(f"\nmock raw query: '{query}'")
-
-    try:
-        # ret = db_query_mapping[query]()
-        # print("returning", list(ret))
-        return db_query_mapping[query]()
-    except KeyError:
-        raise NotImplementedError(f"mock raw query not implemented: '{query}'")
+    return get_query_record(query)
 
 
 @pytest.fixture
@@ -43,4 +35,11 @@ def mock_db(clear_cache):
         with mock.patch.object(GraphDB, "raw_query", new=mock_raw_query):
             yield
     else:
+        if RECORD_DB:
+            clear_current_test_record()
         yield
+
+
+@pytest.fixture
+def eb_reset():
+    EventBus.clear_names()

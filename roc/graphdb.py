@@ -161,10 +161,12 @@ class Node:
         dst_edges: EdgeList,
         *,
         data: dict[Any, Any] | None = None,
-        labels: set[str] | None = None,
+        labels: set[str] | list[str] | None = None,
     ):
         self.id = id
         self.data = data or {}
+        if isinstance(labels, list):
+            labels = set(labels)
         self.labels = labels or set()
         self.src_edges = src_edges
         self.dst_edges = dst_edges
