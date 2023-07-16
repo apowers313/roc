@@ -137,6 +137,10 @@ jobs:
         poetry config virtualenvs.in-project true
         poetry install
 
+    - name: Build coverage
+      run: |
+        make coverage
+
     - name: Publish Coverage
       uses: coverallsapp/github-action@v2
       with:
