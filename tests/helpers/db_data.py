@@ -67,6 +67,14 @@ node0_query = normalize_whitespace(
                 """
 )
 
+node6_query = (
+    "MATCH (n)-[e]-(m) WHERE id(n) = 6 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end"
+)
+
+node2_query = (
+    "MATCH (n)-[e]-(m) WHERE id(n) = 2 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end"
+)
+
 node0_res = lambda: iter(
     [
         {"n": get_json("node_0"), **partial_edge("edge_0")},
@@ -74,6 +82,11 @@ node0_res = lambda: iter(
         {"n": get_json("node_0"), **partial_edge("edge_11")},
     ]
 )
+
+# node2_res = lambda: iter([])
+
+# node6_res = lambda: iter([])
+
 
 edge0_query = "MATCH (n)-[e]-(m) WHERE id(e) = 0 RETURN e LIMIT 1"
 edge1_query = "MATCH (n)-[e]-(m) WHERE id(e) = 1 RETURN e LIMIT 1"
@@ -85,6 +98,8 @@ edge11_res = lambda: iter([{"e": get_json("edge_11")}])
 
 
 add_db_query(node0_query, node0_res)
+# add_db_query(node2_query, node2_res)
+# add_db_query(node6_query, node6_res)
 add_db_query(edge0_query, edge0_res)
 add_db_query(edge1_query, edge1_res)
 add_db_query(edge11_query, edge11_res)

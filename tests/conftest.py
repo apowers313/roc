@@ -8,11 +8,15 @@ from unittest import mock
 
 import pytest
 from helpers.db_data import db_query_mapping, normalize_whitespace
+from helpers.db_record import do_recording
 
 from roc.graphdb import Edge, GraphDB, Node
 
 LIVE_DB = False
 RECORD_DB = False
+
+if RECORD_DB:
+    do_recording()
 
 
 def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
@@ -39,17 +43,4 @@ def mock_db(clear_cache):
         with mock.patch.object(GraphDB, "raw_query", new=mock_raw_query):
             yield
     else:
-        if RECORD_DB:
-            print("DOING RECORD_DB")
-
-            def _debug_record_graphdb_raw_query(query: str, res: Iterator[Any], tag: str) -> None:
-                print("GLOBAL _debug_record_graphdb_raw_query")
-                # write json
-                # write query and json location to query string
-                pass
-
-            GraphDB().set_record_callback(_debug_record_graphdb_raw_query)
-
-            # TODO on exit, save data
-
         yield
