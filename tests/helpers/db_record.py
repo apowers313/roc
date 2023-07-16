@@ -14,7 +14,7 @@ from icecream import ic
 from roc.graphdb import GraphDB
 
 basepath = os.path.dirname(os.path.abspath(__file__))
-records_dir = os.path.abspath(os.path.join(basepath, "..", "helpers", "_generated"))
+records_dir = os.path.abspath(os.path.join(basepath, "..", "data", "_generated"))
 records_json_path = os.path.abspath(os.path.join(records_dir, "query_data.json"))
 
 
@@ -22,13 +22,12 @@ def get_records() -> dict[str, Any]:
     try:
         with open(records_json_path) as f:
             return json.load(f)  # type: ignore
-    except FileNotFoundError:
+    except Exception:
         return dict()
 
 
-# records = get_records()
+records = get_records()
 records_count = 0
-records: dict[str, Any] = {}
 
 
 def normalize_whitespace(s: str) -> str:
@@ -55,6 +54,15 @@ def do_recording() -> None:
     atexit.register(save_recording)
 
 
+def patch_properties(n: Any) -> None:
+    props = list(filter(lambda k: not k.startswith("_"), n.keys()))
+    if len(props) > 0:
+        n["_properties"] = {}
+        for k in props:
+            n["_properties"][k] = n[k]
+            del n[k]
+
+
 class QueryRecord(json.JSONEncoder):
     def __init__(self, query: str, res: Iterator[Any]):
         self.query = query
@@ -66,6 +74,8 @@ class QueryRecord(json.JSONEncoder):
                 entry = self.res[i][key]
                 if isinstance(entry, GQLNode) or isinstance(entry, GQLRelationship):
                     self.res[i][key] = self.res[i][key].dict()
+                    # pydantic removes _properties, recreate it...
+                    patch_properties(self.res[i][key])
 
     def __json__(self) -> Any:
         return {"query": self.query, "res": self.res}
@@ -75,17 +85,26 @@ class QueryRecord(json.JSONEncoder):
         pass
 
 
+def get_current_test_parts() -> list[str]:
+    test_str = os.environ["PYTEST_CURRENT_TEST"]
+    return test_str.split(" ")[0].split("::")
+
+
+def get_current_test_record() -> dict[str, Any]:
+    test_parts = get_current_test_parts()
+    cur_dict = records
+    for test_part in test_parts:
+        if not test_part in cur_dict:
+            cur_dict[test_part] = dict()
+        cur_dict = cur_dict[test_part]
+    return cur_dict
+
+
 def add_test_record(rec: QueryRecord) -> None:
     global records_count
     records_count = records_count + 1
 
-    test_str = os.environ["PYTEST_CURRENT_TEST"]
-    test_path = test_str.split(" ")[0].split("::")
-    cur_dict = records
-    for test_part in test_path:
-        if not test_part in cur_dict:
-            cur_dict[test_part] = dict()
-        cur_dict = cur_dict[test_part]
+    cur_dict = get_current_test_record()
 
     i = 0
     while str(i) in cur_dict:
@@ -100,5 +119,41 @@ def record_raw_query(query: str, res: Iterator[Any]) -> None:
     add_test_record(qr)
 
 
-# def get_query_record(query: str) -> Iterator[Any]:
-#     pass
+def clear_current_test_record() -> None:
+    rec = get_current_test_record()
+    for k in rec.keys():
+        del rec[k]
+
+
+prev_test = ""
+curr_test_count = 0
+
+
+def set_test_count() -> None:
+    global prev_test, curr_test_count
+
+    curr_test = os.environ["PYTEST_CURRENT_TEST"]
+    if prev_test == curr_test:
+        curr_test_count = curr_test_count + 1
+    else:
+        prev_test = curr_test
+        curr_test_count = 0
+
+
+def get_query_record(query: str) -> Iterator[Any]:
+    query = normalize_whitespace(query)
+    set_test_count()
+    curr_test = get_current_test_record()
+    curr_test = curr_test[str(curr_test_count)]
+    if curr_test["query"] != query:
+        exception_msg = f"""While mocking database, executed query did not match expected query: 
+        EXECUTED QUERY: '{query}'
+        EXPECTED QUERY: '{curr_test["query"]}'
+        TEST: '{os.environ["PYTEST_CURRENT_TEST"]}'"""
+        raise Exception(exception_msg)
+    res = curr_test["res"]
+    for row in res:
+        for k in row.keys():
+            if isinstance(row[k], dict):
+                row[k] = type("TESTJSON", (), row[k])
+    return iter(res)
