@@ -12,32 +12,25 @@ from gqlalchemy import Memgraph
 
 from roc.config import settings
 
+RecordFn = Callable[[str, Iterator[Any]], None]
+
 
 class GraphDB:
     def __new__(cls):
         if not hasattr(cls, "instance"):
             cls.instance = super().__new__(cls)
+            cls.instance.__isinitialized = False  # type: ignore
         return cls.instance
 
     def __init__(self):
+        if self.__isinitialized:  # type: ignore
+            return
+
+        self.__isinitialized = True
         self.host = settings.db_host
         self.port = settings.db_port
         self.db = Memgraph(host=self.host, port=self.port)
-        self._record_callback: Callable[[str, Iterator[Any], str], None] | None = None
-
-    @property
-    def record_callback(self):
-        print("getting record_callback", self._record_callback)
-        return self._record_callback
-
-    @record_callback.setter
-    def record_callback(self, val):
-        print("setting record_callback:", self._record_callback, val)
-        self._record_callback = val
-
-    def set_record_callback(self, cb: Callable[[str, Iterator[Any], str], None]) -> None:
-        print("!!! SETTING RECORD CALLBACK", cb)
-        self.record_callback = cb
+        self.record_callback: RecordFn | None = None
 
     @overload
     def raw_query(self, query: str, *, fetch: Literal[True]) -> Iterator[dict[str, Any]]:
@@ -47,16 +40,12 @@ class GraphDB:
     def raw_query(self, query: str, *, fetch: Literal[False]) -> None:
         ...
 
-    def raw_query(
-        self, query: str, *, fetch: bool = True, debug_tag: str = "unknown"
-    ) -> Iterator[dict[str, Any]] | None:
+    def raw_query(self, query: str, *, fetch: bool = True) -> Iterator[dict[str, Any]] | None:
         print(f"raw_query: '{query}'")
 
         if fetch:
-            print("self.__record_callback", self.record_callback)
             if self.record_callback:
-                print("local record query")
-                self.record_callback(query, self.db.execute_and_fetch(query), debug_tag)
+                self.record_callback(query, self.db.execute_and_fetch(query))
 
             ret = self.db.execute_and_fetch(query)
             return ret  # type: ignore
@@ -183,7 +172,6 @@ class Node:
     @staticmethod
     def load(id: int) -> Node:
         db = GraphDB()
-        print("doing query")
         res = list(
             db.raw_query(
                 f"""

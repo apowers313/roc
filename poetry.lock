@@ -1237,6 +1237,17 @@ MarkupSafe = ">=2.0"
 i18n = ["Babel (>=2.7)"]
 
 [[package]]
+name = "json-fix"
+version = "0.5.2"
+description = "allow custom class json behavior on builtin json object"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "json_fix-0.5.2-py3-none-any.whl", hash = "sha256:5e65c8fd5fc674dd7141374968175c660d1af20481ca0d936a16a1633377a583"},
+    {file = "json_fix-0.5.2.tar.gz", hash = "sha256:6d85ba545622603e2662afbd5cdb3b4af1f2992aa473b76cf58d7ed768e0efc8"},
+]
+
+[[package]]
 name = "lazy-object-proxy"
 version = "1.9.0"
 description = "A fast and thorough lazy object proxy."
@@ -2903,4 +2914,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "e230d8cead8666b2673fb7de6ae42c79e150764307597d83f770d90705486d06"
+content-hash = "c50fed253fdf8a92aa54e35a2371e70d635cb32651eb77ad19ac88f825c1b4fb"
