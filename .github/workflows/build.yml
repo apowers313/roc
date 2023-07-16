@@ -1,7 +1,8 @@
 name: Test
 
 on: [push, pull_request]
-
+permissions:
+  contents: write
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -102,13 +103,10 @@ jobs:
         make docs
 
     - name: Deploy
-      uses: JamesIves/github-pages-deploy-action@3.7.1
+      uses: JamesIves/github-pages-deploy-action@v4
       if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       with:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        BRANCH: gh-pages
-        FOLDER: docs/_build/html
-        CLEAN: true
+        folder: docs/_build/html
 
   coverage:
     needs: test
@@ -140,7 +138,7 @@ jobs:
         poetry install
 
     - name: Publish Coverage
-      uses: coverallsapp/github-action@master
+      uses: coverallsapp/github-action@v2
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: coverage.lcov
