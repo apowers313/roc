@@ -1,6 +1,5 @@
-from typing import Any
-
 from collections.abc import Iterator
+from typing import Any
 from unittest import mock
 
 import pytest

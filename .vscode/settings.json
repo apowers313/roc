@@ -1,13 +1,13 @@
 {
     "python.linting.mypyEnabled": true,
     "python.formatting.provider": "black",
-    "editor.formatOnSave": true,
     "python.testing.pytestArgs": [
         "-s",
         "."
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
+    "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.organizeImports": true,
         "source.fixAll": true

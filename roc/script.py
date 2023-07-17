@@ -1,6 +1,5 @@
-from typing import Any
-
 import pprint
+from typing import Any
 
 import click
 import gym

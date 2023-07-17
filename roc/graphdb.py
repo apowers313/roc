@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, Literal, NamedTuple, TypeVar, overload
-
 import functools
 from collections.abc import Iterator, Mapping
 from threading import Lock
+from typing import Any, Callable, Generic, Literal, NamedTuple, TypeVar, overload
 
 from cachetools import Cache, LRUCache, cached
 from gqlalchemy import Memgraph

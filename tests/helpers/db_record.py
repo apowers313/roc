@@ -1,12 +1,11 @@
-from typing import Any
-
 import atexit
 import json
 import os
 import re
 from collections.abc import Iterator
+from typing import Any
 
-import json_fix  # noqa
+import json_fix  # noqa: F401
 from gqlalchemy import Node as GQLNode
 from gqlalchemy import Relationship as GQLRelationship
 
@@ -66,7 +65,8 @@ class QueryRecord(json.JSONEncoder):
     def __init__(self, query: str, res: Iterator[Any]):
         self.query = query
         self.res = list(res)
-        # res is a list of dictonaries, where each key is a pydantic object with the 'dict()' method
+        # res is a list of dictonaries, where each key is a
+        # pydantic object with the 'dict()' method
         for i in range(len(self.res)):
             row = self.res[i]
             for key in row.keys():

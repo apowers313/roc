@@ -88,6 +88,10 @@ exclude = '''
 )/
 '''
 
+[tool.ruff]
+# https://beta.ruff.rs/docs/configuration/
+line-length = 100
+
 [tool.isort]
 # https://github.com/timothycrosley/isort/
 py_version = 310
