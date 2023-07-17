@@ -1,18 +1,7 @@
-from typing import Any, cast
-
-from collections import namedtuple
-
 import pytest
 from cachetools import Cache
-from icecream import ic
 
 from roc.graphdb import Edge, GraphDB, Node
-
-# from gqlalchemy.exceptions import GQLAlchemySubclassNotFoundWarning
-# import warnings
-
-# warnings.filterwarnings("ignore", category=GQLAlchemySubclassNotFoundWarning, module="dynconf")
-# warnings.filterwarnings("ignore", module="gqlalchemy")
 
 
 class TestGraphDB:

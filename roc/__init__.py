@@ -1,6 +1,5 @@
 """Reinforcement Learning of Concepts"""
 
-import sys
 from importlib import metadata as importlib_metadata
 
 
@@ -17,7 +16,3 @@ def get_version() -> str:
 
 
 version: str = get_version()
-
-from roc.component import Component
-from roc.event import Event, EventBus
-from roc.graphdb import Edge, GraphDB, Node

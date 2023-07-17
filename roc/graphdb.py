@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Generic, Literal, NamedTuple, Type, TypeVar, overload
+from typing import Any, Callable, Generic, Literal, NamedTuple, TypeVar, overload
 
 import functools
-from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
 from threading import Lock
 

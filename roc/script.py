@@ -4,7 +4,7 @@ import pprint
 
 import click
 import gym
-import nle
+import nle  # noqa
 
 from roc.component import Component
 from roc.perception import perception_bus
