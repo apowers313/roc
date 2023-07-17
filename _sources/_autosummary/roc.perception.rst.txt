@@ -1,0 +1,31 @@
+roc.perception
+==============
+
+.. automodule:: roc.perception
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      PerceptionComponent
+      PerceptionData
+      PerceptionEvent
+   
+   
+
+   
+   
+   
+
+
+

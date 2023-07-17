@@ -1,0 +1,29 @@
+roc.component
+=============
+
+.. automodule:: roc.component
+
+   
+   
+   
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Classes
+
+   .. autosummary::
+   
+      Component
+   
+   
+
+   
+   
+   
+
+
+

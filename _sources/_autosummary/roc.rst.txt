@@ -1,0 +1,42 @@
+﻿roc
+===
+
+.. automodule:: roc
+
+   
+   
+   
+
+   
+   
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_version
+   
+   
+
+   
+   
+   
+
+   
+   
+   
+
+
+
+.. rubric:: Modules
+
+.. autosummary::
+   :toctree:
+   :recursive:
+
+   roc.component
+   roc.config
+   roc.event
+   roc.graphdb
+   roc.perception
+   roc.script
+
