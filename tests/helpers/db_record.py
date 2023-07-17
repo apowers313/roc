@@ -6,10 +6,9 @@ import os
 import re
 from collections.abc import Iterator
 
-import json_fix
+import json_fix  # noqa
 from gqlalchemy import Node as GQLNode
 from gqlalchemy import Relationship as GQLRelationship
-from icecream import ic
 
 from roc.graphdb import GraphDB
 
@@ -94,7 +93,7 @@ def get_current_test_record() -> dict[str, Any]:
     test_parts = get_current_test_parts()
     cur_dict = records
     for test_part in test_parts:
-        if not test_part in cur_dict:
+        if test_part not in cur_dict:
             cur_dict[test_part] = dict()
         cur_dict = cur_dict[test_part]
     return cur_dict

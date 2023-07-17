@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Generic, Set, TypeVar
+from typing import Generic, TypeVar
 
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import reactivex as rx
 from loguru import logger

@@ -58,6 +58,6 @@ class TestEventBus:
 
     def test_eventbus_duplicate_name(self, eb_reset):
         EventBus.clear_names()
-        eb1 = EventBus[FakeData]("test")
+        EventBus[FakeData]("test")
         with pytest.raises(Exception, match="Duplicate EventBus name: test"):
-            eb2 = EventBus[FakeData]("test")
+            EventBus[FakeData]("test")

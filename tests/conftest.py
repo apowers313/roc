@@ -1,8 +1,5 @@
-from types import SimpleNamespace
-from typing import Any, Literal, Type
+from typing import Any
 
-import json
-import re
 from collections.abc import Iterator
 from unittest import mock
 
