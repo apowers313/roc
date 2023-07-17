@@ -79,9 +79,6 @@ jobs:
     needs: test
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
 
     steps:
     - uses: actions/checkout@v3
@@ -117,9 +114,6 @@ jobs:
     needs: test
 
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10"]
 
     steps:
     - uses: actions/checkout@v3
