@@ -1439,6 +1439,46 @@
                     ]
                 }
             },
+            "test_node_create": {
+                "0": {
+                    "query": "CREATE (n $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2701
+                        }
+                    ]
+                }
+            },
+            "test_node_create_with_data": {
+                "0": {
+                    "query": "CREATE (n:Foo $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2707
+                        }
+                    ]
+                }
+            },
+            "test_node_create_with_label": {
+                "0": {
+                    "query": "CREATE (n:Foo $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2703
+                        }
+                    ]
+                }
+            },
+            "test_node_create_with_multiple_labels": {
+                "0": {
+                    "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2711
+                        }
+                    ]
+                }
+            },
             "test_node_get": {
                 "0": {
                     "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
