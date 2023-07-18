@@ -63,7 +63,6 @@ sphinx = "^7.0.1"
 pytest-mock = "^3.11.1"
 sphinx-autobuild = "^2021.3.14"
 json-fix = "^0.5.2"
-pygrep = "^0.2"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
