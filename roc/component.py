@@ -9,7 +9,8 @@ class Component(ABC):
 
         Args:
             name (str): Name of the component. Mostly used for eventing.
-            type (str): Type of the component. Will be set by the concrete class. Mostly used for eventing.
+            type (str): Type of the component. Will be set by the concrete class. Mostly used for \
+                eventing.
         """
         self._name = name
         self._type = type

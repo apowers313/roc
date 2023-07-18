@@ -29,13 +29,11 @@ install:
 
 .PHONY: pre-commit-install
 pre-commit-install:
-	poetry run pre-commit install
+	poetry run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 #* Formatters
 .PHONY: codestyle
 codestyle:
-	poetry run pyupgrade --exit-zero-even-if-changed --py39-plus **/*.py
-	poetry run isort --settings-path pyproject.toml ./
 	poetry run black --config pyproject.toml ./
 
 .PHONY: formatting
@@ -49,8 +47,8 @@ test:
 
 .PHONY: check-codestyle
 check-codestyle:
-	poetry run isort --diff --check-only --settings-path pyproject.toml ./
-	poetry run black --diff --check --config pyproject.toml ./
+	poetry run ruff --config=./pyproject.toml .
+	poetry run black --config pyproject.toml ./
 	poetry run darglint --verbosity 2 roc tests
 
 .PHONY: mypy
@@ -64,11 +62,11 @@ check-safety:
 	poetry run bandit -ll --recursive roc tests
 
 .PHONY: lint
-lint: test check-codestyle mypy check-safety
+lint: mypy check-codestyle mypy check-safety
 
 .PHONY: update-dev-deps
 update-dev-deps:
-	poetry add -D bandit@latest darglint@latest "isort[colors]@latest" mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
+	poetry add -D bandit@latest darglint@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
 	poetry add -D --allow-prereleases black@latest
 
 # Docs
@@ -132,3 +130,11 @@ build-remove:
 
 .PHONY: cleanup
 cleanup: pycache-remove dsstore-remove mypycache-remove ipynbcheckpoints-remove pytestcache-remove
+
+# commit hooks
+.PHONY: pre-commit
+pre-commit: lint
+
+.PHONY: pre-push
+pre-push: test
+# docs doc-coverage coverage
