@@ -40,6 +40,9 @@ codestyle:
 formatting: codestyle
 
 #* Linting
+.PHONY: lint
+lint: mypy check-codestyle mypy check-safety no-live
+
 .PHONY: test
 test:
 	PYTHONPATH=$(PYTHONPATH) poetry run pytest -c pyproject.toml
@@ -61,13 +64,15 @@ check-safety:
 	poetry run safety check --full-report -i 51457
 	poetry run bandit -ll --recursive roc tests
 
-.PHONY: lint
-lint: mypy check-codestyle mypy check-safety
-
 .PHONY: update-dev-deps
 update-dev-deps:
 	poetry add -D bandit@latest darglint@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
 	poetry add -D --allow-prereleases black@latest
+
+.PHONY: no-live
+no-live:
+	grep '^\s*LIVE_DB\s*=\s*False\s*$$' tests/conftest.py
+	grep '^\s*RECORD_DB\s*=\s*False\s*$$' tests/conftest.py
 
 # Docs
 .PHONY: docs
