@@ -31,24 +31,31 @@ class GraphDB:
         self.record_callback: RecordFn | None = None
 
     @overload
-    def raw_query(self, query: str, *, fetch: Literal[True]) -> Iterator[dict[str, Any]]:
+    def raw_query(
+        self, query: str, *, params: dict[str, Any] | None = None, fetch: Literal[True]
+    ) -> Iterator[dict[str, Any]]:
         ...
 
     @overload
-    def raw_query(self, query: str, *, fetch: Literal[False]) -> None:
+    def raw_query(
+        self, query: str, *, params: dict[str, Any] | None = None, fetch: Literal[False]
+    ) -> None:
         ...
 
-    def raw_query(self, query: str, *, fetch: bool = True) -> Iterator[dict[str, Any]] | None:
+    def raw_query(
+        self, query: str, *, params: dict[str, Any] | None = None, fetch: bool = True
+    ) -> Iterator[dict[str, Any]] | None:
         print(f"raw_query: '{query}'")
+        params = params or {}
 
         if fetch:
             if self.record_callback:
-                self.record_callback(query, self.db.execute_and_fetch(query))
+                self.record_callback(query, self.db.execute_and_fetch(query, parameters=params))
 
-            ret = self.db.execute_and_fetch(query)
+            ret = self.db.execute_and_fetch(query, parameters=params)
             return ret  # type: ignore
         else:
-            self.db.execute(query)
+            self.db.execute(query, parameters=params)
             return None
 
 
@@ -87,6 +94,21 @@ class Edge:
         self.src_id = src_id
         self.dst_id = dst_id
 
+    def __del__(self):
+        Edge.save(self)
+
+    @property
+    def src(self) -> Node:
+        return Node.get(self.src_id)
+
+    @property
+    def dst(self) -> Node:
+        return Node.get(self.dst_id)
+
+    @classmethod
+    def get_cache_control(self) -> CacheControl[Edge]:
+        return CacheControl[Edge](Edge.get)
+
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), info=True)
     def get(id: int) -> Edge:
@@ -107,17 +129,13 @@ class Edge:
             props = e._properties
         return Edge(id, e._start_node_id, e._end_node_id, data=props, type=e._type)
 
-    @property
-    def src(self) -> Node:
-        return Node.get(self.src_id)
+    @staticmethod
+    def save(e: Edge) -> None:
+        GraphDB()
 
-    @property
-    def dst(self) -> Node:
-        return Node.get(self.dst_id)
-
-    @classmethod
-    def get_cache_control(self) -> CacheControl[Edge]:
-        return CacheControl[Edge](Edge.get)
+        # Node.save(e.src)
+        # Node.save(e.dst)
+        # db.raw_query()
 
 
 class EdgeFetchIterator:
@@ -153,23 +171,34 @@ class EdgeList(Mapping[int, Edge]):
         return len(self.__edges)
 
 
+next_new_node = -1
+
+
 class Node:
     def __init__(
         self,
-        id: int,
-        src_edges: EdgeList,
-        dst_edges: EdgeList,
         *,
+        id: int | None = None,
+        src_edges: EdgeList | None = None,
+        dst_edges: EdgeList | None = None,
         data: dict[Any, Any] | None = None,
         labels: set[str] | list[str] | None = None,
     ):
+        self.new = False
+
+        if id is None:
+            global next_new_node
+            id = next_new_node
+            next_new_node = next_new_node - 1
+            self.new = True
+
         self.id = id
         self.data = data or {}
-        if isinstance(labels, list):
-            labels = set(labels)
-        self.labels = labels or set()
-        self.src_edges = src_edges
-        self.dst_edges = dst_edges
+        if isinstance(labels, set):
+            labels = list(labels)
+        self.labels = labels or list()
+        self.src_edges = src_edges or EdgeList([])
+        self.dst_edges = dst_edges or EdgeList([])
 
     @staticmethod
     def load(id: int) -> Node:
@@ -184,6 +213,8 @@ class Node:
             )
         )
 
+        # print("RES", res)
+
         if not len(res) >= 1:
             raise Exception(f"Couldn't find node ID: {id}")
 
@@ -195,9 +226,9 @@ class Node:
         dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
         # reveal_type(n)
         return Node(
-            id,
-            EdgeList(src_edges),
-            EdgeList(dst_edges),
+            id=id,
+            src_edges=EdgeList(src_edges),
+            dst_edges=EdgeList(dst_edges),
             data=n._properties,
             labels=n._labels,
         )
@@ -206,6 +237,39 @@ class Node:
     @staticmethod
     def get(id: int) -> Node:
         return Node.load(id)
+
+    @staticmethod
+    def save(n: Node) -> None:
+        if n.new:
+            Node.create(n)
+        else:
+            Node.update(n)
+
+    @staticmethod
+    def update(n: Node) -> None:
+        pass
+
+    @staticmethod
+    def create(n: Node) -> None:
+        db = GraphDB()
+
+        label_str = ":".join([i for i in n.labels])
+        if len(label_str) > 0:
+            label_str = ":" + label_str
+
+        params = {"props": n.data}
+
+        res = list(
+            db.raw_query(
+                f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params, fetch=True
+            )
+        )
+
+        if not len(res) >= 1:
+            raise Exception(f"Couldn't find node ID: {id}")
+        new_id = res[0]["id"]
+        n.id = new_id
+        n.new = False
 
     @classmethod
     def get_cache_control(self) -> CacheControl[Node]:

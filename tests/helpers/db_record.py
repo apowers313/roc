@@ -48,6 +48,7 @@ def save_recording() -> None:
 
 
 def do_recording() -> None:
+    # TODO: use a mock for this instead
     GraphDB().record_callback = record_raw_query
     atexit.register(save_recording)
 

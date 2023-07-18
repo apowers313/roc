@@ -15,7 +15,9 @@ if RECORD_DB:
     do_recording()
 
 
-def mock_raw_query(db: Any, query: str, *, fetch: bool) -> Iterator[Any]:
+def mock_raw_query(
+    db: Any, query: str, *, params: dict[str, Any] | None = None, fetch: bool
+) -> Iterator[Any]:
     return get_query_record(query)
 
 

@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 from cachetools import Cache
 
@@ -107,7 +109,8 @@ class TestNode:
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
         assert n.data == {"name": "Waymar Royce"}
-        assert n.labels == {"Character"}
+        assert n.labels == ["Character"]
+        assert not n.new
 
     def test_node_cache(self, mock_db):
         cc = Node.get_cache_control()
@@ -138,6 +141,58 @@ class TestNode:
     @pytest.mark.skip("pending")
     def test_node_connect(self):
         pass
+
+    def test_node_new(self):
+        n = Node()
+
+        assert n.id < 0
+        assert len(n.src_edges) == 0
+        assert len(n.dst_edges) == 0
+        assert n.data == dict()
+        assert n.labels == list()
+        assert n.new
+
+    def test_node_create(self, mocker, mock_db):
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        n = Node()
+        pre_id = n.id
+
+        Node.create(n)
+        assert not n.new
+        assert n.id != pre_id
+        spy.assert_called_once()
+
+        assert spy.call_args[0][1] == "CREATE (n $props) RETURN id(n) as id"
+        assert spy.call_args[1]["params"] == {"props": {}}
+        # MATCH (n) WHERE size(labels(n)) = 0 DELETE n
+
+    def test_node_create_with_label(self, mocker, mock_db):
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        n = Node(labels=["Foo"])
+
+        Node.create(n)
+        spy.assert_called_once()
+        assert spy.call_args[0][1] == "CREATE (n:Foo $props) RETURN id(n) as id"
+        assert spy.call_args[1]["params"] == {"props": {}}
+        # MATCH (n:Foo) DELETE n
+
+    def test_node_create_with_multiple_labels(self, mocker, mock_db):
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        n = Node(labels=["Foo", "Bar"])
+
+        Node.create(n)
+        spy.assert_called_once()
+        assert spy.call_args[0][1] == "CREATE (n:Foo:Bar $props) RETURN id(n) as id"
+        assert spy.call_args[1]["params"] == {"props": {}}
+
+    def test_node_create_with_data(self, mocker, mock_db):
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        n = Node(labels=["Foo"], data={"answer": 42})
+
+        Node.create(n)
+        spy.assert_called_once()
+        assert spy.call_args[0][1] == "CREATE (n:Foo $props) RETURN id(n) as id"
+        assert spy.call_args[1]["params"] == {"props": {"answer": 42}}
 
 
 class TestEdgeList:
