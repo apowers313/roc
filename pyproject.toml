@@ -159,6 +159,9 @@ addopts = [
 
 [tool.coverage.run]
 source = ["tests"]
+omit = [
+  "roc/script.py"
+]
 
 [coverage.paths]
 source = "roc"
