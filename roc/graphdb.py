@@ -197,6 +197,7 @@ class Node:
         if isinstance(labels, set):
             labels = list(labels)
         self.labels = labels or list()
+        self._orig_labels = set(self.labels)
         self.src_edges = src_edges or EdgeList([])
         self.dst_edges = dst_edges or EdgeList([])
 
@@ -239,24 +240,44 @@ class Node:
         return Node.load(id)
 
     @staticmethod
-    def save(n: Node) -> None:
+    def save(n: Node) -> Node:
         if n.new:
-            Node.create(n)
+            return Node.create(n)
         else:
-            Node.update(n)
+            return Node.update(n)
 
     @staticmethod
-    def update(n: Node) -> None:
-        pass
-
-    @staticmethod
-    def create(n: Node) -> None:
+    def update(n: Node) -> Node:
         db = GraphDB()
 
-        label_str = ":".join([i for i in n.labels])
-        if len(label_str) > 0:
-            label_str = ":" + label_str
+        orig_labels = n._orig_labels
+        curr_labels = set(n.labels)
+        new_labels = curr_labels - orig_labels
+        rm_labels = orig_labels - curr_labels
+        set_label_str = Node.mklabels(list(new_labels))
+        if set_label_str:
+            set_query = f"SET n{set_label_str}, n = $props"
+        else:
+            set_query = "SET n = $props"
+        rm_label_str = Node.mklabels(list(rm_labels))
+        if rm_label_str:
+            rm_query = f"REMOVE n{rm_label_str}"
+        else:
+            rm_query = ""
 
+        params = {"props": n.data}
+
+        db.raw_query(
+            f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params, fetch=False
+        )
+
+        return n
+
+    @staticmethod
+    def create(n: Node) -> Node:
+        db = GraphDB()
+
+        label_str = Node.mklabels(n.labels)
         params = {"props": n.data}
 
         res = list(
@@ -270,6 +291,16 @@ class Node:
         new_id = res[0]["id"]
         n.id = new_id
         n.new = False
+        # TODO: update edges with new ID
+
+        return n
+
+    @staticmethod
+    def mklabels(labels: list[str]) -> str:
+        label_str = ":".join([i for i in labels])
+        if len(label_str) > 0:
+            label_str = ":" + label_str
+        return label_str
 
     @classmethod
     def get_cache_control(self) -> CacheControl[Node]:

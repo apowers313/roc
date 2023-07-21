@@ -17,8 +17,11 @@ if RECORD_DB:
 
 def mock_raw_query(
     db: Any, query: str, *, params: dict[str, Any] | None = None, fetch: bool
-) -> Iterator[Any]:
-    return get_query_record(query)
+) -> Iterator[Any] | None:
+    if fetch:
+        return get_query_record(query)
+
+    return None
 
 
 @pytest.fixture

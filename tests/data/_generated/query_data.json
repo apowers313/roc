@@ -1552,6 +1552,16 @@
                         }
                     ]
                 }
+            },
+            "test_node_update": {
+                "0": {
+                    "query": "CREATE (n $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2750
+                        }
+                    ]
+                }
             }
         }
     }
