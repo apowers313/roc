@@ -1,3 +1,4 @@
+import re
 from unittest.mock import MagicMock
 
 import pytest
@@ -193,6 +194,20 @@ class TestNode:
         spy.assert_called_once()
         assert spy.call_args[0][1] == "CREATE (n:Foo $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {"answer": 42}}
+
+    def test_node_update(self, mocker, mock_db):
+        n = Node.create(Node())
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        n.labels.append("TestNode")
+        n.data = {"beer": "yum", "number": 42}
+        Node.save(n)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:TestNode, n = $props ")
+        match_str = esc_str.replace("2746", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+        assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
 
 
 class TestEdgeList:
