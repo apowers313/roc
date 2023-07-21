@@ -41,3 +41,13 @@ def mock_db(clear_cache):
 @pytest.fixture
 def eb_reset():
     EventBus.clear_names()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def clear_db():
+    yield
+    db = GraphDB()
+    # delete all test nodes (which may have edges that need to be detached)
+    db.raw_query("MATCH (n:TestNode) DETACH DELETE n", fetch=False)
+    # delete all nodes without relationships
+    db.raw_query("MATCH (n) WHERE degree(n) = 0 DELETE n", fetch=False)
