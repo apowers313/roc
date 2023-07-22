@@ -12,12 +12,11 @@ class TestGraphDB:
     def test_graphdb_connect(self, mock_db):
         db = GraphDB()
         res = list(
-            db.raw_query(
+            db.raw_fetch(
                 """
                 MATCH (n)-[e]-(m) WHERE id(n) = 0
                 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
-                """,
-                fetch=True,
+                """
             )
         )
         assert len(res) == 3
@@ -47,7 +46,7 @@ class TestGraphDB:
         stub = mocker.stub()
         db = GraphDB()
         db.record_callback = stub
-        db.raw_query("MATCH (n)-[e]-{m) WHERE id(n) = 0 RETURN n", fetch=True)
+        db.raw_fetch("MATCH (n)-[e]-{m) WHERE id(n) = 0 RETURN n")
         assert stub.call_count == 1
 
     @pytest.mark.slow
@@ -131,7 +130,7 @@ class TestNode:
         assert id(n) == id(n_dupe)
 
     def test_node_create_on_delete(self, mocker, clear_cache):
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
 
         del n
@@ -148,7 +147,7 @@ class TestNode:
         assert n.id > 0
         n.data = {"foo": "bar"}
         n.labels.append("Bob")
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del n
         Node.cache_control.clear()
@@ -184,7 +183,7 @@ class TestNode:
         assert n.new
 
     def test_node_create(self, mocker, mock_db):
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node()
         pre_id = n.id
 
@@ -198,7 +197,7 @@ class TestNode:
         # MATCH (n) WHERE size(labels(n)) = 0 DELETE n
 
     def test_node_create_with_label(self, mocker, mock_db):
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo"])
 
         Node.create(n)
@@ -208,7 +207,7 @@ class TestNode:
         # MATCH (n:Foo) DELETE n
 
     def test_node_create_with_multiple_labels(self, mocker, mock_db):
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo", "Bar"])
 
         Node.create(n)
@@ -217,7 +216,7 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {}}
 
     def test_node_create_with_data(self, mocker, mock_db):
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo"], data={"answer": 42})
 
         Node.create(n)
@@ -227,7 +226,7 @@ class TestNode:
 
     def test_node_update(self, mocker, mock_db):
         n = Node.create(Node())
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.append("TestNode")
         n.data = {"beer": "yum", "number": 42}
@@ -241,7 +240,7 @@ class TestNode:
 
     def test_node_update_add_label(self, mocker, mock_db):
         n = Node.create(Node(labels=["TestNode"]))
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.append("Foo")
         Node.update(n)
@@ -253,7 +252,7 @@ class TestNode:
 
     def test_node_update_remove_label(self, mocker, mock_db):
         n = Node.create(Node(labels=["TestNode"]))
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.clear()
         Node.update(n)
@@ -265,7 +264,7 @@ class TestNode:
 
     def test_node_update_add_and_remove_label(self, mocker, mock_db):
         n = Node.create(Node(labels=["TestNode"]))
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.clear()
         n.labels.append("Foo")
@@ -278,7 +277,7 @@ class TestNode:
 
     def test_node_update_properties(self, mocker, mock_db):
         n = Node.create(Node(labels=["TestNode"]))
-        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.data = {"foo": "bar", "baz": "bat"}
         Node.update(n)

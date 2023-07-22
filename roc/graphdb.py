@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, MutableSet
 from threading import Lock
-from typing import Any, Callable, Generic, Literal, NamedTuple, TypeVar, overload
+from typing import Any, Callable, Generic, NamedTuple, TypeVar
 
 from cachetools import Cache, LRUCache, cached
 from gqlalchemy import Memgraph
@@ -33,33 +33,21 @@ class GraphDB:
         self.db = Memgraph(host=self.host, port=self.port)
         self.record_callback: RecordFn | None = None
 
-    @overload
-    def raw_query(
-        self, query: str, *, params: dict[str, Any] | None = None, fetch: Literal[True]
+    def raw_fetch(
+        self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
-        ...
-
-    @overload
-    def raw_query(
-        self, query: str, *, params: dict[str, Any] | None = None, fetch: Literal[False]
-    ) -> None:
-        ...
-
-    def raw_query(
-        self, query: str, *, params: dict[str, Any] | None = None, fetch: bool = True
-    ) -> Iterator[dict[str, Any]] | None:
-        print(f"raw_query: '{query}'")
+        print(f"raw_fetch: '{query}'")
         params = params or {}
 
-        if fetch:
-            if self.record_callback:
-                self.record_callback(query, self.db.execute_and_fetch(query, parameters=params))
+        if self.record_callback:
+            self.record_callback(query, self.db.execute_and_fetch(query, parameters=params))
 
-            ret = self.db.execute_and_fetch(query, parameters=params)
-            return ret  # type: ignore
-        else:
-            self.db.execute(query, parameters=params)
-            return None
+        ret = self.db.execute_and_fetch(query, parameters=params)
+        return ret  # type: ignore
+
+    def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
+        print(f"raw_execute: '{query}'")
+        self.db.execute(query, parameters=params)
 
 
 RefType = TypeVar("RefType")
@@ -151,9 +139,7 @@ class Edge(metaclass=EdgeMeta):
     @staticmethod
     def load(id: int) -> Edge:
         db = GraphDB()
-        edge_list = list(
-            db.raw_query(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1", fetch=True)
-        )
+        edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
         if not len(edge_list) == 1:
             raise Exception(f"Couldn't find edge ID: {id}")
 
@@ -175,7 +161,7 @@ class Edge(metaclass=EdgeMeta):
         return e
         # Node.save(e.src)
         # Node.save(e.dst)
-        # db.raw_query()
+        # db.raw_execute()
 
     @staticmethod
     def update(e: Edge) -> Edge:
@@ -299,12 +285,11 @@ class Node(metaclass=NodeMeta):
     def load(id: int) -> Node:
         db = GraphDB()
         res = list(
-            db.raw_query(
+            db.raw_fetch(
                 f"""
-            MATCH (n)-[e]-(m) WHERE id(n) = {id}
-            RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
-            """,
-                fetch=True,
+                MATCH (n)-[e]-(m) WHERE id(n) = {id}
+                RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
+                """,
             )
         )
 
@@ -361,9 +346,7 @@ class Node(metaclass=NodeMeta):
 
         params = {"props": n.data}
 
-        db.raw_query(
-            f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params, fetch=False
-        )
+        db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params)
 
         return n
 
@@ -374,11 +357,7 @@ class Node(metaclass=NodeMeta):
         label_str = Node.mklabels(n.labels)
         params = {"props": n.data}
 
-        res = list(
-            db.raw_query(
-                f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params, fetch=True
-            )
-        )
+        res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
         if not len(res) >= 1:
             raise Exception(f"Couldn't find node ID: {id}")
