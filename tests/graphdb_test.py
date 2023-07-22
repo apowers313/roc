@@ -130,6 +130,35 @@ class TestNode:
         n_dupe = Node.get(n.id)
         assert id(n) == id(n_dupe)
 
+    def test_node_create_on_delete(self, mocker, clear_cache):
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+        n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
+
+        del n
+        Node.cache_control.clear()
+
+        spy.assert_called_once()
+        assert spy.call_args[0][1] == "CREATE (n:TestNode $props) RETURN id(n) as id"
+        assert spy.call_args[1]["params"] == {"props": {"testname": "test_node_save_on_delete"}}
+
+    def test_node_update_on_delete(self, mocker, clear_cache):
+        n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
+        Node.save(n)
+        assert not n.new
+        assert n.id > 0
+        n.data = {"foo": "bar"}
+        n.labels.append("Bob")
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        del n
+        Node.cache_control.clear()
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2813 SET n:Bob, n = $props")
+        match_str = esc_str.replace("2813", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+        assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
+
     def test_node_cache_control(self, clear_cache):
         cc = Node.cache_control
         # assert cc.info() == (0, 0, 4096, 0)

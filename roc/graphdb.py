@@ -292,6 +292,9 @@ class Node(metaclass=NodeMeta):
         self.src_edges = src_edges or EdgeList([])
         self.dst_edges = dst_edges or EdgeList([])
 
+    def __del__(self):
+        Node.save(self)
+
     @staticmethod
     def load(id: int) -> Node:
         db = GraphDB()
