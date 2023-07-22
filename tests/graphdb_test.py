@@ -201,13 +201,65 @@ class TestNode:
 
         n.labels.append("TestNode")
         n.data = {"beer": "yum", "number": 42}
-        Node.save(n)
+        Node.update(n)
 
         spy.assert_called_once()
         esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:TestNode, n = $props ")
         match_str = esc_str.replace("2746", "\d+")
         assert re.search(match_str, spy.call_args[0][1])
         assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
+
+    def test_node_update_add_label(self, mocker, mock_db):
+        n = Node.create(Node(labels=["TestNode"]))
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        n.labels.append("Foo")
+        Node.update(n)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props ")
+        match_str = esc_str.replace("2746", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+
+    def test_node_update_remove_label(self, mocker, mock_db):
+        n = Node.create(Node(labels=["TestNode"]))
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        n.labels.clear()
+        Node.update(n)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n = $props REMOVE n:TestNode")
+        match_str = esc_str.replace("2746", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+
+    def test_node_update_add_and_remove_label(self, mocker, mock_db):
+        n = Node.create(Node(labels=["TestNode"]))
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        n.labels.clear()
+        n.labels.append("Foo")
+        Node.update(n)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props REMOVE n:TestNode")
+        match_str = esc_str.replace("2746", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+
+    def test_node_update_properties(self, mocker, mock_db):
+        n = Node.create(Node(labels=["TestNode"]))
+        spy: MagicMock = mocker.spy(GraphDB, "raw_query")
+
+        n.data = {"foo": "bar", "baz": "bat"}
+        Node.update(n)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n = $props ")
+        match_str = esc_str.replace("2746", "\d+")
+        assert re.search(match_str, spy.call_args[0][1])
+        assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
+
+    # TODO: update empty properties
 
 
 class TestEdgeList:
