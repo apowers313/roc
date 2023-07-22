@@ -2,761 +2,6 @@
     "tests/graphdb_test.py": {
         "TestEdge": {
             "test_dst": {
-                "0": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "1": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 6 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 18,
-                                "_start_node_id": 7,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 18,
-                            "e_start": 7,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 20,
-                                "_start_node_id": 8,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 20,
-                            "e_start": 8,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 1109,
-                                "_start_node_id": 75,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 1109,
-                            "e_start": 75,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 1181,
-                                "_start_node_id": 77,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 1181,
-                            "e_start": 77,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2407,
-                                "_start_node_id": 105,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2407,
-                            "e_start": 105,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2421,
-                                "_start_node_id": 111,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2421,
-                            "e_start": 111,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2434,
-                                "_start_node_id": 114,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2434,
-                            "e_start": 114,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2496,
-                                "_start_node_id": 134,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2496,
-                            "e_start": 134,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2964,
-                                "_start_node_id": 187,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2964,
-                            "e_start": 187,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2967,
-                                "_start_node_id": 189,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2967,
-                            "e_start": 189,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2969,
-                                "_start_node_id": 190,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2969,
-                            "e_start": 190,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2975,
-                                "_start_node_id": 191,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2975,
-                            "e_start": 191,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 2977,
-                                "_start_node_id": 192,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 2977,
-                            "e_start": 192,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3081,
-                                "_start_node_id": 219,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3081,
-                            "e_start": 219,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3086,
-                                "_start_node_id": 220,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3086,
-                            "e_start": 220,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3328,
-                                "_start_node_id": 265,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3328,
-                            "e_start": 265,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3343,
-                                "_start_node_id": 266,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3343,
-                            "e_start": 266,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3357,
-                                "_start_node_id": 270,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3357,
-                            "e_start": 270,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3408,
-                                "_start_node_id": 287,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3408,
-                            "e_start": 287,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3420,
-                                "_start_node_id": 289,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3420,
-                            "e_start": 289,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3431,
-                                "_start_node_id": 293,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3431,
-                            "e_start": 293,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3681,
-                                "_start_node_id": 330,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3681,
-                            "e_start": 330,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3873,
-                                "_start_node_id": 366,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3873,
-                            "e_start": 366,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 3875,
-                                "_start_node_id": 367,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 3875,
-                            "e_start": 367,
-                            "n": {
-                                "_id": 6,
-                                "_labels": [
-                                    "Allegiance"
-                                ],
-                                "_properties": {
-                                    "name": "Nights Watch"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "2": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 453 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 453,
-                                "_labels": [
-                                    "Death"
-                                ],
-                                "_properties": {
-                                    "order": 1
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 4,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 4,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 453,
-                                "_labels": [
-                                    "Death"
-                                ],
-                                "_properties": {
-                                    "order": 1
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 4,
-                                "_id": 5295,
-                                "_start_node_id": 453,
-                                "_type": "HAPPENED_IN"
-                            },
-                            "e_end": 4,
-                            "e_id": 5295,
-                            "e_start": 453,
-                            "n": {
-                                "_id": 453,
-                                "_labels": [
-                                    "Death"
-                                ],
-                                "_properties": {
-                                    "order": 1
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 5,
-                                "_id": 5296,
-                                "_start_node_id": 453,
-                                "_type": "HAPPENED_IN"
-                            },
-                            "e_end": 5,
-                            "e_id": 5296,
-                            "e_start": 453,
-                            "n": {
-                                "_id": 453,
-                                "_labels": [
-                                    "Death"
-                                ],
-                                "_properties": {
-                                    "order": 1
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 1,
-                                "_id": 5297,
-                                "_start_node_id": 453,
-                                "_type": "HAPPENED_IN"
-                            },
-                            "e_end": 1,
-                            "e_id": 5297,
-                            "e_start": 453,
-                            "n": {
-                                "_id": 453,
-                                "_labels": [
-                                    "Death"
-                                ],
-                                "_properties": {
-                                    "order": 1
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "3": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 0 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            }
-                        }
-                    ]
-                },
-                "4": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 1 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            }
-                        }
-                    ]
-                },
-                "5": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 11 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            }
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
@@ -1517,490 +762,6 @@
                 "setup": {}
             },
             "test_src": {
-                "0": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "1": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 2 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 2,
-                                "_id": 3084,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Dragonglass"
-                                },
-                                "_start_node_id": 219,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 2,
-                            "e_id": 3084,
-                            "e_start": 219,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 3,
-                                "_id": 2,
-                                "_start_node_id": 2,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 3,
-                            "e_id": 2,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 336,
-                                "_id": 3,
-                                "_start_node_id": 2,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 336,
-                            "e_id": 3,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 4,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 4,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 454,
-                                "_id": 5,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 454,
-                            "e_id": 5,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 674,
-                                "_id": 6,
-                                "_start_node_id": 2,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 674,
-                            "e_id": 6,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 975,
-                                "_id": 7,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 975,
-                            "e_id": 7,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 982,
-                                "_id": 8,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 982,
-                            "e_id": 8,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 1101,
-                                "_id": 9,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 1101,
-                            "e_id": 9,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 1103,
-                                "_id": 10,
-                                "_start_node_id": 2,
-                                "_type": "KILLER_IN"
-                            },
-                            "e_end": 1103,
-                            "e_id": 10,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 7,
-                                "_id": 12,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 7,
-                            "e_id": 12,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 337,
-                                "_id": 13,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Spear"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 337,
-                            "e_id": 13,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 49,
-                                "_id": 14,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 49,
-                            "e_id": 14,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 371,
-                                "_id": 15,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 371,
-                            "e_id": 15,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 374,
-                                "_id": 16,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 374,
-                            "e_id": 16,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 2,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "White Walker"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "2": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 0 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            }
-                        }
-                    ]
-                },
-                "3": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 1 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            }
-                        }
-                    ]
-                },
-                "4": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 11 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            }
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
@@ -2492,121 +1253,6 @@
         },
         "TestEdgeList": {
             "test_get_edge": {
-                "0": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
-                "1": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 0 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            }
-                        }
-                    ]
-                },
-                "2": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 1 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            }
-                        }
-                    ]
-                },
-                "3": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(e) = 11 RETURN e LIMIT 1",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            }
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
@@ -2729,78 +1375,6 @@
         },
         "TestNode": {
             "test_node_cache": {
-                "0": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
@@ -2878,20 +1452,12 @@
                 "setup": {}
             },
             "test_node_create": {
-                "0": {
-                    "query": "CREATE (n $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2855
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2893
+                                "id": 3034
                             }
                         ]
                     }
@@ -2899,28 +1465,12 @@
                 "setup": {}
             },
             "test_node_create_on_delete": {
-                "0": {
-                    "query": "CREATE (n $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2847
-                        }
-                    ]
-                },
-                "1": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2849
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2887
+                                "id": 3028
                             }
                         ]
                     }
@@ -2930,27 +1480,19 @@
                         "query": "CREATE (n $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2885
+                                "id": 3026
                             }
                         ]
                     }
                 }
             },
             "test_node_create_with_data": {
-                "0": {
-                    "query": "CREATE (n:Foo $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2861
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2899
+                                "id": 3040
                             }
                         ]
                     }
@@ -2958,20 +1500,12 @@
                 "setup": {}
             },
             "test_node_create_with_label": {
-                "0": {
-                    "query": "CREATE (n:Foo $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2857
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2895
+                                "id": 3036
                             }
                         ]
                     }
@@ -2979,20 +1513,12 @@
                 "setup": {}
             },
             "test_node_create_with_multiple_labels": {
-                "0": {
-                    "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2859
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2897
+                                "id": 3038
                             }
                         ]
                     }
@@ -3000,78 +1526,6 @@
                 "setup": {}
             },
             "test_node_get": {
-                "0": {
-                    "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
-                    "res": [
-                        {
-                            "e": {
-                                "_end_node_id": 0,
-                                "_id": 11,
-                                "_properties": {
-                                    "count": 1,
-                                    "method": "Ice sword"
-                                },
-                                "_start_node_id": 2,
-                                "_type": "KILLED"
-                            },
-                            "e_end": 0,
-                            "e_id": 11,
-                            "e_start": 2,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 6,
-                                "_id": 0,
-                                "_start_node_id": 0,
-                                "_type": "LOYAL_TO"
-                            },
-                            "e_end": 6,
-                            "e_id": 0,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        },
-                        {
-                            "e": {
-                                "_end_node_id": 453,
-                                "_id": 1,
-                                "_start_node_id": 0,
-                                "_type": "VICTIM_IN"
-                            },
-                            "e_end": 453,
-                            "e_id": 1,
-                            "e_start": 0,
-                            "n": {
-                                "_id": 0,
-                                "_labels": [
-                                    "Character"
-                                ],
-                                "_properties": {
-                                    "name": "Waymar Royce"
-                                },
-                                "_type": null
-                            }
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
@@ -3149,20 +1603,20 @@
                 "setup": {}
             },
             "test_node_update": {
-                "0": {
-                    "query": "CREATE (n $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2863
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2901
+                                "id": 3042
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3056
                             }
                         ]
                     }
@@ -3170,20 +1624,12 @@
                 "setup": {}
             },
             "test_node_update_add_and_remove_label": {
-                "0": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2869
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2907
+                                "id": 3048
                             }
                         ]
                     }
@@ -3191,20 +1637,12 @@
                 "setup": {}
             },
             "test_node_update_add_label": {
-                "0": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2865
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2903
+                                "id": 3044
                             }
                         ]
                     }
@@ -3212,40 +1650,33 @@
                 "setup": {}
             },
             "test_node_update_on_delete": {
-                "0": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2851
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2889
+                                "id": 3030
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3058
                             }
                         ]
                     }
-                }
+                },
+                "setup": {}
             },
             "test_node_update_properties": {
-                "0": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2871
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2909
+                                "id": 3050
                             }
                         ]
                     }
@@ -3253,20 +1684,12 @@
                 "setup": {}
             },
             "test_node_update_remove_label": {
-                "0": {
-                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                    "res": [
-                        {
-                            "id": 2867
-                        }
-                    ]
-                },
                 "call": {
                     "0": {
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 2905
+                                "id": 3046
                             }
                         ]
                     }

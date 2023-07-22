@@ -15,10 +15,12 @@ if RECORD_DB:
     do_recording()
 
 
-def mock_raw_fetch(
-    db: Any, query: str, *, params: dict[str, Any] | None = None
-) -> Iterator[Any] | None:
+def mock_raw_fetch(db: Any, query: str, *, params: dict[str, Any] | None = None) -> Iterator[Any]:
     return get_query_record(query)
+
+
+def mock_raw_execute(db: Any, query: str, *, params: dict[str, Any] | None = None) -> None:
+    pass
 
 
 @pytest.fixture
@@ -30,8 +32,11 @@ def clear_cache():
 @pytest.fixture
 def mock_db(clear_cache):
     if not LIVE_DB:
+        db = GraphDB()
+        db.db = None
         with mock.patch.object(GraphDB, "raw_fetch", new=mock_raw_fetch):
-            yield
+            with mock.patch.object(GraphDB, "raw_execute", new=mock_raw_execute):
+                yield
     else:
         if RECORD_DB:
             clear_current_test_record()
@@ -46,8 +51,9 @@ def eb_reset():
 @pytest.fixture(scope="session", autouse=True)
 def clear_db():
     yield
-    db = GraphDB()
-    # delete all test nodes (which may have edges that need to be detached)
-    db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
-    # delete all nodes without relationships
-    db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
+    if LIVE_DB:
+        db = GraphDB()
+        # delete all test nodes (which may have edges that need to be detached)
+        db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
+        # delete all nodes without relationships
+        db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
