@@ -87,7 +87,13 @@ class QueryRecord(json.JSONEncoder):
 
 def get_current_test_parts() -> list[str]:
     test_str = os.environ["PYTEST_CURRENT_TEST"]
-    return test_str.split(" ")[0].split("::")
+    test_parts = test_str.split(" ")[0].split("::")
+    test_phase_match = re.search("\((.+)\)$", test_str)
+    if not test_phase_match:
+        raise Exception("couldn't find test phase in PYTEST_CURRENT_TEST")
+    test_phase = test_phase_match.groups()[0]
+    test_parts.append(test_phase)
+    return test_parts
 
 
 def get_current_test_record() -> dict[str, Any]:
