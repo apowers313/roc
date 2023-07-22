@@ -1444,7 +1444,25 @@
                     "query": "CREATE (n $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2790
+                            "id": 2855
+                        }
+                    ]
+                }
+            },
+            "test_node_create_on_delete": {
+                "0": {
+                    "query": "CREATE (n $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2847
+                        }
+                    ]
+                },
+                "1": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2849
                         }
                     ]
                 }
@@ -1454,7 +1472,7 @@
                     "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2796
+                            "id": 2861
                         }
                     ]
                 }
@@ -1464,7 +1482,7 @@
                     "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2792
+                            "id": 2857
                         }
                     ]
                 }
@@ -1474,7 +1492,7 @@
                     "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2794
+                            "id": 2859
                         }
                     ]
                 }
@@ -1558,7 +1576,7 @@
                     "query": "CREATE (n $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2798
+                            "id": 2863
                         }
                     ]
                 }
@@ -1568,7 +1586,7 @@
                     "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2804
+                            "id": 2869
                         }
                     ]
                 }
@@ -1578,7 +1596,17 @@
                     "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2800
+                            "id": 2865
+                        }
+                    ]
+                }
+            },
+            "test_node_update_on_delete": {
+                "0": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2851
                         }
                     ]
                 }
@@ -1588,7 +1616,7 @@
                     "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2806
+                            "id": 2871
                         }
                     ]
                 }
@@ -1598,7 +1626,7 @@
                     "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2802
+                            "id": 2867
                         }
                     ]
                 }
