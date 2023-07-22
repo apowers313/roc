@@ -54,7 +54,7 @@ class TestGraphDB:
     def test_walk(self):
         cnt = 0
         cache: set[int] = set()
-        cc = Node.get_cache_control()
+        cc = Node.cache_control
         maxsize = cc.info().maxsize
         if maxsize:
             max = maxsize + 100
@@ -95,7 +95,7 @@ class TestGraphDB:
         print("CNT", cnt)
         print("MAX", max)
         print("MAXSIZE", maxsize)
-        i = Node.get_cache_control().info()
+        i = Node.cache_control.info()
         print("HITS", i.hits)
         print("MISSES", i.misses)
         print("CURRENT", i.currsize)
@@ -114,7 +114,7 @@ class TestNode:
         assert not n.new
 
     def test_node_cache(self, mock_db):
-        cc = Node.get_cache_control()
+        cc = Node.cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
         n1 = Node.get(0)
@@ -125,8 +125,13 @@ class TestNode:
         assert cc.info().misses == 1
         assert id(n1) == id(n2)
 
+    def test_node_new_in_cache(self, clear_cache):
+        n = Node()
+        n_dupe = Node.get(n.id)
+        assert id(n) == id(n_dupe)
+
     def test_node_cache_control(self, clear_cache):
-        cc = Node.get_cache_control()
+        cc = Node.cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
         assert ci.hits == 0
@@ -137,10 +142,6 @@ class TestNode:
 
     @pytest.mark.skip("pending")
     def test_node_save(self):
-        pass
-
-    @pytest.mark.skip("pending")
-    def test_node_connect(self):
         pass
 
     def test_node_new(self):
@@ -259,7 +260,20 @@ class TestNode:
         assert re.search(match_str, spy.call_args[0][1])
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
 
-    # TODO: update empty properties
+    def test_node_connect(self):
+        n1 = Node()
+        n2 = Node()
+
+        e = Node.connect(n1, n2)
+
+        assert len(n1.src_edges) == 1
+        assert len(n1.dst_edges) == 0
+        assert e in n1.src_edges
+        assert len(n2.src_edges) == 0
+        assert len(n2.dst_edges) == 1
+        assert e in n2.dst_edges
+        assert e.src_id == n1.id
+        assert e.dst_id == n2.id
 
 
 class TestEdgeList:
@@ -295,10 +309,22 @@ class TestEdgeList:
         for e in n.src_edges:
             assert isinstance(e, Edge)
 
+    # test_add
+    # test_add_duplicate
+    # test_discard
+
+    def test_contains(self):
+        n = Node.get(0)
+        e = n.src_edges[0]
+
+        assert e in n.src_edges
+        assert e.id in n.src_edges
+        assert "bob" not in n.src_edges  # type: ignore
+
 
 class TestEdge:
     def test_edge_cache_control(self, clear_cache):
-        cc = Edge.get_cache_control()
+        cc = Edge.cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
         assert ci.hits == 0
