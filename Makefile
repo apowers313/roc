@@ -45,7 +45,7 @@ lint: no-live mypy check-codestyle check-safety
 
 .PHONY: test
 test:
-	PYTHONPATH=$(PYTHONPATH) poetry run pytest -c pyproject.toml
+	poetry run pytest -c pyproject.toml
 #	poetry run coverage-badge -o assets/images/coverage.svg -f
 
 .PHONY: check-codestyle
