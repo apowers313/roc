@@ -49,7 +49,7 @@ def save_recording() -> None:
 
 def do_recording() -> None:
     # TODO: use a mock for this instead
-    GraphDB().record_callback = record_raw_query
+    GraphDB().record_callback = record_raw_fetch
     atexit.register(save_recording)
 
 
@@ -113,7 +113,7 @@ def add_test_record(rec: QueryRecord) -> None:
     cur_dict[str(i)] = rec
 
 
-def record_raw_query(query: str, res: Iterator[Any]) -> None:
+def record_raw_fetch(query: str, res: Iterator[Any]) -> None:
     query = normalize_whitespace(query)
     qr = QueryRecord(query, res)
     add_test_record(qr)

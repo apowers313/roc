@@ -15,13 +15,10 @@ if RECORD_DB:
     do_recording()
 
 
-def mock_raw_query(
-    db: Any, query: str, *, params: dict[str, Any] | None = None, fetch: bool
+def mock_raw_fetch(
+    db: Any, query: str, *, params: dict[str, Any] | None = None
 ) -> Iterator[Any] | None:
-    if fetch:
-        return get_query_record(query)
-
-    return None
+    return get_query_record(query)
 
 
 @pytest.fixture
@@ -33,7 +30,7 @@ def clear_cache():
 @pytest.fixture
 def mock_db(clear_cache):
     if not LIVE_DB:
-        with mock.patch.object(GraphDB, "raw_query", new=mock_raw_query):
+        with mock.patch.object(GraphDB, "raw_fetch", new=mock_raw_fetch):
             yield
     else:
         if RECORD_DB:
@@ -51,6 +48,6 @@ def clear_db():
     yield
     db = GraphDB()
     # delete all test nodes (which may have edges that need to be detached)
-    db.raw_query("MATCH (n:TestNode) DETACH DELETE n", fetch=False)
+    db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
     # delete all nodes without relationships
-    db.raw_query("MATCH (n) WHERE degree(n) = 0 DELETE n", fetch=False)
+    db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
