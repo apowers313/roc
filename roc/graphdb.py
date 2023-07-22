@@ -36,8 +36,8 @@ class GraphDB:
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
-        print(f"raw_fetch: '{query}' *** with params: *** '{params}")
         params = params or {}
+        print(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
         if self.record_callback:
             self.record_callback(query, self.db.execute_and_fetch(query, parameters=params))
@@ -46,6 +46,7 @@ class GraphDB:
         return ret  # type: ignore
 
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
+        params = params or {}
         print(f"raw_execute: '{query}' *** with params: *** '{params}'")
         self.db.execute(query, parameters=params)
 
