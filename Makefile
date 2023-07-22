@@ -41,7 +41,7 @@ formatting: codestyle
 
 #* Linting
 .PHONY: lint
-lint: mypy check-codestyle mypy check-safety no-live
+lint: no-live mypy check-codestyle check-safety
 
 .PHONY: test
 test:
