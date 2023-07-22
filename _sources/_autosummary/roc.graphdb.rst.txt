@@ -22,8 +22,10 @@ roc.graphdb
       Edge
       EdgeFetchIterator
       EdgeList
+      EdgeMeta
       GraphDB
       Node
+      NodeMeta
    
    
 

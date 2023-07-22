@@ -56,24 +56,30 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheControl</span></code>(cache_fn)</p></td>
-<td><p></p></td>
+<td><p>For controlling the Node and Edge caches, such as clearing them, getting their current or max size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheInfo</span></code>(hits, misses, maxsize, currsize)</p></td>
-<td><p></p></td>
+<td><p>Information about the cache: hits, misses, max size, and current size.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code>(id, src_id, dst_id, *[, data, type])</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code>(src_id, dst_id, *[, id, data, type])</p></td>
+<td><p>An edge (a.k.a.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code>(edgeFetchList)</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code>(edge_set)</p></td>
+<td><p>The implementation of an iterator for an EdgeList.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeList</span></code>(ids)</p></td>
+<td><p>A list of Edges that is used by Node for keeping track of the connections it has.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeMeta</span></code></p></td>
 <td><p></p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphDB</span></code>()</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphDB</span></code>()</p></td>
+<td><p>A graph database singleton.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code>(*[, id, src_edges, dst_edges, data, labels])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code>(*[, id, src_edges, dst_edges, data, labels])</p></td>
+<td><p>An graph database node that automatically handles CRUD for the underlying graph database objects</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeMeta</span></code></p></td>
 <td><p></p></td>
 </tr>
 </tbody>
