@@ -26,8 +26,8 @@ def mock_raw_query(
 
 @pytest.fixture
 def clear_cache():
-    Node.get_cache_control().clear()
-    Edge.get_cache_control().clear()
+    Node.cache_control.clear()
+    Edge.cache_control.clear()
 
 
 @pytest.fixture

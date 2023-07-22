@@ -1444,7 +1444,7 @@
                     "query": "CREATE (n $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2701
+                            "id": 2790
                         }
                     ]
                 }
@@ -1454,7 +1454,7 @@
                     "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2707
+                            "id": 2796
                         }
                     ]
                 }
@@ -1464,7 +1464,7 @@
                     "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2703
+                            "id": 2792
                         }
                     ]
                 }
@@ -1474,7 +1474,7 @@
                     "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2711
+                            "id": 2794
                         }
                     ]
                 }
@@ -1558,7 +1558,47 @@
                     "query": "CREATE (n $props) RETURN id(n) as id",
                     "res": [
                         {
-                            "id": 2750
+                            "id": 2798
+                        }
+                    ]
+                }
+            },
+            "test_node_update_add_and_remove_label": {
+                "0": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2804
+                        }
+                    ]
+                }
+            },
+            "test_node_update_add_label": {
+                "0": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2800
+                        }
+                    ]
+                }
+            },
+            "test_node_update_properties": {
+                "0": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2806
+                        }
+                    ]
+                }
+            },
+            "test_node_update_remove_label": {
+                "0": {
+                    "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                    "res": [
+                        {
+                            "id": 2802
                         }
                     ]
                 }
