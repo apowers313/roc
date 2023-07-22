@@ -140,7 +140,7 @@ class TestNode:
         assert spy.call_args[0][1] == "CREATE (n:TestNode $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {"testname": "test_node_save_on_delete"}}
 
-    def test_node_update_on_delete(self, mocker, clear_cache):
+    def test_node_update_on_delete(self, mocker, mock_db):
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
         Node.save(n)
         assert not n.new
