@@ -135,10 +135,32 @@ class Edge(metaclass=EdgeMeta):
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
     def get(id: int) -> Edge:
+        """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
+        otherwise the Edge is queried from the graph database based the ID provided and a new
+        Edge is returned and cached.
+
+        Args:
+            id (int): the unique identifier for the Edge
+
+        Returns:
+            Edge: returns the Edge requested by the id
+        """
         return Edge.load(id)
 
     @staticmethod
     def load(id: int) -> Edge:
+        """Loads an Edge from the graph database without attempting to check if the Edge
+        already exists in the cache. Typically this is only called by Edge.get()
+
+        Args:
+            id (int): the unique identifier of the Edge to fetch
+
+        Raises:
+            Exception: if the specified ID does not exist in the cache or the database
+
+        Returns:
+            Edge: returns the Edge requested by the id
+        """
         db = GraphDB()
         edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
         if not len(edge_list) == 1:
