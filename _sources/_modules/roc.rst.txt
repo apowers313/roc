@@ -1,0 +1,61 @@
+roc package
+===========
+
+Submodules
+----------
+
+roc.component module
+--------------------
+
+.. automodule:: roc.component
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+roc.config module
+-----------------
+
+.. automodule:: roc.config
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+roc.event module
+----------------
+
+.. automodule:: roc.event
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+roc.graphdb module
+------------------
+
+.. automodule:: roc.graphdb
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+roc.perception module
+---------------------
+
+.. automodule:: roc.perception
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+roc.script module
+-----------------
+
+.. automodule:: roc.script
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: roc
+   :members:
+   :undoc-members:
+   :show-inheritance:

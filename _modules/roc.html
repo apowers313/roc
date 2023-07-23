@@ -1,0 +1,591 @@
+
+
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>roc package &#8212; ROC  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/bizstyle.css" />
+    
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">ROC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">roc package</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="roc-package">
+<h1>roc package<a class="headerlink" href="#roc-package" title="Permalink to this heading">¶</a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading">¶</a></h2>
+</section>
+<section id="module-roc.component">
+<span id="roc-component-module"></span><h2>roc.component module<a class="headerlink" href="#module-roc.component" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.component.Component">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.component.</span></span><span class="sig-name descname"><span class="pre">Component</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/component.html#Component"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.component.Component" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>An abstract component class for building pieces of ROC that will talk to each other.</p>
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.component.Component.name">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#roc.component.Component.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the name of the component</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the name of the component</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">Component</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+<span class="go">foo</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.component.Component.type">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#roc.component.Component.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>Getter for the type of the component</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the type of the component</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">c</span> <span class="o">=</span> <span class="n">Component</span><span class="p">(</span><span class="s2">&quot;foo&quot;</span><span class="p">,</span> <span class="s2">&quot;bar&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
+<span class="go">bar</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-roc.config">
+<span id="roc-config-module"></span><h2>roc.config module<a class="headerlink" href="#module-roc.config" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.config.DefaultSetting">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.config.</span></span><span class="sig-name descname"><span class="pre">DefaultSetting</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ValType</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">must_exist</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/config.html#DefaultSetting"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.config.DefaultSetting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Validator</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">ValType</span></code>]</p>
+</dd></dl>
+
+</section>
+<section id="module-roc.event">
+<span id="roc-event-module"></span><h2>roc.event module<a class="headerlink" href="#module-roc.event" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.event.BusConnection">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.event.</span></span><span class="sig-name descname"><span class="pre">BusConnection</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bus</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.event.EventBus" title="roc.event.EventBus"><span class="pre">EventBus</span></a><span class="p"><span class="pre">[</span></span><span class="pre">EventData</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">component</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><span class="pre">Component</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/event.html#BusConnection"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.BusConnection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">EventData</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.event.BusConnection.send">
+<span class="sig-name descname"><span class="pre">send</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">EventData</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/event.html#BusConnection.send"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.BusConnection.send" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.event.Event">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.event.</span></span><span class="sig-name descname"><span class="pre">Event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">EventData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><span class="pre">Component</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/event.html#Event"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.Event" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">EventData</span></code>]</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.event.EventBus">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.event.</span></span><span class="sig-name descname"><span class="pre">EventBus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/event.html#EventBus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.EventBus" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">EventData</span></code>]</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.event.EventBus.clear_names">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">clear_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/event.html#EventBus.clear_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.EventBus.clear_names" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.event.EventBus.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">component</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><span class="pre">Component</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.event.BusConnection" title="roc.event.BusConnection"><span class="pre">BusConnection</span></a><span class="p"><span class="pre">[</span></span><span class="pre">EventData</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="roc/event.html#EventBus.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.EventBus.connect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-roc.graphdb">
+<span id="roc-graphdb-module"></span><h2>roc.graphdb module<a class="headerlink" href="#module-roc.graphdb" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.CacheControl">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">CacheControl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#CacheControl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.CacheControl" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">RefType</span></code>]</p>
+<p>For controlling the Node and Edge caches, such as clearing them, getting their current or max
+size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.CacheInfo">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">CacheInfo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">hits</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">misses</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">maxsize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">currsize</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#CacheInfo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.CacheInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">NamedTuple</span></code></p>
+<p>Information about the cache: hits, misses, max size, and current size.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheInfo.currsize">
+<span class="sig-name descname"><span class="pre">currsize</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#roc.graphdb.CacheInfo.currsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 3</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheInfo.hits">
+<span class="sig-name descname"><span class="pre">hits</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#roc.graphdb.CacheInfo.hits" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 0</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheInfo.maxsize">
+<span class="sig-name descname"><span class="pre">maxsize</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#roc.graphdb.CacheInfo.maxsize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 2</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheInfo.misses">
+<span class="sig-name descname"><span class="pre">misses</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em><a class="headerlink" href="#roc.graphdb.CacheInfo.misses" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for field number 1</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.Edge">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#Edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
+implements all phases of CRUD in the underlying graph database. This is a directional
+relationship with a “source” and “destination”. The source and destination properties
+are dynamically loaded through property getters when they are called, and may trigger
+a graph database query if they don’t already exist in the edge cache.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.create">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.dst">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dst</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></em><a class="headerlink" href="#roc.graphdb.Edge.dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.get">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.get" title="Permalink to this definition">¶</a></dt>
+<dd><p>Looks up an Edge based on it’s ID. If the Edge is cached, the cached edge is returned;
+otherwise the Edge is queried from the graph database based the ID provided and a new
+Edge is returned and cached.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>int</em>) – the unique identifier for the Edge</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>returns the Edge requested by the id</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge">Edge</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.load">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads an Edge from the graph database without attempting to check if the Edge
+already exists in the cache. Typically this is only called by Edge.get()</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>id</strong> (<em>int</em>) – the unique identifier of the Edge to fetch</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Exception</strong> – if the specified ID does not exist in the cache or the database</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>returns the Edge requested by the id</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge">Edge</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.save">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.src">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">src</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></em><a class="headerlink" href="#roc.graphdb.Edge.src" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.to_id">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span></span></span><a class="reference internal" href="roc/graphdb.html#Edge.to_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.to_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.update">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeFetchIterator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeFetchIterator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">edge_set</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#EdgeFetchIterator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeFetchIterator" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The implementation of an iterator for an EdgeList. Only intended to be used internally by
+EdgeList.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeList">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#EdgeList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSet</span></code>[<a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a> | <code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>], <code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>]</p>
+<p>A list of Edges that is used by Node for keeping track of the connections it has.
+Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeList.add">
+<span class="sig-name descname"><span class="pre">add</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#EdgeList.add"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeList.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add an element.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeList.discard">
+<span class="sig-name descname"><span class="pre">discard</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#EdgeList.discard"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeList.discard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove an element.  Do not raise an exception if absent.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeMeta">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeMeta</span></span><a class="reference internal" href="roc/graphdb.html#EdgeMeta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeMeta.cache_control">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cache_control</span></span><a class="headerlink" href="#roc.graphdb.EdgeMeta.cache_control" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.GraphDB">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">GraphDB</span></span><a class="reference internal" href="roc/graphdb.html#GraphDB"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A graph database singleton. Settings for the graph database come from the config module.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.GraphDB.raw_execute">
+<span class="sig-name descname"><span class="pre">raw_execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#GraphDB.raw_execute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB.raw_execute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.GraphDB.raw_fetch">
+<span class="sig-name descname"><span class="pre">raw_fetch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Iterator</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="roc/graphdb.html#GraphDB.raw_fetch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB.raw_fetch" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.Node">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>An graph database node that automatically handles CRUD for the underlying graph database objects</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.connect">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.connect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.create">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.get">
+<span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.load">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.load" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.mklabels">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mklabels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.mklabels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.mklabels" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a list of strings into proper Cypher syntax for a graph database query</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.save">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.update">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.NodeMeta">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">NodeMeta</span></span><a class="reference internal" href="roc/graphdb.html#NodeMeta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.NodeMeta" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.NodeMeta.cache_control">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cache_control</span></span><a class="headerlink" href="#roc.graphdb.NodeMeta.cache_control" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-roc.perception">
+<span id="roc-perception-module"></span><h2>roc.perception module<a class="headerlink" href="#module-roc.perception" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.perception.PerceptionComponent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.perception.</span></span><span class="sig-name descname"><span class="pre">PerceptionComponent</span></span><a class="reference internal" href="roc/perception.html#PerceptionComponent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.perception.PerceptionComponent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code></a></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.perception.PerceptionData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.perception.</span></span><span class="sig-name descname"><span class="pre">PerceptionData</span></span><a class="reference internal" href="roc/perception.html#PerceptionData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.perception.PerceptionData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.perception.PerceptionEvent">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.perception.</span></span><span class="sig-name descname"><span class="pre">PerceptionEvent</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">EventData</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><span class="pre">Component</span></a></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/perception.html#PerceptionEvent"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.perception.PerceptionEvent" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#roc.event.Event" title="roc.event.Event"><code class="xref py py-class docutils literal notranslate"><span class="pre">Event</span></code></a>[<a class="reference internal" href="#roc.perception.PerceptionData" title="roc.perception.PerceptionData"><code class="xref py py-class docutils literal notranslate"><span class="pre">PerceptionData</span></code></a>]</p>
+</dd></dl>
+
+</section>
+<section id="module-roc.script">
+<span id="roc-script-module"></span><h2>roc.script module<a class="headerlink" href="#module-roc.script" title="Permalink to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.script.Environment">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.script.</span></span><span class="sig-name descname"><span class="pre">Environment</span></span><a class="reference internal" href="roc/script.html#Environment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.script.Environment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#roc.component.Component" title="roc.component.Component"><code class="xref py py-class docutils literal notranslate"><span class="pre">Component</span></code></a></p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.script.ascii_list">
+<span class="sig-prename descclassname"><span class="pre">roc.script.</span></span><span class="sig-name descname"><span class="pre">ascii_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">al</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="roc/script.html#ascii_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.script.ascii_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.script.int_list">
+<span class="sig-prename descclassname"><span class="pre">roc.script.</span></span><span class="sig-name descname"><span class="pre">int_list</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">al</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="roc/script.html#int_list"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.script.int_list" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.script.print_screen">
+<span class="sig-prename descclassname"><span class="pre">roc.script.</span></span><span class="sig-name descname"><span class="pre">print_screen</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">screen</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">as_int</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/script.html#print_screen"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.script.print_screen" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</section>
+<section id="module-roc">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-roc" title="Permalink to this heading">¶</a></h2>
+<p>Reinforcement Learning of Concepts</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.get_version">
+<span class="sig-prename descclassname"><span class="pre">roc.</span></span><span class="sig-name descname"><span class="pre">get_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="#get_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.get_version" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the version of this package</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The version string of the package in MAJOR.MINOR.REVISION format, or unknown if the             version wasn’t set.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="../index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">roc package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-roc.component">roc.component module</a><ul>
+<li><a class="reference internal" href="#roc.component.Component"><code class="docutils literal notranslate"><span class="pre">Component</span></code></a><ul>
+<li><a class="reference internal" href="#roc.component.Component.name"><code class="docutils literal notranslate"><span class="pre">Component.name</span></code></a></li>
+<li><a class="reference internal" href="#roc.component.Component.type"><code class="docutils literal notranslate"><span class="pre">Component.type</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc.config">roc.config module</a><ul>
+<li><a class="reference internal" href="#roc.config.DefaultSetting"><code class="docutils literal notranslate"><span class="pre">DefaultSetting</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc.event">roc.event module</a><ul>
+<li><a class="reference internal" href="#roc.event.BusConnection"><code class="docutils literal notranslate"><span class="pre">BusConnection</span></code></a><ul>
+<li><a class="reference internal" href="#roc.event.BusConnection.send"><code class="docutils literal notranslate"><span class="pre">BusConnection.send()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.event.Event"><code class="docutils literal notranslate"><span class="pre">Event</span></code></a></li>
+<li><a class="reference internal" href="#roc.event.EventBus"><code class="docutils literal notranslate"><span class="pre">EventBus</span></code></a><ul>
+<li><a class="reference internal" href="#roc.event.EventBus.clear_names"><code class="docutils literal notranslate"><span class="pre">EventBus.clear_names()</span></code></a></li>
+<li><a class="reference internal" href="#roc.event.EventBus.connect"><code class="docutils literal notranslate"><span class="pre">EventBus.connect()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc.graphdb">roc.graphdb module</a><ul>
+<li><a class="reference internal" href="#roc.graphdb.CacheControl"><code class="docutils literal notranslate"><span class="pre">CacheControl</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.CacheInfo"><code class="docutils literal notranslate"><span class="pre">CacheInfo</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.CacheInfo.currsize"><code class="docutils literal notranslate"><span class="pre">CacheInfo.currsize</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.CacheInfo.hits"><code class="docutils literal notranslate"><span class="pre">CacheInfo.hits</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.CacheInfo.maxsize"><code class="docutils literal notranslate"><span class="pre">CacheInfo.maxsize</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.CacheInfo.misses"><code class="docutils literal notranslate"><span class="pre">CacheInfo.misses</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.Edge.create"><code class="docutils literal notranslate"><span class="pre">Edge.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.dst"><code class="docutils literal notranslate"><span class="pre">Edge.dst</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.get"><code class="docutils literal notranslate"><span class="pre">Edge.get()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.load"><code class="docutils literal notranslate"><span class="pre">Edge.load()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.save"><code class="docutils literal notranslate"><span class="pre">Edge.save()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.src"><code class="docutils literal notranslate"><span class="pre">Edge.src</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.to_id"><code class="docutils literal notranslate"><span class="pre">Edge.to_id()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.update"><code class="docutils literal notranslate"><span class="pre">Edge.update()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.EdgeFetchIterator"><code class="docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.EdgeList"><code class="docutils literal notranslate"><span class="pre">EdgeList</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.EdgeList.add"><code class="docutils literal notranslate"><span class="pre">EdgeList.add()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.EdgeList.discard"><code class="docutils literal notranslate"><span class="pre">EdgeList.discard()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.EdgeMeta"><code class="docutils literal notranslate"><span class="pre">EdgeMeta</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.EdgeMeta.cache_control"><code class="docutils literal notranslate"><span class="pre">EdgeMeta.cache_control</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.GraphDB"><code class="docutils literal notranslate"><span class="pre">GraphDB</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.GraphDB.raw_execute"><code class="docutils literal notranslate"><span class="pre">GraphDB.raw_execute()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.GraphDB.raw_fetch"><code class="docutils literal notranslate"><span class="pre">GraphDB.raw_fetch()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.Node"><code class="docutils literal notranslate"><span class="pre">Node</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.Node.connect"><code class="docutils literal notranslate"><span class="pre">Node.connect()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.create"><code class="docutils literal notranslate"><span class="pre">Node.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.get"><code class="docutils literal notranslate"><span class="pre">Node.get()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.load"><code class="docutils literal notranslate"><span class="pre">Node.load()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.mklabels"><code class="docutils literal notranslate"><span class="pre">Node.mklabels()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.save"><code class="docutils literal notranslate"><span class="pre">Node.save()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.update"><code class="docutils literal notranslate"><span class="pre">Node.update()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.NodeMeta"><code class="docutils literal notranslate"><span class="pre">NodeMeta</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.NodeMeta.cache_control"><code class="docutils literal notranslate"><span class="pre">NodeMeta.cache_control</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc.perception">roc.perception module</a><ul>
+<li><a class="reference internal" href="#roc.perception.PerceptionComponent"><code class="docutils literal notranslate"><span class="pre">PerceptionComponent</span></code></a></li>
+<li><a class="reference internal" href="#roc.perception.PerceptionData"><code class="docutils literal notranslate"><span class="pre">PerceptionData</span></code></a></li>
+<li><a class="reference internal" href="#roc.perception.PerceptionEvent"><code class="docutils literal notranslate"><span class="pre">PerceptionEvent</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc.script">roc.script module</a><ul>
+<li><a class="reference internal" href="#roc.script.Environment"><code class="docutils literal notranslate"><span class="pre">Environment</span></code></a></li>
+<li><a class="reference internal" href="#roc.script.ascii_list"><code class="docutils literal notranslate"><span class="pre">ascii_list()</span></code></a></li>
+<li><a class="reference internal" href="#roc.script.int_list"><code class="docutils literal notranslate"><span class="pre">int_list()</span></code></a></li>
+<li><a class="reference internal" href="#roc.script.print_screen"><code class="docutils literal notranslate"><span class="pre">print_screen()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#module-roc">Module contents</a><ul>
+<li><a class="reference internal" href="#roc.get_version"><code class="docutils literal notranslate"><span class="pre">get_version()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/_modules/roc.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../index.html">ROC  documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">roc package</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Adam Powers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.0.1.
+    </div>
+  </body>
+</html>

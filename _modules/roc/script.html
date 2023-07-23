@@ -1,0 +1,183 @@
+
+
+<!doctype html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>roc.script &#8212; ROC  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/bizstyle.css" />
+    
+    <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+    <script src="../../_static/doctools.js"></script>
+    <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/bizstyle.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <!--[if lt IE 9]>
+    <script src="_static/css3-mediaqueries.js"></script>
+    <![endif]-->
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">ROC  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../roc.html" accesskey="U">roc</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">roc.script</a></li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for roc.script</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span>
+
+<span class="kn">import</span> <span class="nn">click</span>
+<span class="kn">import</span> <span class="nn">gym</span>
+<span class="kn">import</span> <span class="nn">nle</span>  <span class="c1"># noqa</span>
+<span class="kn">from</span> <span class="nn">icecream</span> <span class="kn">import</span> <span class="n">ic</span>
+
+<span class="kn">from</span> <span class="nn">roc.component</span> <span class="kn">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">roc.perception</span> <span class="kn">import</span> <span class="n">perception_bus</span>
+
+<span class="n">pp</span> <span class="o">=</span> <span class="n">pprint</span><span class="o">.</span><span class="n">PrettyPrinter</span><span class="p">(</span><span class="n">width</span><span class="o">=</span><span class="mi">41</span><span class="p">,</span> <span class="n">compact</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ascii_list"><a class="viewcode-back" href="../roc.html#roc.script.ascii_list">[docs]</a><span class="k">def</span> <span class="nf">ascii_list</span><span class="p">(</span><span class="n">al</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">result_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">ascii_value</span> <span class="ow">in</span> <span class="n">al</span><span class="p">:</span>
+        <span class="n">result_string</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">ascii_value</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">result_string</span></div>
+
+
+<div class="viewcode-block" id="int_list"><a class="viewcode-back" href="../roc.html#roc.script.int_list">[docs]</a><span class="k">def</span> <span class="nf">int_list</span><span class="p">(</span><span class="n">al</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">result_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">ascii_value</span> <span class="ow">in</span> <span class="n">al</span><span class="p">:</span>
+        <span class="n">result_string</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">ascii_value</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span>
+
+    <span class="k">return</span> <span class="n">result_string</span></div>
+
+
+<div class="viewcode-block" id="print_screen"><a class="viewcode-back" href="../roc.html#roc.script.print_screen">[docs]</a><span class="k">def</span> <span class="nf">print_screen</span><span class="p">(</span><span class="n">screen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">as_int</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">screen</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">as_int</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">ascii_list</span><span class="p">(</span><span class="n">row</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">int_list</span><span class="p">(</span><span class="n">row</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="Environment"><a class="viewcode-back" href="../roc.html#roc.script.Environment">[docs]</a><span class="k">class</span> <span class="nc">Environment</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;environment&quot;</span><span class="p">,</span> <span class="s2">&quot;environment&quot;</span><span class="p">)</span>
+        <span class="c1"># self.attach(perception_bus)</span>
+        <span class="n">perception_bus</span></div>
+
+
+<span class="nd">@click</span><span class="o">.</span><span class="n">command</span>
+<span class="nd">@click</span><span class="o">.</span><span class="n">option</span><span class="p">(</span><span class="s2">&quot;--arg&quot;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">cli</span><span class="p">(</span><span class="n">arg</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;hello cli&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;arg is&quot;</span><span class="p">,</span> <span class="n">arg</span><span class="p">)</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="s2">&quot;NetHackScore-v0&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">observation_space</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">reward_range</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">repr</span><span class="p">(</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">sample</span><span class="p">()))</span>
+    <span class="n">env</span><span class="o">.</span><span class="n">print_action_meanings</span><span class="p">()</span>
+    <span class="p">(</span><span class="n">obs</span><span class="p">)</span> <span class="o">=</span> <span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+    <span class="n">pp</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">ascii_list</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;message&quot;</span><span class="p">]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;observation keys:&quot;</span><span class="p">,</span> <span class="n">obs</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+    <span class="c1"># print(obs[&quot;blstats&quot;])</span>
+    <span class="c1"># print(type(obs[&quot;blstats&quot;]))</span>
+    <span class="c1"># print(obs[&quot;blstats&quot;].shape)</span>
+    <span class="n">ic</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;tty_chars&quot;</span><span class="p">])</span>
+    <span class="n">print_screen</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;tty_chars&quot;</span><span class="p">])</span>
+    <span class="n">ic</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;screen_descriptions&quot;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;screen_descriptions&quot;</span><span class="p">]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;screen_descriptions&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="c1"># for screen in obs[&quot;screen_descriptions&quot;]:</span>
+    <span class="c1">#     print(&quot;next screen&quot;)</span>
+    <span class="c1">#     for row in screen:</span>
+    <span class="c1">#         print(ascii_list(row))</span>
+    <span class="c1"># env.render()</span>
+
+    <span class="c1"># obs, reward, terminated, truncated = env.step(env.action_space.sample())</span>
+    <span class="c1"># pp.pprint(obs)</span>
+    <span class="c1"># pp.pprint(reward)</span>
+    <span class="c1"># print(&quot;terminated:&quot;, terminated)</span>
+    <span class="c1"># print(&quot;truncated:&quot;, truncated)</span>
+    <span class="n">print_screen</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">])</span>
+    <span class="n">print_screen</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;colors&quot;</span><span class="p">],</span> <span class="n">as_int</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">print_screen</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;inv_strs&quot;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;glyphs&quot;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;glyphs&quot;</span><span class="p">]))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;inv_oclasses&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;inv_oclasses&quot;</span><span class="p">])</span>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">cli</span><span class="p">()</span>
+</pre></div>
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">ROC  documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >Module code</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="../roc.html" >roc</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">roc.script</a></li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2023, Adam Powers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.0.1.
+    </div>
+  </body>
+</html>
