@@ -75,13 +75,17 @@ no-live:
 	grep '^\s*RECORD_DB\s*=\s*False\s*$$' tests/conftest.py
 
 # Docs
+.PHONY: update-api-docs
+update-api-docs:
+	poetry run sphinx-apidoc -f -o ./docs/_modules ./roc
+
 .PHONY: docs
-docs:
+docs: update-api-docs
 	cd docs && make html
 
 .PHONY: edit-docs
 edit-docs:
-	poetry run sphinx-autobuild --host 0.0.0.0 --port 9000 docs docs/_build/html
+	poetry run sphinx-autobuild --pre-build "make update-api-docs" --host 0.0.0.0 --port 9000 docs docs/_build/html
 
 # Coverage
 .PHONY: coverage
