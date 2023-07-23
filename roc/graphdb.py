@@ -82,6 +82,14 @@ class CacheControl(Generic[RefType]):
 next_new_edge = -1
 
 
+class EdgeNotFound(Exception):
+    pass
+
+
+class EdgeCreateFailed(Exception):
+    pass
+
+
 class EdgeMeta(type):
     @property
     def cache_control(cls):
@@ -101,10 +109,10 @@ class Edge(metaclass=EdgeMeta):
         self,
         src_id: int,
         dst_id: int,
+        type: str,
         *,
         id: int | None = None,
         data: dict[Any, Any] | None = None,
-        type: str | None = None,
     ):
         self.new = False
 
@@ -116,7 +124,7 @@ class Edge(metaclass=EdgeMeta):
             Edge.cache_control.cache[id] = self
 
         self.id = id
-        self.type = type
+        self.__type = type
         self.data = data or {}
         self.src_id = src_id
         self.dst_id = dst_id
@@ -131,6 +139,10 @@ class Edge(metaclass=EdgeMeta):
     @property
     def dst(self) -> Node:
         return Node.get(self.dst_id)
+
+    @property
+    def type(self) -> str:
+        return self.__type
 
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
@@ -156,7 +168,7 @@ class Edge(metaclass=EdgeMeta):
             id (int): the unique identifier of the Edge to fetch
 
         Raises:
-            Exception: if the specified ID does not exist in the cache or the database
+            EdgeNotFound: if the specified ID does not exist in the cache or the database
 
         Returns:
             Edge: returns the Edge requested by the id
@@ -164,7 +176,7 @@ class Edge(metaclass=EdgeMeta):
         db = GraphDB()
         edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
         if not len(edge_list) == 1:
-            raise Exception(f"Couldn't find edge ID: {id}")
+            raise EdgeNotFound(f"Couldn't find edge ID: {id}")
 
         e = edge_list[0]["e"]
         props = None
@@ -181,10 +193,43 @@ class Edge(metaclass=EdgeMeta):
 
     @staticmethod
     def create(e: Edge) -> Edge:
+        db = GraphDB()
+        old_id = e.id
+
+        if e.src.new:
+            Node.save(e.src)
+
+        if e.dst.new:
+            Node.save(e.dst)
+
+        params = {"props": e.data}
+
+        ret = list(
+            db.raw_fetch(
+                f"""
+                MATCH (src), (dst)
+                WHERE id(src) = {e.src_id} AND id(dst) = {e.dst_id} 
+                CREATE (src)-[e:{e.type} $props]->(dst)
+                RETURN id(e) as e_id
+                """,
+                params=params,
+            )
+        )
+
+        if len(ret) != 1:
+            raise EdgeCreateFailed("failed to create new edge")
+
+        e.id = ret[0]["e_id"]
+        e.new = False
+        # update cache to use new id
+        cache = Edge.cache_control.cache
+        del cache[old_id]
+        cache[e.id] = e
+        # update references to edge id
+        e.src.src_edges.replace(old_id, e.id)
+        e.dst.dst_edges.replace(old_id, e.id)
+
         return e
-        # Node.save(e.src)
-        # Node.save(e.dst)
-        # db.raw_execute()
 
     @staticmethod
     def update(e: Edge) -> Edge:
@@ -204,18 +249,18 @@ class EdgeFetchIterator:
     EdgeList.
     """
 
-    def __init__(self, edge_set: list[int]):
-        self.__edge_set = edge_set
+    def __init__(self, edge_list: list[int]):
+        self.__edge_list = edge_list
         self.cur = 0
 
     def __iter__(self):
         return self
 
     def __next__(self):
-        if self.cur >= len(self.__edge_set):
+        if self.cur >= len(self.__edge_list):
             raise StopIteration
 
-        id = self.__edge_set[self.cur]
+        id = self.__edge_list[self.cur]
         self.cur = self.cur + 1
         return Edge.get(id)
 
@@ -259,8 +304,23 @@ class EdgeList(MutableSet[Edge | int], Mapping[int, Edge]):
 
         return e_id in self.__edges
 
+    def replace(self, old: Edge | int, new: Edge | int) -> None:
+        old_id = Edge.to_id(old)
+        new_id = Edge.to_id(new)
+        for i in range(len(self.__edges)):
+            if self.__edges[i] == old_id:
+                self.__edges[i] = new_id
+
 
 next_new_node = -1
+
+
+class NodeNotFound(Exception):
+    pass
+
+
+class NodeCreationFailed(Exception):
+    pass
 
 
 class NodeMeta(type):
@@ -319,7 +379,7 @@ class Node(metaclass=NodeMeta):
         # print("RES", res)
 
         if not len(res) >= 1:
-            raise Exception(f"Couldn't find node ID: {id}")
+            raise NodeNotFound(f"Couldn't find node ID: {id}")
 
         n = res[0]["n"]
         edges = list(
@@ -376,6 +436,7 @@ class Node(metaclass=NodeMeta):
     @staticmethod
     def create(n: Node) -> Node:
         db = GraphDB()
+        old_id = n.id
 
         label_str = Node.mklabels(n.labels)
         params = {"props": n.data}
@@ -383,16 +444,27 @@ class Node(metaclass=NodeMeta):
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
         if not len(res) >= 1:
-            raise Exception(f"Couldn't find node ID: {id}")
+            raise NodeCreationFailed(f"Couldn't find node ID: {id}")
+
         new_id = res[0]["id"]
         n.id = new_id
         n.new = False
-        # TODO: update edges with new ID
+        cache = Node.cache_control.cache
+        del cache[old_id]
+        cache[new_id] = n
+
+        for e in n.src_edges:
+            assert e.src_id == old_id
+            e.src_id = new_id
+
+        for e in n.dst_edges:
+            assert e.dst_id == old_id
+            e.dst_id = new_id
 
         return n
 
     @staticmethod
-    def connect(src: int | Node, dst: int | Node) -> Edge:
+    def connect(src: int | Node, dst: int | Node, type: str) -> Edge:
         if isinstance(src, Node):
             src_id = src.id
         else:
@@ -403,7 +475,7 @@ class Node(metaclass=NodeMeta):
         else:
             dst_id = dst
 
-        e = Edge(src_id, dst_id)
+        e = Edge(src_id, dst_id, type)
         src_node = Node.get(src_id)
         dst_node = Node.get(dst_id)
         src_node.src_edges.add(e)

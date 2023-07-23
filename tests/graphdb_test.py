@@ -3,8 +3,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
+from helpers.db_record import normalize_whitespace
 
-from roc.graphdb import Edge, GraphDB, Node
+from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeNotFound
 
 
 class TestGraphDB:
@@ -292,7 +293,7 @@ class TestNode:
         n1 = Node()
         n2 = Node()
 
-        e = Node.connect(n1, n2)
+        e = Node.connect(n1, n2, "Test")
 
         assert len(n1.src_edges) == 1
         assert len(n1.dst_edges) == 0
@@ -302,6 +303,55 @@ class TestNode:
         assert e in n2.dst_edges
         assert e.src_id == n1.id
         assert e.dst_id == n2.id
+
+    def test_node_create_updates_edge_src(self, mock_db):
+        n1 = Node(labels=["TestNode"])
+        old_id = n1.id
+        n2 = Node(labels=["TestNode"])
+        e = Node.connect(n1, n2, "Test")
+        Node.save(n1)
+
+        # edge is still new
+        assert e.new
+        assert e.id < 0
+        # but src node id has been updated
+        assert old_id != n1.id
+        # and edge src has been updated
+        assert e.src_id == n1.id
+
+    def test_node_create_updates_edge_dst(self, mock_db):
+        n1 = Node(labels=["TestNode"])
+        n2 = Node(labels=["TestNode"])
+        n2_id = n2.id
+        e = Node.connect(n1, n2, "Test")
+        Node.save(n2)
+
+        # edge is still new
+        assert e.new
+        assert e.id < 0
+        # but src node id has been updated
+        assert n2_id != n2.id
+        # and edge dst has been updated
+        assert e.dst_id == n2.id
+
+    def test_node_create_updates_cache(self, mock_db):
+        cc = Node.cache_control
+        n = Node(labels=["TestNode"])
+        old_id = n.id
+
+        Node.create(n)
+
+        assert cc.info().hits == 0
+        assert cc.info().misses == 0
+        # old ID doesn't exist in cache
+        with pytest.raises(NodeNotFound):
+            Node.get(old_id)
+        assert cc.info().hits == 0
+        assert cc.info().misses == 1
+        # new ID does exist in cache
+        Node.get(n.id)
+        assert cc.info().hits == 1
+        assert cc.info().misses == 1
 
 
 class TestEdgeList:
@@ -387,6 +437,118 @@ class TestEdge:
         assert id(e11.dst) == id(n0)
         assert id(e0.dst) == id(n6)
         assert id(e1.dst) == id(n453)
+
+    def test_edge_create(self, mocker, mock_db):
+        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        e_id = e.id
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
+        e = Edge.create(e)
+
+        # saved both new nodes
+        assert not e.src.new
+        assert not e.dst.new
+        assert not e.new
+        # created an ID
+        assert e.id != e_id
+        assert e.id > 0
+
+        assert spy.call_count == 3
+        query = normalize_whitespace(spy.call_args[0][1])
+        esc_str = re.escape(
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id"  # noqa: E501
+        )
+        match_str = esc_str.replace("3102", "\d+")
+        match_str = match_str.replace("3103", "\d+")
+        assert re.search(match_str, query)
+
+    def test_edge_create_with_data(self, mocker, mock_db):
+        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        e_id = e.id
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
+        e.data = {"name": "bob", "fun": False}
+        e = Edge.create(e)
+
+        # saved both new nodes
+        assert not e.src.new
+        assert not e.dst.new
+        assert not e.new
+        # created an ID
+        assert e.id != e_id
+        assert e.id > 0
+
+        assert spy.call_count == 3
+        query = normalize_whitespace(spy.call_args[0][1])
+        esc_str = re.escape(
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id"  # noqa: E501
+        )
+        match_str = esc_str.replace("3102", "\d+")
+        match_str = match_str.replace("3103", "\d+")
+        assert re.search(match_str, query)
+        assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
+
+    def test_edge_create_updates_cache(self, clear_cache, mock_db):
+        cc = Edge.cache_control
+        assert cc.info().hits == 0
+        assert cc.info().misses == 0
+        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        old_id = e.id
+
+        Edge.create(e)
+
+        # NOTE: Node.create() is called by Edge.create() if the nodes are new
+        # Node.create() updates the edge.src and edge.dst, so it hits the cache twice
+        assert cc.info().hits == 2
+        assert cc.info().misses == 0
+        # old ID doesn't exist in cache
+        with pytest.raises(EdgeNotFound):
+            Edge.get(old_id)
+        assert cc.info().hits == 2
+        assert cc.info().misses == 1
+        # new ID does exist in cache
+        Edge.get(e.id)
+        assert cc.info().hits == 3
+        assert cc.info().misses == 1
+
+    def test_edge_create_updates_node_edges(self, mock_db):
+        src_n = Node(labels=["TestNode"])
+        dst_n = Node(labels=["TestNode"])
+        e = Node.connect(src_n, dst_n, "Test")
+        old_id = e.id
+        e.data = {"name": "bob", "fun": False}
+
+        e = Edge.create(e)
+
+        assert e.id != old_id
+        assert e.id in src_n.src_edges
+        assert e.id in dst_n.dst_edges
+
+    def test_edge_immutable_properties(self, mock_db):
+        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        # orig_src_id = e.src_id
+        # orig_dst_id = e.dst_id
+        orig_src = e.src
+        orig_dst = e.dst
+        orig_type = e.type
+
+        # e.src_id = -666
+        # e.dst_id = -666
+        with pytest.raises(AttributeError):
+            e.src = Node()  # type: ignore
+        with pytest.raises(AttributeError):
+            e.dst = Node()  # type: ignore
+        with pytest.raises(AttributeError):
+            e.type = "jackedup"  # type: ignore
+
+        # assert e.src_id == orig_src_id
+        # assert e.dst_id == orig_dst_id
+        assert id(e.src) == id(orig_src)
+        assert id(e.dst) == id(orig_dst)
+        assert e.type == orig_type
+
+    # test_edge_update
+    # test_edge_update_data
+    # test_edge_src_after_node_save
+    # test_edge_dst_after_node_save
 
     @pytest.mark.skip("pending")
     def test_edge_cache(self):
