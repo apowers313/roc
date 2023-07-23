@@ -24,7 +24,10 @@ def mock_raw_execute(db: Any, query: str, *, params: dict[str, Any] | None = Non
 
 
 @pytest.fixture
-def clear_cache():
+def clear_cache(scope="function", autouse=True):
+    Node.cache_control.clear()
+    Edge.cache_control.clear()
+    yield
     Node.cache_control.clear()
     Edge.cache_control.clear()
 

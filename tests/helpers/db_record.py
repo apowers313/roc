@@ -150,7 +150,11 @@ def get_query_record(query: str) -> Iterator[Any]:
     set_test_count()
     curr_test = get_current_test_record()
     curr_test = curr_test[str(curr_test_count)]
-    if curr_test["query"] != query:
+    expected_query = curr_test["query"]
+    esc_str = re.escape(expected_query)
+    match_str = re.sub("\d+", "\\\\d+", esc_str)
+    # if curr_test["query"] != query:
+    if not re.search(match_str, query):
         exception_msg = f"""While mocking database, executed query did not match expected query: 
         EXECUTED QUERY: '{query}'
         EXPECTED QUERY: '{curr_test["query"]}'

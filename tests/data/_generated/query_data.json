@@ -761,6 +761,167 @@
                 },
                 "setup": {}
             },
+            "test_edge_create": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3560
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3562
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "MATCH (src), (dst) WHERE id(src) = 3561 AND id(dst) = 3563 CREATE (src)-[e:Test $props]->(dst) RETURN id(e) as e_id",
+                        "res": [
+                            {
+                                "e_id": 12042
+                            }
+                        ]
+                    }
+                },
+                "setup": {}
+            },
+            "test_edge_create_updates_cache": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3568
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3570
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "MATCH (src), (dst) WHERE id(src) = 3569 AND id(dst) = 3571 CREATE (src)-[e:Test $props]->(dst) RETURN id(e) as e_id",
+                        "res": [
+                            {
+                                "e_id": 12046
+                            }
+                        ]
+                    },
+                    "3": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(e) = -6 RETURN e LIMIT 1",
+                        "res": []
+                    }
+                },
+                "setup": {}
+            },
+            "test_edge_create_updates_node_edges": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3572
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3574
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "MATCH (src), (dst) WHERE id(src) = 3573 AND id(dst) = 3575 CREATE (src)-[e:Test $props]->(dst) RETURN id(e) as e_id",
+                        "res": [
+                            {
+                                "e_id": 12048
+                            }
+                        ]
+                    }
+                },
+                "setup": {}
+            },
+            "test_edge_create_with_data": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3564
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3566
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "MATCH (src), (dst) WHERE id(src) = 3565 AND id(dst) = 3567 CREATE (src)-[e:Test $props]->(dst) RETURN id(e) as e_id",
+                        "res": [
+                            {
+                                "e_id": 12044
+                            }
+                        ]
+                    }
+                },
+                "setup": {}
+            },
+            "test_edge_immutable_properties": {
+                "setup": {},
+                "teardown": {
+                    "0": {
+                        "query": "CREATE (n $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3576
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "CREATE (n $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3578
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3580
+                            }
+                        ]
+                    },
+                    "3": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3582
+                            }
+                        ]
+                    },
+                    "4": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(n) = -29 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
+                        "res": []
+                    }
+                }
+            },
             "test_src": {
                 "call": {
                     "0": {
@@ -1371,6 +1532,108 @@
                     }
                 },
                 "setup": {}
+            },
+            "test_iter": {
+                "call": {
+                    "0": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(n) = 0 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
+                        "res": [
+                            {
+                                "e": {
+                                    "_end_node_id": 0,
+                                    "_id": 11,
+                                    "_properties": {
+                                        "count": 1,
+                                        "method": "Ice sword"
+                                    },
+                                    "_start_node_id": 2,
+                                    "_type": "KILLED"
+                                },
+                                "e_end": 0,
+                                "e_id": 11,
+                                "e_start": 2,
+                                "n": {
+                                    "_id": 0,
+                                    "_labels": [
+                                        "Character"
+                                    ],
+                                    "_properties": {
+                                        "name": "Waymar Royce"
+                                    },
+                                    "_type": null
+                                }
+                            },
+                            {
+                                "e": {
+                                    "_end_node_id": 6,
+                                    "_id": 0,
+                                    "_start_node_id": 0,
+                                    "_type": "LOYAL_TO"
+                                },
+                                "e_end": 6,
+                                "e_id": 0,
+                                "e_start": 0,
+                                "n": {
+                                    "_id": 0,
+                                    "_labels": [
+                                        "Character"
+                                    ],
+                                    "_properties": {
+                                        "name": "Waymar Royce"
+                                    },
+                                    "_type": null
+                                }
+                            },
+                            {
+                                "e": {
+                                    "_end_node_id": 453,
+                                    "_id": 1,
+                                    "_start_node_id": 0,
+                                    "_type": "VICTIM_IN"
+                                },
+                                "e_end": 453,
+                                "e_id": 1,
+                                "e_start": 0,
+                                "n": {
+                                    "_id": 0,
+                                    "_labels": [
+                                        "Character"
+                                    ],
+                                    "_properties": {
+                                        "name": "Waymar Royce"
+                                    },
+                                    "_type": null
+                                }
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(e) = 0 RETURN e LIMIT 1",
+                        "res": [
+                            {
+                                "e": {
+                                    "_end_node_id": 6,
+                                    "_id": 0,
+                                    "_start_node_id": 0,
+                                    "_type": "LOYAL_TO"
+                                }
+                            }
+                        ]
+                    },
+                    "2": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(e) = 1 RETURN e LIMIT 1",
+                        "res": [
+                            {
+                                "e": {
+                                    "_end_node_id": 453,
+                                    "_id": 1,
+                                    "_start_node_id": 0,
+                                    "_type": "VICTIM_IN"
+                                }
+                            }
+                        ]
+                    }
+                }
             }
         },
         "TestNode": {
@@ -1457,7 +1720,7 @@
                         "query": "CREATE (n $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3034
+                                "id": 3528
                             }
                         ]
                     }
@@ -1470,19 +1733,80 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3028
+                                "id": 3522
+                            }
+                        ]
+                    }
+                }
+            },
+            "test_node_create_updates_cache": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3558
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(n) = -20 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
+                        "res": []
+                    }
+                },
+                "setup": {}
+            },
+            "test_node_create_updates_edge_dst": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3554
                             }
                         ]
                     }
                 },
-                "setup": {
+                "setup": {},
+                "teardown": {
                     "0": {
-                        "query": "CREATE (n $props) RETURN id(n) as id",
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3026
+                                "id": 3556
                             }
                         ]
+                    },
+                    "1": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(n) = -18 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
+                        "res": []
+                    }
+                }
+            },
+            "test_node_create_updates_edge_src": {
+                "call": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3550
+                            }
+                        ]
+                    }
+                },
+                "setup": {},
+                "teardown": {
+                    "0": {
+                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3552
+                            }
+                        ]
+                    },
+                    "1": {
+                        "query": "MATCH (n)-[e]-(m) WHERE id(n) = 3551 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end",
+                        "res": []
                     }
                 }
             },
@@ -1492,7 +1816,7 @@
                         "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3040
+                                "id": 3534
                             }
                         ]
                     }
@@ -1505,7 +1829,7 @@
                         "query": "CREATE (n:Foo $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3036
+                                "id": 3530
                             }
                         ]
                     }
@@ -1518,7 +1842,7 @@
                         "query": "CREATE (n:Foo:Bar $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3038
+                                "id": 3532
                             }
                         ]
                     }
@@ -1602,21 +1926,25 @@
                 },
                 "setup": {}
             },
+            "test_node_new_in_cache": {
+                "teardown": {
+                    "0": {
+                        "query": "CREATE (n $props) RETURN id(n) as id",
+                        "res": [
+                            {
+                                "id": 3520
+                            }
+                        ]
+                    }
+                }
+            },
             "test_node_update": {
                 "call": {
                     "0": {
                         "query": "CREATE (n $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3042
-                            }
-                        ]
-                    },
-                    "1": {
-                        "query": "CREATE (n $props) RETURN id(n) as id",
-                        "res": [
-                            {
-                                "id": 3056
+                                "id": 3536
                             }
                         ]
                     }
@@ -1629,7 +1957,7 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3048
+                                "id": 3542
                             }
                         ]
                     }
@@ -1642,7 +1970,7 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3044
+                                "id": 3538
                             }
                         ]
                     }
@@ -1655,15 +1983,7 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3030
-                            }
-                        ]
-                    },
-                    "1": {
-                        "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
-                        "res": [
-                            {
-                                "id": 3058
+                                "id": 3524
                             }
                         ]
                     }
@@ -1676,7 +1996,7 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3050
+                                "id": 3544
                             }
                         ]
                     }
@@ -1689,7 +2009,7 @@
                         "query": "CREATE (n:TestNode $props) RETURN id(n) as id",
                         "res": [
                             {
-                                "id": 3046
+                                "id": 3540
                             }
                         ]
                     }
