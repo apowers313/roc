@@ -183,6 +183,7 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 docs/_autosummary
+docs/_modules
 
 # PyBuilder
 target/
