@@ -41,7 +41,9 @@ jobs:
   test:
     needs: lint
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+
+    container: ghcr.io/apowers313/roc-dev:1.1.0
 
     strategy:
       matrix:
