@@ -5,6 +5,7 @@ on: [push]
 permissions:
   contents: write
   pages: write
+  packages: write
 
 jobs:
   lint:
