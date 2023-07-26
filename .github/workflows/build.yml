@@ -13,9 +13,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install poetry
-      run: make poetry-download
-
     - name: Set up cache
       uses: actions/cache@v3.3.1
       with:
@@ -57,9 +54,6 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install poetry
-      run: make poetry-download
-
     - name: Set up cache
       uses: actions/cache@v3.3.1
       with:
@@ -86,9 +80,6 @@ jobs:
       uses: actions/setup-python@v4.7.0
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install poetry
-      run: make poetry-download
 
     - name: Set up cache
       uses: actions/cache@v3.3.1
@@ -121,9 +112,6 @@ jobs:
       uses: actions/setup-python@v4.7.0
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install poetry
-      run: make poetry-download
 
     - name: Set up cache
       uses: actions/cache@v3.3.1
