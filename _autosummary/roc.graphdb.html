@@ -61,10 +61,10 @@
 <tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.CacheInfo" title="roc.graphdb.CacheInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheInfo</span></code></a>(hits, misses, maxsize, currsize)</p></td>
 <td><p>Information about the cache: hits, misses, max size, and current size.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code></a>(src_id, dst_id, *[, id, data, type])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code></a>(src_id, dst_id, type, *[, id, data])</p></td>
 <td><p>An edge (a.k.a.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeFetchIterator" title="roc.graphdb.EdgeFetchIterator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code></a>(edge_set)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeFetchIterator" title="roc.graphdb.EdgeFetchIterator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code></a>(edge_list)</p></td>
 <td><p>The implementation of an iterator for an EdgeList.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeList</span></code></a>(ids)</p></td>
@@ -80,6 +80,23 @@
 <td><p>An graph database node that automatically handles CRUD for the underlying graph database objects</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.NodeMeta" title="roc.graphdb.NodeMeta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeMeta</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Exceptions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeCreateFailed" title="roc.graphdb.EdgeCreateFailed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeCreateFailed</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeNotFound" title="roc.graphdb.EdgeNotFound"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeNotFound</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.NodeCreationFailed" title="roc.graphdb.NodeCreationFailed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeCreationFailed</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.NodeNotFound" title="roc.graphdb.NodeNotFound"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeNotFound</span></code></a></p></td>
 <td><p></p></td>
 </tr>
 </tbody>

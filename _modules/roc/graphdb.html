@@ -127,6 +127,14 @@
 <span class="n">next_new_edge</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
 
 
+<div class="viewcode-block" id="EdgeNotFound"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeNotFound">[docs]</a><span class="k">class</span> <span class="nc">EdgeNotFound</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="EdgeCreateFailed"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeCreateFailed">[docs]</a><span class="k">class</span> <span class="nc">EdgeCreateFailed</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
 <div class="viewcode-block" id="EdgeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeMeta">[docs]</a><span class="k">class</span> <span class="nc">EdgeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">cache_control</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
@@ -146,10 +154,10 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">src_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">dst_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
 
@@ -161,7 +169,7 @@
             <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">type</span> <span class="o">=</span> <span class="nb">type</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__type</span> <span class="o">=</span> <span class="nb">type</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">src_id</span> <span class="o">=</span> <span class="n">src_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">dst_id</span> <span class="o">=</span> <span class="n">dst_id</span>
@@ -176,6 +184,10 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dst</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dst_id</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__type</span>
 
 <div class="viewcode-block" id="Edge.get"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.get">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -201,7 +213,7 @@
 <span class="sd">            id (int): the unique identifier of the Edge to fetch</span>
 
 <span class="sd">        Raises:</span>
-<span class="sd">            Exception: if the specified ID does not exist in the cache or the database</span>
+<span class="sd">            EdgeNotFound: if the specified ID does not exist in the cache or the database</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Edge: returns the Edge requested by the id</span>
@@ -209,7 +221,7 @@
         <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">edge_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n)-[e]-(m) WHERE id(e) = </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2"> RETURN e LIMIT 1&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find edge ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">EdgeNotFound</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find edge ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="n">e</span> <span class="o">=</span> <span class="n">edge_list</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;e&quot;</span><span class="p">]</span>
         <span class="n">props</span> <span class="o">=</span> <span class="kc">None</span>
@@ -226,10 +238,43 @@
 
 <div class="viewcode-block" id="Edge.create"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.create">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
+        <span class="n">old_id</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span>
+
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">new</span><span class="p">:</span>
+            <span class="n">Node</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">new</span><span class="p">:</span>
+            <span class="n">Node</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+
+        <span class="n">ret</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                MATCH (src), (dst)</span>
+<span class="s2">                WHERE id(src) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="si">}</span><span class="s2"> AND id(dst) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">dst_id</span><span class="si">}</span><span class="s2"> </span>
+<span class="s2">                CREATE (src)-[e:</span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">type</span><span class="si">}</span><span class="s2"> $props]-&gt;(dst)</span>
+<span class="s2">                RETURN id(e) as e_id</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="p">,</span>
+                <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">ret</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">EdgeCreateFailed</span><span class="p">(</span><span class="s2">&quot;failed to create new edge&quot;</span><span class="p">)</span>
+
+        <span class="n">e</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">ret</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;e_id&quot;</span><span class="p">]</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="c1"># update cache to use new id</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
+        <span class="n">cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
+        <span class="c1"># update references to edge id</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">old_id</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">e</span></div>
-        <span class="c1"># Node.save(e.src)</span>
-        <span class="c1"># Node.save(e.dst)</span>
-        <span class="c1"># db.raw_execute()</span>
 
 <div class="viewcode-block" id="Edge.update"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.update">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
@@ -249,18 +294,18 @@
 <span class="sd">    EdgeList.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_set</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__edge_set</span> <span class="o">=</span> <span class="n">edge_set</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">edge_list</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__edge_list</span> <span class="o">=</span> <span class="n">edge_list</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">=</span> <span class="mi">0</span>
 
     <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edge_set</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edge_list</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">StopIteration</span>
 
-        <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__edge_set</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cur</span><span class="p">]</span>
+        <span class="nb">id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__edge_list</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">cur</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">+</span> <span class="mi">1</span>
         <span class="k">return</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></div>
 
@@ -302,10 +347,25 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
 
-        <span class="k">return</span> <span class="n">e_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__edges</span></div>
+        <span class="k">return</span> <span class="n">e_id</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__edges</span>
+
+<div class="viewcode-block" id="EdgeList.replace"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeList.replace">[docs]</a>    <span class="k">def</span> <span class="nf">replace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">old</span><span class="p">:</span> <span class="n">Edge</span> <span class="o">|</span> <span class="nb">int</span><span class="p">,</span> <span class="n">new</span><span class="p">:</span> <span class="n">Edge</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">old_id</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">to_id</span><span class="p">(</span><span class="n">old</span><span class="p">)</span>
+        <span class="n">new_id</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">to_id</span><span class="p">(</span><span class="n">new</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">old_id</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_id</span></div></div>
 
 
 <span class="n">next_new_node</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+
+<div class="viewcode-block" id="NodeNotFound"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeNotFound">[docs]</a><span class="k">class</span> <span class="nc">NodeNotFound</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="NodeCreationFailed"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeCreationFailed">[docs]</a><span class="k">class</span> <span class="nc">NodeCreationFailed</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+    <span class="k">pass</span></div>
 
 
 <div class="viewcode-block" id="NodeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeMeta">[docs]</a><span class="k">class</span> <span class="nc">NodeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
@@ -364,7 +424,7 @@
         <span class="c1"># print(&quot;RES&quot;, res)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find node ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">NodeNotFound</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find node ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
         <span class="n">n</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;n&quot;</span><span class="p">]</span>
         <span class="n">edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
@@ -421,6 +481,7 @@
 <div class="viewcode-block" id="Node.create"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.create">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
         <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
+        <span class="n">old_id</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span>
 
         <span class="n">label_str</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">mklabels</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
         <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
@@ -428,16 +489,27 @@
         <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CREATE (n</span><span class="si">{</span><span class="n">label_str</span><span class="si">}</span><span class="s2"> $props) RETURN id(n) as id&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">))</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find node ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="n">NodeCreationFailed</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find node ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
         <span class="n">new_id</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
         <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">new_id</span>
         <span class="n">n</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="c1"># TODO: update edges with new ID</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
+        <span class="n">cache</span><span class="p">[</span><span class="n">new_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">src_edges</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span> <span class="o">==</span> <span class="n">old_id</span>
+            <span class="n">e</span><span class="o">.</span><span class="n">src_id</span> <span class="o">=</span> <span class="n">new_id</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">dst_edges</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">e</span><span class="o">.</span><span class="n">dst_id</span> <span class="o">==</span> <span class="n">old_id</span>
+            <span class="n">e</span><span class="o">.</span><span class="n">dst_id</span> <span class="o">=</span> <span class="n">new_id</span>
 
         <span class="k">return</span> <span class="n">n</span></div>
 
 <div class="viewcode-block" id="Node.connect"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.connect">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Node</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="n">src</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Node</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="n">Node</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">Node</span><span class="p">):</span>
             <span class="n">src_id</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">id</span>
         <span class="k">else</span><span class="p">:</span>
@@ -448,7 +520,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">dst_id</span> <span class="o">=</span> <span class="n">dst</span>
 
-        <span class="n">e</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">dst_id</span><span class="p">)</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">dst_id</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
         <span class="n">src_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_id</span><span class="p">)</span>
         <span class="n">dst_node</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_id</span><span class="p">)</span>
         <span class="n">src_node</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>

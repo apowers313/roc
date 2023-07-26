@@ -31,6 +31,15 @@ roc.graphdb
 
    
    
+   .. rubric:: Exceptions
+
+   .. autosummary::
+   
+      EdgeCreateFailed
+      EdgeNotFound
+      NodeCreationFailed
+      NodeNotFound
+   
    
 
 
