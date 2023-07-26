@@ -20,6 +20,9 @@ jobs:
         key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
 
     - name: Install dependencies
+      run: id
+      run: echo $PATH
+      run: echo $SHELL
       run: |
         poetry config virtualenvs.in-project true
         poetry install
