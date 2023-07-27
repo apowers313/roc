@@ -137,7 +137,12 @@ warn_unused_ignores = true
 # Directories that are not visited by pytest collector:
 norecursedirs =["hooks", "*.egg", ".eggs", "dist", "build", "docs", ".tox", ".git", "__pycache__"]
 doctest_optionflags = ["NUMBER", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
-filterwarnings = ["ignore::DeprecationWarning", "ignore::gqlalchemy.exceptions.GQLAlchemySubclassNotFoundWarning"]
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning", 
+  "ignore::gqlalchemy.exceptions.GQLAlchemySubclassNotFoundWarning",
+]
+
 markers = [
   "slow: tests that take a long time to run",
 #  "pending: tests that haven't been written yet"
