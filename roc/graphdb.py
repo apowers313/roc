@@ -221,10 +221,13 @@ class Edge(metaclass=EdgeMeta):
 
         e.id = ret[0]["e_id"]
         e.new = False
-        # update cache to use new id
-        cache = Edge.cache_control.cache
-        del cache[old_id]
-        cache[e.id] = e
+        # update the cache; if being called during __del__ then the cache entry may not exist
+        try:
+            cache = Edge.cache_control.cache
+            del cache[old_id]
+            cache[e.id] = e
+        except KeyError:
+            pass
         # update references to edge id
         e.src.src_edges.replace(old_id, e.id)
         e.dst.dst_edges.replace(old_id, e.id)
@@ -449,9 +452,13 @@ class Node(metaclass=NodeMeta):
         new_id = res[0]["id"]
         n.id = new_id
         n.new = False
-        cache = Node.cache_control.cache
-        del cache[old_id]
-        cache[new_id] = n
+        # update the cache; if being called during __del__ then the cache entry may not exist
+        try:
+            cache = Node.cache_control.cache
+            del cache[old_id]
+            cache[new_id] = n
+        except KeyError:
+            pass
 
         for e in n.src_edges:
             assert e.src_id == old_id
