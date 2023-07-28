@@ -43,9 +43,9 @@ jobs:
 
     container:
       image: ghcr.io/apowers313/roc-dev:1.2.0
-      options: >-
-        --user 0:0
-        --volume /data/var/log:/var/log:ro
+      volumes:
+        - /data/var/log:/var/log
+      options: --user 0:0
 
     strategy:
       matrix:
