@@ -3,7 +3,7 @@ name: Test
 on: [push]
 
 env:
-      ROC_DB_HOST=mg
+  ROC_DB_HOST: mg
 
 jobs:
   lint:
