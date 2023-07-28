@@ -51,7 +51,7 @@ jobs:
     #   options: --user 0:0
     services:
       mg:
-        image: memgraph/memgraph
+        image: ghcr.io/apowers313/roc-dev:1.2.0
 
     strategy:
       matrix:
@@ -67,25 +67,25 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install poetry
-      run: |
-        make poetry-download
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
     - name: Set up cache
       uses: actions/cache@v3.3.1
       with:
         path: .venv
         key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
 
+    - name: Install poetry
+      run: |
+        make poetry-download
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
     - name: Install dependencies
       run: |
         poetry config virtualenvs.in-project true
         poetry install
 
-    - name: Load database test data
-      run: |
-        make load-data
+    # - name: Load database test data
+    #   run: |
+    #     make load-data
 
     - name: Run tests
       run: |
