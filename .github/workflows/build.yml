@@ -74,6 +74,15 @@ jobs:
       run: |
         make test
 
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: logs
+        path: /var/log
+        if-no-files-found: error
+        retention-days: 90
+
   docs:
     needs: test
 
