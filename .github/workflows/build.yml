@@ -48,7 +48,7 @@ jobs:
     #   options: --user 0:0
     services:
       mg:
-        images: memgraph/memgraph
+        image: memgraph/memgraph
     
     env:
       ROC_DB_HOST=mg
