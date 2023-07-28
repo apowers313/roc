@@ -19,13 +19,18 @@ if RECORD_DB:
 #     pass
 
 
-@pytest.fixture
-def clear_cache(scope="function", autouse=True):
+@pytest.fixture(autouse=True)
+def clear_cache():
+    node_cache = Node.cache_control.cache
+    edge_cache = Edge.cache_control.cache
+    for n in node_cache:
+        node_cache[n].no_save = True
+    for e in edge_cache:
+        edge_cache[e].no_save = True
+
     Node.cache_control.clear()
     Edge.cache_control.clear()
     yield
-    Node.cache_control.clear()
-    Edge.cache_control.clear()
 
 
 @pytest.fixture

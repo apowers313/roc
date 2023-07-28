@@ -322,6 +322,7 @@ class TestNode:
     def test_node_create_updates_edge_dst(self, mock_db):
         n1 = Node(labels=["TestNode"])
         n2 = Node(labels=["TestNode"])
+
         n2_id = n2.id
         e = Node.connect(n1, n2, "Test")
         Node.save(n2)
@@ -401,7 +402,7 @@ class TestEdgeList:
 
 
 class TestEdge:
-    def test_edge_cache_control(self, clear_cache):
+    def test_edge_cache_control(self):
         cc = Edge.cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()

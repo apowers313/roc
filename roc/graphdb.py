@@ -115,6 +115,7 @@ class Edge(metaclass=EdgeMeta):
         data: dict[Any, Any] | None = None,
     ):
         self.new = False
+        self.no_save = False
 
         if id is None:
             global next_new_edge
@@ -193,6 +194,9 @@ class Edge(metaclass=EdgeMeta):
 
     @staticmethod
     def create(e: Edge) -> Edge:
+        if e.no_save:
+            return e
+
         db = GraphDB()
         old_id = e.id
 
@@ -236,7 +240,11 @@ class Edge(metaclass=EdgeMeta):
 
     @staticmethod
     def update(e: Edge) -> Edge:
-        return e
+        if e.no_save:
+            return e
+
+        print("Trying to update Edge", e.id)
+        raise NotImplementedError
 
     @staticmethod
     def to_id(e: Edge | int) -> int:
@@ -347,6 +355,7 @@ class Node(metaclass=NodeMeta):
         labels: set[str] | list[str] | None = None,
     ):
         self.new = False
+        self.no_save = False
 
         if id is None:
             global next_new_node
@@ -413,6 +422,9 @@ class Node(metaclass=NodeMeta):
 
     @staticmethod
     def update(n: Node) -> Node:
+        if n.no_save:
+            return n
+
         db = GraphDB()
 
         orig_labels = n._orig_labels
@@ -438,6 +450,9 @@ class Node(metaclass=NodeMeta):
 
     @staticmethod
     def create(n: Node) -> Node:
+        if n.no_save:
+            return n
+
         db = GraphDB()
         old_id = n.id
 
