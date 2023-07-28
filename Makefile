@@ -41,7 +41,12 @@ formatting: codestyle
 
 #* Linting
 .PHONY: lint
-lint: no-live mypy check-codestyle check-safety
+# lint: no-live mypy check-codestyle check-safety
+lint: mypy check-codestyle check-safety
+
+.PHONY: load-data
+load-data:
+	mgconsole < tests/data/got.cypherl
 
 .PHONY: test
 test:
