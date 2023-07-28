@@ -43,7 +43,9 @@ jobs:
 
     container:
       image: ghcr.io/apowers313/roc-dev:1.2.0
-      options: --user 0:0
+      options: >-
+        --user 0:0
+        --volume /data/var/log:/var/log:ro
 
     strategy:
       matrix:
@@ -79,7 +81,7 @@ jobs:
       if: always()
       with:
         name: logs
-        path: /var/log
+        path: /data/var/log
         if-no-files-found: error
         retention-days: 90
 
