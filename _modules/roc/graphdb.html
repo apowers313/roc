@@ -288,8 +288,13 @@
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">no_save</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">e</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Trying to update Edge&quot;</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+
+        <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH ()-[e]-&gt;() WHERE id(e) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> SET e = $props&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">e</span></div>
 
 <div class="viewcode-block" id="Edge.to_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.to_id">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">to_id</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span> <span class="o">|</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
