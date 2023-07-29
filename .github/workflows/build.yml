@@ -2,8 +2,8 @@ name: Test
 
 on: [push]
 
-env:
-  ROC_DB_HOST: localhost
+# env:
+#   ROC_DB_HOST: localhost
 
 jobs:
   lint:
@@ -95,14 +95,14 @@ jobs:
       run: |
         make test
 
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v3
-      if: always()
-      with:
-        name: logs
-        path: /data/var/log
-        if-no-files-found: error
-        retention-days: 90
+    # - name: Upload artifacts
+    #   uses: actions/upload-artifact@v3
+    #   if: always()
+    #   with:
+    #     name: logs
+    #     path: /data/var/log
+    #     if-no-files-found: error
+    #     retention-days: 90
 
   docs:
     needs: test
