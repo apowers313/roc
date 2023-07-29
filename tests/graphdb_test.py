@@ -440,8 +440,9 @@ class TestEdge:
         assert id(e1.dst) == id(n453)
 
     def test_edge_create(self, mocker, mock_db):
-        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
         e_id = e.id
+
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         e = Edge.create(e)
 
@@ -453,7 +454,7 @@ class TestEdge:
         assert e.id != e_id
         assert e.id > 0
 
-        assert spy.call_count == 3
+        assert spy.call_count == 1
         query = normalize_whitespace(spy.call_args[0][1])
         esc_str = re.escape(
             "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id"  # noqa: E501
@@ -547,9 +548,43 @@ class TestEdge:
         assert e.type == orig_type
 
     # test_edge_update
-    # test_edge_update_data
-    # test_edge_src_after_node_save
-    # test_edge_dst_after_node_save
+    def test_edge_update(self, mocker, mock_db):
+        e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
+
+        e.data = {"wine": "cab", "more": True}
+        Edge.update(e)
+
+        spy.assert_called_once()
+        esc_str = re.escape("MATCH ()-[e]->() WHERE id(e) = 2746 SET e = $props")
+        match_str = esc_str.replace("2746", "\d+")
+        print("CALL:", spy.call_args[0][1])
+        assert re.search(match_str, spy.call_args[0][1])
+        assert spy.call_args[1]["params"] == {"props": {"wine": "cab", "more": True}}
+
+    def test_edge_src_after_node_save(self):
+        src = Node(labels=["TestNode"])
+        dst = Node(labels=["TestNode"])
+        old_id = src.id
+        e = Edge.create(Node.connect(src, dst, "Test"))
+
+        Node.save(src)
+
+        assert src.id != old_id
+        assert e.src_id == src.id
+        assert id(e.src) == id(src)
+
+    def test_edge_dst_after_node_save(self):
+        src = Node(labels=["TestNode"])
+        dst = Node(labels=["TestNode"])
+        old_id = dst.id
+        e = Edge.create(Node.connect(src, dst, "Test"))
+
+        Node.save(dst)
+
+        assert dst.id != old_id
+        assert e.dst_id == dst.id
+        assert id(e.dst) == id(dst)
 
     @pytest.mark.skip("pending")
     def test_edge_cache(self):
