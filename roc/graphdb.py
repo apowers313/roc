@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Mapping, MutableSet
 from threading import Lock
-from typing import Any, Callable, Generic, NamedTuple, TypeVar
+from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 from cachetools import Cache, LRUCache, cached
 from gqlalchemy import Memgraph
@@ -79,7 +79,9 @@ class CacheControl(Generic[RefType]):
         self.info: Callable[[], CacheInfo] = cache_fn.cache_info
 
 
-next_new_edge = -1
+EdgeId = NewType("EdgeId", int)
+NodeId = NewType("NodeId", int)
+next_new_edge: EdgeId = cast(EdgeId, -1)
 
 
 class EdgeNotFound(Exception):
@@ -107,11 +109,11 @@ class Edge(metaclass=EdgeMeta):
 
     def __init__(
         self,
-        src_id: int,
-        dst_id: int,
+        src_id: NodeId,
+        dst_id: NodeId,
         type: str,
         *,
-        id: int | None = None,
+        id: EdgeId | None = None,
         data: dict[Any, Any] | None = None,
     ):
         self.new = False
@@ -120,11 +122,11 @@ class Edge(metaclass=EdgeMeta):
         if id is None:
             global next_new_edge
             id = next_new_edge
-            next_new_edge = next_new_edge - 1
+            next_new_edge = cast(EdgeId, next_new_edge - 1)
             self.new = True
             Edge.cache_control.cache[id] = self
 
-        self.id = id
+        self.id: EdgeId = id
         self.__type = type
         self.data = data or {}
         self.src_id = src_id
@@ -147,13 +149,13 @@ class Edge(metaclass=EdgeMeta):
 
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
-    def get(id: int) -> Edge:
+    def get(id: EdgeId) -> Edge:
         """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
         otherwise the Edge is queried from the graph database based the ID provided and a new
         Edge is returned and cached.
 
         Args:
-            id (int): the unique identifier for the Edge
+            id (EdgeId): the unique identifier for the Edge
 
         Returns:
             Edge: returns the Edge requested by the id
@@ -161,12 +163,12 @@ class Edge(metaclass=EdgeMeta):
         return Edge.load(id)
 
     @staticmethod
-    def load(id: int) -> Edge:
+    def load(id: EdgeId) -> Edge:
         """Loads an Edge from the graph database without attempting to check if the Edge
         already exists in the cache. Typically this is only called by Edge.get()
 
         Args:
-            id (int): the unique identifier of the Edge to fetch
+            id (EdgeId): the unique identifier of the Edge to fetch
 
         Raises:
             EdgeNotFound: if the specified ID does not exist in the cache or the database
@@ -183,7 +185,13 @@ class Edge(metaclass=EdgeMeta):
         props = None
         if hasattr(e, "_properties"):
             props = e._properties
-        return Edge(e._start_node_id, e._end_node_id, id=id, data=props, type=e._type)
+        return Edge(
+            e._start_node_id,
+            e._end_node_id,
+            id=id,
+            data=props,
+            type=e._type,
+        )
 
     @staticmethod
     def save(e: Edge) -> Edge:
@@ -252,7 +260,7 @@ class Edge(metaclass=EdgeMeta):
         return e
 
     @staticmethod
-    def to_id(e: Edge | int) -> int:
+    def to_id(e: Edge | EdgeId) -> EdgeId:
         if isinstance(e, Edge):
             return e.id
         else:
@@ -265,7 +273,7 @@ class EdgeFetchIterator:
     EdgeList.
     """
 
-    def __init__(self, edge_list: list[int]):
+    def __init__(self, edge_list: list[EdgeId]):
         self.__edge_list = edge_list
         self.cur = 0
 
@@ -281,14 +289,14 @@ class EdgeFetchIterator:
         return Edge.get(id)
 
 
-class EdgeList(MutableSet[Edge | int], Mapping[int, Edge]):
+class EdgeList(MutableSet[Edge | EdgeId], Mapping[EdgeId, Edge]):
     """
     A list of Edges that is used by Node for keeping track of the connections it has.
     Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())
     """
 
-    def __init__(self, ids: list[int] | set[int]):
-        self.__edges: list[int] = list(ids)
+    def __init__(self, ids: list[EdgeId] | set[EdgeId]):
+        self.__edges: list[EdgeId] = list(ids)
 
     def __iter__(self):
         return EdgeFetchIterator(self.__edges)
@@ -299,7 +307,7 @@ class EdgeList(MutableSet[Edge | int], Mapping[int, Edge]):
     def __len__(self):
         return len(self.__edges)
 
-    def add(self, e: Edge | int) -> None:
+    def add(self, e: Edge | EdgeId) -> None:
         e_id = Edge.to_id(e)
 
         if e_id in self.__edges:
@@ -307,20 +315,20 @@ class EdgeList(MutableSet[Edge | int], Mapping[int, Edge]):
 
         self.__edges.append(e_id)
 
-    def discard(self, e: Edge | int) -> None:
+    def discard(self, e: Edge | EdgeId) -> None:
         e_id = Edge.to_id(e)
 
         self.__edges.remove(e_id)
 
     def __contains__(self, e: Any) -> bool:
         if isinstance(e, Edge) or type(e) == int:
-            e_id = Edge.to_id(e)
+            e_id = Edge.to_id(e)  # type: ignore
         else:
             return False
 
         return e_id in self.__edges
 
-    def replace(self, old: Edge | int, new: Edge | int) -> None:
+    def replace(self, old: Edge | EdgeId, new: Edge | EdgeId) -> None:
         old_id = Edge.to_id(old)
         new_id = Edge.to_id(new)
         for i in range(len(self.__edges)):
@@ -328,7 +336,7 @@ class EdgeList(MutableSet[Edge | int], Mapping[int, Edge]):
                 self.__edges[i] = new_id
 
 
-next_new_node = -1
+next_new_node: NodeId = cast(NodeId, -1)
 
 
 class NodeNotFound(Exception):
@@ -353,7 +361,7 @@ class Node(metaclass=NodeMeta):
     def __init__(
         self,
         *,
-        id: int | None = None,
+        id: NodeId | None = None,
         src_edges: EdgeList | None = None,
         dst_edges: EdgeList | None = None,
         data: dict[Any, Any] | None = None,
@@ -365,7 +373,7 @@ class Node(metaclass=NodeMeta):
         if id is None:
             global next_new_node
             id = next_new_node
-            next_new_node = next_new_node - 1
+            next_new_node = cast(NodeId, next_new_node - 1)
             self.new = True
             Node.cache_control.cache[id] = self
 
@@ -382,7 +390,7 @@ class Node(metaclass=NodeMeta):
         Node.save(self)
 
     @staticmethod
-    def load(id: int) -> Node:
+    def load(id: NodeId) -> Node:
         db = GraphDB()
         res = list(
             db.raw_fetch(
@@ -415,7 +423,7 @@ class Node(metaclass=NodeMeta):
 
     @cached(cache=LRUCache(settings.node_cache_size), key=lambda id: id, info=True)
     @staticmethod
-    def get(id: int) -> Node:
+    def get(id: NodeId) -> Node:
         return Node.load(id)
 
     @staticmethod
@@ -491,7 +499,7 @@ class Node(metaclass=NodeMeta):
         return n
 
     @staticmethod
-    def connect(src: int | Node, dst: int | Node, type: str) -> Edge:
+    def connect(src: NodeId | Node, dst: NodeId | Node, type: str) -> Edge:
         if isinstance(src, Node):
             src_id = src.id
         else:

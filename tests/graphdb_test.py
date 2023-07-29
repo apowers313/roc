@@ -1,11 +1,12 @@
 import re
+from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
 from helpers.util import normalize_whitespace
 
-from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeNotFound
+from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 
 class TestGraphDB:
@@ -72,7 +73,7 @@ class TestGraphDB:
             print(f"*** MAX {cnt}/{max}")
 
             cnt = cnt + 1
-            n = Node.get(id)
+            n = Node.get(cast(NodeId, id))
             src_edges = n.src_edges
             dst_edges = n.dst_edges
             del n
@@ -105,7 +106,7 @@ class TestGraphDB:
 
 class TestNode:
     def test_node_get(self):
-        n = Node.get(0)
+        n = Node.get(cast(NodeId, 0))
         assert n.id == 0
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
@@ -117,10 +118,10 @@ class TestNode:
         cc = Node.cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
-        n1 = Node.get(0)
+        n1 = Node.get(cast(NodeId, 0))
         assert cc.info().hits == 0
         assert cc.info().misses == 1
-        n2 = Node.get(0)
+        n2 = Node.get(cast(NodeId, 0))
         assert cc.info().hits == 1
         assert cc.info().misses == 1
         assert id(n1) == id(n2)
@@ -357,7 +358,7 @@ class TestNode:
 
 class TestEdgeList:
     def test_get_edge(self):
-        n = Node.get(0)
+        n = Node.get(cast(NodeId, 0))
         e0 = n.src_edges[0]
         e1 = n.src_edges[1]
         e11 = n.dst_edges[0]
@@ -384,7 +385,7 @@ class TestEdgeList:
         assert e11.dst_id == 0
 
     def test_iter(self):
-        n = Node.get(0)
+        n = Node.get(cast(NodeId, 0))
         for e in n.src_edges:
             assert isinstance(e, Edge)
 
@@ -393,7 +394,7 @@ class TestEdgeList:
     # test_discard
 
     def test_contains(self):
-        n = Node.get(0)
+        n = Node.get(cast(NodeId, 0))
         e = n.src_edges[0]
 
         assert e in n.src_edges
@@ -413,8 +414,8 @@ class TestEdge:
         assert isinstance(cc.cache, Cache)
 
     def test_src(self):
-        n0 = Node.get(0)
-        n2 = Node.get(2)
+        n0 = Node.get(cast(NodeId, 0))
+        n2 = Node.get(cast(NodeId, 2))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
@@ -426,9 +427,9 @@ class TestEdge:
         assert id(e11.src) == id(n2)
 
     def test_dst(self):
-        n0 = Node.get(0)
-        n6 = Node.get(6)
-        n453 = Node.get(453)
+        n0 = Node.get(cast(NodeId, 0))
+        n6 = Node.get(cast(NodeId, 6))
+        n453 = Node.get(cast(NodeId, 453))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
