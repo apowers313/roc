@@ -243,8 +243,13 @@ class Edge(metaclass=EdgeMeta):
         if e.no_save:
             return e
 
-        print("Trying to update Edge", e.id)
-        raise NotImplementedError
+        db = GraphDB()
+
+        params = {"props": e.data}
+
+        db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} SET e = $props", params=params)
+
+        return e
 
     @staticmethod
     def to_id(e: Edge | int) -> int:
