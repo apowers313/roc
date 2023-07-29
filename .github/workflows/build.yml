@@ -52,6 +52,8 @@ jobs:
     services:
       mg:
         image: ghcr.io/apowers313/roc-dev:1.2.0
+        ports:
+        - 7687:7687
 
     strategy:
       matrix:
