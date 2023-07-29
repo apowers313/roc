@@ -51,7 +51,7 @@ jobs:
     #   options: --user 0:0
     services:
       mg:
-        image: ghcr.io/apowers313/roc-dev:1.2.0
+        image: memgraph/memgraph
         ports:
         - 7687:7687
 
