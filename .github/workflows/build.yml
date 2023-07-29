@@ -1,9 +1,6 @@
-name: Test
+name: Build
 
 on: [push]
-
-# env:
-#   ROC_DB_HOST: localhost
 
 jobs:
   lint:
@@ -39,18 +36,11 @@ jobs:
       run: |
         make check-codestyle
 
-  test:
+  build:
     needs: lint
 
     runs-on: ubuntu-latest
 
-    # container:
-    #   image: ghcr.io/apowers313/roc-dev:1.2.0
-    #   # volumes:
-    #   #   - /data/var/log:/var/log
-    #   ports:
-    #     - 7687:7687
-    #   options: --user 0:0
     services:
       mg:
         image: ghcr.io/apowers313/roc-dev:1.2.0
@@ -95,80 +85,6 @@ jobs:
       run: |
         make test
 
-    # - name: Upload artifacts
-    #   uses: actions/upload-artifact@v3
-    #   if: always()
-    #   with:
-    #     name: logs
-    #     path: /data/var/log
-    #     if-no-files-found: error
-    #     retention-days: 90
-
-  docs:
-    needs: test
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install poetry
-      run: |
-        make poetry-download
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Set up cache
-      uses: actions/cache@v3.3.1
-      with:
-        path: .venv
-        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
-
-    - name: Install dependencies
-      run: |
-        poetry config virtualenvs.in-project true
-        poetry install
-
-    - name: Sphinx build
-      run: |
-        make docs
-
-    - name: Deploy
-      uses: JamesIves/github-pages-deploy-action@v4
-      with:
-        folder: docs/_build/html
-
-  coverage:
-    needs: test
-
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4.7.0
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install poetry
-      run: |
-        make poetry-download
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-    - name: Set up cache
-      uses: actions/cache@v3.3.1
-      with:
-        path: .venv
-        key: venv-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ hashFiles('poetry.lock') }}
-
-    - name: Install dependencies
-      run: |
-        poetry config virtualenvs.in-project true
-        poetry install
-
     - name: Build coverage
       run: |
         make coverage
@@ -178,3 +94,12 @@ jobs:
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: coverage.lcov
+
+    - name: Sphinx build
+      run: |
+        make docs
+
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        folder: docs/_build/html
