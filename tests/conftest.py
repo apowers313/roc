@@ -21,6 +21,8 @@ if RECORD_DB:
 
 @pytest.fixture(autouse=True)
 def clear_cache():
+    yield
+
     node_cache = Node.cache_control.cache
     edge_cache = Edge.cache_control.cache
     for n in node_cache:
@@ -30,7 +32,6 @@ def clear_cache():
 
     Node.cache_control.clear()
     Edge.cache_control.clear()
-    yield
 
 
 @pytest.fixture
