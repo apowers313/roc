@@ -16,6 +16,10 @@ settings = Dynaconf(
     validators=[
         DefaultSetting[str]("db_host", "127.0.0.1"),
         DefaultSetting[int]("db_port", 7687),
+        DefaultSetting[bool]("db_conn_encrypted", False),
+        DefaultSetting[str | None]("db_username", None),
+        DefaultSetting[str | None]("db_password", None),
+        DefaultSetting[bool]("db_lazy", False),
         DefaultSetting[int]("node_cache_size", 2**11),
         DefaultSetting[int]("edge_cache_size", 2**11),
         DefaultSetting[str]("log_level", "trace"),
