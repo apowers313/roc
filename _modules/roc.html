@@ -335,6 +335,16 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>A graph database singleton. Settings for the graph database come from the config module.</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.GraphDB.connect">
+<span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Connection</span></span></span><a class="reference internal" href="roc/graphdb.html#GraphDB.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB.connect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.GraphDB.connected">
+<span class="sig-name descname"><span class="pre">connected</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">bool</span></span></span><a class="reference internal" href="roc/graphdb.html#GraphDB.connected"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB.connected" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.GraphDB.raw_execute">
 <span class="sig-name descname"><span class="pre">raw_execute</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#GraphDB.raw_execute"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.GraphDB.raw_execute" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
@@ -556,6 +566,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 </li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeNotFound"><code class="docutils literal notranslate"><span class="pre">EdgeNotFound</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.GraphDB"><code class="docutils literal notranslate"><span class="pre">GraphDB</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.GraphDB.connect"><code class="docutils literal notranslate"><span class="pre">GraphDB.connect()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.GraphDB.connected"><code class="docutils literal notranslate"><span class="pre">GraphDB.connected()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.GraphDB.raw_execute"><code class="docutils literal notranslate"><span class="pre">GraphDB.raw_execute()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.GraphDB.raw_fetch"><code class="docutils literal notranslate"><span class="pre">GraphDB.raw_fetch()</span></code></a></li>
 </ul>
