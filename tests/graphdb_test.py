@@ -562,6 +562,23 @@ class TestEdge:
         assert e.id in src.src_edges
         assert e.id in dst.dst_edges
 
+    def test_edge_create_on_delete(self, mocker):
+        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        e.data = {"foo": "deleting-edge"}
+        Edge.create(e)
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
+
+        del e
+        Edge.cache_control.clear()
+
+        spy.assert_called_once()
+        assert_similar(
+            "MATCH ()-[e]->() WHERE id(e) = 11928 SET e = $props",
+            spy.call_args[0][1],
+            [("11928", "\d+")],
+        )
+        assert spy.call_args[1]["params"] == {"props": {"foo": "deleting-edge"}}
+
     def test_edge_immutable_properties(self, new_edge):
         e, _, _ = new_edge
         # orig_src_id = e.src_id
