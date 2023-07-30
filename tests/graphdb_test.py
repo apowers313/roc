@@ -42,14 +42,6 @@ class TestGraphDB:
         db2 = GraphDB()
         assert db2.port == 1111
 
-    @pytest.mark.skip("screws up recording tests")
-    def test_set_record_callback(self, mocker):
-        stub = mocker.stub()
-        db = GraphDB()
-        db.record_callback = stub
-        db.raw_fetch("MATCH (n)-[e]-{m) WHERE id(n) = 0 RETURN n")
-        assert stub.call_count == 1
-
     @pytest.mark.slow
     def test_walk(self):
         cnt = 0

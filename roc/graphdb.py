@@ -4,8 +4,8 @@ from collections.abc import Iterator, Mapping, MutableSet
 from threading import Lock
 from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
+import mgclient
 from cachetools import Cache, LRUCache, cached
-from gqlalchemy import Memgraph
 
 from roc.config import settings
 
@@ -30,8 +30,13 @@ class GraphDB:
         self.__isinitialized = True
         self.host = settings.db_host
         self.port = settings.db_port
-        self.db = Memgraph(host=self.host, port=self.port)
-        self.record_callback: RecordFn | None = None
+        self.encrypted = settings.db_conn_encrypted
+        self.username = settings.db_username or ""
+        self.password = settings.db_password or ""
+        self.lazy = settings.db_lazy
+        self.client_name = "roc-graphdb-client"
+        self.db_conn = self.connect()
+        # self.record_callback: RecordFn | None = None
 
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
@@ -39,16 +44,76 @@ class GraphDB:
         params = params or {}
         print(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
-        if self.record_callback:
-            self.record_callback(query, self.db.execute_and_fetch(query, parameters=params))
-
-        ret = self.db.execute_and_fetch(query, parameters=params)
-        return ret  # type: ignore
+        cursor = self.db_conn.cursor()
+        cursor.execute(query, params)
+        while True:
+            row = cursor.fetchone()
+            if row is None:
+                break
+            yield {
+                dsc.name: _convert_memgraph_value(row[index])
+                for index, dsc in enumerate(cursor.description)
+            }
 
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
         params = params or {}
         print(f"raw_execute: '{query}' *** with params: *** '{params}'")
-        self.db.execute(query, parameters=params)
+        cursor = self.db_conn.cursor()
+        cursor.execute(query, params)
+        cursor.fetchall()
+
+    def connected(self) -> bool:
+        return self.db_conn is not None and self.db_conn.status == mgclient.CONN_STATUS_READY
+
+    def connect(self) -> mgclient.Connection:
+        sslmode = mgclient.MG_SSLMODE_REQUIRE if self.encrypted else mgclient.MG_SSLMODE_DISABLE
+        connection = mgclient.connect(
+            host=self.host,
+            port=self.port,
+            username=self.username,
+            password=self.password,
+            sslmode=sslmode,
+            lazy=self.lazy,
+            client_name=self.client_name,
+        )
+        connection.autocommit = True
+        return connection
+
+
+# XXX: copied from GQLAlchemy
+def _convert_memgraph_value(value: Any) -> Any:
+    """Converts Memgraph objects to custom Node/Relationship objects."""
+    # if isinstance(value, mgclient.Relationship):
+    #     return Relationship.parse_obj(
+    #         {
+    #             "_type": value.type,
+    #             "_id": value.id,
+    #             "_start_node_id": value.start_id,
+    #             "_end_node_id": value.end_id,
+    #             **value.properties,
+    #         }
+    #     )
+
+    # if isinstance(value, mgclient.Node):
+    #     return Node.parse_obj(
+    #         {
+    #             "_id": value.id,
+    #             "_labels": set(value.labels),
+    #             **value.properties,
+    #         }
+    #     )
+
+    # if isinstance(value, mgclient.Path):
+    #     return Path.parse_obj(
+    #         {
+    #             "_nodes": list([_convert_memgraph_value(node) for node in value.nodes]),
+    #             "_relationships": list(
+    #                 [_convert_memgraph_value(rel) for rel in value.relationships]
+    #             ),
+    #         }
+    #     )
+
+    return value
 
 
 CacheType = TypeVar("CacheType")
@@ -185,14 +250,14 @@ class Edge(metaclass=EdgeMeta):
 
         e = edge_list[0]["e"]
         props = None
-        if hasattr(e, "_properties"):
-            props = e._properties
+        if hasattr(e, "properties"):
+            props = e.properties
         return Edge(
-            e._start_node_id,
-            e._end_node_id,
+            e.start_id,
+            e.end_id,
             id=id,
             data=props,
-            type=e._type,
+            type=e.type,
         )
 
     @staticmethod
@@ -439,8 +504,8 @@ class Node(metaclass=NodeMeta):
             id=id,
             src_edges=EdgeList(src_edges),
             dst_edges=EdgeList(dst_edges),
-            data=n._properties,
-            labels=n._labels,
+            data=n.properties,
+            labels=n.labels,
         )
 
     @cached(cache=LRUCache(settings.node_cache_size), key=lambda id: id, info=True)
