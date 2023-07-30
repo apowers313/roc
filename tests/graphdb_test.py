@@ -1,10 +1,9 @@
-import re
 from typing import cast
 from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
-from helpers.util import normalize_whitespace
+from helpers.util import assert_similar, normalize_whitespace
 
 from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
@@ -155,9 +154,11 @@ class TestNode:
         Node.cache_control.clear()
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2813 SET n:Bob, n = $props")
-        match_str = esc_str.replace("2813", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2813 SET n:Bob, n = $props",
+            spy.call_args[0][1],
+            [("2813", "\d+")],
+        )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
     def test_node_cache_control(self, clear_cache):
@@ -235,9 +236,11 @@ class TestNode:
         Node.update(n)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:TestNode, n = $props ")
-        match_str = esc_str.replace("2746", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 SET n:TestNode, n = $props ",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
         assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
 
     def test_node_update_add_label(self, mocker):
@@ -248,9 +251,11 @@ class TestNode:
         Node.update(n)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props ")
-        match_str = esc_str.replace("2746", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props ",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
 
     def test_node_update_remove_label(self, mocker):
         n = Node.create(Node(labels=["TestNode"]))
@@ -260,9 +265,11 @@ class TestNode:
         Node.update(n)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n = $props REMOVE n:TestNode")
-        match_str = esc_str.replace("2746", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 SET n = $props REMOVE n:TestNode",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
 
     def test_node_update_add_and_remove_label(self, mocker):
         n = Node.create(Node(labels=["TestNode"]))
@@ -273,9 +280,11 @@ class TestNode:
         Node.update(n)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props REMOVE n:TestNode")
-        match_str = esc_str.replace("2746", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props REMOVE n:TestNode",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
 
     def test_node_update_properties(self, mocker):
         n = Node.create(Node(labels=["TestNode"]))
@@ -285,9 +294,11 @@ class TestNode:
         Node.update(n)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH (n) WHERE id(n) = 2746 SET n = $props ")
-        match_str = esc_str.replace("2746", "\d+")
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 SET n = $props ",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
 
     def test_node_connect(self):
@@ -354,6 +365,36 @@ class TestNode:
         Node.get(n.id)
         assert cc.info().hits == 1
         assert cc.info().misses == 1
+
+    def test_node_delete_new(self):
+        n = Node(labels=["TestNode"])
+        old_id = n.id
+
+        Node.delete(n)
+
+        assert n.deleted is True
+        assert n.no_save is True
+        assert old_id not in Node.cache_control.cache
+
+    def test_node_delete_existing(self, mocker):
+        n = Node(labels=["TestNode"])
+        Node.save(n)
+        old_id = n.id
+
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
+        Node.delete(n)
+
+        spy.assert_called_once()
+        assert old_id not in Node.cache_control.cache
+        with pytest.raises(NodeNotFound):
+            Node.get(old_id)
+        assert_similar(
+            "MATCH (n) WHERE id(n) = 2746 DELETE n",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
+
+    # deletes edges
 
 
 class TestEdgeList:
@@ -440,9 +481,11 @@ class TestEdge:
         assert id(e0.dst) == id(n6)
         assert id(e1.dst) == id(n453)
 
-    def test_edge_create(self, mocker):
-        e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
+    def test_edge_create(self, mocker, new_edge, clear_cache):
+        e, src, dst = new_edge
         e_id = e.id
+        Node.save(src)
+        Node.save(dst)
 
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         e = Edge.create(e)
@@ -456,16 +499,14 @@ class TestEdge:
         assert e.id > 0
 
         assert spy.call_count == 1
-        query = normalize_whitespace(spy.call_args[0][1])
-        esc_str = re.escape(
-            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id"  # noqa: E501
+        assert_similar(
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",  # noqa: E501
+            normalize_whitespace(spy.call_args[0][1]),
+            [("3102", "\d+"), ("3103", "\d+")],
         )
-        match_str = esc_str.replace("3102", "\d+")
-        match_str = match_str.replace("3103", "\d+")
-        assert re.search(match_str, query)
 
-    def test_edge_create_with_data(self, mocker):
-        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+    def test_edge_create_with_data(self, mocker, new_edge):
+        e, _, _ = new_edge
         e_id = e.id
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         e.data = {"name": "bob", "fun": False}
@@ -480,20 +521,18 @@ class TestEdge:
         assert e.id > 0
 
         assert spy.call_count == 3
-        query = normalize_whitespace(spy.call_args[0][1])
-        esc_str = re.escape(
-            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id"  # noqa: E501
+        assert_similar(
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",  # noqa: E501
+            normalize_whitespace(spy.call_args[0][1]),
+            [("3102", "\d+"), ("3103", "\d+")],
         )
-        match_str = esc_str.replace("3102", "\d+")
-        match_str = match_str.replace("3103", "\d+")
-        assert re.search(match_str, query)
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
-    def test_edge_create_updates_cache(self, clear_cache):
+    def test_edge_create_updates_cache(self, new_edge):
         cc = Edge.cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
-        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+        e, _, _ = new_edge
         old_id = e.id
 
         Edge.create(e)
@@ -512,21 +551,19 @@ class TestEdge:
         assert cc.info().hits == 3
         assert cc.info().misses == 1
 
-    def test_edge_create_updates_node_edges(self):
-        src_n = Node(labels=["TestNode"])
-        dst_n = Node(labels=["TestNode"])
-        e = Node.connect(src_n, dst_n, "Test")
+    def test_edge_create_updates_node_edges(self, new_edge):
+        e, src, dst = new_edge
         old_id = e.id
         e.data = {"name": "bob", "fun": False}
 
         e = Edge.create(e)
 
         assert e.id != old_id
-        assert e.id in src_n.src_edges
-        assert e.id in dst_n.dst_edges
+        assert e.id in src.src_edges
+        assert e.id in dst.dst_edges
 
-    def test_edge_immutable_properties(self):
-        e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
+    def test_edge_immutable_properties(self, new_edge):
+        e, _, _ = new_edge
         # orig_src_id = e.src_id
         # orig_dst_id = e.dst_id
         orig_src = e.src
@@ -536,11 +573,11 @@ class TestEdge:
         # e.src_id = -666
         # e.dst_id = -666
         with pytest.raises(AttributeError):
-            e.src = Node()  # type: ignore
+            e.src = Node()
         with pytest.raises(AttributeError):
-            e.dst = Node()  # type: ignore
+            e.dst = Node()
         with pytest.raises(AttributeError):
-            e.type = "jackedup"  # type: ignore
+            e.type = "jackedup"
 
         # assert e.src_id == orig_src_id
         # assert e.dst_id == orig_dst_id
@@ -557,17 +594,17 @@ class TestEdge:
         Edge.update(e)
 
         spy.assert_called_once()
-        esc_str = re.escape("MATCH ()-[e]->() WHERE id(e) = 2746 SET e = $props")
-        match_str = esc_str.replace("2746", "\d+")
-        print("CALL:", spy.call_args[0][1])
-        assert re.search(match_str, spy.call_args[0][1])
+        assert_similar(
+            "MATCH ()-[e]->() WHERE id(e) = 2746 SET e = $props",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
         assert spy.call_args[1]["params"] == {"props": {"wine": "cab", "more": True}}
 
-    def test_edge_src_after_node_save(self):
-        src = Node(labels=["TestNode"])
-        dst = Node(labels=["TestNode"])
+    def test_edge_src_after_node_save(self, new_edge):
+        e, src, dst = new_edge
         old_id = src.id
-        e = Edge.create(Node.connect(src, dst, "Test"))
+        e = Edge.create(e)
 
         Node.save(src)
 
@@ -575,17 +612,45 @@ class TestEdge:
         assert e.src_id == src.id
         assert id(e.src) == id(src)
 
-    def test_edge_dst_after_node_save(self):
-        src = Node(labels=["TestNode"])
-        dst = Node(labels=["TestNode"])
+    def test_edge_dst_after_node_save(self, new_edge):
+        e, src, dst = new_edge
         old_id = dst.id
-        e = Edge.create(Node.connect(src, dst, "Test"))
+        e = Edge.create(e)
 
         Node.save(dst)
 
         assert dst.id != old_id
         assert e.dst_id == dst.id
         assert id(e.dst) == id(dst)
+
+    def test_edge_delete_new(self, new_edge):
+        e, src, dst = new_edge
+        e = Edge.create(e)
+        old_id = e.id
+
+        Edge.delete(e)
+
+        assert e.deleted is True
+        assert e.no_save is True
+        assert old_id not in Edge.cache_control.cache
+
+    def test_edge_delete_existing(self, mocker, new_edge):
+        e, src, dst = new_edge
+        e = Edge.create(e)
+        old_id = e.id
+
+        spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
+        Edge.delete(e)
+
+        spy.assert_called_once()
+        assert old_id not in Edge.cache_control.cache
+        with pytest.raises(EdgeNotFound):
+            Edge.get(old_id)
+        assert_similar(
+            "MATCH ()-[e]->() WHERE id(e) = 2746 DELETE e",
+            spy.call_args[0][1],
+            [("2746", "\d+")],
+        )
 
     @pytest.mark.skip("pending")
     def test_edge_cache(self):

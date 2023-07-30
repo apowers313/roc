@@ -51,7 +51,8 @@ class GraphDB:
         self.db.execute(query, parameters=params)
 
 
-RefType = TypeVar("RefType")
+CacheType = TypeVar("CacheType")
+CacheId = TypeVar("CacheId")
 
 
 class CacheInfo(NamedTuple):
@@ -65,14 +66,14 @@ class CacheInfo(NamedTuple):
     currsize: int
 
 
-class CacheControl(Generic[RefType]):
+class CacheControl(Generic[CacheType, CacheId]):
     """
     For controlling the Node and Edge caches, such as clearing them, getting their current or max
     size, adding items to the cache (outside the automatic methods for adding cached items), etc.
     """
 
     def __init__(self, cache_fn: Any):
-        self.cache: Cache[int, RefType] = cache_fn.cache
+        self.cache: Cache[CacheId, CacheType] = cache_fn.cache
         self.key: Callable[[Any, Any], tuple[Any]] = cache_fn.cache_key
         self.lock: Lock | None = cache_fn.cache_lock
         self.clear: Callable[[], None] = cache_fn.cache_clear
@@ -95,7 +96,7 @@ class EdgeCreateFailed(Exception):
 class EdgeMeta(type):
     @property
     def cache_control(cls):
-        return CacheControl[Edge](Edge.get)
+        return CacheControl[Edge, EdgeId](Edge.get)
 
 
 class Edge(metaclass=EdgeMeta):
@@ -118,6 +119,7 @@ class Edge(metaclass=EdgeMeta):
     ):
         self.new = False
         self.no_save = False
+        self.deleted = False
 
         if id is None:
             global next_new_edge
@@ -260,6 +262,25 @@ class Edge(metaclass=EdgeMeta):
         return e
 
     @staticmethod
+    def delete(e: Edge) -> None:
+        e.deleted = True
+        e.no_save = True
+
+        # remove e from src and dst nodes
+        e.src.src_edges.discard(e)
+        e.dst.dst_edges.discard(e)
+
+        # remove from cache
+        edge_cache = Edge.cache_control.cache
+        if e.id in edge_cache:
+            del edge_cache[e.id]
+
+        # delete from db
+        if not e.new:
+            db = GraphDB()
+            db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} DELETE e")
+
+    @staticmethod
     def to_id(e: Edge | EdgeId) -> EdgeId:
         if isinstance(e, Edge):
             return e.id
@@ -289,7 +310,7 @@ class EdgeFetchIterator:
         return Edge.get(id)
 
 
-class EdgeList(MutableSet[Edge | EdgeId], Mapping[EdgeId, Edge]):
+class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     """
     A list of Edges that is used by Node for keeping track of the connections it has.
     Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())
@@ -350,7 +371,7 @@ class NodeCreationFailed(Exception):
 class NodeMeta(type):
     @property
     def cache_control(cls):
-        return CacheControl[Node](Node.get)
+        return CacheControl[Node, NodeId](Node.get)
 
 
 class Node(metaclass=NodeMeta):
@@ -369,6 +390,7 @@ class Node(metaclass=NodeMeta):
     ):
         self.new = False
         self.no_save = False
+        self.deleted = False
 
         if id is None:
             global next_new_node
@@ -516,6 +538,27 @@ class Node(metaclass=NodeMeta):
         src_node.src_edges.add(e)
         dst_node.dst_edges.add(e)
         return e
+
+    @staticmethod
+    def delete(n: Node) -> None:
+        # remove edges
+        for e in n.src_edges:
+            Edge.delete(e)
+
+        for e in n.dst_edges:
+            Edge.delete(e)
+
+        # remove from cache
+        node_cache = Node.cache_control.cache
+        if n.id in node_cache:
+            del node_cache[n.id]
+
+        if not n.new:
+            db = GraphDB()
+            db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} DELETE n")
+
+        n.deleted = True
+        n.no_save = True
 
     @staticmethod
     def mklabels(labels: list[str]) -> str:

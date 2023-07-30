@@ -20,6 +20,14 @@ def clear_cache():
 
 
 @pytest.fixture
+def new_edge() -> tuple[Edge, Node, Node]:
+    src = Node(labels=["TestNode"])
+    dst = Node(labels=["TestNode"])
+    e = Node.connect(src, dst, "Test")
+    return (e, src, dst)
+
+
+@pytest.fixture
 def eb_reset():
     EventBus.clear_names()
 
