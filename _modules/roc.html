@@ -146,7 +146,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="roc.graphdb.CacheControl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">CacheControl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#CacheControl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.CacheControl" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">RefType</span></code>]</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheId</span></code>]</p>
 <p>For controlling the Node and Edge caches, such as clearing them, getting their current or max
 size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p>
 </dd></dl>
@@ -194,6 +194,11 @@ a graph database query if they don’t already exist in the edge cache.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.create">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.delete">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#Edge.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.delete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py property">
@@ -285,7 +290,7 @@ EdgeList.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="roc.graphdb.EdgeList">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeList</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ids</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">roc.graphdb.EdgeId</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">roc.graphdb.EdgeId</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#EdgeList"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeList" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSet</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code>[<a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">EdgeId</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">EdgeId</span></code>, <a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>]</p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MutableSet</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">Union</span></code>[<a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>, <code class="xref py py-class docutils literal notranslate"><span class="pre">EdgeId</span></code>]], <code class="xref py py-class docutils literal notranslate"><span class="pre">Mapping</span></code>[<code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code>, <a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-class docutils literal notranslate"><span class="pre">Edge</span></code></a>]</p>
 <p>A list of Edges that is used by Node for keeping track of the connections it has.
 Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())</p>
 <dl class="py method">
@@ -354,6 +359,11 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.create">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.create" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.delete">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.delete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -521,6 +531,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 </li>
 <li><a class="reference internal" href="#roc.graphdb.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.Edge.create"><code class="docutils literal notranslate"><span class="pre">Edge.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.delete"><code class="docutils literal notranslate"><span class="pre">Edge.delete()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.dst"><code class="docutils literal notranslate"><span class="pre">Edge.dst</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.get"><code class="docutils literal notranslate"><span class="pre">Edge.get()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.load"><code class="docutils literal notranslate"><span class="pre">Edge.load()</span></code></a></li>
@@ -552,6 +563,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <li><a class="reference internal" href="#roc.graphdb.Node"><code class="docutils literal notranslate"><span class="pre">Node</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.Node.connect"><code class="docutils literal notranslate"><span class="pre">Node.connect()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.create"><code class="docutils literal notranslate"><span class="pre">Node.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.delete"><code class="docutils literal notranslate"><span class="pre">Node.delete()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.get"><code class="docutils literal notranslate"><span class="pre">Node.get()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.load"><code class="docutils literal notranslate"><span class="pre">Node.load()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.mklabels"><code class="docutils literal notranslate"><span class="pre">Node.mklabels()</span></code></a></li>

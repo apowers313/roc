@@ -96,7 +96,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">db</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">parameters</span><span class="o">=</span><span class="n">params</span><span class="p">)</span></div></div>
 
 
-<span class="n">RefType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;RefType&quot;</span><span class="p">)</span>
+<span class="n">CacheType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;CacheType&quot;</span><span class="p">)</span>
+<span class="n">CacheId</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s2">&quot;CacheId&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="CacheInfo"><a class="viewcode-back" href="../roc.html#roc.graphdb.CacheInfo">[docs]</a><span class="k">class</span> <span class="nc">CacheInfo</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
@@ -110,14 +111,14 @@
     <span class="n">currsize</span><span class="p">:</span> <span class="nb">int</span></div>
 
 
-<div class="viewcode-block" id="CacheControl"><a class="viewcode-back" href="../roc.html#roc.graphdb.CacheControl">[docs]</a><span class="k">class</span> <span class="nc">CacheControl</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">RefType</span><span class="p">]):</span>
+<div class="viewcode-block" id="CacheControl"><a class="viewcode-back" href="../roc.html#roc.graphdb.CacheControl">[docs]</a><span class="k">class</span> <span class="nc">CacheControl</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">CacheType</span><span class="p">,</span> <span class="n">CacheId</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For controlling the Node and Edge caches, such as clearing them, getting their current or max</span>
 <span class="sd">    size, adding items to the cache (outside the automatic methods for adding cached items), etc.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache_fn</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">RefType</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span><span class="p">[</span><span class="n">CacheId</span><span class="p">,</span> <span class="n">CacheType</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_key</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">:</span> <span class="n">Lock</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_lock</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_clear</span>
@@ -140,7 +141,7 @@
 <div class="viewcode-block" id="EdgeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeMeta">[docs]</a><span class="k">class</span> <span class="nc">EdgeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">cache_control</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Edge</span><span class="p">](</span><span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">EdgeId</span><span class="p">](</span><span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">EdgeMeta</span><span class="p">):</span>
@@ -163,6 +164,7 @@
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">global</span> <span class="n">next_new_edge</span>
@@ -304,6 +306,25 @@
 
         <span class="k">return</span> <span class="n">e</span></div>
 
+<div class="viewcode-block" id="Edge.delete"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.delete">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="c1"># remove e from src and dst nodes</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+        <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># remove from cache</span>
+        <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">edge_cache</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">edge_cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+
+        <span class="c1"># delete from db</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="o">.</span><span class="n">new</span><span class="p">:</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH ()-[e]-&gt;() WHERE id(e) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> DELETE e&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="Edge.to_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.to_id">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">to_id</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeId</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">Edge</span><span class="p">):</span>
@@ -334,7 +355,7 @@
         <span class="k">return</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="EdgeList"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeList">[docs]</a><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="n">EdgeId</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
+<div class="viewcode-block" id="EdgeList"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeList">[docs]</a><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A list of Edges that is used by Node for keeping track of the connections it has.</span>
 <span class="sd">    Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())</span>
@@ -395,7 +416,7 @@
 <div class="viewcode-block" id="NodeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeMeta">[docs]</a><span class="k">class</span> <span class="nc">NodeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">cache_control</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Node</span><span class="p">](</span><span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">NodeId</span><span class="p">](</span><span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="Node"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node">[docs]</a><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">NodeMeta</span><span class="p">):</span>
@@ -414,6 +435,7 @@
     <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">global</span> <span class="n">next_new_node</span>
@@ -561,6 +583,27 @@
         <span class="n">src_node</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="n">dst_node</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">e</span></div>
+
+<div class="viewcode-block" id="Node.delete"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.delete">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># remove edges</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">src_edges</span><span class="p">:</span>
+            <span class="n">Edge</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">dst_edges</span><span class="p">:</span>
+            <span class="n">Edge</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="c1"># remove from cache</span>
+        <span class="n">node_cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">node_cache</span><span class="p">:</span>
+            <span class="k">del</span> <span class="n">node_cache</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">.</span><span class="n">new</span><span class="p">:</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
+            <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n) WHERE id(n) = </span><span class="si">{</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> DELETE n&quot;</span><span class="p">)</span>
+
+        <span class="n">n</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">n</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 <div class="viewcode-block" id="Node.mklabels"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.mklabels">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">mklabels</span><span class="p">(</span><span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
