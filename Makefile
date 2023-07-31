@@ -41,7 +41,6 @@ formatting: codestyle
 
 #* Linting
 .PHONY: lint
-# lint: no-live mypy check-codestyle check-safety
 lint: mypy check-codestyle check-safety
 
 .PHONY: load-data
@@ -51,7 +50,6 @@ load-data:
 .PHONY: test
 test:
 	poetry run pytest -c pyproject.toml
-#	poetry run coverage-badge -o assets/images/coverage.svg -f
 
 .PHONY: check-codestyle
 check-codestyle:
@@ -74,11 +72,6 @@ update-dev-deps:
 	poetry add -D bandit@latest darglint@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
 	poetry add -D --allow-prereleases black@latest
 
-.PHONY: no-live
-no-live:
-	grep '^\s*LIVE_DB\s*=\s*False\s*$$' tests/conftest.py
-	grep '^\s*RECORD_DB\s*=\s*False\s*$$' tests/conftest.py
-
 # Docs
 .PHONY: update-api-docs
 update-api-docs:
@@ -98,6 +91,7 @@ coverage:
 	poetry run pytest -c pyproject.toml --cov-report=lcov
 
 .PHONY: doc-coverage
+doc-coverage:
 	poetry run interrogate
 
 #* Docker
@@ -147,8 +141,7 @@ cleanup: pycache-remove dsstore-remove mypycache-remove ipynbcheckpoints-remove 
 
 # commit hooks
 .PHONY: pre-commit
-pre-commit: lint
+pre-commit:
 
 .PHONY: pre-push
-pre-push: test
-# docs doc-coverage coverage
+pre-push: doc-coverage lint test coverage docs
