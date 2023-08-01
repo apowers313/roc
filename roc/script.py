@@ -39,7 +39,7 @@ def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
 
 
 class Environment(Component):
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__("environment", "environment")
         # self.attach(perception_bus)
         perception_bus

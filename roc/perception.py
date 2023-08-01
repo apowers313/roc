@@ -14,5 +14,5 @@ perception_bus = EventBus[PerceptionData]("perception")
 
 
 class PerceptionComponent(Component):
-    def __init__(self):
+    def __init__(self) -> None:
         self.pb_conn = perception_bus.connect(self)

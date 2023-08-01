@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+
 from unittest.mock import MagicMock
 
 import pytest

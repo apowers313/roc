@@ -6,7 +6,7 @@ ValType = TypeVar("ValType")
 
 
 class DefaultSetting(Validator, Generic[ValType]):
-    def __init__(self, name: str, val: ValType, *, must_exist: bool = True):
+    def __init__(self, name: str, val: ValType, *, must_exist: bool = True) -> None:
         super().__init__(name, default=val, apply_default_on_none=True, must_exist=must_exist)
 
 

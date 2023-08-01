@@ -1,3 +1,5 @@
+from typing import Generator
+
 import pytest
 
 from roc.event import EventBus
@@ -5,7 +7,7 @@ from roc.graphdb import Edge, GraphDB, Node
 
 
 @pytest.fixture(autouse=True)
-def clear_cache():
+def clear_cache() -> Generator[None, None, None]:
     yield
 
     node_cache = Node.cache_control.cache
@@ -28,12 +30,12 @@ def new_edge() -> tuple[Edge, Node, Node]:
 
 
 @pytest.fixture
-def eb_reset():
+def eb_reset() -> None:
     EventBus.clear_names()
 
 
 @pytest.fixture(scope="session", autouse=True)
-def clear_db():
+def clear_db() -> Generator[None, None, None]:
     yield
 
     db = GraphDB()
