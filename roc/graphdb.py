@@ -17,13 +17,13 @@ class GraphDB:
     A graph database singleton. Settings for the graph database come from the config module.
     """
 
-    def __new__(cls):
+    def __new__(cls) -> GraphDB:
         if not hasattr(cls, "instance"):
             cls.instance = super().__new__(cls)
             cls.instance.__isinitialized = False  # type: ignore
         return cls.instance
 
-    def __init__(self):
+    def __init__(self) -> None:
         if self.__isinitialized:  # type: ignore
             return
 
@@ -160,7 +160,7 @@ class EdgeCreateFailed(Exception):
 
 class EdgeMeta(type):
     @property
-    def cache_control(cls):
+    def cache_control(cls) -> CacheControl[Edge, EdgeId]:
         return CacheControl[Edge, EdgeId](Edge.get)
 
 
@@ -199,7 +199,7 @@ class Edge(metaclass=EdgeMeta):
         self.src_id = src_id
         self.dst_id = dst_id
 
-    def __del__(self):
+    def __del__(self) -> None:
         Edge.save(self)
 
     @property
@@ -363,10 +363,10 @@ class EdgeFetchIterator:
         self.__edge_list = edge_list
         self.cur = 0
 
-    def __iter__(self):
+    def __iter__(self) -> EdgeFetchIterator:
         return self
 
-    def __next__(self):
+    def __next__(self) -> Edge:
         if self.cur >= len(self.__edge_list):
             raise StopIteration
 
@@ -384,13 +384,13 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     def __init__(self, ids: list[EdgeId] | set[EdgeId]):
         self.__edges: list[EdgeId] = list(ids)
 
-    def __iter__(self):
+    def __iter__(self) -> EdgeFetchIterator:
         return EdgeFetchIterator(self.__edges)
 
     def __getitem__(self, key: int) -> Edge:
         return Edge.get(self.__edges[key])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.__edges)
 
     def add(self, e: Edge | EdgeId) -> None:
@@ -435,7 +435,7 @@ class NodeCreationFailed(Exception):
 
 class NodeMeta(type):
     @property
-    def cache_control(cls):
+    def cache_control(cls) -> CacheControl[Node, NodeId]:
         return CacheControl[Node, NodeId](Node.get)
 
 
@@ -473,7 +473,7 @@ class Node(metaclass=NodeMeta):
         self.src_edges = src_edges or EdgeList([])
         self.dst_edges = dst_edges or EdgeList([])
 
-    def __del__(self):
+    def __del__(self) -> None:
         Node.save(self)
 
     @staticmethod

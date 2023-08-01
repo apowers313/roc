@@ -33,7 +33,7 @@ eventbus_names: set[str] = set()
 
 
 class EventBus(Generic[EventData]):
-    def __init__(self, name):
+    def __init__(self, name: str) -> None:
         if name in eventbus_names:
             raise Exception(f"Duplicate EventBus name: {name}")
         self.name = name

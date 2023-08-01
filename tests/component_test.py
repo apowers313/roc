@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+
 from roc.component import Component
 
 

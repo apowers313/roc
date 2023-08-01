@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -10,7 +12,7 @@ from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 class TestGraphDB:
     @pytest.mark.skip(reason="add assertions")
-    def test_graphdb_connect(self):
+    def test_graphdb_connect(self) -> None:
         db = GraphDB()
         res = list(
             db.raw_fetch(
@@ -27,7 +29,7 @@ class TestGraphDB:
         for row in res:
             print("!!! ROW:", repr(row))
 
-    def test_is_singleton(self):
+    def test_is_singleton(self) -> None:
         db1 = GraphDB()
         db2 = GraphDB()
         assert not db2.port == 1111
@@ -35,7 +37,7 @@ class TestGraphDB:
         db1.port = 1111
         assert db2.port == 1111
 
-    def test_singleton_doesnt_double_init(self):
+    def test_singleton_doesnt_double_init(self) -> None:
         db1 = GraphDB()
         db1.port = 1111
         assert db1.port == 1111
@@ -43,7 +45,7 @@ class TestGraphDB:
         assert db2.port == 1111
 
     @pytest.mark.slow
-    def test_walk(self):
+    def test_walk(self) -> None:
         cnt = 0
         cache: set[int] = set()
         cc = Node.cache_control
@@ -96,7 +98,7 @@ class TestGraphDB:
 
 
 class TestNode:
-    def test_node_get(self):
+    def test_node_get(self) -> None:
         n = Node.get(cast(NodeId, 0))
         assert n.id == 0
         assert len(n.src_edges) == 2
@@ -105,7 +107,7 @@ class TestNode:
         assert n.labels == ["Character"]
         assert not n.new
 
-    def test_node_cache(self):
+    def test_node_cache(self) -> None:
         cc = Node.cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
@@ -117,12 +119,12 @@ class TestNode:
         assert cc.info().misses == 1
         assert id(n1) == id(n2)
 
-    def test_node_new_in_cache(self, clear_cache):
+    def test_node_new_in_cache(self, clear_cache) -> None:  # type: ignore
         n = Node()
         n_dupe = Node.get(n.id)
         assert id(n) == id(n_dupe)
 
-    def test_node_create_on_delete(self, mocker, clear_cache):
+    def test_node_create_on_delete(self, mocker, clear_cache) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
 
@@ -133,7 +135,7 @@ class TestNode:
         assert spy.call_args[0][1] == "CREATE (n:TestNode $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {"testname": "test_node_save_on_delete"}}
 
-    def test_node_update_on_delete(self, mocker):
+    def test_node_update_on_delete(self, mocker) -> None:
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
         Node.save(n)
         assert not n.new
@@ -153,7 +155,7 @@ class TestNode:
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
-    def test_node_cache_control(self, clear_cache):
+    def test_node_cache_control(self, clear_cache) -> None:
         cc = Node.cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
@@ -164,10 +166,10 @@ class TestNode:
         assert isinstance(cc.cache, Cache)
 
     @pytest.mark.skip("pending")
-    def test_node_save(self):
+    def test_node_save(self) -> None:
         pass
 
-    def test_node_new(self):
+    def test_node_new(self) -> None:
         n = Node()
 
         assert n.id < 0
@@ -177,7 +179,7 @@ class TestNode:
         assert n.labels == list()
         assert n.new
 
-    def test_node_create(self, mocker):
+    def test_node_create(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node()
         pre_id = n.id
@@ -191,7 +193,7 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {}}
         # MATCH (n) WHERE size(labels(n)) = 0 DELETE n
 
-    def test_node_create_with_label(self, mocker):
+    def test_node_create_with_label(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo"])
 
@@ -201,7 +203,7 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {}}
         # MATCH (n:Foo) DELETE n
 
-    def test_node_create_with_multiple_labels(self, mocker):
+    def test_node_create_with_multiple_labels(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo", "Bar"])
 
@@ -210,7 +212,7 @@ class TestNode:
         assert spy.call_args[0][1] == "CREATE (n:Foo:Bar $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {}}
 
-    def test_node_create_with_data(self, mocker):
+    def test_node_create_with_data(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
         n = Node(labels=["Foo"], data={"answer": 42})
 
@@ -219,7 +221,7 @@ class TestNode:
         assert spy.call_args[0][1] == "CREATE (n:Foo $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {"answer": 42}}
 
-    def test_node_update(self, mocker):
+    def test_node_update(self, mocker) -> None:
         n = Node.create(Node())
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -235,7 +237,7 @@ class TestNode:
         )
         assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
 
-    def test_node_update_add_label(self, mocker):
+    def test_node_update_add_label(self, mocker) -> None:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -249,7 +251,7 @@ class TestNode:
             [("2746", "\d+")],
         )
 
-    def test_node_update_remove_label(self, mocker):
+    def test_node_update_remove_label(self, mocker) -> None:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -263,7 +265,7 @@ class TestNode:
             [("2746", "\d+")],
         )
 
-    def test_node_update_add_and_remove_label(self, mocker):
+    def test_node_update_add_and_remove_label(self, mocker) -> None:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -278,7 +280,7 @@ class TestNode:
             [("2746", "\d+")],
         )
 
-    def test_node_update_properties(self, mocker):
+    def test_node_update_properties(self, mocker) -> None:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -293,7 +295,7 @@ class TestNode:
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
 
-    def test_node_connect(self):
+    def test_node_connect(self) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -308,7 +310,7 @@ class TestNode:
         assert e.src_id == n1.id
         assert e.dst_id == n2.id
 
-    def test_node_create_updates_edge_src(self):
+    def test_node_create_updates_edge_src(self) -> None:
         n1 = Node(labels=["TestNode"])
         old_id = n1.id
         n2 = Node(labels=["TestNode"])
@@ -323,7 +325,7 @@ class TestNode:
         # and edge src has been updated
         assert e.src_id == n1.id
 
-    def test_node_create_updates_edge_dst(self):
+    def test_node_create_updates_edge_dst(self) -> None:
         n1 = Node(labels=["TestNode"])
         n2 = Node(labels=["TestNode"])
 
@@ -339,7 +341,7 @@ class TestNode:
         # and edge dst has been updated
         assert e.dst_id == n2.id
 
-    def test_node_create_updates_cache(self):
+    def test_node_create_updates_cache(self) -> None:
         cc = Node.cache_control
         n = Node(labels=["TestNode"])
         old_id = n.id
@@ -358,7 +360,7 @@ class TestNode:
         assert cc.info().hits == 1
         assert cc.info().misses == 1
 
-    def test_node_delete_new(self):
+    def test_node_delete_new(self) -> None:
         n = Node(labels=["TestNode"])
         old_id = n.id
 
@@ -368,7 +370,7 @@ class TestNode:
         assert n.no_save is True
         assert old_id not in Node.cache_control.cache
 
-    def test_node_delete_existing(self, mocker):
+    def test_node_delete_existing(self, mocker) -> None:
         n = Node(labels=["TestNode"])
         Node.save(n)
         old_id = n.id
@@ -390,7 +392,7 @@ class TestNode:
 
 
 class TestEdgeList:
-    def test_get_edge(self):
+    def test_get_edge(self) -> None:
         n = Node.get(cast(NodeId, 0))
         e0 = n.src_edges[0]
         e1 = n.src_edges[1]
@@ -417,7 +419,7 @@ class TestEdgeList:
         assert e11.src_id == 2
         assert e11.dst_id == 0
 
-    def test_iter(self):
+    def test_iter(self) -> None:
         n = Node.get(cast(NodeId, 0))
         for e in n.src_edges:
             assert isinstance(e, Edge)
@@ -426,7 +428,7 @@ class TestEdgeList:
     # test_add_duplicate
     # test_discard
 
-    def test_contains(self):
+    def test_contains(self) -> None:
         n = Node.get(cast(NodeId, 0))
         e = n.src_edges[0]
 
@@ -436,7 +438,7 @@ class TestEdgeList:
 
 
 class TestEdge:
-    def test_edge_cache_control(self):
+    def test_edge_cache_control(self) -> None:
         cc = Edge.cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
@@ -446,7 +448,7 @@ class TestEdge:
         assert ci.currsize == 0
         assert isinstance(cc.cache, Cache)
 
-    def test_src(self):
+    def test_src(self) -> None:
         n0 = Node.get(cast(NodeId, 0))
         n2 = Node.get(cast(NodeId, 2))
         e0 = n0.src_edges[0]
@@ -459,7 +461,7 @@ class TestEdge:
         assert id(e1.src) == id(n0)
         assert id(e11.src) == id(n2)
 
-    def test_dst(self):
+    def test_dst(self) -> None:
         n0 = Node.get(cast(NodeId, 0))
         n6 = Node.get(cast(NodeId, 6))
         n453 = Node.get(cast(NodeId, 453))
@@ -473,7 +475,7 @@ class TestEdge:
         assert id(e0.dst) == id(n6)
         assert id(e1.dst) == id(n453)
 
-    def test_edge_create(self, mocker, new_edge, clear_cache):
+    def test_edge_create(self, mocker, new_edge, clear_cache) -> None:  # type: ignore
         e, src, dst = new_edge
         e_id = e.id
         Node.save(src)
@@ -497,7 +499,7 @@ class TestEdge:
             [("3102", "\d+"), ("3103", "\d+")],
         )
 
-    def test_edge_create_with_data(self, mocker, new_edge):
+    def test_edge_create_with_data(self, mocker, new_edge) -> None:
         e, _, _ = new_edge
         e_id = e.id
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
@@ -520,7 +522,7 @@ class TestEdge:
         )
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
-    def test_edge_create_updates_cache(self, new_edge):
+    def test_edge_create_updates_cache(self, new_edge) -> None:
         cc = Edge.cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
@@ -543,7 +545,7 @@ class TestEdge:
         assert cc.info().hits == 3
         assert cc.info().misses == 1
 
-    def test_edge_create_updates_node_edges(self, new_edge):
+    def test_edge_create_updates_node_edges(self, new_edge) -> None:
         e, src, dst = new_edge
         old_id = e.id
         e.data = {"name": "bob", "fun": False}
@@ -554,7 +556,7 @@ class TestEdge:
         assert e.id in src.src_edges
         assert e.id in dst.dst_edges
 
-    def test_edge_create_on_delete(self, mocker):
+    def test_edge_create_on_delete(self, mocker) -> None:
         e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
         e.data = {"foo": "deleting-edge"}
         Edge.create(e)
@@ -571,7 +573,7 @@ class TestEdge:
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "deleting-edge"}}
 
-    def test_edge_immutable_properties(self, new_edge):
+    def test_edge_immutable_properties(self, new_edge) -> None:
         e, _, _ = new_edge
         # orig_src_id = e.src_id
         # orig_dst_id = e.dst_id
@@ -595,7 +597,7 @@ class TestEdge:
         assert e.type == orig_type
 
     # test_edge_update
-    def test_edge_update(self, mocker):
+    def test_edge_update(self, mocker) -> None:
         e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -610,7 +612,7 @@ class TestEdge:
         )
         assert spy.call_args[1]["params"] == {"props": {"wine": "cab", "more": True}}
 
-    def test_edge_src_after_node_save(self, new_edge):
+    def test_edge_src_after_node_save(self, new_edge) -> None:
         e, src, dst = new_edge
         old_id = src.id
         e = Edge.create(e)
@@ -621,7 +623,7 @@ class TestEdge:
         assert e.src_id == src.id
         assert id(e.src) == id(src)
 
-    def test_edge_dst_after_node_save(self, new_edge):
+    def test_edge_dst_after_node_save(self, new_edge) -> None:
         e, src, dst = new_edge
         old_id = dst.id
         e = Edge.create(e)
@@ -632,7 +634,7 @@ class TestEdge:
         assert e.dst_id == dst.id
         assert id(e.dst) == id(dst)
 
-    def test_edge_delete_new(self, new_edge):
+    def test_edge_delete_new(self, new_edge) -> None:
         e, src, dst = new_edge
         e = Edge.create(e)
         old_id = e.id
@@ -643,7 +645,7 @@ class TestEdge:
         assert e.no_save is True
         assert old_id not in Edge.cache_control.cache
 
-    def test_edge_delete_existing(self, mocker, new_edge):
+    def test_edge_delete_existing(self, mocker, new_edge) -> None:
         e, src, dst = new_edge
         e = Edge.create(e)
         old_id = e.id
@@ -662,9 +664,9 @@ class TestEdge:
         )
 
     @pytest.mark.skip("pending")
-    def test_edge_cache(self):
+    def test_edge_cache(self) -> None:
         pass
 
     @pytest.mark.skip("pending")
-    def test_edge_save(self):
+    def test_edge_save(self) -> None:
         pass
