@@ -6,6 +6,7 @@ from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
+from pydantic import BaseModel, Field, field_validator
 
 from roc.config import settings
 
@@ -131,11 +132,24 @@ class CacheInfo(NamedTuple):
     currsize: int
 
 
+class NodeCacheControlAttr:
+    def __get__(self, instance: Any, owner: Any) -> CacheControl[Node, NodeId]:
+        return CacheControl[Node, NodeId](Node.get)
+
+
+class EdgeCacheControlAttr:
+    def __get__(self, instance: Any, owner: Any) -> CacheControl[Edge, EdgeId]:
+        return CacheControl[Edge, EdgeId](Edge.get)
+
+
 class CacheControl(Generic[CacheType, CacheId]):
     """
     For controlling the Node and Edge caches, such as clearing them, getting their current or max
     size, adding items to the cache (outside the automatic methods for adding cached items), etc.
     """
+
+    node_cache_control = NodeCacheControlAttr()
+    edge_cache_control = EdgeCacheControlAttr()
 
     def __init__(self, cache_fn: Any):
         self.cache: Cache[CacheId, CacheType] = cache_fn.cache
@@ -158,13 +172,7 @@ class EdgeCreateFailed(Exception):
     pass
 
 
-class EdgeMeta(type):
-    @property
-    def cache_control(cls) -> CacheControl[Edge, EdgeId]:
-        return CacheControl[Edge, EdgeId](Edge.get)
-
-
-class Edge(metaclass=EdgeMeta):
+class Edge:
     """
     An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
     implements all phases of CRUD in the underlying graph database. This is a directional
@@ -191,7 +199,7 @@ class Edge(metaclass=EdgeMeta):
             id = next_new_edge
             next_new_edge = cast(EdgeId, next_new_edge - 1)
             self.new = True
-            Edge.cache_control.cache[id] = self
+            CacheControl.edge_cache_control.cache[id] = self
 
         self.id: EdgeId = id
         self.__type = type
@@ -302,7 +310,7 @@ class Edge(metaclass=EdgeMeta):
         e.new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
-            cache = Edge.cache_control.cache
+            cache = CacheControl.edge_cache_control.cache
             del cache[old_id]
             cache[e.id] = e
         except KeyError:
@@ -336,7 +344,7 @@ class Edge(metaclass=EdgeMeta):
         e.dst.dst_edges.discard(e)
 
         # remove from cache
-        edge_cache = Edge.cache_control.cache
+        edge_cache = CacheControl.edge_cache_control.cache
         if e.id in edge_cache:
             del edge_cache[e.id]
 
@@ -433,45 +441,86 @@ class NodeCreationFailed(Exception):
     pass
 
 
-class NodeMeta(type):
-    @property
-    def cache_control(cls) -> CacheControl[Node, NodeId]:
-        return CacheControl[Node, NodeId](Node.get)
+pydantic_node_base_config = {
+    "extra": "allow",
+}
 
 
-class Node(metaclass=NodeMeta):
+def get_next_new_id() -> NodeId:
+    global next_new_node
+    id = next_new_node
+    next_new_node = cast(NodeId, next_new_node - 1)
+    return id
+
+
+class Node(BaseModel):
     """
     An graph database node that automatically handles CRUD for the underlying graph database objects
     """
+
+    id: NodeId
+    # TODO: set[str]
+    labels: list[str] = Field(default_factory=lambda: list())
+    data: dict[str, Any]
+
+    # TODO: maybe make these properties or PrivateAttr()s?
+    # lifecycle management, not part of the data model
+    new: bool = Field(default=False)
+    no_save: bool = Field(default=False)
+    deleted: bool = Field(default=False)
+
+    @field_validator("id", mode="before")
+    def default_id(cls, id: NodeId | None) -> NodeId:
+        if isinstance(id, int):
+            return id
+
+        return get_next_new_id()
+
+    @field_validator("labels", mode="before")
+    def default_labels(cls, labels: list[str] | set[str] | None) -> list[str]:
+        if not labels:
+            return []
+
+        if isinstance(labels, set):
+            return list(labels)
+
+        return labels
+
+    @field_validator("data", mode="before")
+    def default_data(cls, d: dict[str, Any] | None) -> dict[str, Any]:
+        if not d:
+            return dict()
+
+        return d
 
     def __init__(
         self,
         *,
         id: NodeId | None = None,
-        src_edges: EdgeList | None = None,
-        dst_edges: EdgeList | None = None,
         data: dict[Any, Any] | None = None,
         labels: set[str] | list[str] | None = None,
+        src_edges: EdgeList | None = None,
+        dst_edges: EdgeList | None = None,
     ):
-        self.new = False
-        self.no_save = False
-        self.deleted = False
+        super().__init__(id=id, data=data, labels=labels)
 
-        if id is None:
-            global next_new_node
-            id = next_new_node
-            next_new_node = cast(NodeId, next_new_node - 1)
-            self.new = True
-            Node.cache_control.cache[id] = self
+        if self.id < 0:
+            self.new = True  # TODO: derived?
+            CacheControl.node_cache_control.cache[self.id] = self
 
-        self.id = id
-        self.data = data or {}
-        if isinstance(labels, set):
-            labels = list(labels)
-        self.labels = labels or list()
         self._orig_labels = set(self.labels)
-        self.src_edges = src_edges or EdgeList([])
-        self.dst_edges = dst_edges or EdgeList([])
+        self._src_edges = src_edges or EdgeList([])
+        self._dst_edges = dst_edges or EdgeList([])
+        # TODO: ignore fields on save
+        self._ignored_fields = ["new", "no_save", "deleted"]
+
+    @property
+    def src_edges(self) -> EdgeList:
+        return self._src_edges
+
+    @property
+    def dst_edges(self) -> EdgeList:
+        return self._dst_edges
 
     def __del__(self) -> None:
         Node.save(self)
@@ -499,7 +548,6 @@ class Node(metaclass=NodeMeta):
         )
         src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
         dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
-        # reveal_type(n)
         return Node(
             id=id,
             src_edges=EdgeList(src_edges),
@@ -569,7 +617,7 @@ class Node(metaclass=NodeMeta):
         n.new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
-            cache = Node.cache_control.cache
+            cache = CacheControl.node_cache_control.cache
             del cache[old_id]
             cache[new_id] = n
         except KeyError:
@@ -614,7 +662,7 @@ class Node(metaclass=NodeMeta):
             Edge.delete(e)
 
         # remove from cache
-        node_cache = Node.cache_control.cache
+        node_cache = CacheControl.node_cache_control.cache
         if n.id in node_cache:
             del node_cache[n.id]
 
