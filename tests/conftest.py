@@ -3,22 +3,22 @@ from typing import Generator
 import pytest
 
 from roc.event import EventBus
-from roc.graphdb import Edge, GraphDB, Node
+from roc.graphdb import CacheControl, Edge, GraphDB, Node
 
 
 @pytest.fixture(autouse=True)
 def clear_cache() -> Generator[None, None, None]:
     yield
 
-    node_cache = Node.cache_control.cache
-    edge_cache = Edge.cache_control.cache
+    node_cache = CacheControl.node_cache_control.cache
+    edge_cache = CacheControl.edge_cache_control.cache
     for n in node_cache:
         node_cache[n].no_save = True
     for e in edge_cache:
         edge_cache[e].no_save = True
 
-    Node.cache_control.clear()
-    Edge.cache_control.clear()
+    CacheControl.node_cache_control.clear()
+    CacheControl.edge_cache_control.clear()
 
 
 @pytest.fixture

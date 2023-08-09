@@ -7,7 +7,7 @@ import pytest
 from cachetools import Cache
 from helpers.util import assert_similar, normalize_whitespace
 
-from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
+from roc.graphdb import CacheControl, Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 
 class TestGraphDB:
@@ -48,7 +48,7 @@ class TestGraphDB:
     def test_walk(self) -> None:
         cnt = 0
         cache: set[int] = set()
-        cc = Node.cache_control
+        cc = CacheControl.node_cache_control
         maxsize = cc.info().maxsize
         if maxsize:
             max = maxsize + 100
@@ -89,7 +89,7 @@ class TestGraphDB:
         print("CNT", cnt)
         print("MAX", max)
         print("MAXSIZE", maxsize)
-        i = Node.cache_control.info()
+        i = CacheControl.node_cache_control.info()
         print("HITS", i.hits)
         print("MISSES", i.misses)
         print("CURRENT", i.currsize)
@@ -108,7 +108,7 @@ class TestNode:
         assert not n.new
 
     def test_node_cache(self) -> None:
-        cc = Node.cache_control
+        cc = CacheControl.node_cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
         n1 = Node.get(cast(NodeId, 0))
@@ -129,7 +129,7 @@ class TestNode:
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
 
         del n
-        Node.cache_control.clear()
+        CacheControl.node_cache_control.clear()
 
         spy.assert_called_once()
         assert spy.call_args[0][1] == "CREATE (n:TestNode $props) RETURN id(n) as id"
@@ -145,7 +145,7 @@ class TestNode:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del n
-        Node.cache_control.clear()
+        CacheControl.node_cache_control.clear()
 
         spy.assert_called_once()
         assert_similar(
@@ -156,7 +156,7 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
     def test_node_cache_control(self, clear_cache) -> None:
-        cc = Node.cache_control
+        cc = CacheControl.node_cache_control
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
         assert ci.hits == 0
@@ -342,7 +342,7 @@ class TestNode:
         assert e.dst_id == n2.id
 
     def test_node_create_updates_cache(self) -> None:
-        cc = Node.cache_control
+        cc = CacheControl.node_cache_control
         n = Node(labels=["TestNode"])
         old_id = n.id
 
@@ -368,7 +368,7 @@ class TestNode:
 
         assert n.deleted is True
         assert n.no_save is True
-        assert old_id not in Node.cache_control.cache
+        assert old_id not in CacheControl.node_cache_control.cache
 
     def test_node_delete_existing(self, mocker) -> None:
         n = Node(labels=["TestNode"])
@@ -379,7 +379,7 @@ class TestNode:
         Node.delete(n)
 
         spy.assert_called_once()
-        assert old_id not in Node.cache_control.cache
+        assert old_id not in CacheControl.node_cache_control.cache
         with pytest.raises(NodeNotFound):
             Node.get(old_id)
         assert_similar(
@@ -439,7 +439,8 @@ class TestEdgeList:
 
 class TestEdge:
     def test_edge_cache_control(self) -> None:
-        cc = Edge.cache_control
+        cc = CacheControl.edge_cache_control
+        cc.clear()
         # assert cc.info() == (0, 0, 4096, 0)
         ci = cc.info()
         assert ci.hits == 0
@@ -522,8 +523,8 @@ class TestEdge:
         )
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
-    def test_edge_create_updates_cache(self, new_edge) -> None:
-        cc = Edge.cache_control
+    def test_edge_create_updates_cache(self, new_edge, clear_cache) -> None:
+        cc = CacheControl.edge_cache_control
         assert cc.info().hits == 0
         assert cc.info().misses == 0
         e, _, _ = new_edge
@@ -563,7 +564,7 @@ class TestEdge:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del e
-        Edge.cache_control.clear()
+        CacheControl.edge_cache_control.clear()
 
         spy.assert_called_once()
         assert_similar(
@@ -643,7 +644,7 @@ class TestEdge:
 
         assert e.deleted is True
         assert e.no_save is True
-        assert old_id not in Edge.cache_control.cache
+        assert old_id not in CacheControl.edge_cache_control.cache
 
     def test_edge_delete_existing(self, mocker, new_edge) -> None:
         e, src, dst = new_edge
@@ -654,7 +655,7 @@ class TestEdge:
         Edge.delete(e)
 
         spy.assert_called_once()
-        assert old_id not in Edge.cache_control.cache
+        assert old_id not in CacheControl.edge_cache_control.cache
         with pytest.raises(EdgeNotFound):
             Edge.get(old_id)
         assert_similar(
