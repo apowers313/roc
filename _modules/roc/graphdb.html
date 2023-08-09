@@ -51,10 +51,15 @@
 
 <span class="kn">import</span> <span class="nn">mgclient</span>
 <span class="kn">from</span> <span class="nn">cachetools</span> <span class="kn">import</span> <span class="n">Cache</span><span class="p">,</span> <span class="n">LRUCache</span><span class="p">,</span> <span class="n">cached</span>
+<span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span>
 
 <span class="kn">from</span> <span class="nn">roc.config</span> <span class="kn">import</span> <span class="n">settings</span>
 
 <span class="n">RecordFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">Any</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="AnyData"><a class="viewcode-back" href="../roc.html#roc.graphdb.AnyData">[docs]</a><span class="k">class</span> <span class="nc">AnyData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
+    <span class="k">pass</span></div>
 
 
 <div class="viewcode-block" id="GraphDB"><a class="viewcode-back" href="../roc.html#roc.graphdb.GraphDB">[docs]</a><span class="k">class</span> <span class="nc">GraphDB</span><span class="p">:</span>
@@ -62,13 +67,13 @@
 <span class="sd">    A graph database singleton. Settings for the graph database come from the config module.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphDB</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">):</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
             <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">__isinitialized</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># type: ignore</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__isinitialized</span><span class="p">:</span>  <span class="c1"># type: ignore</span>
             <span class="k">return</span>
 
@@ -176,11 +181,24 @@
     <span class="n">currsize</span><span class="p">:</span> <span class="nb">int</span></div>
 
 
+<div class="viewcode-block" id="NodeCacheControlAttr"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeCacheControlAttr">[docs]</a><span class="k">class</span> <span class="nc">NodeCacheControlAttr</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">owner</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">NodeId</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">NodeId</span><span class="p">](</span><span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="EdgeCacheControlAttr"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeCacheControlAttr">[docs]</a><span class="k">class</span> <span class="nc">EdgeCacheControlAttr</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__get__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">instance</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">owner</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">EdgeId</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">EdgeId</span><span class="p">](</span><span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="CacheControl"><a class="viewcode-back" href="../roc.html#roc.graphdb.CacheControl">[docs]</a><span class="k">class</span> <span class="nc">CacheControl</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">CacheType</span><span class="p">,</span> <span class="n">CacheId</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    For controlling the Node and Edge caches, such as clearing them, getting their current or max</span>
 <span class="sd">    size, adding items to the cache (outside the automatic methods for adding cached items), etc.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">node_cache_control</span> <span class="o">=</span> <span class="n">NodeCacheControlAttr</span><span class="p">()</span>
+    <span class="n">edge_cache_control</span> <span class="o">=</span> <span class="n">EdgeCacheControlAttr</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache_fn</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span><span class="p">[</span><span class="n">CacheId</span><span class="p">,</span> <span class="n">CacheType</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache</span>
@@ -203,13 +221,15 @@
     <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="EdgeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeMeta">[docs]</a><span class="k">class</span> <span class="nc">EdgeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">cache_control</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Edge</span><span class="p">,</span> <span class="n">EdgeId</span><span class="p">](</span><span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+<div class="viewcode-block" id="get_next_new_edge_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.get_next_new_edge_id">[docs]</a><span class="k">def</span> <span class="nf">get_next_new_edge_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">EdgeId</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">next_new_edge</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">next_new_edge</span>
+    <span class="n">next_new_edge</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">EdgeId</span><span class="p">,</span> <span class="n">next_new_edge</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">id</span></div>
 
 
-<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">EdgeMeta</span><span class="p">):</span>
+<div class="viewcode-block" id="Edge"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge">[docs]</a><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically</span>
 <span class="sd">    implements all phases of CRUD in the underlying graph database. This is a directional</span>
@@ -217,6 +237,31 @@
 <span class="sd">    are dynamically loaded through property getters when they are called, and may trigger</span>
 <span class="sd">    a graph database query if they don&#39;t already exist in the edge cache.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">literal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">src_id</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">literal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">dst_id</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">literal</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">AnyData</span>
+
+    <span class="c1"># TODO: lifecycle to privattr</span>
+    <span class="n">new</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">no_save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">deleted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+<div class="viewcode-block" id="Edge.default_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.default_id">[docs]</a>    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">default_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeId</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">id</span>
+
+        <span class="k">return</span> <span class="n">get_next_new_edge_id</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Edge.default_data"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.default_data">[docs]</a>    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">default_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">AnyData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AnyData</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">AnyData</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">d</span></div>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -227,24 +272,19 @@
         <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">src_id</span><span class="o">=</span><span class="n">src_id</span><span class="p">,</span>
+            <span class="n">dst_id</span><span class="o">=</span><span class="n">dst_id</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="nb">type</span><span class="p">,</span>
+            <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+        <span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">global</span> <span class="n">next_new_edge</span>
-            <span class="nb">id</span> <span class="o">=</span> <span class="n">next_new_edge</span>
-            <span class="n">next_new_edge</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">EdgeId</span><span class="p">,</span> <span class="n">next_new_edge</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">:</span> <span class="n">EdgeId</span> <span class="o">=</span> <span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">__type</span> <span class="o">=</span> <span class="nb">type</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">src_id</span> <span class="o">=</span> <span class="n">src_id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dst_id</span> <span class="o">=</span> <span class="n">dst_id</span>
-
-    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">Edge</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="nd">@property</span>
@@ -254,10 +294,6 @@
     <span class="nd">@property</span>
     <span class="k">def</span> <span class="nf">dst</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dst_id</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__type</span>
 
 <div class="viewcode-block" id="Edge.get"><a class="viewcode-back" href="../roc.html#roc.graphdb.Edge.get">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -326,7 +362,7 @@
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">new</span><span class="p">:</span>
             <span class="n">Node</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span>
 
-        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
         <span class="n">ret</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
             <span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span>
@@ -347,7 +383,7 @@
         <span class="n">e</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
             <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
             <span class="n">cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -365,7 +401,7 @@
 
         <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
 
-        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
         <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH ()-[e]-&gt;() WHERE id(e) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> SET e = $props&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
 
@@ -381,7 +417,7 @@
         <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
         <span class="c1"># remove from cache</span>
-        <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">edge_cache</span><span class="p">:</span>
             <span class="k">del</span> <span class="n">edge_cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
 
@@ -408,10 +444,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">__edge_list</span> <span class="o">=</span> <span class="n">edge_list</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">=</span> <span class="mi">0</span>
 
-    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeFetchIterator</span><span class="p">:</span>
         <span class="k">return</span> <span class="bp">self</span>
 
-    <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cur</span> <span class="o">&gt;=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edge_list</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">StopIteration</span>
 
@@ -429,13 +465,13 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EdgeId</span><span class="p">]</span> <span class="o">|</span> <span class="nb">set</span><span class="p">[</span><span class="n">EdgeId</span><span class="p">]):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">EdgeId</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">ids</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeFetchIterator</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">EdgeFetchIterator</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__edges</span><span class="p">)</span>
 
 <div class="viewcode-block" id="EdgeList.add"><a class="viewcode-back" href="../roc.html#roc.graphdb.EdgeList.add">[docs]</a>    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -478,47 +514,87 @@
     <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="NodeMeta"><a class="viewcode-back" href="../roc.html#roc.graphdb.NodeMeta">[docs]</a><span class="k">class</span> <span class="nc">NodeMeta</span><span class="p">(</span><span class="nb">type</span><span class="p">):</span>
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">cache_control</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">CacheControl</span><span class="p">[</span><span class="n">Node</span><span class="p">,</span> <span class="n">NodeId</span><span class="p">](</span><span class="n">Node</span><span class="o">.</span><span class="n">get</span><span class="p">)</span></div>
+<div class="viewcode-block" id="get_next_new_node_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.get_next_new_node_id">[docs]</a><span class="k">def</span> <span class="nf">get_next_new_node_id</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">NodeId</span><span class="p">:</span>
+    <span class="k">global</span> <span class="n">next_new_node</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">next_new_node</span>
+    <span class="n">next_new_node</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">NodeId</span><span class="p">,</span> <span class="n">next_new_node</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">id</span></div>
 
 
-<div class="viewcode-block" id="Node"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node">[docs]</a><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">metaclass</span><span class="o">=</span><span class="n">NodeMeta</span><span class="p">):</span>
+<div class="viewcode-block" id="Node"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node">[docs]</a><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An graph database node that automatically handles CRUD for the underlying graph database objects</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># TODO: set[str]</span>
+    <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">data</span><span class="p">:</span> <span class="n">AnyData</span>
+
+    <span class="c1"># TODO: maybe make these properties or PrivateAttr()s?</span>
+    <span class="c1"># lifecycle management, not part of the data model</span>
+    <span class="n">new</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">no_save</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">deleted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Node.default_id"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.default_id">[docs]</a>    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">default_id</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeId</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">id</span>
+
+        <span class="k">return</span> <span class="n">get_next_new_node_id</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Node.default_labels"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.default_labels">[docs]</a>    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;labels&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">default_labels</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">labels</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">labels</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
+            <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">labels</span></div>
+
+<div class="viewcode-block" id="Node.default_data"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.default_data">[docs]</a>    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;data&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">default_data</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">AnyData</span> <span class="o">|</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AnyData</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">d</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">AnyData</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">d</span></div>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">src_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">dst_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">data</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">src_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">dst_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">no_save</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">deleted</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
+            <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
+        <span class="p">)</span>
 
-        <span class="k">if</span> <span class="nb">id</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">global</span> <span class="n">next_new_node</span>
-            <span class="nb">id</span> <span class="o">=</span> <span class="n">next_new_node</span>
-            <span class="n">next_new_node</span> <span class="o">=</span> <span class="n">cast</span><span class="p">(</span><span class="n">NodeId</span><span class="p">,</span> <span class="n">next_new_node</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="n">Node</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># TODO: derived?</span>
+            <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="nb">id</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">labels</span><span class="p">,</span> <span class="nb">set</span><span class="p">):</span>
-            <span class="n">labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">labels</span> <span class="o">=</span> <span class="n">labels</span> <span class="ow">or</span> <span class="nb">list</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_orig_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">src_edges</span> <span class="o">=</span> <span class="n">src_edges</span> <span class="ow">or</span> <span class="n">EdgeList</span><span class="p">([])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dst_edges</span> <span class="o">=</span> <span class="n">dst_edges</span> <span class="ow">or</span> <span class="n">EdgeList</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_src_edges</span> <span class="o">=</span> <span class="n">src_edges</span> <span class="ow">or</span> <span class="n">EdgeList</span><span class="p">([])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dst_edges</span> <span class="o">=</span> <span class="n">dst_edges</span> <span class="ow">or</span> <span class="n">EdgeList</span><span class="p">([])</span>
+        <span class="c1"># TODO: ignore fields on save</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ignored_fields</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;new&quot;</span><span class="p">,</span> <span class="s2">&quot;no_save&quot;</span><span class="p">,</span> <span class="s2">&quot;deleted&quot;</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">src_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeList</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_src_edges</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">dst_edges</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeList</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dst_edges</span>
+
+    <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">Node</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
 <div class="viewcode-block" id="Node.load"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.load">[docs]</a>    <span class="nd">@staticmethod</span>
@@ -544,7 +620,6 @@
         <span class="p">)</span>
         <span class="n">src_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;start&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">,</span> <span class="n">edges</span><span class="p">)))</span>
         <span class="n">dst_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;end&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">,</span> <span class="n">edges</span><span class="p">)))</span>
-        <span class="c1"># reveal_type(n)</span>
         <span class="k">return</span> <span class="n">Node</span><span class="p">(</span>
             <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
             <span class="n">src_edges</span><span class="o">=</span><span class="n">EdgeList</span><span class="p">(</span><span class="n">src_edges</span><span class="p">),</span>
@@ -587,7 +662,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">rm_query</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
 
-        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
         <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n) WHERE id(n) = </span><span class="si">{</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">set_query</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">rm_query</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
 
@@ -602,7 +677,7 @@
         <span class="n">old_id</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span>
 
         <span class="n">label_str</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">mklabels</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
-        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="p">}</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">n</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
         <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;CREATE (n</span><span class="si">{</span><span class="n">label_str</span><span class="si">}</span><span class="s2"> $props) RETURN id(n) as id&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">))</span>
 
@@ -614,7 +689,7 @@
         <span class="n">n</span><span class="o">.</span><span class="n">new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span>
             <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
             <span class="n">cache</span><span class="p">[</span><span class="n">new_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -659,7 +734,7 @@
             <span class="n">Edge</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
         <span class="c1"># remove from cache</span>
-        <span class="n">node_cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">cache_control</span><span class="o">.</span><span class="n">cache</span>
+        <span class="n">node_cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">node_cache</span><span class="p">:</span>
             <span class="k">del</span> <span class="n">node_cache</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
 

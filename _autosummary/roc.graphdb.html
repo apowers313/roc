@@ -52,17 +52,34 @@
             
   <section id="module-roc.graphdb">
 <span id="roc-graphdb"></span><h1>roc.graphdb<a class="headerlink" href="#module-roc.graphdb" title="Permalink to this heading">¶</a></h1>
+<p class="rubric">Functions</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.get_next_new_edge_id" title="roc.graphdb.get_next_new_edge_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_next_new_edge_id</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.get_next_new_node_id" title="roc.graphdb.get_next_new_node_id"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_next_new_node_id</span></code></a>()</p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
 <p class="rubric">Classes</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.CacheControl" title="roc.graphdb.CacheControl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheControl</span></code></a>(cache_fn)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><code class="xref py py-obj docutils literal notranslate"><span class="pre">AnyData</span></code></a>(**extra_data)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.CacheControl" title="roc.graphdb.CacheControl"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheControl</span></code></a>(cache_fn)</p></td>
 <td><p>For controlling the Node and Edge caches, such as clearing them, getting their current or max size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.CacheInfo" title="roc.graphdb.CacheInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheInfo</span></code></a>(hits, misses, maxsize, currsize)</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.CacheInfo" title="roc.graphdb.CacheInfo"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheInfo</span></code></a>(hits, misses, maxsize, currsize)</p></td>
 <td><p>Information about the cache: hits, misses, max size, and current size.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code></a>(src_id, dst_id, type, *[, id, data])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Edge" title="roc.graphdb.Edge"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Edge</span></code></a>(src_id, dst_id, type, *[, id, data])</p></td>
 <td><p>An edge (a.k.a.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeCacheControlAttr" title="roc.graphdb.EdgeCacheControlAttr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeCacheControlAttr</span></code></a>()</p></td>
+<td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeFetchIterator" title="roc.graphdb.EdgeFetchIterator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code></a>(edge_list)</p></td>
 <td><p>The implementation of an iterator for an EdgeList.</p></td>
@@ -70,16 +87,13 @@
 <tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeList</span></code></a>(ids)</p></td>
 <td><p>A list of Edges that is used by Node for keeping track of the connections it has.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.EdgeMeta" title="roc.graphdb.EdgeMeta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">EdgeMeta</span></code></a></p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.GraphDB" title="roc.graphdb.GraphDB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphDB</span></code></a>()</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.GraphDB" title="roc.graphdb.GraphDB"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GraphDB</span></code></a>()</p></td>
 <td><p>A graph database singleton.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Node" title="roc.graphdb.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>(*[, id, src_edges, dst_edges, data, labels])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.Node" title="roc.graphdb.Node"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Node</span></code></a>(*[, id, data, labels, src_edges, dst_edges])</p></td>
 <td><p>An graph database node that automatically handles CRUD for the underlying graph database objects</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.NodeMeta" title="roc.graphdb.NodeMeta"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeMeta</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="../_modules/roc.html#roc.graphdb.NodeCacheControlAttr" title="roc.graphdb.NodeCacheControlAttr"><code class="xref py py-obj docutils literal notranslate"><span class="pre">NodeCacheControlAttr</span></code></a>()</p></td>
 <td><p></p></td>
 </tr>
 </tbody>

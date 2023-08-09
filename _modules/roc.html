@@ -126,7 +126,7 @@
 
 <dl class="py class">
 <dt class="sig sig-object py" id="roc.event.EventBus">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.event.</span></span><span class="sig-name descname"><span class="pre">EventBus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/event.html#EventBus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.EventBus" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.event.</span></span><span class="sig-name descname"><span class="pre">EventBus</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/event.html#EventBus"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.event.EventBus" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">EventData</span></code>]</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.event.EventBus.clear_names">
@@ -144,11 +144,41 @@
 <section id="module-roc.graphdb">
 <span id="roc-graphdb-module"></span><h2>roc.graphdb module<a class="headerlink" href="#module-roc.graphdb" title="Permalink to this heading">¶</a></h2>
 <dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.AnyData">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">AnyData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">extra_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#AnyData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.AnyData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.AnyData.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'extra':</span> <span class="pre">'allow'}</span></em><a class="headerlink" href="#roc.graphdb.AnyData.model_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.AnyData.model_fields">
+<span class="sig-name descname"><span class="pre">model_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#roc.graphdb.AnyData.model_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Metadata about the fields defined on the model,
+mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</p>
+<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="roc.graphdb.CacheControl">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">CacheControl</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_fn</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#CacheControl"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.CacheControl" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Generic</span></code>[<code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheType</span></code>, <code class="xref py py-obj docutils literal notranslate"><span class="pre">CacheId</span></code>]</p>
 <p>For controlling the Node and Edge caches, such as clearing them, getting their current or max
 size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheControl.edge_cache_control">
+<span class="sig-name descname"><span class="pre">edge_cache_control</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;roc.graphdb.CacheControl</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#roc.graphdb.CacheControl.edge_cache_control" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.CacheControl.node_cache_control">
+<span class="sig-name descname"><span class="pre">node_cache_control</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">&lt;roc.graphdb.CacheControl</span> <span class="pre">object&gt;</span></em><a class="headerlink" href="#roc.graphdb.CacheControl.node_cache_control" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </dd></dl>
 
 <dl class="py class">
@@ -185,7 +215,7 @@ size, adding items to the cache (outside the automatic methods for adding cached
 <dl class="py class">
 <dt class="sig sig-object py" id="roc.graphdb.Edge">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">Edge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">EdgeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#Edge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
 <p>An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
 implements all phases of CRUD in the underlying graph database. This is a directional
 relationship with a “source” and “destination”. The source and destination properties
@@ -196,14 +226,39 @@ a graph database query if they don’t already exist in the edge cache.</p>
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.create" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.data">
+<span class="sig-name descname"><span class="pre">data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a></em><a class="headerlink" href="#roc.graphdb.Edge.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.default_data">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.default_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.default_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.default_id">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">EdgeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">EdgeId</span></span></span><a class="reference internal" href="roc/graphdb.html#Edge.default_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.default_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.delete">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#Edge.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.delete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.deleted">
+<span class="sig-name descname"><span class="pre">deleted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Edge.deleted" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py property">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.dst">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dst</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></em><a class="headerlink" href="#roc.graphdb.Edge.dst" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.dst_id">
+<span class="sig-name descname"><span class="pre">dst_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NodeId</span></em><a class="headerlink" href="#roc.graphdb.Edge.dst_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -224,6 +279,11 @@ Edge is returned and cached.</p>
 </dd>
 </dl>
 </dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.id">
+<span class="sig-name descname"><span class="pre">id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">EdgeId</span></em><a class="headerlink" href="#roc.graphdb.Edge.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.load">
@@ -246,6 +306,30 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 </dl>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#roc.graphdb.Edge.model_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.model_fields">
+<span class="sig-name descname"><span class="pre">model_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'data':</span> <span class="pre">FieldInfo(annotation=AnyData,</span> <span class="pre">required=True),</span> <span class="pre">'deleted':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False),</span> <span class="pre">'dst_id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True,</span> <span class="pre">json_schema_extra={'literal':</span> <span class="pre">True}),</span> <span class="pre">'id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True),</span> <span class="pre">'new':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False),</span> <span class="pre">'no_save':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False),</span> <span class="pre">'src_id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True,</span> <span class="pre">json_schema_extra={'literal':</span> <span class="pre">True}),</span> <span class="pre">'type':</span> <span class="pre">FieldInfo(annotation=str,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True,</span> <span class="pre">json_schema_extra={'literal':</span> <span class="pre">True})}</span></em><a class="headerlink" href="#roc.graphdb.Edge.model_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Metadata about the fields defined on the model,
+mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</p>
+<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.new">
+<span class="sig-name descname"><span class="pre">new</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Edge.new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.no_save">
+<span class="sig-name descname"><span class="pre">no_save</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Edge.no_save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.save">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.save" title="Permalink to this definition">¶</a></dt>
@@ -256,14 +340,19 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">src</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></em><a class="headerlink" href="#roc.graphdb.Edge.src" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Edge.src_id">
+<span class="sig-name descname"><span class="pre">src_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NodeId</span></em><a class="headerlink" href="#roc.graphdb.Edge.src_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.to_id">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">to_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">EdgeId</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">EdgeId</span></span></span><a class="reference internal" href="roc/graphdb.html#Edge.to_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.to_id" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
-<dl class="py property">
+<dl class="py attribute">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.type">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#roc.graphdb.Edge.type" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><a class="headerlink" href="#roc.graphdb.Edge.type" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -271,6 +360,12 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">e</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Edge.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Edge.update" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.EdgeCacheControlAttr">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeCacheControlAttr</span></span><a class="reference internal" href="roc/graphdb.html#EdgeCacheControlAttr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeCacheControlAttr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 </dd></dl>
 
 <dl class="py exception">
@@ -312,17 +407,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 </dd></dl>
 
-<dl class="py class">
-<dt class="sig sig-object py" id="roc.graphdb.EdgeMeta">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeMeta</span></span><a class="reference internal" href="roc/graphdb.html#EdgeMeta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeMeta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
-<dl class="py property">
-<dt class="sig sig-object py" id="roc.graphdb.EdgeMeta.cache_control">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cache_control</span></span><a class="headerlink" href="#roc.graphdb.EdgeMeta.cache_control" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 <dl class="py exception">
 <dt class="sig sig-object py" id="roc.graphdb.EdgeNotFound">
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">EdgeNotFound</span></span><a class="reference internal" href="roc/graphdb.html#EdgeNotFound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.EdgeNotFound" title="Permalink to this definition">¶</a></dt>
@@ -358,8 +442,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <dl class="py class">
 <dt class="sig sig-object py" id="roc.graphdb.Node">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">Node</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">Any</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">src_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_edges</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="roc/graphdb.html#Node"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
 <p>An graph database node that automatically handles CRUD for the underlying graph database objects</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.connect">
@@ -371,14 +455,54 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.create" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.data">
+<span class="sig-name descname"><span class="pre">data</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a></em><a class="headerlink" href="#roc.graphdb.Node.data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.default_data">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">d</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.AnyData" title="roc.graphdb.AnyData"><span class="pre">AnyData</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.default_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.default_data" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.default_id">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">id</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NodeId</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.default_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.default_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="roc.graphdb.Node.default_labels">
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="roc/graphdb.html#Node.default_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.default_labels" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.delete">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delete</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.delete"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.delete" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.deleted">
+<span class="sig-name descname"><span class="pre">deleted</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Node.deleted" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.Node.dst_edges">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">dst_edges</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a></em><a class="headerlink" href="#roc.graphdb.Node.dst_edges" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.get">
 <span class="sig-name descname"><span class="pre">get</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.get"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.id">
+<span class="sig-name descname"><span class="pre">id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">NodeId</span></em><a class="headerlink" href="#roc.graphdb.Node.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.labels">
+<span class="sig-name descname"><span class="pre">labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#roc.graphdb.Node.labels" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -392,9 +516,38 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <dd><p>Converts a list of strings into proper Cypher syntax for a graph database query</p>
 </dd></dl>
 
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.model_config">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em><a class="headerlink" href="#roc.graphdb.Node.model_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.model_fields">
+<span class="sig-name descname"><span class="pre">model_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'data':</span> <span class="pre">FieldInfo(annotation=AnyData,</span> <span class="pre">required=True),</span> <span class="pre">'deleted':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False),</span> <span class="pre">'id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True),</span> <span class="pre">'labels':</span> <span class="pre">FieldInfo(annotation=list[str],</span> <span class="pre">required=True,</span> <span class="pre">exclude=True),</span> <span class="pre">'new':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False),</span> <span class="pre">'no_save':</span> <span class="pre">FieldInfo(annotation=bool,</span> <span class="pre">required=False,</span> <span class="pre">default=False)}</span></em><a class="headerlink" href="#roc.graphdb.Node.model_fields" title="Permalink to this definition">¶</a></dt>
+<dd><p>Metadata about the fields defined on the model,
+mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</p>
+<p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.new">
+<span class="sig-name descname"><span class="pre">new</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Node.new" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="roc.graphdb.Node.no_save">
+<span class="sig-name descname"><span class="pre">no_save</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Node.no_save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.save">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.save" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="roc.graphdb.Node.src_edges">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">src_edges</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.EdgeList" title="roc.graphdb.EdgeList"><span class="pre">EdgeList</span></a></em><a class="headerlink" href="#roc.graphdb.Node.src_edges" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -404,21 +557,16 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 </dd></dl>
 
+<dl class="py class">
+<dt class="sig sig-object py" id="roc.graphdb.NodeCacheControlAttr">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">NodeCacheControlAttr</span></span><a class="reference internal" href="roc/graphdb.html#NodeCacheControlAttr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.NodeCacheControlAttr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+</dd></dl>
+
 <dl class="py exception">
 <dt class="sig sig-object py" id="roc.graphdb.NodeCreationFailed">
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">NodeCreationFailed</span></span><a class="reference internal" href="roc/graphdb.html#NodeCreationFailed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.NodeCreationFailed" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="roc.graphdb.NodeMeta">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">NodeMeta</span></span><a class="reference internal" href="roc/graphdb.html#NodeMeta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.NodeMeta" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">type</span></code></p>
-<dl class="py property">
-<dt class="sig sig-object py" id="roc.graphdb.NodeMeta.cache_control">
-<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">cache_control</span></span><a class="headerlink" href="#roc.graphdb.NodeMeta.cache_control" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
 </dd></dl>
 
 <dl class="py exception">
@@ -426,6 +574,16 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">NodeNotFound</span></span><a class="reference internal" href="roc/graphdb.html#NodeNotFound"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.NodeNotFound" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></p>
 </dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.graphdb.get_next_new_edge_id">
+<span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">get_next_new_edge_id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">EdgeId</span></span></span><a class="reference internal" href="roc/graphdb.html#get_next_new_edge_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.get_next_new_edge_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="roc.graphdb.get_next_new_node_id">
+<span class="sig-prename descclassname"><span class="pre">roc.graphdb.</span></span><span class="sig-name descname"><span class="pre">get_next_new_node_id</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">NodeId</span></span></span><a class="reference internal" href="roc/graphdb.html#get_next_new_node_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.get_next_new_node_id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
 
 </section>
 <section id="module-roc.perception">
@@ -531,7 +689,16 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 </ul>
 </li>
 <li><a class="reference internal" href="#module-roc.graphdb">roc.graphdb module</a><ul>
-<li><a class="reference internal" href="#roc.graphdb.CacheControl"><code class="docutils literal notranslate"><span class="pre">CacheControl</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.AnyData"><code class="docutils literal notranslate"><span class="pre">AnyData</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.AnyData.model_config"><code class="docutils literal notranslate"><span class="pre">AnyData.model_config</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.AnyData.model_fields"><code class="docutils literal notranslate"><span class="pre">AnyData.model_fields</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#roc.graphdb.CacheControl"><code class="docutils literal notranslate"><span class="pre">CacheControl</span></code></a><ul>
+<li><a class="reference internal" href="#roc.graphdb.CacheControl.edge_cache_control"><code class="docutils literal notranslate"><span class="pre">CacheControl.edge_cache_control</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.CacheControl.node_cache_control"><code class="docutils literal notranslate"><span class="pre">CacheControl.node_cache_control</span></code></a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#roc.graphdb.CacheInfo"><code class="docutils literal notranslate"><span class="pre">CacheInfo</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.CacheInfo.currsize"><code class="docutils literal notranslate"><span class="pre">CacheInfo.currsize</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.CacheInfo.hits"><code class="docutils literal notranslate"><span class="pre">CacheInfo.hits</span></code></a></li>
@@ -541,27 +708,35 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 </li>
 <li><a class="reference internal" href="#roc.graphdb.Edge"><code class="docutils literal notranslate"><span class="pre">Edge</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.Edge.create"><code class="docutils literal notranslate"><span class="pre">Edge.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.data"><code class="docutils literal notranslate"><span class="pre">Edge.data</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.default_data"><code class="docutils literal notranslate"><span class="pre">Edge.default_data()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.default_id"><code class="docutils literal notranslate"><span class="pre">Edge.default_id()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.delete"><code class="docutils literal notranslate"><span class="pre">Edge.delete()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.deleted"><code class="docutils literal notranslate"><span class="pre">Edge.deleted</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.dst"><code class="docutils literal notranslate"><span class="pre">Edge.dst</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.dst_id"><code class="docutils literal notranslate"><span class="pre">Edge.dst_id</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.get"><code class="docutils literal notranslate"><span class="pre">Edge.get()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.id"><code class="docutils literal notranslate"><span class="pre">Edge.id</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.load"><code class="docutils literal notranslate"><span class="pre">Edge.load()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.model_config"><code class="docutils literal notranslate"><span class="pre">Edge.model_config</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.model_fields"><code class="docutils literal notranslate"><span class="pre">Edge.model_fields</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.new"><code class="docutils literal notranslate"><span class="pre">Edge.new</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.no_save"><code class="docutils literal notranslate"><span class="pre">Edge.no_save</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.save"><code class="docutils literal notranslate"><span class="pre">Edge.save()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.src"><code class="docutils literal notranslate"><span class="pre">Edge.src</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Edge.src_id"><code class="docutils literal notranslate"><span class="pre">Edge.src_id</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.to_id"><code class="docutils literal notranslate"><span class="pre">Edge.to_id()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.type"><code class="docutils literal notranslate"><span class="pre">Edge.type</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.update"><code class="docutils literal notranslate"><span class="pre">Edge.update()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#roc.graphdb.EdgeCacheControlAttr"><code class="docutils literal notranslate"><span class="pre">EdgeCacheControlAttr</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeCreateFailed"><code class="docutils literal notranslate"><span class="pre">EdgeCreateFailed</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeFetchIterator"><code class="docutils literal notranslate"><span class="pre">EdgeFetchIterator</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeList"><code class="docutils literal notranslate"><span class="pre">EdgeList</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.EdgeList.add"><code class="docutils literal notranslate"><span class="pre">EdgeList.add()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeList.discard"><code class="docutils literal notranslate"><span class="pre">EdgeList.discard()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeList.replace"><code class="docutils literal notranslate"><span class="pre">EdgeList.replace()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#roc.graphdb.EdgeMeta"><code class="docutils literal notranslate"><span class="pre">EdgeMeta</span></code></a><ul>
-<li><a class="reference internal" href="#roc.graphdb.EdgeMeta.cache_control"><code class="docutils literal notranslate"><span class="pre">EdgeMeta.cache_control</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#roc.graphdb.EdgeNotFound"><code class="docutils literal notranslate"><span class="pre">EdgeNotFound</span></code></a></li>
@@ -575,20 +750,32 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <li><a class="reference internal" href="#roc.graphdb.Node"><code class="docutils literal notranslate"><span class="pre">Node</span></code></a><ul>
 <li><a class="reference internal" href="#roc.graphdb.Node.connect"><code class="docutils literal notranslate"><span class="pre">Node.connect()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.create"><code class="docutils literal notranslate"><span class="pre">Node.create()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.data"><code class="docutils literal notranslate"><span class="pre">Node.data</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.default_data"><code class="docutils literal notranslate"><span class="pre">Node.default_data()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.default_id"><code class="docutils literal notranslate"><span class="pre">Node.default_id()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.default_labels"><code class="docutils literal notranslate"><span class="pre">Node.default_labels()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.delete"><code class="docutils literal notranslate"><span class="pre">Node.delete()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.deleted"><code class="docutils literal notranslate"><span class="pre">Node.deleted</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.dst_edges"><code class="docutils literal notranslate"><span class="pre">Node.dst_edges</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.get"><code class="docutils literal notranslate"><span class="pre">Node.get()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.id"><code class="docutils literal notranslate"><span class="pre">Node.id</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.labels"><code class="docutils literal notranslate"><span class="pre">Node.labels</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.load"><code class="docutils literal notranslate"><span class="pre">Node.load()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.mklabels"><code class="docutils literal notranslate"><span class="pre">Node.mklabels()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.model_config"><code class="docutils literal notranslate"><span class="pre">Node.model_config</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.model_fields"><code class="docutils literal notranslate"><span class="pre">Node.model_fields</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.new"><code class="docutils literal notranslate"><span class="pre">Node.new</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.no_save"><code class="docutils literal notranslate"><span class="pre">Node.no_save</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.save"><code class="docutils literal notranslate"><span class="pre">Node.save()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.Node.src_edges"><code class="docutils literal notranslate"><span class="pre">Node.src_edges</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.update"><code class="docutils literal notranslate"><span class="pre">Node.update()</span></code></a></li>
 </ul>
 </li>
+<li><a class="reference internal" href="#roc.graphdb.NodeCacheControlAttr"><code class="docutils literal notranslate"><span class="pre">NodeCacheControlAttr</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.NodeCreationFailed"><code class="docutils literal notranslate"><span class="pre">NodeCreationFailed</span></code></a></li>
-<li><a class="reference internal" href="#roc.graphdb.NodeMeta"><code class="docutils literal notranslate"><span class="pre">NodeMeta</span></code></a><ul>
-<li><a class="reference internal" href="#roc.graphdb.NodeMeta.cache_control"><code class="docutils literal notranslate"><span class="pre">NodeMeta.cache_control</span></code></a></li>
-</ul>
-</li>
 <li><a class="reference internal" href="#roc.graphdb.NodeNotFound"><code class="docutils literal notranslate"><span class="pre">NodeNotFound</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.get_next_new_edge_id"><code class="docutils literal notranslate"><span class="pre">get_next_new_edge_id()</span></code></a></li>
+<li><a class="reference internal" href="#roc.graphdb.get_next_new_node_id"><code class="docutils literal notranslate"><span class="pre">get_next_new_node_id()</span></code></a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#module-roc.perception">roc.perception module</a><ul>

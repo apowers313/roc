@@ -9,6 +9,13 @@ roc.graphdb
 
    
    
+   .. rubric:: Functions
+
+   .. autosummary::
+   
+      get_next_new_edge_id
+      get_next_new_node_id
+   
    
 
    
@@ -17,15 +24,16 @@ roc.graphdb
 
    .. autosummary::
    
+      AnyData
       CacheControl
       CacheInfo
       Edge
+      EdgeCacheControlAttr
       EdgeFetchIterator
       EdgeList
-      EdgeMeta
       GraphDB
       Node
-      NodeMeta
+      NodeCacheControlAttr
    
    
 
