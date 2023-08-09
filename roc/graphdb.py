@@ -13,6 +13,10 @@ from roc.config import settings
 RecordFn = Callable[[str, Iterator[Any]], None]
 
 
+class AnyData(BaseModel, extra="allow"):
+    pass
+
+
 class GraphDB:
     """
     A graph database singleton. Settings for the graph database come from the config module.
@@ -172,7 +176,15 @@ class EdgeCreateFailed(Exception):
     pass
 
 
-class Edge:
+def get_next_new_edge_id() -> EdgeId:
+    global next_new_edge
+    id = next_new_edge
+    next_new_edge = cast(EdgeId, next_new_edge - 1)
+
+    return id
+
+
+class Edge(BaseModel):
     """
     An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
     implements all phases of CRUD in the underlying graph database. This is a directional
@@ -180,6 +192,31 @@ class Edge:
     are dynamically loaded through property getters when they are called, and may trigger
     a graph database query if they don't already exist in the edge cache.
     """
+
+    id: EdgeId = Field(exclude=True)
+    type: str = Field(literal=True, exclude=True)
+    src_id: NodeId = Field(literal=True, exclude=True)
+    dst_id: NodeId = Field(literal=True, exclude=True)
+    data: AnyData
+
+    # TODO: lifecycle to privattr
+    new: bool = False
+    no_save: bool = False
+    deleted: bool = False
+
+    @field_validator("id", mode="before")
+    def default_id(cls, id: EdgeId | None) -> EdgeId:
+        if isinstance(id, int):
+            return id
+
+        return get_next_new_edge_id()
+
+    @field_validator("data", mode="before")
+    def default_data(cls, d: AnyData | None) -> AnyData:
+        if not d:
+            return AnyData()
+
+        return d
 
     def __init__(
         self,
@@ -190,22 +227,17 @@ class Edge:
         id: EdgeId | None = None,
         data: dict[Any, Any] | None = None,
     ):
-        self.new = False
-        self.no_save = False
-        self.deleted = False
+        super().__init__(
+            src_id=src_id,
+            dst_id=dst_id,
+            type=type,
+            id=id,
+            data=data,
+        )
 
-        if id is None:
-            global next_new_edge
-            id = next_new_edge
-            next_new_edge = cast(EdgeId, next_new_edge - 1)
+        if self.id < 0:
             self.new = True
-            CacheControl.edge_cache_control.cache[id] = self
-
-        self.id: EdgeId = id
-        self.__type = type
-        self.data = data or {}
-        self.src_id = src_id
-        self.dst_id = dst_id
+            CacheControl.edge_cache_control.cache[self.id] = self
 
     def __del__(self) -> None:
         Edge.save(self)
@@ -217,10 +249,6 @@ class Edge:
     @property
     def dst(self) -> Node:
         return Node.get(self.dst_id)
-
-    @property
-    def type(self) -> str:
-        return self.__type
 
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
@@ -289,7 +317,7 @@ class Edge:
         if e.dst.new:
             Node.save(e.dst)
 
-        params = {"props": e.data}
+        params = {"props": e.data.model_dump()}
 
         ret = list(
             db.raw_fetch(
@@ -328,7 +356,7 @@ class Edge:
 
         db = GraphDB()
 
-        params = {"props": e.data}
+        params = {"props": e.data.model_dump()}
 
         db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} SET e = $props", params=params)
 
@@ -441,12 +469,7 @@ class NodeCreationFailed(Exception):
     pass
 
 
-pydantic_node_base_config = {
-    "extra": "allow",
-}
-
-
-def get_next_new_id() -> NodeId:
+def get_next_new_node_id() -> NodeId:
     global next_new_node
     id = next_new_node
     next_new_node = cast(NodeId, next_new_node - 1)
@@ -458,10 +481,10 @@ class Node(BaseModel):
     An graph database node that automatically handles CRUD for the underlying graph database objects
     """
 
-    id: NodeId
+    id: NodeId = Field(exclude=True)
     # TODO: set[str]
-    labels: list[str] = Field(default_factory=lambda: list())
-    data: dict[str, Any]
+    labels: list[str] = Field(exclude=True)
+    data: AnyData
 
     # TODO: maybe make these properties or PrivateAttr()s?
     # lifecycle management, not part of the data model
@@ -474,7 +497,7 @@ class Node(BaseModel):
         if isinstance(id, int):
             return id
 
-        return get_next_new_id()
+        return get_next_new_node_id()
 
     @field_validator("labels", mode="before")
     def default_labels(cls, labels: list[str] | set[str] | None) -> list[str]:
@@ -487,9 +510,9 @@ class Node(BaseModel):
         return labels
 
     @field_validator("data", mode="before")
-    def default_data(cls, d: dict[str, Any] | None) -> dict[str, Any]:
+    def default_data(cls, d: AnyData | None) -> AnyData:
         if not d:
-            return dict()
+            return AnyData()
 
         return d
 
@@ -502,7 +525,11 @@ class Node(BaseModel):
         src_edges: EdgeList | None = None,
         dst_edges: EdgeList | None = None,
     ):
-        super().__init__(id=id, data=data, labels=labels)
+        super().__init__(
+            id=id,
+            data=data,
+            labels=labels,
+        )
 
         if self.id < 0:
             self.new = True  # TODO: derived?
@@ -590,7 +617,7 @@ class Node(BaseModel):
         else:
             rm_query = ""
 
-        params = {"props": n.data}
+        params = {"props": n.data.model_dump()}
 
         db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params)
 
@@ -605,7 +632,7 @@ class Node(BaseModel):
         old_id = n.id
 
         label_str = Node.mklabels(n.labels)
-        params = {"props": n.data}
+        params = {"props": n.data.model_dump()}
 
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
