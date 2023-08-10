@@ -7,6 +7,7 @@ from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 import mgclient
 from cachetools import Cache, LRUCache, cached
 from pydantic import BaseModel, Field, field_validator
+from typing_extensions import Self
 
 from roc.config import settings
 
@@ -539,8 +540,8 @@ class Node(BaseModel, extra="allow"):
     def __del__(self) -> None:
         Node.save(self)
 
-    @staticmethod
-    def load(id: NodeId) -> Node:
+    @classmethod
+    def load(cls, id: NodeId) -> Self:
         db = GraphDB()
         res = list(
             db.raw_fetch(
@@ -551,7 +552,7 @@ class Node(BaseModel, extra="allow"):
             )
         )
 
-        print("RES", res)
+        # print("RES", res)
 
         if not len(res) >= 1:
             raise NodeNotFound(f"Couldn't find node ID: {id}")
@@ -562,7 +563,7 @@ class Node(BaseModel, extra="allow"):
         )
         src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
         dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
-        return Node(
+        return cls(
             id=id,
             src_edges=EdgeList(src_edges),
             dst_edges=EdgeList(dst_edges),
@@ -570,10 +571,10 @@ class Node(BaseModel, extra="allow"):
             data=n.properties,
         )
 
-    @cached(cache=LRUCache(settings.node_cache_size), key=lambda id: id, info=True)
-    @staticmethod
-    def get(id: NodeId) -> Node:
-        return Node.load(id)
+    @classmethod
+    @cached(cache=LRUCache(settings.node_cache_size), key=lambda cls, id: id, info=True)
+    def get(cls, id: NodeId) -> Self:
+        return cls.load(id)
 
     @staticmethod
     def save(n: Node) -> Node:

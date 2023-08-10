@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
+from helpers.schema import GotCharacter
 from helpers.util import assert_similar, normalize_whitespace
 
 from roc.graphdb import (
@@ -107,7 +108,7 @@ class TestGraphDB:
 
 class TestNode:
     def test_node_get(self) -> None:
-        n = Node.get(cast(NodeId, 0))
+        n = GotCharacter.get(cast(NodeId, 0))
         assert n.id == 0
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1

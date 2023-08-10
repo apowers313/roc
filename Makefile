@@ -24,6 +24,7 @@ setup: install pre-commit-install
 install:
 	poetry config virtualenvs.in-project true
 	poetry lock -n && poetry export --without-hashes > requirements.txt
+	poetry env use 3.11
 	poetry install -n
 	-poetry run mypy --install-types --non-interactive ./
 
