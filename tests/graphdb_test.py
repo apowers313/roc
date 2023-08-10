@@ -112,7 +112,7 @@ class TestNode:
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
         assert n.model_dump() == {"name": "Waymar Royce"}
-        assert n.labels == ["Character"]
+        assert n.labels == {"Character"}
         assert not n.new
         assert n.id in CacheControl.node_cache_control.cache
 
@@ -145,13 +145,13 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"testname": "test_node_save_on_delete"}}
 
     def test_node_update_on_delete(self, mocker) -> None:
-        n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
+        n = Node(labels={"TestNode"}, data={"testname": "test_node_save_on_delete"})
         Node.save(n)
         assert not n.new
         assert n.id > 0
         n.foo = "bar"
         del n.testname  # type: ignore
-        n.labels.append("Bob")
+        n.labels.add("Bob")
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del n
@@ -186,7 +186,7 @@ class TestNode:
         assert len(n.src_edges) == 0
         assert len(n.dst_edges) == 0
         assert n.model_dump() == dict()
-        assert n.labels == list()
+        assert n.labels == set()
         assert n.new
 
     def test_node_create(self, mocker) -> None:
@@ -215,11 +215,11 @@ class TestNode:
 
     def test_node_create_with_multiple_labels(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
-        n = Node(labels=["Foo", "Bar"])
+        n = Node(labels={"Foo", "Bar"})
 
         Node.create(n)
         spy.assert_called_once()
-        assert spy.call_args[0][1] == "CREATE (n:Foo:Bar $props) RETURN id(n) as id"
+        assert spy.call_args[0][1] == "CREATE (n:Bar:Foo $props) RETURN id(n) as id"
         assert spy.call_args[1]["params"] == {"props": {}}
 
     def test_node_create_with_data(self, mocker) -> None:
@@ -235,7 +235,7 @@ class TestNode:
         n = Node.create(Node())
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
-        n.labels.append("TestNode")
+        n.labels.add("TestNode")
         n.beer = "yum"
         n.number = 42
         Node.update(n)
@@ -249,10 +249,10 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
 
     def test_node_update_add_label(self, mocker) -> None:
-        n = Node.create(Node(labels=["TestNode"]))
+        n = Node.create(Node(labels={"TestNode"}))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
-        n.labels.append("Foo")
+        n.labels.add("Foo")
         Node.update(n)
 
         spy.assert_called_once()
@@ -281,7 +281,7 @@ class TestNode:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.clear()
-        n.labels.append("Foo")
+        n.labels.add("Foo")
         Node.update(n)
 
         spy.assert_called_once()
