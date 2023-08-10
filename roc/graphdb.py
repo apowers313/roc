@@ -6,15 +6,11 @@ from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 from roc.config import settings
 
 RecordFn = Callable[[str, Iterator[Any]], None]
-
-
-class AnyData(BaseModel, extra="allow"):
-    pass
 
 
 class GraphDB:
@@ -184,7 +180,7 @@ def get_next_new_edge_id() -> EdgeId:
     return id
 
 
-class Edge(BaseModel):
+class Edge(BaseModel, extra="allow"):
     """
     An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
     implements all phases of CRUD in the underlying graph database. This is a directional
@@ -197,12 +193,11 @@ class Edge(BaseModel):
     type: str = Field(literal=True, exclude=True)
     src_id: NodeId = Field(literal=True, exclude=True)
     dst_id: NodeId = Field(literal=True, exclude=True)
-    data: AnyData
 
     # TODO: lifecycle to privattr
-    new: bool = False
-    no_save: bool = False
-    deleted: bool = False
+    _new: bool = False
+    _no_save: bool = False
+    _deleted: bool = False
 
     @field_validator("id", mode="before")
     def default_id(cls, id: EdgeId | None) -> EdgeId:
@@ -210,13 +205,6 @@ class Edge(BaseModel):
             return id
 
         return get_next_new_edge_id()
-
-    @field_validator("data", mode="before")
-    def default_data(cls, d: AnyData | None) -> AnyData:
-        if not d:
-            return AnyData()
-
-        return d
 
     def __init__(
         self,
@@ -227,16 +215,17 @@ class Edge(BaseModel):
         id: EdgeId | None = None,
         data: dict[Any, Any] | None = None,
     ):
+        data = data or {}
         super().__init__(
             src_id=src_id,
             dst_id=dst_id,
             type=type,
             id=id,
-            data=data,
+            **data,
         )
 
         if self.id < 0:
-            self.new = True
+            self._new = True
             CacheControl.edge_cache_control.cache[self.id] = self
 
     def __del__(self) -> None:
@@ -249,6 +238,10 @@ class Edge(BaseModel):
     @property
     def dst(self) -> Node:
         return Node.get(self.dst_id)
+
+    @property
+    def new(self) -> bool:
+        return self._new
 
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
@@ -298,26 +291,26 @@ class Edge(BaseModel):
 
     @staticmethod
     def save(e: Edge) -> Edge:
-        if e.new:
+        if e._new:
             return Edge.create(e)
         else:
             return Edge.update(e)
 
     @staticmethod
     def create(e: Edge) -> Edge:
-        if e.no_save:
+        if e._no_save:
             return e
 
         db = GraphDB()
         old_id = e.id
 
-        if e.src.new:
+        if e.src._new:
             Node.save(e.src)
 
-        if e.dst.new:
+        if e.dst._new:
             Node.save(e.dst)
 
-        params = {"props": e.data.model_dump()}
+        params = {"props": e.model_dump()}
 
         ret = list(
             db.raw_fetch(
@@ -335,7 +328,7 @@ class Edge(BaseModel):
             raise EdgeCreateFailed("failed to create new edge")
 
         e.id = ret[0]["e_id"]
-        e.new = False
+        e._new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
             cache = CacheControl.edge_cache_control.cache
@@ -351,12 +344,12 @@ class Edge(BaseModel):
 
     @staticmethod
     def update(e: Edge) -> Edge:
-        if e.no_save:
+        if e._no_save:
             return e
 
         db = GraphDB()
 
-        params = {"props": e.data.model_dump()}
+        params = {"props": e.model_dump()}
 
         db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} SET e = $props", params=params)
 
@@ -364,8 +357,8 @@ class Edge(BaseModel):
 
     @staticmethod
     def delete(e: Edge) -> None:
-        e.deleted = True
-        e.no_save = True
+        e._deleted = True
+        e._no_save = True
 
         # remove e from src and dst nodes
         e.src.src_edges.discard(e)
@@ -377,7 +370,7 @@ class Edge(BaseModel):
             del edge_cache[e.id]
 
         # delete from db
-        if not e.new:
+        if not e._new:
             db = GraphDB()
             db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} DELETE e")
 
@@ -477,20 +470,19 @@ def get_next_new_node_id() -> NodeId:
 
 
 class Node(BaseModel):
+    # class Node(BaseModel):
     """
     An graph database node that automatically handles CRUD for the underlying graph database objects
     """
 
+    model_config = ConfigDict(extra="allow")
     id: NodeId = Field(exclude=True)
     # TODO: set[str]
     labels: list[str] = Field(exclude=True)
-    data: AnyData
-
-    # TODO: maybe make these properties or PrivateAttr()s?
-    # lifecycle management, not part of the data model
-    new: bool = Field(default=False)
-    no_save: bool = Field(default=False)
-    deleted: bool = Field(default=False)
+    _new: bool = PrivateAttr(default=False)
+    # new: bool = Field(default=False)
+    _no_save: bool = PrivateAttr(default=False)
+    _deleted: bool = PrivateAttr(default=False)
 
     @field_validator("id", mode="before")
     def default_id(cls, id: NodeId | None) -> NodeId:
@@ -509,13 +501,6 @@ class Node(BaseModel):
 
         return labels
 
-    @field_validator("data", mode="before")
-    def default_data(cls, d: AnyData | None) -> AnyData:
-        if not d:
-            return AnyData()
-
-        return d
-
     def __init__(
         self,
         *,
@@ -525,21 +510,22 @@ class Node(BaseModel):
         src_edges: EdgeList | None = None,
         dst_edges: EdgeList | None = None,
     ):
+        data = data or {}
         super().__init__(
             id=id,
-            data=data,
             labels=labels,
+            **data,
         )
 
         if self.id < 0:
-            self.new = True  # TODO: derived?
+            self._new = True  # TODO: derived?
             CacheControl.node_cache_control.cache[self.id] = self
 
         self._orig_labels = set(self.labels)
         self._src_edges = src_edges or EdgeList([])
         self._dst_edges = dst_edges or EdgeList([])
         # TODO: ignore fields on save
-        self._ignored_fields = ["new", "no_save", "deleted"]
+        # self._ignored_fields = ["new", "no_save", "deleted"]
 
     @property
     def src_edges(self) -> EdgeList:
@@ -548,6 +534,10 @@ class Node(BaseModel):
     @property
     def dst_edges(self) -> EdgeList:
         return self._dst_edges
+
+    @property
+    def new(self) -> bool:
+        return self._new
 
     def __del__(self) -> None:
         Node.save(self)
@@ -564,7 +554,7 @@ class Node(BaseModel):
             )
         )
 
-        # print("RES", res)
+        print("RES", res)
 
         if not len(res) >= 1:
             raise NodeNotFound(f"Couldn't find node ID: {id}")
@@ -579,8 +569,8 @@ class Node(BaseModel):
             id=id,
             src_edges=EdgeList(src_edges),
             dst_edges=EdgeList(dst_edges),
-            data=n.properties,
             labels=n.labels,
+            data=n.properties,
         )
 
     @cached(cache=LRUCache(settings.node_cache_size), key=lambda id: id, info=True)
@@ -590,14 +580,14 @@ class Node(BaseModel):
 
     @staticmethod
     def save(n: Node) -> Node:
-        if n.new:
+        if n._new:
             return Node.create(n)
         else:
             return Node.update(n)
 
     @staticmethod
     def update(n: Node) -> Node:
-        if n.no_save:
+        if n._no_save:
             return n
 
         db = GraphDB()
@@ -617,7 +607,7 @@ class Node(BaseModel):
         else:
             rm_query = ""
 
-        params = {"props": n.data.model_dump()}
+        params = {"props": n.model_dump()}
 
         db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params)
 
@@ -625,14 +615,14 @@ class Node(BaseModel):
 
     @staticmethod
     def create(n: Node) -> Node:
-        if n.no_save:
+        if n._no_save:
             return n
 
         db = GraphDB()
         old_id = n.id
 
         label_str = Node.mklabels(n.labels)
-        params = {"props": n.data.model_dump()}
+        params = {"props": n.model_dump()}
 
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
@@ -641,7 +631,7 @@ class Node(BaseModel):
 
         new_id = res[0]["id"]
         n.id = new_id
-        n.new = False
+        n._new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
             cache = CacheControl.node_cache_control.cache
@@ -693,12 +683,12 @@ class Node(BaseModel):
         if n.id in node_cache:
             del node_cache[n.id]
 
-        if not n.new:
+        if not n._new:
             db = GraphDB()
             db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} DELETE n")
 
-        n.deleted = True
-        n.no_save = True
+        n._deleted = True
+        n._no_save = True
 
     @staticmethod
     def mklabels(labels: list[str]) -> str:

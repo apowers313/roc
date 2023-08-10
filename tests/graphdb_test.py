@@ -8,7 +8,6 @@ from cachetools import Cache
 from helpers.util import assert_similar, normalize_whitespace
 
 from roc.graphdb import (
-    AnyData,
     CacheControl,
     Edge,
     EdgeNotFound,
@@ -112,9 +111,10 @@ class TestNode:
         assert n.id == 0
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
-        assert n.data.model_dump() == {"name": "Waymar Royce"}
+        assert n.model_dump() == {"name": "Waymar Royce"}
         assert n.labels == ["Character"]
         assert not n.new
+        assert n.id in CacheControl.node_cache_control.cache
 
     def test_node_cache(self) -> None:
         cc = CacheControl.node_cache_control
@@ -149,7 +149,8 @@ class TestNode:
         Node.save(n)
         assert not n.new
         assert n.id > 0
-        n.data = AnyData(**{"foo": "bar"})
+        n.foo = "bar"
+        del n.testname  # type: ignore
         n.labels.append("Bob")
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -184,7 +185,7 @@ class TestNode:
         assert n.id < 0
         assert len(n.src_edges) == 0
         assert len(n.dst_edges) == 0
-        assert n.data.model_dump() == dict()
+        assert n.model_dump() == dict()
         assert n.labels == list()
         assert n.new
 
@@ -235,7 +236,8 @@ class TestNode:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.append("TestNode")
-        n.data = AnyData(**{"beer": "yum", "number": 42})
+        n.beer = "yum"
+        n.number = 42
         Node.update(n)
 
         spy.assert_called_once()
@@ -293,7 +295,8 @@ class TestNode:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
-        n.data = AnyData(**{"foo": "bar", "baz": "bat"})
+        n.foo = "bar"
+        n.baz = "bat"
         Node.update(n)
 
         spy.assert_called_once()
@@ -375,8 +378,8 @@ class TestNode:
 
         Node.delete(n)
 
-        assert n.deleted is True
-        assert n.no_save is True
+        assert n._deleted is True
+        assert n._no_save is True
         assert old_id not in CacheControl.node_cache_control.cache
 
     def test_node_delete_existing(self, mocker) -> None:
@@ -411,19 +414,19 @@ class TestEdgeList:
         assert isinstance(e11, Edge)
         # Edge 0
         assert e0.id == 0
-        assert e0.data.model_dump() == {}
+        assert e0.model_dump() == {}
         assert e0.type == "LOYAL_TO"
         assert e0.src_id == 0
         assert e0.dst_id == 6
         # Edge 1
         assert e1.id == 1
-        assert e1.data.model_dump() == {}
+        assert e1.model_dump() == {}
         assert e1.type == "VICTIM_IN"
         assert e1.src_id == 0
         assert e1.dst_id == 453
         # Edge 11
         assert e11.id == 11
-        assert e11.data.model_dump() == {"count": 1, "method": "Ice sword"}
+        assert e11.model_dump() == {"count": 1, "method": "Ice sword"}
         assert e11.type == "KILLED"
         assert e11.src_id == 2
         assert e11.dst_id == 0
@@ -513,7 +516,8 @@ class TestEdge:
         e, _, _ = new_edge
         e_id = e.id
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
-        e.data = AnyData(**{"name": "bob", "fun": False})
+        e.name = "bob"
+        e.fun = False
         e = Edge.create(e)
 
         # saved both new nodes
@@ -558,7 +562,8 @@ class TestEdge:
     def test_edge_create_updates_node_edges(self, new_edge) -> None:
         e, src, dst = new_edge
         old_id = e.id
-        e.data = AnyData(**{"name": "bob", "fun": False})
+        e.name = "bob"
+        e.fun = False
 
         e = Edge.create(e)
 
@@ -568,7 +573,7 @@ class TestEdge:
 
     def test_edge_create_on_delete(self, mocker) -> None:
         e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
-        e.data = AnyData(**{"foo": "deleting-edge"})
+        e.foo = "deleting-edge"
         Edge.create(e)
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -613,7 +618,8 @@ class TestEdge:
         e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
-        e.data = AnyData(**{"wine": "cab", "more": True})
+        e.wine = "cab"
+        e.more = True
         Edge.update(e)
 
         spy.assert_called_once()
@@ -653,8 +659,8 @@ class TestEdge:
 
         Edge.delete(e)
 
-        assert e.deleted is True
-        assert e.no_save is True
+        assert e._deleted is True
+        assert e._no_save is True
         assert old_id not in CacheControl.edge_cache_control.cache
 
     def test_edge_delete_existing(self, mocker, new_edge) -> None:

@@ -13,9 +13,9 @@ def clear_cache() -> Generator[None, None, None]:
     node_cache = CacheControl.node_cache_control.cache
     edge_cache = CacheControl.edge_cache_control.cache
     for n in node_cache:
-        node_cache[n].no_save = True
+        node_cache[n]._no_save = True
     for e in edge_cache:
-        edge_cache[e].no_save = True
+        edge_cache[e]._no_save = True
 
     CacheControl.node_cache_control.clear()
     CacheControl.edge_cache_control.clear()
