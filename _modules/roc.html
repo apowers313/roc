@@ -285,21 +285,6 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</
 <p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
 </dd></dl>
 
-<dl class="py method">
-<dt class="sig sig-object py" id="roc.graphdb.Edge.model_post_init">
-<span class="sig-name descname"><span class="pre">model_post_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#roc.graphdb.Edge.model_post_init" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function is meant to behave like a BaseModel method to initialise private attributes.</p>
-<p>It takes context as an argument since that’s what pydantic-core passes when calling it.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>self</strong> – The BaseModel instance.</p></li>
-<li><p><strong>__context</strong> – The context.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
 <dl class="py property">
 <dt class="sig sig-object py" id="roc.graphdb.Edge.new">
 <em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">new</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#roc.graphdb.Edge.new" title="Permalink to this definition">¶</a></dt>
@@ -462,7 +447,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="roc.graphdb.Node.labels">
-<span class="sig-name descname"><span class="pre">labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#roc.graphdb.Node.labels" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">labels</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#roc.graphdb.Node.labels" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -472,7 +457,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.mklabels">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mklabels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.mklabels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.mklabels" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">mklabels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.mklabels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.mklabels" title="Permalink to this definition">¶</a></dt>
 <dd><p>Converts a list of strings into proper Cypher syntax for a graph database query</p>
 </dd></dl>
 
@@ -484,25 +469,10 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="roc.graphdb.Node.model_fields">
-<span class="sig-name descname"><span class="pre">model_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True),</span> <span class="pre">'labels':</span> <span class="pre">FieldInfo(annotation=list[str],</span> <span class="pre">required=True,</span> <span class="pre">exclude=True)}</span></em><a class="headerlink" href="#roc.graphdb.Node.model_fields" title="Permalink to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">model_fields</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">FieldInfo</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'id':</span> <span class="pre">FieldInfo(annotation=NewType,</span> <span class="pre">required=True,</span> <span class="pre">exclude=True),</span> <span class="pre">'labels':</span> <span class="pre">FieldInfo(annotation=set[str],</span> <span class="pre">required=True,</span> <span class="pre">exclude=True)}</span></em><a class="headerlink" href="#roc.graphdb.Node.model_fields" title="Permalink to this definition">¶</a></dt>
 <dd><p>Metadata about the fields defined on the model,
 mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</p>
 <p>This replaces <cite>Model.__fields__</cite> from Pydantic V1.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="roc.graphdb.Node.model_post_init">
-<span class="sig-name descname"><span class="pre">model_post_init</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">__context</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Any</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="headerlink" href="#roc.graphdb.Node.model_post_init" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function is meant to behave like a BaseModel method to initialise private attributes.</p>
-<p>It takes context as an argument since that’s what pydantic-core passes when calling it.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>self</strong> – The BaseModel instance.</p></li>
-<li><p><strong>__context</strong> – The context.</p></li>
-</ul>
-</dd>
-</dl>
 </dd></dl>
 
 <dl class="py property">
@@ -682,7 +652,6 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</
 <li><a class="reference internal" href="#roc.graphdb.Edge.load"><code class="docutils literal notranslate"><span class="pre">Edge.load()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.model_config"><code class="docutils literal notranslate"><span class="pre">Edge.model_config</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.model_fields"><code class="docutils literal notranslate"><span class="pre">Edge.model_fields</span></code></a></li>
-<li><a class="reference internal" href="#roc.graphdb.Edge.model_post_init"><code class="docutils literal notranslate"><span class="pre">Edge.model_post_init()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.new"><code class="docutils literal notranslate"><span class="pre">Edge.new</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.save"><code class="docutils literal notranslate"><span class="pre">Edge.save()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Edge.src"><code class="docutils literal notranslate"><span class="pre">Edge.src</span></code></a></li>
@@ -723,7 +692,6 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</
 <li><a class="reference internal" href="#roc.graphdb.Node.mklabels"><code class="docutils literal notranslate"><span class="pre">Node.mklabels()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.model_config"><code class="docutils literal notranslate"><span class="pre">Node.model_config</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.model_fields"><code class="docutils literal notranslate"><span class="pre">Node.model_fields</span></code></a></li>
-<li><a class="reference internal" href="#roc.graphdb.Node.model_post_init"><code class="docutils literal notranslate"><span class="pre">Node.model_post_init()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.new"><code class="docutils literal notranslate"><span class="pre">Node.new</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.save"><code class="docutils literal notranslate"><span class="pre">Node.save()</span></code></a></li>
 <li><a class="reference internal" href="#roc.graphdb.Node.src_edges"><code class="docutils literal notranslate"><span class="pre">Node.src_edges</span></code></a></li>
