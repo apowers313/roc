@@ -6,7 +6,7 @@ from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from roc.config import settings
 
@@ -194,11 +194,6 @@ class Edge(BaseModel, extra="allow"):
     src_id: NodeId = Field(literal=True, exclude=True)
     dst_id: NodeId = Field(literal=True, exclude=True)
 
-    # TODO: lifecycle to privattr
-    _new: bool = False
-    _no_save: bool = False
-    _deleted: bool = False
-
     @field_validator("id", mode="before")
     def default_id(cls, id: EdgeId | None) -> EdgeId:
         if isinstance(id, int):
@@ -223,6 +218,10 @@ class Edge(BaseModel, extra="allow"):
             id=id,
             **data,
         )
+
+        self._new = False
+        self._no_save = False
+        self._deleted = False
 
         if self.id < 0:
             self._new = True
@@ -469,20 +468,13 @@ def get_next_new_node_id() -> NodeId:
     return id
 
 
-class Node(BaseModel):
-    # class Node(BaseModel):
+class Node(BaseModel, extra="allow"):
     """
     An graph database node that automatically handles CRUD for the underlying graph database objects
     """
 
-    model_config = ConfigDict(extra="allow")
     id: NodeId = Field(exclude=True)
-    # TODO: set[str]
-    labels: list[str] = Field(exclude=True)
-    _new: bool = PrivateAttr(default=False)
-    # new: bool = Field(default=False)
-    _no_save: bool = PrivateAttr(default=False)
-    _deleted: bool = PrivateAttr(default=False)
+    labels: set[str] = Field(exclude=True)
 
     @field_validator("id", mode="before")
     def default_id(cls, id: NodeId | None) -> NodeId:
@@ -511,17 +503,22 @@ class Node(BaseModel):
         dst_edges: EdgeList | None = None,
     ):
         data = data or {}
+
         super().__init__(
             id=id,
             labels=labels,
             **data,
         )
 
+        self._new = False
+        self._no_save = False
+        self._deleted = False
+
         if self.id < 0:
             self._new = True  # TODO: derived?
             CacheControl.node_cache_control.cache[self.id] = self
 
-        self._orig_labels = set(self.labels)
+        self._orig_labels = self.labels.copy()
         self._src_edges = src_edges or EdgeList([])
         self._dst_edges = dst_edges or EdgeList([])
         # TODO: ignore fields on save
@@ -596,12 +593,12 @@ class Node(BaseModel):
         curr_labels = set(n.labels)
         new_labels = curr_labels - orig_labels
         rm_labels = orig_labels - curr_labels
-        set_label_str = Node.mklabels(list(new_labels))
+        set_label_str = Node.mklabels(new_labels)
         if set_label_str:
             set_query = f"SET n{set_label_str}, n = $props"
         else:
             set_query = "SET n = $props"
-        rm_label_str = Node.mklabels(list(rm_labels))
+        rm_label_str = Node.mklabels(rm_labels)
         if rm_label_str:
             rm_query = f"REMOVE n{rm_label_str}"
         else:
@@ -691,9 +688,11 @@ class Node(BaseModel):
         n._no_save = True
 
     @staticmethod
-    def mklabels(labels: list[str]) -> str:
+    def mklabels(labels: set[str]) -> str:
         "Converts a list of strings into proper Cypher syntax for a graph database query"
-        label_str = ":".join([i for i in labels])
+        labels_list = [i for i in labels]
+        labels_list.sort()
+        label_str = ":".join(labels_list)
         if len(label_str) > 0:
             label_str = ":" + label_str
         return label_str
