@@ -24,7 +24,6 @@ roc.graphdb
 
    .. autosummary::
    
-      AnyData
       CacheControl
       CacheInfo
       Edge
