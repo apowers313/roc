@@ -52,6 +52,7 @@
 <span class="kn">import</span> <span class="nn">mgclient</span>
 <span class="kn">from</span> <span class="nn">cachetools</span> <span class="kn">import</span> <span class="n">Cache</span><span class="p">,</span> <span class="n">LRUCache</span><span class="p">,</span> <span class="n">cached</span>
 <span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">field_validator</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
 
 <span class="kn">from</span> <span class="nn">roc.config</span> <span class="kn">import</span> <span class="n">settings</span>
 
@@ -584,8 +585,8 @@
     <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">Node</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
-<div class="viewcode-block" id="Node.load"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.load">[docs]</a>    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
+<div class="viewcode-block" id="Node.load"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.load">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
         <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
             <span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span>
@@ -596,7 +597,7 @@
             <span class="p">)</span>
         <span class="p">)</span>
 
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;RES&quot;</span><span class="p">,</span> <span class="n">res</span><span class="p">)</span>
+        <span class="c1"># print(&quot;RES&quot;, res)</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">res</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">NodeNotFound</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find node ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -607,7 +608,7 @@
         <span class="p">)</span>
         <span class="n">src_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;start&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">,</span> <span class="n">edges</span><span class="p">)))</span>
         <span class="n">dst_edges</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="nb">filter</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span><span class="p">[</span><span class="s2">&quot;end&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="nb">id</span><span class="p">,</span> <span class="n">edges</span><span class="p">)))</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="p">(</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span>
             <span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">,</span>
             <span class="n">src_edges</span><span class="o">=</span><span class="n">EdgeList</span><span class="p">(</span><span class="n">src_edges</span><span class="p">),</span>
             <span class="n">dst_edges</span><span class="o">=</span><span class="n">EdgeList</span><span class="p">(</span><span class="n">dst_edges</span><span class="p">),</span>
@@ -615,10 +616,10 @@
             <span class="n">data</span><span class="o">=</span><span class="n">n</span><span class="o">.</span><span class="n">properties</span><span class="p">,</span>
         <span class="p">)</span></div>
 
-<div class="viewcode-block" id="Node.get"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.get">[docs]</a>    <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">Node</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></div>
+<div class="viewcode-block" id="Node.get"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.get">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="Node.save"><a class="viewcode-back" href="../roc.html#roc.graphdb.Node.save">[docs]</a>    <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Node</span><span class="p">:</span>
