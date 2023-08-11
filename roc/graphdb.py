@@ -1,19 +1,29 @@
 from __future__ import annotations
 
+from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
+from typing_extensions import Self
+
 from collections.abc import Iterator, Mapping, MutableSet
 from threading import Lock
-from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
 from pydantic import BaseModel, Field, field_validator
-from typing_extensions import Self
 
 from roc.config import settings
 
 RecordFn = Callable[[str, Iterator[Any]], None]
+CacheType = TypeVar("CacheType")
+CacheId = TypeVar("CacheId")
+EdgeId = NewType("EdgeId", int)
+NodeId = NewType("NodeId", int)
+next_new_edge: EdgeId = cast(EdgeId, -1)
+next_new_node: NodeId = cast(NodeId, -1)
 
 
+#########
+# GRAPHDB
+#########
 class GraphDB:
     """
     A graph database singleton. Settings for the graph database come from the config module.
@@ -118,10 +128,9 @@ def _convert_memgraph_value(value: Any) -> Any:
     return value
 
 
-CacheType = TypeVar("CacheType")
-CacheId = TypeVar("CacheId")
-
-
+#######
+# CACHE
+#######
 class CacheInfo(NamedTuple):
     """
     Information about the cache: hits, misses, max size, and current size.
@@ -160,11 +169,9 @@ class CacheControl(Generic[CacheType, CacheId]):
         self.info: Callable[[], CacheInfo] = cache_fn.cache_info
 
 
-EdgeId = NewType("EdgeId", int)
-NodeId = NewType("NodeId", int)
-next_new_edge: EdgeId = cast(EdgeId, -1)
-
-
+#######
+# EDGE
+#######
 class EdgeNotFound(Exception):
     pass
 
@@ -202,6 +209,18 @@ class Edge(BaseModel, extra="allow"):
 
         return get_next_new_edge_id()
 
+    @property
+    def src(self) -> Node:
+        return Node.get(self.src_id)
+
+    @property
+    def dst(self) -> Node:
+        return Node.get(self.dst_id)
+
+    @property
+    def new(self) -> bool:
+        return self._new
+
     def __init__(
         self,
         src_id: NodeId,
@@ -230,18 +249,6 @@ class Edge(BaseModel, extra="allow"):
 
     def __del__(self) -> None:
         Edge.save(self)
-
-    @property
-    def src(self) -> Node:
-        return Node.get(self.src_id)
-
-    @property
-    def dst(self) -> Node:
-        return Node.get(self.dst_id)
-
-    @property
-    def new(self) -> bool:
-        return self._new
 
     @staticmethod
     @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
@@ -382,6 +389,9 @@ class Edge(BaseModel, extra="allow"):
             return e
 
 
+#######
+# EDGE LIST
+#######
 class EdgeFetchIterator:
     """
     The implementation of an iterator for an EdgeList. Only intended to be used internally by
@@ -422,6 +432,14 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     def __len__(self) -> int:
         return len(self.__edges)
 
+    def __contains__(self, e: Any) -> bool:
+        if isinstance(e, Edge) or type(e) == int:
+            e_id = Edge.to_id(e)  # type: ignore
+        else:
+            return False
+
+        return e_id in self.__edges
+
     def add(self, e: Edge | EdgeId) -> None:
         e_id = Edge.to_id(e)
 
@@ -435,14 +453,6 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 
         self.__edges.remove(e_id)
 
-    def __contains__(self, e: Any) -> bool:
-        if isinstance(e, Edge) or type(e) == int:
-            e_id = Edge.to_id(e)  # type: ignore
-        else:
-            return False
-
-        return e_id in self.__edges
-
     def replace(self, old: Edge | EdgeId, new: Edge | EdgeId) -> None:
         old_id = Edge.to_id(old)
         new_id = Edge.to_id(new)
@@ -451,9 +461,9 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
                 self.__edges[i] = new_id
 
 
-next_new_node: NodeId = cast(NodeId, -1)
-
-
+#######
+# NODE
+#######
 class NodeNotFound(Exception):
     pass
 
@@ -494,6 +504,18 @@ class Node(BaseModel, extra="allow"):
 
         return labels
 
+    @property
+    def src_edges(self) -> EdgeList:
+        return self._src_edges
+
+    @property
+    def dst_edges(self) -> EdgeList:
+        return self._dst_edges
+
+    @property
+    def new(self) -> bool:
+        return self._new
+
     def __init__(
         self,
         *,
@@ -524,18 +546,6 @@ class Node(BaseModel, extra="allow"):
         self._dst_edges = dst_edges or EdgeList([])
         # TODO: ignore fields on save
         # self._ignored_fields = ["new", "no_save", "deleted"]
-
-    @property
-    def src_edges(self) -> EdgeList:
-        return self._src_edges
-
-    @property
-    def dst_edges(self) -> EdgeList:
-        return self._dst_edges
-
-    @property
-    def new(self) -> bool:
-        return self._new
 
     def __del__(self) -> None:
         Node.save(self)
