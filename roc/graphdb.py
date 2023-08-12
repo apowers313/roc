@@ -495,12 +495,12 @@ class Node(BaseModel, extra="allow"):
         return get_next_new_node_id()
 
     @field_validator("labels", mode="before")
-    def default_labels(cls, labels: list[str] | set[str] | None) -> list[str]:
+    def default_labels(cls, labels: list[str] | set[str] | None) -> set[str]:
         if not labels:
-            return []
+            return set()
 
-        if isinstance(labels, set):
-            return list(labels)
+        if isinstance(labels, list):
+            return set(labels)
 
         return labels
 
@@ -548,7 +548,10 @@ class Node(BaseModel, extra="allow"):
         # self._ignored_fields = ["new", "no_save", "deleted"]
 
     def __del__(self) -> None:
-        Node.save(self)
+        try:
+            self.__class__.save(self)
+        except Exception as e:
+            print("error saving during del:", e)
 
     @classmethod
     def load(cls, id: NodeId) -> Self:
@@ -586,15 +589,41 @@ class Node(BaseModel, extra="allow"):
     def get(cls, id: NodeId) -> Self:
         return cls.load(id)
 
-    @staticmethod
-    def save(n: Node) -> Node:
-        if n._new:
-            return Node.create(n)
-        else:
-            return Node.update(n)
+    @classmethod
+    def save(cls, n: Self) -> Self:
+        """Save a node to persistent storage
 
-    @staticmethod
-    def update(n: Node) -> Node:
+        Writes the specified node to the GraphDB for persistent storage. If the node does not
+        already exist in storage, it is created via the `create` method. If the node does exist, it
+        is updated via the `update` method.
+
+        If the _no_save flag is True on the node, the save request will be silently ignored.
+
+        Args:
+            n (Self): The Node to be saved
+
+        Returns:
+            Self: As a convenience, the node that was stored is returned. This may be useful
+            since the the id of the node may change if it was created in the database.
+        """
+        if n._new:
+            return cls.create(n)
+        else:
+            return cls.update(n)
+
+    @classmethod
+    def update(cls, n: Self) -> Self:
+        """Update an existing node in the GraphDB.
+
+        Calling `save` is preferred to using this method so that the caller doesn't need to know the
+        state of the node.
+
+        Args:
+            n (Self): The node to be updated
+
+        Returns:
+            Self: The node that was passed in, for convenience
+        """
         if n._no_save:
             return n
 
@@ -621,8 +650,23 @@ class Node(BaseModel, extra="allow"):
 
         return n
 
-    @staticmethod
-    def create(n: Node) -> Node:
+    @classmethod
+    def create(cls, n: Self) -> Self:
+        """Creates the specified node in the GraphDB.
+
+        Calling `save` is preferred to using this method so that the caller doesn't need to know the
+        state of the node.
+
+        Args:
+            n (Self): the node to be created
+
+        Raises:
+            NodeCreationFailed: if creating the node failed in the database
+
+        Returns:
+            Self: the node that was passed in, albeit with a new `id` and potenitally other new
+            fields
+        """
         if n._no_save:
             return n
 
@@ -658,8 +702,18 @@ class Node(BaseModel, extra="allow"):
 
         return n
 
-    @staticmethod
-    def connect(src: NodeId | Node, dst: NodeId | Node, type: str) -> Edge:
+    @classmethod
+    def connect(cls, src: NodeId | Self, dst: NodeId | Self, type: str) -> Edge:
+        """Connects two nodes (creates an Edge between two nodes)
+
+        Args:
+            src (NodeId | Node): _description_
+            dst (NodeId | Node): _description_
+            type (str): _description_
+
+        Returns:
+            Edge: _description_
+        """
         if isinstance(src, Node):
             src_id = src.id
         else:
@@ -671,8 +725,8 @@ class Node(BaseModel, extra="allow"):
             dst_id = dst
 
         e = Edge(src_id, dst_id, type)
-        src_node = Node.get(src_id)
-        dst_node = Node.get(dst_id)
+        src_node = cls.get(src_id)
+        dst_node = cls.get(dst_id)
         src_node.src_edges.add(e)
         dst_node.dst_edges.add(e)
         return e
