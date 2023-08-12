@@ -95,11 +95,11 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         file: coverage.lcov
 
-    - name: Sphinx build
+    - name: Docs build
       run: |
         make docs
 
     - name: Deploy
       uses: JamesIves/github-pages-deploy-action@v4
       with:
-        folder: docs/_build/html
+        folder: site

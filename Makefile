@@ -42,7 +42,11 @@ formatting: codestyle
 
 #* Linting
 .PHONY: lint
-lint: mypy check-codestyle check-safety
+lint: mypy check-codestyle check-safety dep-check
+
+.PHONY: dep-check
+dep-check:
+	poetry run deptry .
 
 .PHONY: load-data
 load-data:
@@ -74,17 +78,13 @@ update-dev-deps:
 	poetry add -D --allow-prereleases black@latest
 
 # Docs
-.PHONY: update-api-docs
-update-api-docs:
-	poetry run sphinx-apidoc -f -o ./docs/_modules ./roc
-
 .PHONY: docs
-docs: update-api-docs
-	cd docs && make html
+docs:
+	poetry run mkdocs build
 
 .PHONY: edit-docs
 edit-docs:
-	poetry run sphinx-autobuild --pre-build "make update-api-docs" --host 0.0.0.0 --port 9000 docs docs/_build/html
+	poetry run mkdocs serve -a 0.0.0.0:9000 -w roc
 
 # Coverage
 .PHONY: coverage

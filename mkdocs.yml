@@ -1,0 +1,17 @@
+site_name: Reinforcement Learning of Concepts
+
+theme:
+  name: "material"
+
+plugins:
+- search
+- gen-files:
+    scripts:
+    - docs/gen_ref_pages.py
+- literate-nav:
+    nav_file: SUMMARY.md
+- mkdocstrings:
+    default_handler: python
+    handlers:
+      python:
+        paths: [roc]    
