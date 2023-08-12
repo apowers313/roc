@@ -184,6 +184,7 @@ coverage.xml
 docs/_build/
 docs/_autosummary
 docs/_modules
+docs/reference/
 
 # PyBuilder
 target/
