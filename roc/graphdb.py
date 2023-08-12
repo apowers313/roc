@@ -250,9 +250,9 @@ class Edge(BaseModel, extra="allow"):
     def __del__(self) -> None:
         Edge.save(self)
 
-    @staticmethod
-    @cached(cache=LRUCache(settings.edge_cache_size), key=lambda id: id, info=True)
-    def get(id: EdgeId) -> Edge:
+    @classmethod
+    @cached(cache=LRUCache(settings.edge_cache_size), key=lambda cls, id: id, info=True)
+    def get(cls, id: EdgeId) -> Self:
         """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
         otherwise the Edge is queried from the graph database based the ID provided and a new
         Edge is returned and cached.
@@ -261,12 +261,12 @@ class Edge(BaseModel, extra="allow"):
             id (EdgeId): the unique identifier for the Edge
 
         Returns:
-            Edge: returns the Edge requested by the id
+            Self: returns the Edge requested by the id
         """
-        return Edge.load(id)
+        return cls.load(id)
 
-    @staticmethod
-    def load(id: EdgeId) -> Edge:
+    @classmethod
+    def load(cls, id: EdgeId) -> Self:
         """Loads an Edge from the graph database without attempting to check if the Edge
         already exists in the cache. Typically this is only called by Edge.get()
 
@@ -277,7 +277,7 @@ class Edge(BaseModel, extra="allow"):
             EdgeNotFound: if the specified ID does not exist in the cache or the database
 
         Returns:
-            Edge: returns the Edge requested by the id
+            Self: returns the Edge requested by the id
         """
         db = GraphDB()
         edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
@@ -288,7 +288,7 @@ class Edge(BaseModel, extra="allow"):
         props = None
         if hasattr(e, "properties"):
             props = e.properties
-        return Edge(
+        return cls(
             e.start_id,
             e.end_id,
             id=id,
@@ -296,15 +296,37 @@ class Edge(BaseModel, extra="allow"):
             type=e.type,
         )
 
-    @staticmethod
-    def save(e: Edge) -> Edge:
-        if e._new:
-            return Edge.create(e)
-        else:
-            return Edge.update(e)
+    @classmethod
+    def save(cls, e: Self) -> Self:
+        """Saves the edge to the database. Calls Edge.create if the edge is new, or Edge.update if
+        edge already exists in the database.
 
-    @staticmethod
-    def create(e: Edge) -> Edge:
+        Args:
+            e (Self): The edge to save
+
+        Returns:
+            Self: The same edge that was passed in, for convenience. The Edge may be updated with a
+            new identifier if it was newly created in the database.
+        """
+        if e._new:
+            return cls.create(e)
+        else:
+            return cls.update(e)
+
+    @classmethod
+    def create(cls, e: Self) -> Self:
+        """Creates a new edge in the database. Typically only called by Edge.save
+
+        Args:
+            e (Self): The edge to create
+
+        Raises:
+            EdgeCreateFailed: Failed to write the edge to the database, for eample
+                if the ID is wrong.
+
+        Returns:
+            Self: the edge that was created, with an updated identifier and other chagned attributes
+        """
         if e._no_save:
             return e
 
@@ -349,8 +371,16 @@ class Edge(BaseModel, extra="allow"):
 
         return e
 
-    @staticmethod
-    def update(e: Edge) -> Edge:
+    @classmethod
+    def update(cls, e: Self) -> Self:
+        """Updates the edge in the database. Typically only called by Edge.save
+
+        Args:
+            e (Self): The edge to update
+
+        Returns:
+            Self: The same edge that was passed in, for convenience
+        """
         if e._no_save:
             return e
 
@@ -364,6 +394,12 @@ class Edge(BaseModel, extra="allow"):
 
     @staticmethod
     def delete(e: Edge) -> None:
+        """Deletes the specified edge from the database. If the edge has not already been persisted
+        to the database, this marks the edge as deleted and returns.
+
+        Args:
+            e (Edge): The edge to delete
+        """
         e._deleted = True
         e._no_save = True
 
@@ -555,6 +591,18 @@ class Node(BaseModel, extra="allow"):
 
     @classmethod
     def load(cls, id: NodeId) -> Self:
+        """Loads a node from the database. Use `Node.get` or other methods instead.
+
+        Args:
+            id (NodeId): The identifier of the node to fetch
+
+        Raises:
+            NodeNotFound: The node specified by the identifier does not exist in the database
+
+        Returns:
+            Self: The node from the database
+        """
+
         db = GraphDB()
         res = list(
             db.raw_fetch(
@@ -587,6 +635,16 @@ class Node(BaseModel, extra="allow"):
     @classmethod
     @cached(cache=LRUCache(settings.node_cache_size), key=lambda cls, id: id, info=True)
     def get(cls, id: NodeId) -> Self:
+        """Returns a cached node with the specified id. If no node is cached, it is retrieved from
+        the database.
+
+
+        Args:
+            id (NodeId): The unique identifier of the node to fetch
+
+        Returns:
+            Self: the cached or newly retrieved node
+        """
         return cls.load(id)
 
     @classmethod
