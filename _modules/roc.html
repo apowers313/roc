@@ -407,13 +407,47 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <p>An graph database node that automatically handles CRUD for the underlying graph database objects</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.connect">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.connect" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">connect</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">src</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">NodeId</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge"><span class="pre">Edge</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.connect"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connects two nodes (creates an Edge between two nodes)</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>src</strong> (<em>NodeId</em><em> | </em><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><em>Node</em></a>) – _description_</p></li>
+<li><p><strong>dst</strong> (<em>NodeId</em><em> | </em><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><em>Node</em></a>) – _description_</p></li>
+<li><p><strong>type</strong> (<em>str</em>) – _description_</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>_description_</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#roc.graphdb.Edge" title="roc.graphdb.Edge">Edge</a></p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.create">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.create" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.create"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.create" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the specified node in the GraphDB.</p>
+<p>Calling <cite>save</cite> is preferred to using this method so that the caller doesn’t need to know the
+state of the node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n</strong> (<em>Self</em>) – the node to be created</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#roc.graphdb.NodeCreationFailed" title="roc.graphdb.NodeCreationFailed"><strong>NodeCreationFailed</strong></a> – if creating the node failed in the database</p>
+</dd>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>the node that was passed in, albeit with a new <cite>id</cite> and potenitally other new
+fields</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>Self</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.default_id">
@@ -422,7 +456,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.default_labels">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="roc/graphdb.html#Node.default_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.default_labels" title="Permalink to this definition">¶</a></dt>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">default_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">labels</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">set</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="roc/graphdb.html#Node.default_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.default_labels" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -482,8 +516,25 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.save">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.save" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">save</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.save"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save a node to persistent storage</p>
+<p>Writes the specified node to the GraphDB for persistent storage. If the node does not
+already exist in storage, it is created via the <cite>create</cite> method. If the node does exist, it
+is updated via the <cite>update</cite> method.</p>
+<p>If the _no_save flag is True on the node, the save request will be silently ignored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n</strong> (<em>Self</em>) – The Node to be saved</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>As a convenience, the node that was stored is returned. This may be useful
+since the the id of the node may change if it was created in the database.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Self</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py property">
 <dt class="sig sig-object py" id="roc.graphdb.Node.src_edges">
@@ -492,8 +543,22 @@ mapping of field names to [<cite>FieldInfo</cite>][pydantic.fields.FieldInfo].</
 
 <dl class="py method">
 <dt class="sig sig-object py" id="roc.graphdb.Node.update">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><a class="reference internal" href="#roc.graphdb.Node" title="roc.graphdb.Node"><span class="pre">Node</span></a></span></span><a class="reference internal" href="roc/graphdb.html#Node.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">update</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Self</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="roc/graphdb.html#Node.update"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#roc.graphdb.Node.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update an existing node in the GraphDB.</p>
+<p>Calling <cite>save</cite> is preferred to using this method so that the caller doesn’t need to know the
+state of the node.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>n</strong> (<em>Self</em>) – The node to be updated</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The node that was passed in, for convenience</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Self</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
