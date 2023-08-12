@@ -1,22 +1,16 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from typing import cast
+
 from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
-from helpers.schema import GotCharacter
+from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
+from pydantic import ValidationError
 
-from roc.graphdb import (
-    CacheControl,
-    Edge,
-    EdgeNotFound,
-    GraphDB,
-    Node,
-    NodeId,
-    NodeNotFound,
-)
+from roc.graphdb import CacheControl, Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 
 class TestGraphDB:
@@ -689,3 +683,22 @@ class TestEdge:
     @pytest.mark.skip("pending")
     def test_edge_save(self) -> None:
         pass
+
+
+class TestTypes:
+    def test_get(self):
+        c = GotCharacter.get(cast(NodeId, 0))
+
+        assert isinstance(c, GotCharacter)
+        assert isinstance(c, Node)
+
+    def test_parse_fail(self):
+        with pytest.raises(ValidationError):
+            GotSeason.get(cast(NodeId, 0))
+
+    def test_same_cache(self):
+        c = GotCharacter.get(cast(NodeId, 0))
+        n = Node.get(cast(NodeId, 0))
+
+        assert id(n) == id(c)
+        assert id(Node.get.cache) == id(GotCharacter.get.cache)  # type: ignore
