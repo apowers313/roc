@@ -433,7 +433,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         return len(self.__edges)
 
     def __contains__(self, e: Any) -> bool:
-        if isinstance(e, Edge) or type(e) == int:
+        if isinstance(e, Edge) or isinstance(e, int):
             e_id = Edge.to_id(e)  # type: ignore
         else:
             return False
