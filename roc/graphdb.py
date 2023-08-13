@@ -8,6 +8,7 @@ from threading import Lock
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
+from loguru import logger
 from pydantic import BaseModel, Field, field_validator
 
 from roc.config import settings
@@ -54,7 +55,7 @@ class GraphDB:
         self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
         params = params or {}
-        print(f"raw_fetch: '{query}' *** with params: *** '{params}")
+        logger.trace(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
         cursor = self.db_conn.cursor()
         cursor.execute(query, params)
@@ -69,7 +70,7 @@ class GraphDB:
 
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
         params = params or {}
-        print(f"raw_execute: '{query}' *** with params: *** '{params}'")
+        logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
         cursor = self.db_conn.cursor()
         cursor.execute(query, params)
         cursor.fetchall()
@@ -587,7 +588,7 @@ class Node(BaseModel, extra="allow"):
         try:
             self.__class__.save(self)
         except Exception as e:
-            print("error saving during del:", e)
+            logger.warning("error saving during del:", e)
 
     @classmethod
     def load(cls, id: NodeId) -> Self:

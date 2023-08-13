@@ -22,7 +22,8 @@ settings = Dynaconf(
         DefaultSetting[bool]("db_lazy", False),
         DefaultSetting[int]("node_cache_size", 2**11),
         DefaultSetting[int]("edge_cache_size", 2**11),
-        DefaultSetting[str]("log_level", "trace"),
+        DefaultSetting[str]("log_level", "INFO"),
+        DefaultSetting[bool]("log_enable", True),
     ],
 )
 
