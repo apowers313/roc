@@ -1,10 +1,19 @@
 # ruff: noqa: F401
-# """Reinforcement Learning of Concepts"""
+"""Reinforcement Learning of Concepts"""
 
-import roc.component
-import roc.event
-import roc.graphdb
-import roc.perception
+from .component import Component
+from .graphdb import Edge, Node
+
+__all__ = ["Edge", "Node", "Component"]
+
+
+def foo() -> None:
+    pass
+
+
+# import roc.event
+# import roc.graphdb
+# import roc.perception
 
 # from importlib import metadata as importlib_metadata
 
@@ -21,4 +30,5 @@ import roc.perception
 #         return "unknown"
 
 
+# version: str = get_version()
 # version: str = get_version()
