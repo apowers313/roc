@@ -70,6 +70,7 @@ mkdocstrings = { extras = ["python"], version = "^0.22.0" }
 mkdocs-material = "^9.1.21"
 mkdocs-gen-files = "^0.5.0"
 mkdocs-literate-nav = "^0.6.0"
+pytest-emoji = "^0.2.0"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
@@ -212,6 +213,7 @@ addopts = [
   "--doctest-continue-on-failure",
   "--cov=roc",
   "--cov-report=html",
+  "--emoji",
   "-rA",
   "-s",
   "-m",
