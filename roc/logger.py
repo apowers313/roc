@@ -4,6 +4,10 @@ from loguru import logger
 
 from .config import settings
 
+__all__ = [
+    "logger",
+]
+
 if settings.log_enable:
     logger.remove()
     logger.add(sys.stderr, level=settings.log_level)

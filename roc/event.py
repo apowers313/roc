@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar
-
 from abc import ABC
+from typing import Generic, TypeVar
 
 import reactivex as rx
 from loguru import logger
@@ -41,7 +40,7 @@ class BusConnection(Generic[EventData]):
     def __init__(self, bus: EventBus[EventData], component: Component):
         self.attached_bus = bus
         self.attached_component = component
-        pass
+        self.subject: rx.Subject[Event[EventData]] = self.attached_bus.subject
 
     def send(self, data: EventData) -> None:
         """Send data over the EventBus. Internally, the data is converted to an Event
