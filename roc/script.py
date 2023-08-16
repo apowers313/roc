@@ -1,13 +1,11 @@
-import pprint
 from typing import Any
+
+import pprint
 
 import click
 import gym
 import nle  # noqa
 from icecream import ic
-
-from roc.component import Component
-from roc.perception import perception_bus
 
 pp = pprint.PrettyPrinter(width=41, compact=True)
 
@@ -38,11 +36,11 @@ def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
             print(int_list(row))
 
 
-class Environment(Component):
-    def __init__(self) -> None:
-        super().__init__("environment", "environment")
-        # self.attach(perception_bus)
-        perception_bus
+# class Environment(Component):
+#     def __init__(self) -> None:
+#         super().__init__("environment", "environment")
+#         # self.attach(perception_bus)
+#         perception_bus
 
 
 @click.command
@@ -51,6 +49,8 @@ def cli(arg: Any) -> None:
     print("hello cli")
     print("arg is", arg)
     env = gym.make("NetHackScore-v0")
+    # GymComponent(gym.make("NetHackScore-v0"))
+    # environment_bus.send(EnvInputEvent(env.action_space))
     print(repr(env.action_space))
     print(env.action_space)
     print(repr(env.observation_space))

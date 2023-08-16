@@ -1,17 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
-from typing_extensions import Self
-
 from collections.abc import Iterator, Mapping, MutableSet
 from threading import Lock
+from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import Cache, LRUCache, cached
-from loguru import logger
 from pydantic import BaseModel, Field, field_validator
+from typing_extensions import Self
 
-from roc.config import settings
+from .config import settings
+from .logger import logger
 
 RecordFn = Callable[[str, Iterator[Any]], None]
 CacheType = TypeVar("CacheType")
