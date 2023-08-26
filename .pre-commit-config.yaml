@@ -10,9 +10,9 @@ repos:
       name: Lint
       stages: [commit]
       language: system
-      entry: make lint
+      entry: make pre-commit
     - id: test
       name: Test
       stages: [push]
       language: system
-      entry: make test
+      entry: make pre-push
