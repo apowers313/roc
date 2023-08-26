@@ -93,7 +93,7 @@ coverage:
 
 .PHONY: doc-coverage
 doc-coverage:
-	poetry run interrogate
+	poetry run interrogate -c pyproject.toml -vv roc
 
 #* Docker
 # Example: make docker-build VERSION=latest
@@ -142,7 +142,7 @@ cleanup: pycache-remove dsstore-remove mypycache-remove ipynbcheckpoints-remove 
 
 # commit hooks
 .PHONY: pre-commit
-pre-commit:
+pre-commit: lint
 
 .PHONY: pre-push
-pre-push: doc-coverage lint test coverage docs
+pre-push: doc-coverage test coverage docs
