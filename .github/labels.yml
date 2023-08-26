@@ -7,3 +7,6 @@
 - name: duplicate
   description: This issue or pull request already exists
   color: cfd3d7
+- name: priority:high
+  description: This is a top priority
+  color: #e99695
