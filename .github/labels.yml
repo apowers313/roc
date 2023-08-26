@@ -8,7 +8,7 @@
   description: This is a low priority
   color: c2e0c6
 - name: 🐞 type:bug
-  descrption: Error. Does not compute.
+  description: Error. Does not compute.
   color: ffffff
 - name: ☢️ type:core
   description: Core feature
