@@ -7,6 +7,11 @@ PYTHONPATH := `pwd`
 IMAGE := roc
 VERSION := latest
 
+# Test the library
+.PHONY: play
+play:
+	poetry run play
+
 #* Poetry
 .PHONY: poetry-download
 poetry-download:
