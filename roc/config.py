@@ -63,11 +63,9 @@ def load_config(*, force: bool = False) -> None:
         settings_files=["settings.toml", ".secrets.toml"],
         validators=settings_vars,
     )
-    print("CONFIG LOADED")
 
     initialized = True
     config_modules()
-    print("CONFIG MODULES DONE")
 
 
 def config_modules() -> None:

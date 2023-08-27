@@ -57,7 +57,6 @@ class BusConnection(Generic[EventData]):
             data (EventData): The data type of the data to be sent
         """
         e = Event[EventData](data, self.attached_component, self.attached_bus)
-        print(f">>> Non-logger sending {e}")
         logger.trace(f">>> Sending {e}")
         self.attached_bus.subject.on_next(e)
 
