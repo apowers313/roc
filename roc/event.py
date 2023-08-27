@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC
+from pprint import pformat
 from typing import Generic, TypeVar
 
 import reactivex as rx
 from loguru import logger
 
-from roc.component import Component
+from .component import Component
 
 EventData = TypeVar("EventData")
 
@@ -19,15 +20,21 @@ class Event(ABC, Generic[EventData]):
         Generic (EventData): The data to be carried by the event
     """
 
-    def __init__(self, data: EventData, src: Component):
+    def __init__(self, data: EventData, src: Component, bus: EventBus[EventData]):
         """The initializer for the Event
 
         Args:
             data (EventData): The data for this event
             src (Component): The Component sending the event
+            bus (EventBus): The EventBus that the event is being sent over
         """
         self.data = data
         self.src = src
+        self.bus = bus
+
+    def __repr__(self) -> str:
+        data_str = pformat(self.data)
+        return f"[EVENT: {self.src.name} >>> {self.bus.name}]: {data_str}"
 
 
 class BusConnection(Generic[EventData]):
@@ -49,8 +56,8 @@ class BusConnection(Generic[EventData]):
         Args:
             data (EventData): The data type of the data to be sent
         """
-        e = Event[EventData](data, self.attached_component)
-        logger.trace("Sending event:", e)
+        e = Event[EventData](data, self.attached_component, self.attached_bus)
+        logger.trace(f"Sending {e}")
         self.attached_bus.subject.on_next(e)
 
 
