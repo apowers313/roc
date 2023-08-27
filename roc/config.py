@@ -24,6 +24,7 @@ settings = Dynaconf(
         DefaultSetting[int]("edge_cache_size", 2**11),
         DefaultSetting[str]("log_level", "INFO"),
         DefaultSetting[bool]("log_enable", True),
+        DefaultSetting[str]("log_modules", ""),
     ],
 )
 
