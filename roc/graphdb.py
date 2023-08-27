@@ -9,7 +9,7 @@ from cachetools import Cache, LRUCache, cached
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
-from .config import settings
+from .config import get_setting
 from .logger import logger
 
 RecordFn = Callable[[str, Iterator[Any]], None]
@@ -40,12 +40,12 @@ class GraphDB:
             return
 
         self.__isinitialized = True
-        self.host = settings.db_host
-        self.port = settings.db_port
-        self.encrypted = settings.db_conn_encrypted
-        self.username = settings.db_username or ""
-        self.password = settings.db_password or ""
-        self.lazy = settings.db_lazy
+        self.host = get_setting("db_host", str)
+        self.port = get_setting("db_port", int)
+        self.encrypted = get_setting("db_conn_encrypted", bool)
+        self.username = get_setting("db_username", str)
+        self.password = get_setting("db_password", str)
+        self.lazy = get_setting("db_lazy", bool)
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         # self.record_callback: RecordFn | None = None
@@ -250,8 +250,11 @@ class Edge(BaseModel, extra="allow"):
     def __del__(self) -> None:
         Edge.save(self)
 
+    # @cached(cache=
+    # LRUCache(get_setting("edge_cache_size", int)), key=lambda cls, id: id, info=True)
+
     @classmethod
-    @cached(cache=LRUCache(settings.edge_cache_size), key=lambda cls, id: id, info=True)
+    @cached(cache=LRUCache(2**11), key=lambda cls, id: id, info=True)
     def get(cls, id: EdgeId) -> Self:
         """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
         otherwise the Edge is queried from the graph database based the ID provided and a new
@@ -632,8 +635,12 @@ class Node(BaseModel, extra="allow"):
             data=n.properties,
         )
 
+    # TODO: use attribute getter with __call__ value to dynamically set LRUCache size on first call
+    # @cached(cache=
+    # LRUCache(get_setting("node_cache_size", int)), key=lambda cls, id: id, info=True)
+
     @classmethod
-    @cached(cache=LRUCache(settings.node_cache_size), key=lambda cls, id: id, info=True)
+    @cached(cache=LRUCache(2**11), key=lambda cls, id: id, info=True)
     def get(cls, id: NodeId) -> Self:
         """Returns a cached node with the specified id. If no node is cached, it is retrieved from
         the database.

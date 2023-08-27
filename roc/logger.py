@@ -5,7 +5,7 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field, TypeAdapter, field_validator
 
-from .config import settings
+from .config import get_setting
 
 __all__ = [
     "logger",
@@ -38,18 +38,29 @@ class DebugModuleLevel(BaseModel):
 
 class LogFilter:
     def __init__(
-        self, *, level: str | None = None, log_modules: str | None = None, enabled: bool = True
+        self,
+        *,
+        level: str | None = None,
+        log_modules: str | None = None,
+        enabled: bool = True,
+        use_module_settings: bool = True,
     ):
-        self.level = level or settings.log_level
+        self.level = level or get_setting("log_level", str)
         self.level_num = logger.level(self.level).no
-        if isinstance(log_modules, str):
-            self.module_levels = self.parse_module_str(log_modules)
-        else:
-            self.module_levels = []
+        if not isinstance(log_modules, str):
+            if use_module_settings:
+                log_modules = get_setting("log_modules", str)
+            else:
+                log_modules = ""
+        self.module_levels = self.parse_module_str(log_modules)
 
     def __call__(self, record: Any) -> bool:
+        print("LOGGER CALLED", record["module"], record["level"])
+        # TODO: this would be more effecient as a dict rather than a loop (O(1) rather than O(n))
+        print("self.module_levels", self.module_levels)
         for mod in self.module_levels:
             if record["module"] == mod.module_name:
+                print("found module")
                 mod_level_num = logger.level(mod.log_level).no
                 if record["level"].no >= mod_level_num:
                     return True
@@ -57,8 +68,10 @@ class LogFilter:
                     return False
 
         if record["level"].no >= self.level_num:
+            print("doing default print")
             return True
 
+        print("not found")
         return False
 
     @classmethod
@@ -79,8 +92,16 @@ class LogFilter:
         return debug_module_list.validate_python(mod_lvl_list)
 
 
-default_log_filter = LogFilter()
+default_log_filter = None
 
-if settings.log_enable:
+
+def config() -> None:
+    global default_log_filter
+    print("LOADING CONFIG")
+    default_log_filter = LogFilter()
+    print("SET default_log_filter")
+
     logger.remove()
-    logger.add(sys.stderr, level=0, filter=default_log_filter)
+    print("LOGGER ENABLED", get_setting("log_enable", bool))
+    if get_setting("log_enable", bool):
+        logger.add(sys.stderr, level=0, filter=default_log_filter)
