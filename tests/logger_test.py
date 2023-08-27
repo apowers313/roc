@@ -81,7 +81,7 @@ class TestLogFilter:
 
         assert filter.level == "INFO"
         assert filter.level_num == 20
-        assert filter.module_levels == []
+        assert filter.module_levels == {}
         assert filter(FakeRecord("INFO", "event"))
         assert not filter(FakeRecord("TRACE", "event"))
         assert not filter(FakeRecord("TRACE", "config"))
@@ -105,12 +105,9 @@ class TestLogFilter:
         assert filter.level_num == 20
         # sets up per-module levels
         assert len(filter.module_levels) == 3
-        assert filter.module_levels[0].module_name == "logger"
-        assert filter.module_levels[0].log_level == "INFO"
-        assert filter.module_levels[1].module_name == "config"
-        assert filter.module_levels[1].log_level == "TRACE"
-        assert filter.module_levels[2].module_name == "environment"
-        assert filter.module_levels[2].log_level == "CRITICAL"
+        assert filter.module_levels["logger"] == "INFO"
+        assert filter.module_levels["config"] == "TRACE"
+        assert filter.module_levels["environment"] == "CRITICAL"
         # filters correctly
         assert filter(FakeRecord("INFO", "logger"))
         assert not filter(FakeRecord("DEBUG", "logger"))
