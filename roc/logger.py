@@ -55,12 +55,9 @@ class LogFilter:
         self.module_levels = self.parse_module_str(log_modules)
 
     def __call__(self, record: Any) -> bool:
-        print("LOGGER CALLED", record["module"], record["level"])
         # TODO: this would be more effecient as a dict rather than a loop (O(1) rather than O(n))
-        print("self.module_levels", self.module_levels)
         for mod in self.module_levels:
             if record["module"] == mod.module_name:
-                print("found module")
                 mod_level_num = logger.level(mod.log_level).no
                 if record["level"].no >= mod_level_num:
                     return True
@@ -68,10 +65,8 @@ class LogFilter:
                     return False
 
         if record["level"].no >= self.level_num:
-            print("doing default print")
             return True
 
-        print("not found")
         return False
 
     @classmethod
@@ -97,11 +92,8 @@ default_log_filter = None
 
 def config() -> None:
     global default_log_filter
-    print("LOADING CONFIG")
     default_log_filter = LogFilter()
-    print("SET default_log_filter")
 
     logger.remove()
-    print("LOGGER ENABLED", get_setting("log_enable", bool))
     if get_setting("log_enable", bool):
         logger.add(sys.stderr, level=0, filter=default_log_filter)

@@ -32,7 +32,6 @@ class TestLogger:
         logger.trace("qwer5678")
         captured = capfd.readouterr()
 
-        print("CAPTURED", captured)
         assert "asdf1234" in captured.err
         assert "qwer5678" not in captured.err
 
