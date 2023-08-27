@@ -52,17 +52,19 @@ class LogFilter:
                 log_modules = get_setting("log_modules", str)
             else:
                 log_modules = ""
-        self.module_levels = self.parse_module_str(log_modules)
+        mod_list = self.parse_module_str(log_modules)
+        self.module_levels = {mod_lvl.module_name: mod_lvl.log_level for mod_lvl in mod_list}
 
     def __call__(self, record: Any) -> bool:
         # TODO: this would be more effecient as a dict rather than a loop (O(1) rather than O(n))
-        for mod in self.module_levels:
-            if record["module"] == mod.module_name:
-                mod_level_num = logger.level(mod.log_level).no
-                if record["level"].no >= mod_level_num:
-                    return True
-                else:
-                    return False
+
+        if record["module"] in self.module_levels:
+            mod_log_level = self.module_levels[record["module"]]
+            mod_level_num = logger.level(mod_log_level).no
+            if record["level"].no >= mod_level_num:
+                return True
+            else:
+                return False
 
         if record["level"].no >= self.level_num:
             return True
