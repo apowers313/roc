@@ -3,8 +3,9 @@
 import pytest
 from pydantic import ValidationError
 
-from roc.config import settings
-from roc.logger import LogFilter, default_log_filter, logger
+import roc.config as config
+import roc.logger as roc_logger
+from roc.logger import LogFilter, logger
 
 
 class FakeRecord:
@@ -18,8 +19,9 @@ class FakeRecord:
 
 class TestLogger:
     def test_default_log_level(self):
-        assert settings.log_level == "INFO"
-        assert default_log_filter.level == "INFO"
+        assert config.initialized
+        assert config.get_setting("log_level", str) == "INFO"
+        assert roc_logger.default_log_filter.level == "INFO"  # type: ignore
 
     def test_logging(self):
         logger.info("THIS IS LOGGING")
@@ -76,7 +78,7 @@ class TestLogFilter:
         assert r["module"] == "event"
 
     def test_filter_defaults(self):
-        filter = LogFilter()
+        filter = LogFilter(use_module_settings=False)
 
         assert filter.level == "INFO"
         assert filter.level_num == 20

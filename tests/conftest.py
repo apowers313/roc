@@ -4,6 +4,7 @@ import pytest
 
 from roc.action import ActionData, action_bus
 from roc.component import Component
+from roc.config import load_config
 from roc.environment import EnvData, environment_bus
 from roc.event import BusConnection, EventBus
 from roc.graphdb import CacheControl, Edge, GraphDB, Node
@@ -35,6 +36,11 @@ def new_edge() -> tuple[Edge, Node, Node]:
 @pytest.fixture
 def eb_reset() -> None:
     EventBus.clear_names()
+
+
+@pytest.fixture(scope="function", autouse=True)
+def do_init() -> None:
+    load_config()
 
 
 @pytest.fixture(scope="session", autouse=True)
