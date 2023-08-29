@@ -28,7 +28,7 @@ class ErrorSavingDuringDelWarning(Warning):
 #########
 # GRAPHDB
 #########
-# graph_db_singleton: GraphDB | None = None
+graph_db_singleton: GraphDB | None = None
 
 
 class GraphDB:
@@ -36,17 +36,7 @@ class GraphDB:
     A graph database singleton. Settings for the graph database come from the config module.
     """
 
-    def __new__(cls) -> GraphDB:
-        if not hasattr(cls, "instance"):
-            cls.instance = super().__new__(cls)
-            cls.instance.__isinitialized = False  # type: ignore
-        return cls.instance
-
     def __init__(self) -> None:
-        if self.__isinitialized:  # type: ignore
-            return
-
-        self.__isinitialized = True
         self.host = get_setting("db_host", str)
         self.port = get_setting("db_port", int)
         self.encrypted = get_setting("db_conn_encrypted", bool)
@@ -97,13 +87,13 @@ class GraphDB:
         connection.autocommit = True
         return connection
 
-    # @classmethod
-    # def singleton(cls) -> GraphDB:
-    #     global graph_db_singleton
-    #     if not graph_db_singleton:
-    #         graph_db_singleton = GraphDB()
+    @classmethod
+    def singleton(cls) -> GraphDB:
+        global graph_db_singleton
+        if not graph_db_singleton:
+            graph_db_singleton = GraphDB()
 
-    #     return graph_db_singleton
+        return graph_db_singleton
 
 
 # XXX: copied from GQLAlchemy
@@ -268,13 +258,14 @@ class Edge(BaseModel, extra="allow"):
         return edge_cache
 
     @classmethod
-    def get(cls, id: EdgeId) -> Self:
+    def get(cls, id: EdgeId, *, db: GraphDB | None = None) -> Self:
         """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
         otherwise the Edge is queried from the graph database based the ID provided and a new
         Edge is returned and cached.
 
         Args:
             id (EdgeId): the unique identifier for the Edge
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: returns the Edge requested by the id
@@ -282,18 +273,19 @@ class Edge(BaseModel, extra="allow"):
         cache = Edge.get_cache()
         e = cache.get(id)
         if not e:
-            e = cls.load(id)
+            e = cls.load(id, db=db)
             cache[id] = e
 
         return cast(Self, e)
 
     @classmethod
-    def load(cls, id: EdgeId) -> Self:
+    def load(cls, id: EdgeId, *, db: GraphDB | None = None) -> Self:
         """Loads an Edge from the graph database without attempting to check if the Edge
         already exists in the cache. Typically this is only called by Edge.get()
 
         Args:
             id (EdgeId): the unique identifier of the Edge to fetch
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Raises:
             EdgeNotFound: if the specified ID does not exist in the cache or the database
@@ -301,7 +293,7 @@ class Edge(BaseModel, extra="allow"):
         Returns:
             Self: returns the Edge requested by the id
         """
-        db = GraphDB()
+        db = db or GraphDB.singleton()
         edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
         if not len(edge_list) == 1:
             raise EdgeNotFound(f"Couldn't find edge ID: {id}")
@@ -319,28 +311,30 @@ class Edge(BaseModel, extra="allow"):
         )
 
     @classmethod
-    def save(cls, e: Self) -> Self:
+    def save(cls, e: Self, *, db: GraphDB | None = None) -> Self:
         """Saves the edge to the database. Calls Edge.create if the edge is new, or Edge.update if
         edge already exists in the database.
 
         Args:
             e (Self): The edge to save
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: The same edge that was passed in, for convenience. The Edge may be updated with a
             new identifier if it was newly created in the database.
         """
         if e._new:
-            return cls.create(e)
+            return cls.create(e, db=db)
         else:
-            return cls.update(e)
+            return cls.update(e, db=db)
 
     @classmethod
-    def create(cls, e: Self) -> Self:
+    def create(cls, e: Self, *, db: GraphDB | None = None) -> Self:
         """Creates a new edge in the database. Typically only called by Edge.save
 
         Args:
             e (Self): The edge to create
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Raises:
             EdgeCreateFailed: Failed to write the edge to the database, for eample
@@ -352,7 +346,7 @@ class Edge(BaseModel, extra="allow"):
         if e._no_save:
             return e
 
-        db = GraphDB()
+        db = db or GraphDB.singleton()
         old_id = e.id
 
         if e.src._new:
@@ -394,11 +388,12 @@ class Edge(BaseModel, extra="allow"):
         return e
 
     @classmethod
-    def update(cls, e: Self) -> Self:
+    def update(cls, e: Self, *, db: GraphDB | None = None) -> Self:
         """Updates the edge in the database. Typically only called by Edge.save
 
         Args:
             e (Self): The edge to update
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: The same edge that was passed in, for convenience
@@ -406,7 +401,7 @@ class Edge(BaseModel, extra="allow"):
         if e._no_save:
             return e
 
-        db = GraphDB()
+        db = db or GraphDB.singleton()
 
         params = {"props": e.model_dump()}
 
@@ -415,15 +410,17 @@ class Edge(BaseModel, extra="allow"):
         return e
 
     @staticmethod
-    def delete(e: Edge) -> None:
+    def delete(e: Edge, *, db: GraphDB | None = None) -> None:
         """Deletes the specified edge from the database. If the edge has not already been persisted
         to the database, this marks the edge as deleted and returns.
 
         Args:
             e (Edge): The edge to delete
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
         """
         e._deleted = True
         e._no_save = True
+        db = db or GraphDB.singleton()
 
         # remove e from src and dst nodes
         e.src.src_edges.discard(e)
@@ -436,7 +433,6 @@ class Edge(BaseModel, extra="allow"):
 
         # delete from db
         if not e._new:
-            db = GraphDB()
             db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} DELETE e")
 
     @staticmethod
@@ -586,6 +582,7 @@ class Node(BaseModel, extra="allow"):
         labels: set[str] | list[str] | None = None,
         src_edges: EdgeList | None = None,
         dst_edges: EdgeList | None = None,
+        db: GraphDB | None = None,
     ):
         data = data or {}
 
@@ -598,6 +595,7 @@ class Node(BaseModel, extra="allow"):
         self._new = False
         self._no_save = False
         self._deleted = False
+        self._db = db or GraphDB.singleton()
 
         if self.id < 0:
             self._new = True  # TODO: derived?
@@ -611,18 +609,19 @@ class Node(BaseModel, extra="allow"):
 
     def __del__(self) -> None:
         try:
-            self.__class__.save(self)
+            self.__class__.save(self, db=self._db)
         except Exception as e:
             err_msg = f"error saving during del: {e}"
             logger.warning(err_msg)
             warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
     @classmethod
-    def load(cls, id: NodeId) -> Self:
+    def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
         """Loads a node from the database. Use `Node.get` or other methods instead.
 
         Args:
             id (NodeId): The identifier of the node to fetch
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Raises:
             NodeNotFound: The node specified by the identifier does not exist in the database
@@ -631,7 +630,7 @@ class Node(BaseModel, extra="allow"):
             Self: The node from the database
         """
 
-        db = GraphDB()
+        db = db or GraphDB.singleton()
         res = list(
             db.raw_fetch(
                 f"""
@@ -669,13 +668,14 @@ class Node(BaseModel, extra="allow"):
         return node_cache
 
     @classmethod
-    def get(cls, id: NodeId) -> Self:
+    def get(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
         """Returns a cached node with the specified id. If no node is cached, it is retrieved from
         the database.
 
 
         Args:
             id (NodeId): The unique identifier of the node to fetch
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: the cached or newly retrieved node
@@ -683,13 +683,13 @@ class Node(BaseModel, extra="allow"):
         cache = Node.get_cache()
         n = cache.get(id)
         if not n:
-            n = cls.load(id)
+            n = cls.load(id, db=db)
             cache[id] = n
 
         return cast(Self, n)
 
     @classmethod
-    def save(cls, n: Self) -> Self:
+    def save(cls, n: Self, *, db: GraphDB | None = None) -> Self:
         """Save a node to persistent storage
 
         Writes the specified node to the GraphDB for persistent storage. If the node does not
@@ -700,18 +700,19 @@ class Node(BaseModel, extra="allow"):
 
         Args:
             n (Self): The Node to be saved
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: As a convenience, the node that was stored is returned. This may be useful
             since the the id of the node may change if it was created in the database.
         """
         if n._new:
-            return cls.create(n)
+            return cls.create(n, db=db)
         else:
-            return cls.update(n)
+            return cls.update(n, db=db)
 
     @classmethod
-    def update(cls, n: Self) -> Self:
+    def update(cls, n: Self, *, db: GraphDB | None = None) -> Self:
         """Update an existing node in the GraphDB.
 
         Calling `save` is preferred to using this method so that the caller doesn't need to know the
@@ -719,6 +720,7 @@ class Node(BaseModel, extra="allow"):
 
         Args:
             n (Self): The node to be updated
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Self: The node that was passed in, for convenience
@@ -726,7 +728,7 @@ class Node(BaseModel, extra="allow"):
         if n._no_save:
             return n
 
-        db = GraphDB()
+        db = db or GraphDB.singleton()
 
         orig_labels = n._orig_labels
         curr_labels = set(n.labels)
@@ -750,7 +752,7 @@ class Node(BaseModel, extra="allow"):
         return n
 
     @classmethod
-    def create(cls, n: Self) -> Self:
+    def create(cls, n: Self, *, db: GraphDB | None = None) -> Self:
         """Creates the specified node in the GraphDB.
 
         Calling `save` is preferred to using this method so that the caller doesn't need to know the
@@ -758,6 +760,7 @@ class Node(BaseModel, extra="allow"):
 
         Args:
             n (Self): the node to be created
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Raises:
             NodeCreationFailed: if creating the node failed in the database
@@ -769,7 +772,7 @@ class Node(BaseModel, extra="allow"):
         if n._no_save:
             return n
 
-        db = GraphDB()
+        db = db or GraphDB.singleton()
         old_id = n.id
 
         label_str = Node.mklabels(n.labels)
@@ -802,13 +805,21 @@ class Node(BaseModel, extra="allow"):
         return n
 
     @classmethod
-    def connect(cls, src: NodeId | Self, dst: NodeId | Self, type: str) -> Edge:
+    def connect(
+        cls,
+        src: NodeId | Self,
+        dst: NodeId | Self,
+        type: str,
+        *,
+        db: GraphDB | None = None,
+    ) -> Edge:
         """Connects two nodes (creates an Edge between two nodes)
 
         Args:
             src (NodeId | Node): _description_
             dst (NodeId | Node): _description_
             type (str): _description_
+            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
             Edge: _description_
@@ -824,14 +835,16 @@ class Node(BaseModel, extra="allow"):
             dst_id = dst
 
         e = Edge(src_id, dst_id, type)
-        src_node = cls.get(src_id)
-        dst_node = cls.get(dst_id)
+        src_node = cls.get(src_id, db=db)
+        dst_node = cls.get(dst_id, db=db)
         src_node.src_edges.add(e)
         dst_node.dst_edges.add(e)
         return e
 
     @staticmethod
-    def delete(n: Node) -> None:
+    def delete(n: Node, *, db: GraphDB | None = None) -> None:
+        db = db or GraphDB.singleton()
+
         # remove edges
         for e in n.src_edges:
             Edge.delete(e)
@@ -845,7 +858,6 @@ class Node(BaseModel, extra="allow"):
             del node_cache[n.id]
 
         if not n._new:
-            db = GraphDB()
             db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} DELETE n")
 
         n._deleted = True
