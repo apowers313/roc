@@ -15,7 +15,7 @@ from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 class TestGraphDB:
     @pytest.mark.skip(reason="add assertions")
     def test_graphdb_connect(self) -> None:
-        db = GraphDB()
+        db = GraphDB.singleton()
         res = list(
             db.raw_fetch(
                 """
@@ -31,19 +31,19 @@ class TestGraphDB:
         for row in res:
             print("!!! ROW:", repr(row))
 
-    def test_is_singleton(self) -> None:
-        db1 = GraphDB()
-        db2 = GraphDB()
+    def test_singleton(self) -> None:
+        db1 = GraphDB.singleton()
+        db2 = GraphDB.singleton()
         assert not db2.port == 1111
         assert id(db1) == id(db2)
         db1.port = 1111
         assert db2.port == 1111
 
     def test_singleton_doesnt_double_init(self) -> None:
-        db1 = GraphDB()
+        db1 = GraphDB.singleton()
         db1.port = 1111
         assert db1.port == 1111
-        db2 = GraphDB()
+        db2 = GraphDB.singleton()
         assert db2.port == 1111
 
     @pytest.mark.slow

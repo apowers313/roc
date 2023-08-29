@@ -47,7 +47,7 @@ def do_init() -> None:
 def clear_db() -> Generator[None, None, None]:
     yield
 
-    db = GraphDB()
+    db = GraphDB.singleton()
     # delete all test nodes (which may have edges that need to be detached)
     db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
     # delete all nodes without relationships
