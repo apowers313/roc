@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC
-from pprint import pformat
 from typing import Generic, TypeVar
 
 import reactivex as rx
 from loguru import logger
+from rich.pretty import pretty_repr
 
 from .component import Component
 
@@ -33,7 +33,16 @@ class Event(ABC, Generic[EventData]):
         self.bus = bus
 
     def __repr__(self) -> str:
-        data_str = pformat(self.data)
+        data_str = pretty_repr(
+            self.data,
+            # max_depth=4, # Maximum depth of nested data structure
+            max_length=5,  # Maximum length of containers before abbreviating
+            max_string=60,  # Maximum length of string before truncating
+            expand_all=False,  # Expand all containers regardless of available width
+            max_width=120,
+        )
+        if "\n" in data_str:
+            data_str = "\n" + data_str
         return f"[EVENT: {self.src.name} >>> {self.bus.name}]: {data_str}"
 
 
