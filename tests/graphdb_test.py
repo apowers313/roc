@@ -50,8 +50,8 @@ class TestGraphDB:
     def test_walk(self) -> None:
         cnt = 0
         cache: set[int] = set()
-        cc = Node.get_cache()
-        maxsize = cc.info.maxsize
+        c = Node.get_cache()
+        maxsize = c.maxsize
         if maxsize:
             max = maxsize + 100
         else:
@@ -91,12 +91,12 @@ class TestGraphDB:
         print("CNT", cnt)
         print("MAX", max)
         print("MAXSIZE", maxsize)
-        i = Node.get_cache().info
-        print("HITS", i.hits)
-        print("MISSES", i.misses)
-        print("CURRENT", i.currsize)
-        assert cnt == i.misses
-        assert i.currsize == i.maxsize
+        c = Node.get_cache()
+        print("HITS", c.hits)
+        print("MISSES", c.misses)
+        print("CURRENT", c.currsize)
+        assert cnt == c.misses
+        assert c.currsize == c.maxsize
 
 
 class TestNode:
@@ -111,17 +111,15 @@ class TestNode:
         assert n.id in Node.get_cache()
 
     def test_node_cache(self) -> None:
-        cc = Node.get_cache()
-        assert cc.info.hits == 0
-        assert cc.info.misses == 0
+        c = Node.get_cache()
+        assert c.hits == 0
+        assert c.misses == 0
         n1 = Node.get(cast(NodeId, 0))
-        print("cc.info", cc.info)
-        print("cc.misses", cc.misses)
-        assert cc.info.hits == 0
-        assert cc.info.misses == 1
+        assert c.hits == 0
+        assert c.misses == 1
         n2 = Node.get(cast(NodeId, 0))
-        assert cc.info.hits == 1
-        assert cc.info.misses == 1
+        assert c.hits == 1
+        assert c.misses == 1
         assert id(n1) == id(n2)
 
     def test_node_new_in_cache(self, clear_cache) -> None:
@@ -162,14 +160,12 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
     def test_node_cache_control(self, clear_cache) -> None:
-        cc = Node.get_cache()
-        # assert cc.info() == (0, 0, 4096, 0)
-        ci = cc.info
-        assert ci.hits == 0
-        assert ci.misses == 0
-        assert ci.maxsize == 2048
-        assert ci.currsize == 0
-        assert isinstance(cc, Cache)
+        c = Node.get_cache()
+        assert c.hits == 0
+        assert c.misses == 0
+        assert c.maxsize == 2048
+        assert c.currsize == 0
+        assert isinstance(c, Cache)
 
     @pytest.mark.skip("pending")
     def test_node_save(self) -> None:
@@ -350,23 +346,23 @@ class TestNode:
         assert e.dst_id == n2.id
 
     def test_node_create_updates_cache(self) -> None:
-        cc = Node.get_cache()
+        c = Node.get_cache()
         n = Node(labels=["TestNode"])
         old_id = n.id
 
         Node.create(n)
 
-        assert cc.info.hits == 0
-        assert cc.info.misses == 0
+        assert c.hits == 0
+        assert c.misses == 0
         # old ID doesn't exist in cache
         with pytest.raises(NodeNotFound):
             Node.get(old_id)
-        assert cc.info.hits == 0
-        assert cc.info.misses == 1
+        assert c.hits == 0
+        assert c.misses == 1
         # new ID does exist in cache
         Node.get(n.id)
-        assert cc.info.hits == 1
-        assert cc.info.misses == 1
+        assert c.hits == 1
+        assert c.misses == 1
 
     def test_node_delete_new(self) -> None:
         n = Node(labels=["TestNode"])
@@ -447,15 +443,13 @@ class TestEdgeList:
 
 class TestEdge:
     def test_edge_cache_control(self) -> None:
-        cc = Edge.get_cache()
-        cc.clear()
-        # assert cc.info() == (0, 0, 4096, 0)
-        ci = cc.info
-        assert ci.hits == 0
-        assert ci.misses == 0
-        assert ci.maxsize == 2048
-        assert ci.currsize == 0
-        assert isinstance(cc, Cache)
+        c = Edge.get_cache()
+        c.clear()
+        assert c.hits == 0
+        assert c.misses == 0
+        assert c.maxsize == 2048
+        assert c.currsize == 0
+        assert isinstance(c, Cache)
 
     def test_src(self) -> None:
         n0 = Node.get(cast(NodeId, 0))
@@ -533,9 +527,9 @@ class TestEdge:
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
     def test_edge_create_updates_cache(self, new_edge, clear_cache) -> None:
-        cc = Edge.get_cache()
-        assert cc.info.hits == 0
-        assert cc.info.misses == 0
+        c = Edge.get_cache()
+        assert c.hits == 0
+        assert c.misses == 0
         e, _, _ = new_edge
         old_id = e.id
 
@@ -543,17 +537,17 @@ class TestEdge:
 
         # NOTE: Node.create() is called by Edge.create() if the nodes are new
         # Node.create() updates the edge.src and edge.dst, so it hits the cache twice
-        assert cc.info.hits == 2
-        assert cc.info.misses == 0
+        assert c.hits == 2
+        assert c.misses == 0
         # old ID doesn't exist in cache
         with pytest.raises(EdgeNotFound):
             Edge.get(old_id)
-        assert cc.info.hits == 2
-        assert cc.info.misses == 1
+        assert c.hits == 2
+        assert c.misses == 1
         # new ID does exist in cache
         Edge.get(e.id)
-        assert cc.info.hits == 3
-        assert cc.info.misses == 1
+        assert c.hits == 3
+        assert c.misses == 1
 
     def test_edge_create_updates_node_edges(self, new_edge) -> None:
         e, src, dst = new_edge

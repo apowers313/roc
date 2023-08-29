@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator, Mapping, MutableSet
-from dataclasses import dataclass
 from typing import Any, Callable, Generic, NewType, TypeVar, cast
 
 import mgclient
@@ -148,43 +147,26 @@ def _convert_memgraph_value(value: Any) -> Any:
 #######
 CacheKey = TypeVar("CacheKey")
 CacheValue = TypeVar("CacheValue")
-
-
-@dataclass
-class CacheInfo:
-    hits: int
-    misses: int
-    maxsize: int
-    currsize: int
+CacheDefault = TypeVar("CacheDefault")
 
 
 class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
     def __init__(self, maxsize: int):
-        print("CREATING CACHE")
         super().__init__(maxsize=maxsize)
         self.hits = 0
         self.misses = 0
 
-    @property
-    def info(self) -> CacheInfo:
-        print("+++ getting cache info")
-        return CacheInfo(
-            hits=self.hits,
-            misses=self.misses,
-            maxsize=cast(int, self.maxsize),
-            currsize=cast(int, self.currsize),
-        )
-
-    def try_get(self, key: CacheKey) -> CacheValue | None:
-        print("try_get", key)
+    def get(  # type: ignore [override]
+        self,
+        key: CacheKey,
+        /,
+        default: CacheValue | None = None,
+    ) -> CacheValue | None:
         v = super().get(key)
         if not v:
-            print("MISS!")
             self.misses = self.misses + 1
         else:
-            print("HIT!")
             self.hits = self.hits + 1
-        print("cache info in try_get", self.info)
         return v
 
     def clear(self) -> None:
@@ -298,7 +280,7 @@ class Edge(BaseModel, extra="allow"):
             Self: returns the Edge requested by the id
         """
         cache = Edge.get_cache()
-        e = cache.try_get(id)
+        e = cache.get(id)
         if not e:
             e = cls.load(id)
             cache[id] = e
@@ -698,9 +680,8 @@ class Node(BaseModel, extra="allow"):
         Returns:
             Self: the cached or newly retrieved node
         """
-        print("Node.get")
         cache = Node.get_cache()
-        n = cache.try_get(id)
+        n = cache.get(id)
         if not n:
             n = cls.load(id)
             cache[id] = n
