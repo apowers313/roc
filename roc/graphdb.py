@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Iterator, Mapping, MutableSet
-from threading import Lock
-from typing import Any, Callable, Generic, NamedTuple, NewType, TypeVar, cast
+from dataclasses import dataclass
+from typing import Any, Callable, Generic, NewType, TypeVar, cast
 
 import mgclient
-from cachetools import Cache, LRUCache, cached
+from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
@@ -21,9 +22,16 @@ next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
 
 
+class ErrorSavingDuringDelWarning(Warning):
+    pass
+
+
 #########
 # GRAPHDB
 #########
+# graph_db_singleton: GraphDB | None = None
+
+
 class GraphDB:
     """
     A graph database singleton. Settings for the graph database come from the config module.
@@ -48,7 +56,6 @@ class GraphDB:
         self.lazy = get_setting("db_lazy", bool)
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
-        # self.record_callback: RecordFn | None = None
 
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
@@ -91,6 +98,14 @@ class GraphDB:
         connection.autocommit = True
         return connection
 
+    # @classmethod
+    # def singleton(cls) -> GraphDB:
+    #     global graph_db_singleton
+    #     if not graph_db_singleton:
+    #         graph_db_singleton = GraphDB()
+
+    #     return graph_db_singleton
+
 
 # XXX: copied from GQLAlchemy
 def _convert_memgraph_value(value: Any) -> Any:
@@ -131,42 +146,51 @@ def _convert_memgraph_value(value: Any) -> Any:
 #######
 # CACHE
 #######
-class CacheInfo(NamedTuple):
-    """
-    Information about the cache: hits, misses, max size, and current size.
-    """
+CacheKey = TypeVar("CacheKey")
+CacheValue = TypeVar("CacheValue")
 
+
+@dataclass
+class CacheInfo:
     hits: int
     misses: int
-    maxsize: int | None
+    maxsize: int
     currsize: int
 
 
-class NodeCacheControlAttr:
-    def __get__(self, instance: Any, owner: Any) -> CacheControl[Node, NodeId]:
-        return CacheControl[Node, NodeId](Node.get)
+class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
+    def __init__(self, maxsize: int):
+        print("CREATING CACHE")
+        super().__init__(maxsize=maxsize)
+        self.hits = 0
+        self.misses = 0
 
+    @property
+    def info(self) -> CacheInfo:
+        print("+++ getting cache info")
+        return CacheInfo(
+            hits=self.hits,
+            misses=self.misses,
+            maxsize=cast(int, self.maxsize),
+            currsize=cast(int, self.currsize),
+        )
 
-class EdgeCacheControlAttr:
-    def __get__(self, instance: Any, owner: Any) -> CacheControl[Edge, EdgeId]:
-        return CacheControl[Edge, EdgeId](Edge.get)
+    def try_get(self, key: CacheKey) -> CacheValue | None:
+        print("try_get", key)
+        v = super().get(key)
+        if not v:
+            print("MISS!")
+            self.misses = self.misses + 1
+        else:
+            print("HIT!")
+            self.hits = self.hits + 1
+        print("cache info in try_get", self.info)
+        return v
 
-
-class CacheControl(Generic[CacheType, CacheId]):
-    """
-    For controlling the Node and Edge caches, such as clearing them, getting their current or max
-    size, adding items to the cache (outside the automatic methods for adding cached items), etc.
-    """
-
-    node_cache_control = NodeCacheControlAttr()
-    edge_cache_control = EdgeCacheControlAttr()
-
-    def __init__(self, cache_fn: Any):
-        self.cache: Cache[CacheId, CacheType] = cache_fn.cache
-        self.key: Callable[[Any, Any], tuple[Any]] = cache_fn.cache_key
-        self.lock: Lock | None = cache_fn.cache_lock
-        self.clear: Callable[[], None] = cache_fn.cache_clear
-        self.info: Callable[[], CacheInfo] = cache_fn.cache_info
+    def clear(self) -> None:
+        super().clear()
+        self.hits = 0
+        self.misses = 0
 
 
 #######
@@ -245,7 +269,7 @@ class Edge(BaseModel, extra="allow"):
 
         if self.id < 0:
             self._new = True
-            CacheControl.edge_cache_control.cache[self.id] = self
+            Edge.get_cache()[self.id] = self
 
     def __del__(self) -> None:
         Edge.save(self)
@@ -254,7 +278,14 @@ class Edge(BaseModel, extra="allow"):
     # LRUCache(get_setting("edge_cache_size", int)), key=lambda cls, id: id, info=True)
 
     @classmethod
-    @cached(cache=LRUCache(2**11), key=lambda cls, id: id, info=True)
+    def get_cache(self) -> EdgeCache:
+        global edge_cache
+        if edge_cache is None:
+            edge_cache = EdgeCache(maxsize=get_setting("edge_cache_size", int))
+
+        return edge_cache
+
+    @classmethod
     def get(cls, id: EdgeId) -> Self:
         """Looks up an Edge based on it's ID. If the Edge is cached, the cached edge is returned;
         otherwise the Edge is queried from the graph database based the ID provided and a new
@@ -266,7 +297,13 @@ class Edge(BaseModel, extra="allow"):
         Returns:
             Self: returns the Edge requested by the id
         """
-        return cls.load(id)
+        cache = Edge.get_cache()
+        e = cache.try_get(id)
+        if not e:
+            e = cls.load(id)
+            cache[id] = e
+
+        return cast(Self, e)
 
     @classmethod
     def load(cls, id: EdgeId) -> Self:
@@ -363,7 +400,7 @@ class Edge(BaseModel, extra="allow"):
         e._new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
-            cache = CacheControl.edge_cache_control.cache
+            cache = Edge.get_cache()
             del cache[old_id]
             cache[e.id] = e
         except KeyError:
@@ -411,7 +448,7 @@ class Edge(BaseModel, extra="allow"):
         e.dst.dst_edges.discard(e)
 
         # remove from cache
-        edge_cache = CacheControl.edge_cache_control.cache
+        edge_cache = Edge.get_cache()
         if e.id in edge_cache:
             del edge_cache[e.id]
 
@@ -426,6 +463,10 @@ class Edge(BaseModel, extra="allow"):
             return e.id
         else:
             return e
+
+
+EdgeCache = GraphCache[EdgeId, Edge]
+edge_cache: EdgeCache | None = None
 
 
 #######
@@ -578,7 +619,7 @@ class Node(BaseModel, extra="allow"):
 
         if self.id < 0:
             self._new = True  # TODO: derived?
-            CacheControl.node_cache_control.cache[self.id] = self
+            Node.get_cache()[self.id] = self
 
         self._orig_labels = self.labels.copy()
         self._src_edges = src_edges or EdgeList([])
@@ -590,7 +631,9 @@ class Node(BaseModel, extra="allow"):
         try:
             self.__class__.save(self)
         except Exception as e:
-            logger.warning("error saving during del:", e)
+            err_msg = f"error saving during del: {e}"
+            logger.warning(err_msg)
+            warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
     @classmethod
     def load(cls, id: NodeId) -> Self:
@@ -635,12 +678,15 @@ class Node(BaseModel, extra="allow"):
             data=n.properties,
         )
 
-    # TODO: use attribute getter with __call__ value to dynamically set LRUCache size on first call
-    # @cached(cache=
-    # LRUCache(get_setting("node_cache_size", int)), key=lambda cls, id: id, info=True)
+    @classmethod
+    def get_cache(cls) -> NodeCache:
+        global node_cache
+        if node_cache is None:
+            node_cache = NodeCache(get_setting("node_cache_size", int))
+
+        return node_cache
 
     @classmethod
-    @cached(cache=LRUCache(2**11), key=lambda cls, id: id, info=True)
     def get(cls, id: NodeId) -> Self:
         """Returns a cached node with the specified id. If no node is cached, it is retrieved from
         the database.
@@ -652,7 +698,14 @@ class Node(BaseModel, extra="allow"):
         Returns:
             Self: the cached or newly retrieved node
         """
-        return cls.load(id)
+        print("Node.get")
+        cache = Node.get_cache()
+        n = cache.try_get(id)
+        if not n:
+            n = cls.load(id)
+            cache[id] = n
+
+        return cast(Self, n)
 
     @classmethod
     def save(cls, n: Self) -> Self:
@@ -749,9 +802,9 @@ class Node(BaseModel, extra="allow"):
         new_id = res[0]["id"]
         n.id = new_id
         n._new = False
-        # update the cache; if being called during __del__ then the cache entry may not exist
+        # update the cache; if being called during c then the cache entry may not exist
         try:
-            cache = CacheControl.node_cache_control.cache
+            cache = Node.get_cache()
             del cache[old_id]
             cache[new_id] = n
         except KeyError:
@@ -806,7 +859,7 @@ class Node(BaseModel, extra="allow"):
             Edge.delete(e)
 
         # remove from cache
-        node_cache = CacheControl.node_cache_control.cache
+        node_cache = Node.get_cache()
         if n.id in node_cache:
             del node_cache[n.id]
 
@@ -826,3 +879,7 @@ class Node(BaseModel, extra="allow"):
         if len(label_str) > 0:
             label_str = ":" + label_str
         return label_str
+
+
+NodeCache = GraphCache[NodeId, Node]
+node_cache: NodeCache | None = None
