@@ -1,7 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from typing import cast
-
 from unittest.mock import MagicMock
 
 import pytest
@@ -10,7 +9,7 @@ from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
 from pydantic import ValidationError
 
-from roc.graphdb import CacheControl, Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
+from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 
 class TestGraphDB:
@@ -51,8 +50,8 @@ class TestGraphDB:
     def test_walk(self) -> None:
         cnt = 0
         cache: set[int] = set()
-        cc = CacheControl.node_cache_control
-        maxsize = cc.info().maxsize
+        cc = Node.get_cache()
+        maxsize = cc.info.maxsize
         if maxsize:
             max = maxsize + 100
         else:
@@ -92,7 +91,7 @@ class TestGraphDB:
         print("CNT", cnt)
         print("MAX", max)
         print("MAXSIZE", maxsize)
-        i = CacheControl.node_cache_control.info()
+        i = Node.get_cache().info
         print("HITS", i.hits)
         print("MISSES", i.misses)
         print("CURRENT", i.currsize)
@@ -109,21 +108,23 @@ class TestNode:
         assert n.model_dump() == {"name": "Waymar Royce"}
         assert n.labels == {"Character"}
         assert not n.new
-        assert n.id in CacheControl.node_cache_control.cache
+        assert n.id in Node.get_cache()
 
     def test_node_cache(self) -> None:
-        cc = CacheControl.node_cache_control
-        assert cc.info().hits == 0
-        assert cc.info().misses == 0
+        cc = Node.get_cache()
+        assert cc.info.hits == 0
+        assert cc.info.misses == 0
         n1 = Node.get(cast(NodeId, 0))
-        assert cc.info().hits == 0
-        assert cc.info().misses == 1
+        print("cc.info", cc.info)
+        print("cc.misses", cc.misses)
+        assert cc.info.hits == 0
+        assert cc.info.misses == 1
         n2 = Node.get(cast(NodeId, 0))
-        assert cc.info().hits == 1
-        assert cc.info().misses == 1
+        assert cc.info.hits == 1
+        assert cc.info.misses == 1
         assert id(n1) == id(n2)
 
-    def test_node_new_in_cache(self, clear_cache) -> None:  # type: ignore
+    def test_node_new_in_cache(self, clear_cache) -> None:
         n = Node()
         n_dupe = Node.get(n.id)
         assert id(n) == id(n_dupe)
@@ -133,7 +134,7 @@ class TestNode:
         n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
 
         del n
-        CacheControl.node_cache_control.clear()
+        Node.get_cache().clear()
 
         spy.assert_called_once()
         assert spy.call_args[0][1] == "CREATE (n:TestNode $props) RETURN id(n) as id"
@@ -150,7 +151,7 @@ class TestNode:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del n
-        CacheControl.node_cache_control.clear()
+        Node.get_cache().clear()
 
         spy.assert_called_once()
         assert_similar(
@@ -161,14 +162,14 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
     def test_node_cache_control(self, clear_cache) -> None:
-        cc = CacheControl.node_cache_control
+        cc = Node.get_cache()
         # assert cc.info() == (0, 0, 4096, 0)
-        ci = cc.info()
+        ci = cc.info
         assert ci.hits == 0
         assert ci.misses == 0
         assert ci.maxsize == 2048
         assert ci.currsize == 0
-        assert isinstance(cc.cache, Cache)
+        assert isinstance(cc, Cache)
 
     @pytest.mark.skip("pending")
     def test_node_save(self) -> None:
@@ -349,23 +350,23 @@ class TestNode:
         assert e.dst_id == n2.id
 
     def test_node_create_updates_cache(self) -> None:
-        cc = CacheControl.node_cache_control
+        cc = Node.get_cache()
         n = Node(labels=["TestNode"])
         old_id = n.id
 
         Node.create(n)
 
-        assert cc.info().hits == 0
-        assert cc.info().misses == 0
+        assert cc.info.hits == 0
+        assert cc.info.misses == 0
         # old ID doesn't exist in cache
         with pytest.raises(NodeNotFound):
             Node.get(old_id)
-        assert cc.info().hits == 0
-        assert cc.info().misses == 1
+        assert cc.info.hits == 0
+        assert cc.info.misses == 1
         # new ID does exist in cache
         Node.get(n.id)
-        assert cc.info().hits == 1
-        assert cc.info().misses == 1
+        assert cc.info.hits == 1
+        assert cc.info.misses == 1
 
     def test_node_delete_new(self) -> None:
         n = Node(labels=["TestNode"])
@@ -375,7 +376,7 @@ class TestNode:
 
         assert n._deleted is True
         assert n._no_save is True
-        assert old_id not in CacheControl.node_cache_control.cache
+        assert old_id not in Node.get_cache()
 
     def test_node_delete_existing(self, mocker) -> None:
         n = Node(labels=["TestNode"])
@@ -386,7 +387,7 @@ class TestNode:
         Node.delete(n)
 
         spy.assert_called_once()
-        assert old_id not in CacheControl.node_cache_control.cache
+        assert old_id not in Node.get_cache()
         with pytest.raises(NodeNotFound):
             Node.get(old_id)
         assert_similar(
@@ -446,15 +447,15 @@ class TestEdgeList:
 
 class TestEdge:
     def test_edge_cache_control(self) -> None:
-        cc = CacheControl.edge_cache_control
+        cc = Edge.get_cache()
         cc.clear()
         # assert cc.info() == (0, 0, 4096, 0)
-        ci = cc.info()
+        ci = cc.info
         assert ci.hits == 0
         assert ci.misses == 0
         assert ci.maxsize == 2048
         assert ci.currsize == 0
-        assert isinstance(cc.cache, Cache)
+        assert isinstance(cc, Cache)
 
     def test_src(self) -> None:
         n0 = Node.get(cast(NodeId, 0))
@@ -532,9 +533,9 @@ class TestEdge:
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
     def test_edge_create_updates_cache(self, new_edge, clear_cache) -> None:
-        cc = CacheControl.edge_cache_control
-        assert cc.info().hits == 0
-        assert cc.info().misses == 0
+        cc = Edge.get_cache()
+        assert cc.info.hits == 0
+        assert cc.info.misses == 0
         e, _, _ = new_edge
         old_id = e.id
 
@@ -542,17 +543,17 @@ class TestEdge:
 
         # NOTE: Node.create() is called by Edge.create() if the nodes are new
         # Node.create() updates the edge.src and edge.dst, so it hits the cache twice
-        assert cc.info().hits == 2
-        assert cc.info().misses == 0
+        assert cc.info.hits == 2
+        assert cc.info.misses == 0
         # old ID doesn't exist in cache
         with pytest.raises(EdgeNotFound):
             Edge.get(old_id)
-        assert cc.info().hits == 2
-        assert cc.info().misses == 1
+        assert cc.info.hits == 2
+        assert cc.info.misses == 1
         # new ID does exist in cache
         Edge.get(e.id)
-        assert cc.info().hits == 3
-        assert cc.info().misses == 1
+        assert cc.info.hits == 3
+        assert cc.info.misses == 1
 
     def test_edge_create_updates_node_edges(self, new_edge) -> None:
         e, src, dst = new_edge
@@ -573,7 +574,7 @@ class TestEdge:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         del e
-        CacheControl.edge_cache_control.clear()
+        Edge.get_cache().clear()
 
         spy.assert_called_once()
         assert_similar(
@@ -656,7 +657,7 @@ class TestEdge:
 
         assert e._deleted is True
         assert e._no_save is True
-        assert old_id not in CacheControl.edge_cache_control.cache
+        assert old_id not in Edge.get_cache()
 
     def test_edge_delete_existing(self, mocker, new_edge) -> None:
         e, src, dst = new_edge
@@ -667,7 +668,7 @@ class TestEdge:
         Edge.delete(e)
 
         spy.assert_called_once()
-        assert old_id not in CacheControl.edge_cache_control.cache
+        assert old_id not in Edge.get_cache()
         with pytest.raises(EdgeNotFound):
             Edge.get(old_id)
         assert_similar(
@@ -701,4 +702,4 @@ class TestTypes:
         n = Node.get(cast(NodeId, 0))
 
         assert id(n) == id(c)
-        assert id(Node.get.cache) == id(GotCharacter.get.cache)  # type: ignore
+        assert id(Node.get_cache()) == id(GotCharacter.get_cache())

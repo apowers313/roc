@@ -7,22 +7,22 @@ from roc.component import Component
 from roc.config import load_config
 from roc.environment import EnvData, environment_bus
 from roc.event import BusConnection, EventBus
-from roc.graphdb import CacheControl, Edge, GraphDB, Node
+from roc.graphdb import Edge, GraphDB, Node
 
 
 @pytest.fixture(autouse=True)
 def clear_cache() -> Generator[None, None, None]:
     yield
 
-    node_cache = CacheControl.node_cache_control.cache
-    edge_cache = CacheControl.edge_cache_control.cache
+    node_cache = Node.get_cache()
+    edge_cache = Edge.get_cache()
     for n in node_cache:
         node_cache[n]._no_save = True
     for e in edge_cache:
         edge_cache[e]._no_save = True
 
-    CacheControl.node_cache_control.clear()
-    CacheControl.edge_cache_control.clear()
+    Node.get_cache().clear()
+    Edge.get_cache().clear()
 
 
 @pytest.fixture
