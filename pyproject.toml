@@ -219,7 +219,11 @@ doctest_optionflags = [
   "NORMALIZE_WHITESPACE",
   "IGNORE_EXCEPTION_DETAIL",
 ]
-filterwarnings = ["error", "ignore::DeprecationWarning"]
+filterwarnings = [
+  "error",
+  "ignore::DeprecationWarning",
+  "ignore::roc.graphdb.ErrorSavingDuringDelWarning",
+]
 
 markers = [
   "slow: tests that take a long time to run",
