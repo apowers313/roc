@@ -624,3 +624,6 @@ MigrationBackup/
 
 # Ignore dynaconf secret files
 .secrets.*
+
+# Ignore NetHack play data
+nle_data/
