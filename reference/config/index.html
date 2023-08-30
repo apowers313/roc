@@ -355,6 +355,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#config.load_config" class="md-nav__link">
+    load_config()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -542,6 +549,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#config.load_config" class="md-nav__link">
+    load_config()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -577,6 +591,59 @@
 
 
 
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="config.load_config" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">load_config</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Initializes the settings by reading the configuration files and environment variables</p>
+
+          <details class="quote">
+            <summary>Source code in <code>roc/config.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">load_config</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the settings by reading the configuration files and environment variables&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">initialized</span>
+    <span class="k">if</span> <span class="n">initialized</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="k">global</span> <span class="n">_settings</span>
+    <span class="n">_settings</span> <span class="o">=</span> <span class="n">Dynaconf</span><span class="p">(</span>
+        <span class="n">envvar_prefix</span><span class="o">=</span><span class="s2">&quot;ROC&quot;</span><span class="p">,</span>
+        <span class="n">settings_files</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;settings.toml&quot;</span><span class="p">,</span> <span class="s2">&quot;.secrets.toml&quot;</span><span class="p">],</span>
+        <span class="n">validators</span><span class="o">=</span><span class="n">settings_vars</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">config_modules</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
 
 
 
