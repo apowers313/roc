@@ -6,6 +6,8 @@ import gym
 import nle  # noqa
 from nle import nethack
 
+from .gymnasium import NethackGym
+
 pp = pprint.PrettyPrinter(width=41, compact=True)
 
 
@@ -45,10 +47,12 @@ def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
 @click.command
 @click.option("--arg", default=1)
 def cli(arg: Any) -> None:
-    print("hello cli")
-    print("arg is", arg)
     # env = gym.make("NetHackScore-v0", options=["autodig"])
     env = gym.make("NetHackScore-v0")
+    nhgym = NethackGym(env)
+    nhgym.start()
+    # exit()
+
     # GymComponent(gym.make("NetHackScore-v0"))
     # environment_bus.send(EnvInputEvent(env.action_space))
     print(repr(env.action_space))
