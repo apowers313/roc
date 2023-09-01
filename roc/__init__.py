@@ -3,17 +3,17 @@
 
 from .action import ActionData, action_bus
 from .component import Component
-from .environment import EnvData, environment_bus
 from .gymnasium import GymComponent
+from .perception import PerceptionData, perception_bus
 
 __all__ = [
     # Component Exports
     "Component",
     # Gym Exports
     "GymComponent",
-    # Environment Exports
-    "environment_bus",
-    "EnvData",
+    # Perception Interface Exports
+    "perception_bus",
+    "PerceptionData",
     # Action Exports
     "action_bus",
     "ActionData",

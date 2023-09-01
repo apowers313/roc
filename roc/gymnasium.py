@@ -8,8 +8,8 @@ from pydantic import BaseModel
 from .action import ActionCount, action_bus
 from .component import Component
 from .config import load_config
-from .environment import VisionData, environment_bus
 from .logger import logger
+from .perception import VisionData, perception_bus
 
 # TODO: try to import 'gym' and 'gymnasium' for proper typing
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
@@ -22,11 +22,11 @@ except Exception:
 
 class GymComponent(Component, ABC):
     def __init__(self, env: Env) -> None:
-        super().__init__("gym-interface", "environment")
+        super().__init__()
         self.env = env
 
         # setup communications
-        self.env_bus = environment_bus
+        self.env_bus = perception_bus
         self.action_bus = action_bus
         self.env_bus_conn = self.env_bus.connect(self)
         self.action_bus_conn = self.action_bus.connect(self)
