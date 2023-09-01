@@ -3,11 +3,11 @@ from typing import Any, Generator
 import pytest
 
 from roc.action import ActionData, action_bus
-from roc.component import Component
+from roc.component import Component, register_component
 from roc.config import load_config
-from roc.environment import EnvData, environment_bus
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
+from roc.perception import PerceptionData, perception_bus
 
 
 @pytest.fixture(autouse=True)
@@ -54,15 +54,29 @@ def clear_db() -> Generator[None, None, None]:
     db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
 
 
+@pytest.fixture(scope="function", autouse=True)
+def clear_components() -> None:
+    Component.clear_registry()
+
+
 @pytest.fixture
-def env_bus_conn() -> BusConnection[EnvData]:
-    c = Component("foo", "test")
-    return environment_bus.connect(c)
+def fake_component() -> Component:
+    @register_component("fake", "thing")
+    class FakeComponent(Component):
+        pass
+
+    return Component.get("fake", "thing")
+
+
+@pytest.fixture
+def env_bus_conn() -> BusConnection[PerceptionData]:
+    c = Component()
+    return perception_bus.connect(c)
 
 
 @pytest.fixture
 def action_bus_conn() -> BusConnection[ActionData]:
-    c = Component("foo", "test")
+    c = Component()
     return action_bus.connect(c)
 
 

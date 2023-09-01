@@ -27,7 +27,7 @@ ActionEvent = Event[ActionData]
 
 class ActionComponent(Component):
     def __init__(self) -> None:
-        super().__init__("action", "action")
+        super().__init__()
         self.action_bus_conn = action_bus.connect(self)
 
         def count_filter(e: ActionEvent) -> bool:

@@ -1,14 +1,18 @@
-from roc.component import Component
-from roc.event import Event, EventBus
+from pydantic import BaseModel
+
+from .component import Component
+from .event import EventBus
 
 
-class PerceptionData:
-    pass
+# TODO: vision input
+# TODO: sound input
+# TODO: other input
+class VisionData(BaseModel):
+    spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
+    # spectrum: tuple[int | str, ...]
 
 
-class PerceptionEvent(Event[PerceptionData]):
-    pass
-
+PerceptionData = VisionData
 
 perception_bus = EventBus[PerceptionData]("perception")
 

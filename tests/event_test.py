@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from roc.component import Component
 from roc.event import Event, EventBus
 
 
@@ -15,13 +14,12 @@ class FakeData:
 
 
 class TestEventBus:
-    def test_eventbus_send(self, eb_reset, mocker):
+    def test_eventbus_send(self, eb_reset, mocker, fake_component):
         eb = EventBus[FakeData]("test")
         stub: MagicMock = mocker.stub(name="event_callback")
         eb.subject.subscribe(stub)
 
-        c = Component("test_component", "test_type")
-        eb_conn = eb.connect(c)
+        eb_conn = eb.connect(fake_component)
         d = FakeData("bar", 42)
         eb_conn.send(d)
 
@@ -32,7 +30,7 @@ class TestEventBus:
         assert e.data.foo == "bar"
         assert e.data.baz == 42
 
-    def test_eventbus_multiple_listeners(self, eb_reset, mocker):
+    def test_eventbus_multiple_listeners(self, eb_reset, mocker, fake_component):
         eb = EventBus[FakeData]("test")
         l1: MagicMock = mocker.stub(name="listener1")
         l2: MagicMock = mocker.stub(name="listener2")
@@ -41,8 +39,7 @@ class TestEventBus:
         eb.subject.subscribe(l2)
         eb.subject.subscribe(l3)
 
-        c = Component("test_component", "test_type")
-        eb_conn = eb.connect(c)
+        eb_conn = eb.connect(fake_component)
         d = FakeData("bar", 42)
         eb_conn.send(d)
 
