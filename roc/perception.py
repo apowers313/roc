@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 
 from .component import Component
-from .event import EventBus
+from .event import Event, EventBus
+from .logger import logger
 
 
 # TODO: vision input
@@ -14,9 +15,15 @@ class VisionData(BaseModel):
 
 PerceptionData = VisionData
 
+PerceptionEvent = Event[PerceptionData]
+
 perception_bus = EventBus[PerceptionData]("perception")
 
 
-class PerceptionComponent(Component):
+class Perception(Component):
     def __init__(self) -> None:
         self.pb_conn = perception_bus.connect(self)
+        self.pb_conn.subject.subscribe(self.do_perception)
+
+    def do_perception(self, e: PerceptionEvent) -> None:
+        lambda e: logger.info(f"Perception got {e}")

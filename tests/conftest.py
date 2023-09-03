@@ -4,7 +4,7 @@ import pytest
 
 from roc.action import ActionData, action_bus
 from roc.component import Component, register_component
-from roc.config import load_config
+from roc.config import Config
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
 from roc.perception import PerceptionData, perception_bus
@@ -40,7 +40,7 @@ def eb_reset() -> None:
 
 @pytest.fixture(scope="function", autouse=True)
 def do_init() -> None:
-    load_config()
+    Config.init()
 
 
 @pytest.fixture(scope="session", autouse=True)

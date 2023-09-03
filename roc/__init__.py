@@ -1,9 +1,12 @@
 # ruff: noqa: F401
 """Reinforcement Learning of Concepts"""
 
+import roc.logger as logger
+
 from .action import ActionData, action_bus
 from .component import Component
-from .gymnasium import GymComponent
+from .config import Config
+from .gymnasium import NethackGym
 from .perception import PerceptionData, perception_bus
 
 __all__ = [
@@ -18,3 +21,15 @@ __all__ = [
     "action_bus",
     "ActionData",
 ]
+
+
+def init() -> None:
+    Config.init()
+    logger.init()
+    Component.init()
+    # Gym.init()
+
+
+def start() -> None:
+    g = NethackGym()
+    g.start()

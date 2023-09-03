@@ -9,7 +9,7 @@ from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
 
-from .config import get_setting
+from .config import Config
 from .logger import logger
 
 RecordFn = Callable[[str, Iterator[Any]], None]
@@ -37,12 +37,13 @@ class GraphDB:
     """
 
     def __init__(self) -> None:
-        self.host = get_setting("db_host", str)
-        self.port = get_setting("db_port", int)
-        self.encrypted = get_setting("db_conn_encrypted", bool)
-        self.username = get_setting("db_username", str)
-        self.password = get_setting("db_password", str)
-        self.lazy = get_setting("db_lazy", bool)
+        settings = Config.get()
+        self.host = settings.DB_HOST
+        self.port = settings.DB_PORT
+        self.encrypted = settings.DB_CONN_ENCRYPTED
+        self.username = settings.DB_USERNAME
+        self.password = settings.DB_PASSWORD
+        self.lazy = settings.DB_LAZY
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
 
@@ -246,14 +247,12 @@ class Edge(BaseModel, extra="allow"):
     def __del__(self) -> None:
         Edge.save(self)
 
-    # @cached(cache=
-    # LRUCache(get_setting("edge_cache_size", int)), key=lambda cls, id: id, info=True)
-
     @classmethod
     def get_cache(self) -> EdgeCache:
         global edge_cache
         if edge_cache is None:
-            edge_cache = EdgeCache(maxsize=get_setting("edge_cache_size", int))
+            settings = Config.get()
+            edge_cache = EdgeCache(maxsize=settings.EDGE_CACHE_SIZE)
 
         return edge_cache
 
@@ -663,7 +662,8 @@ class Node(BaseModel, extra="allow"):
     def get_cache(cls) -> NodeCache:
         global node_cache
         if node_cache is None:
-            node_cache = NodeCache(get_setting("node_cache_size", int))
+            settings = Config.get()
+            node_cache = NodeCache(settings.NODE_CACHE_SIZE)
 
         return node_cache
 

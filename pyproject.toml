@@ -90,6 +90,9 @@ exclude = [
 ]
 ignore = ["DEP003"]
 
+[tool.deptry.per_rule_ignores]
+DEP001 = ["gymnasium"]
+
 [tool.black]
 # https://github.com/psf/black
 target-version = ["py310"]
@@ -121,7 +124,7 @@ ignore-init-method = true
 ignore-init-module = true
 ignore-magic = true
 ignore-semiprivate = false
-ignore-private = false
+ignore-private = true
 ignore-property-decorators = false
 ignore-module = false
 ignore-nested-functions = true
@@ -215,6 +218,7 @@ addopts = [
   "--doctest-continue-on-failure",
   "--cov=roc",
   "--cov-report=html",
+  "--cov-report=term:skip-covered",
   "--emoji",
   "-rA",
   "-s",
