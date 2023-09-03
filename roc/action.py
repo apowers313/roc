@@ -1,14 +1,11 @@
-from typing import Annotated, Literal
+from random import randrange
+from typing import Annotated, Callable, Literal
 
 from pydantic import BaseModel, Field
 from reactivex import operators as op
 
-from .component import Component
+from .component import Component, register_component
 from .event import Event, EventBus
-
-
-class ActionEmpty(BaseModel):
-    type: Literal["action_empty"] = "action_empty"
 
 
 class ActionCount(BaseModel):
@@ -16,8 +13,13 @@ class ActionCount(BaseModel):
     action_count: int
 
 
+class ActionGo(BaseModel):
+    type: Literal["action_go"] = "action_go"
+    go: bool
+
+
 ActionData = Annotated[
-    ActionEmpty | ActionCount,
+    ActionCount | ActionGo,
     Field(discriminator="type"),
 ]
 
@@ -25,13 +27,18 @@ action_bus = EventBus[ActionData]("action")
 ActionEvent = Event[ActionData]
 
 
+@register_component("action", "action")
 class ActionComponent(Component):
     def __init__(self) -> None:
         super().__init__()
         self.action_bus_conn = action_bus.connect(self)
 
+        # XXX: function because you can't type annotate an inline lambda
         def count_filter(e: ActionEvent) -> bool:
             return e.data.type == "action_count"
+
+        def go_filter(e: ActionEvent) -> bool:
+            return e.data.type == "action_go"
 
         self.action_bus_conn.subject.pipe(
             op.filter(count_filter),
@@ -43,3 +50,34 @@ class ActionComponent(Component):
             raise Exception("bad data received in recv_action_count")
 
         self.action_count = e.data.action_count
+
+
+ActionFn = Callable[[], int]
+default_action_registry: dict[str, ActionFn] = {}
+
+
+class register_default_action:
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __call__(self, fn: ActionFn) -> ActionFn:
+        if self.name in default_action_registry:
+            raise ValueError(f"Registering duplicate default action '{self.name}")
+
+        default_action_registry[self.name] = fn
+
+        return fn
+
+
+@register_default_action("pass")
+def default_pass() -> int:
+    return 19
+
+
+@register_default_action("random")
+def default_random() -> int:
+    c = ActionComponent.get("action", "action")
+    if c.action_count is None:
+        raise ValueError("Trying to get action before actions have been configured")
+
+    return randrange(c.action_count)

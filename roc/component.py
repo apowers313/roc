@@ -4,7 +4,10 @@ from typing import Any, TypeVar, cast
 
 from typing_extensions import Self
 
-# from abc import ABC
+from .config import Config
+from .logger import logger
+
+loaded_components: dict[str, Component] = {}
 
 
 class Component:
@@ -13,47 +16,25 @@ class Component:
     name: str = "<name unassigned>"
     type: str = "<type unassigned>"
 
-    # def __init__(self, name: str, type: str):
-    # """Component constructor.
+    def shutdown(self) -> None:
+        pass
 
-    # Args:
-    #     name (str): Name of the component. Mostly used for eventing.
-    #     type (str): Type of the component. Will be set by the concrete class. Mostly used for \
-    #         eventing.
-    # """
-    # # self._name = name
-    # # self._type = type
+    @classmethod
+    def init(cls) -> None:
+        settings = Config.get()
+        component_list = default_components
+        component_list = component_list.union(settings.PERCEPTION_COMPONENTS)
 
-    # @property
-    # def name(self) -> str:
-    #     """Getter for the name of the component
+        # TODO: shutdown previously loaded components
 
-    #     Returns:
-    #         str: the name of the component
+        for reg_str in component_list:
+            logger.trace(f"Loading component: {reg_str} ...")
+            (name, type) = reg_str.split(":")
+            loaded_components[reg_str] = Component.get(name, type)
 
-    #     Example:
-    #         >>> c = Component("foo", "bar")
-    #         >>> print(c.name)
-    #         foo
-    #     """
-    #     return self._name
-
-    # @property
-    # def type(self) -> str:
-    #     """Getter for the type of the component
-
-    #     Returns:
-    #         str: the type of the component
-
-    #     Example:
-    #         >>> c = Component("foo", "bar")
-    #         >>> print(c.type)
-    #         bar
-    #     """
-    #     return self._type
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
-        reg_str = component_registry_key(name, type)
+        reg_str = _component_registry_key(name, type)
         return cast(Self, component_registry[reg_str](*args, **kwargs))
 
     @classmethod
@@ -63,33 +44,31 @@ class Component:
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)
 component_registry: dict[str, type[Component]] = {}
+default_components: set[str] = set()
 
 
-def component_registry_key(name: str, type: str) -> str:
+def _component_registry_key(name: str, type: str) -> str:
     return f"{name}:{type}"
 
 
 class register_component:
-    def __init__(self, name: str, type: str) -> None:
+    def __init__(self, name: str, type: str, *, auto: bool = False) -> None:
         self.name = name
         self.type = type
+        self.auto = auto
 
     def __call__(self, cls: type[Component]) -> type[Component]:
         global register_component
-        reg_str = component_registry_key(self.name, self.type)
+
+        reg_str = _component_registry_key(self.name, self.type)
         if reg_str in component_registry:
             raise ValueError(f"Registering duplicate component name: '{self.name}'")
+
+        if self.auto:
+            default_components.add(reg_str)
+
         component_registry[reg_str] = cls
         cls.name = self.name
         cls.type = self.type
 
         return cls
-
-        # @functools.wraps(cls)
-        # class WrappedComponent(cls):  # type: ignore [valid-type,misc]
-        #     def __init__(self, *args: Any, **kwargs_orig: Any) -> None:
-        #         kwargs = kwargs_orig.copy()
-        #         kwargs["name"] = self.name
-        #         super().__init__(*args, **kwargs)
-
-        # return WrappedComponent

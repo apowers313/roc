@@ -5,7 +5,7 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field, TypeAdapter, field_validator
 
-from .config import get_setting
+from .config import Config
 
 __all__ = [
     "logger",
@@ -45,11 +45,12 @@ class LogFilter:
         enabled: bool = True,
         use_module_settings: bool = True,
     ):
-        self.level = level or get_setting("log_level", str)
+        settings = Config.get()
+        self.level = level or settings.LOG_LEVEL
         self.level_num = logger.level(self.level).no
         if not isinstance(log_modules, str):
             if use_module_settings:
-                log_modules = get_setting("log_modules", str)
+                log_modules = settings.LOG_MODULES
             else:
                 log_modules = ""
         mod_list = self.parse_module_str(log_modules)
@@ -92,10 +93,11 @@ class LogFilter:
 default_log_filter = None
 
 
-def config() -> None:
+def init() -> None:
     global default_log_filter
     default_log_filter = LogFilter()
 
     logger.remove()
-    if get_setting("log_enable", bool):
+    settings = Config.get()
+    if settings.LOG_ENABLE:
         logger.add(sys.stderr, level=0, filter=default_log_filter)

@@ -1,3 +1,4 @@
+# pragma: no cover
 from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any
@@ -7,7 +8,6 @@ from pydantic import BaseModel
 # from roc import init as roc_init
 from .action import ActionCount, action_bus
 from .component import Component
-from .config import load_config
 from .logger import logger
 from .perception import VisionData, perception_bus
 
@@ -15,15 +15,16 @@ from .perception import VisionData, perception_bus
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
 
 try:
-    from gym import Env
-except Exception:
-    pass
+    import gym
+except ModuleNotFoundError:
+    import gymnasium as gym
 
 
-class GymComponent(Component, ABC):
-    def __init__(self, env: Env) -> None:
+class Gym(Component, ABC):
+    def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
         super().__init__()
-        self.env = env
+        gym_opts = gym_opts or {}
+        self.env = gym.make(gym_id, **gym_opts)
 
         # setup communications
         self.env_bus = perception_bus
@@ -32,7 +33,7 @@ class GymComponent(Component, ABC):
         self.action_bus_conn = self.action_bus.connect(self)
 
         # config actions
-        self.action_count = env.action_space.n
+        self.action_count = self.env.action_space.n
         self.config_actions(self.action_count)
 
         # TODO: config environment
@@ -48,7 +49,6 @@ class GymComponent(Component, ABC):
 
     @logger.catch
     def start(self) -> None:
-        load_config()
         obs = self.env.reset()
 
         done = False
@@ -69,7 +69,6 @@ class GymComponent(Component, ABC):
             if len(step_res) == 5:
                 done = step_res[2] or step_res[3]
             else:
-                print("has done, done is", step_res[2])
                 done = step_res[2]
 
             # self.env.render()
@@ -185,7 +184,11 @@ class BaselineStats(BaseModel):
     ALIGN: int
 
 
-class NethackGym(GymComponent):
+class NethackGym(Gym):
+    def __init__(self, *, gym_opts: dict[str, Any] | None = None) -> None:
+        gym_opts = gym_opts or {}
+        super().__init__("NetHackScore-v0", **gym_opts)
+
     def config_actions(self, action_count: int) -> None:
         a = ActionCount(action_count=action_count)
         self.action_bus_conn.send(a)
