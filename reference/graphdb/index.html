@@ -878,8 +878,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">187</span>
-<span class="normal">188</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">188</span>
 <span class="normal">189</span>
 <span class="normal">190</span>
 <span class="normal">191</span>
@@ -1133,8 +1132,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 <span class="normal">439</span>
 <span class="normal">440</span>
 <span class="normal">441</span>
-<span class="normal">442</span>
-<span class="normal">443</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
+<span class="normal">442</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically</span>
 <span class="sd">    implements all phases of CRUD in the underlying graph database. This is a directional</span>
@@ -1196,14 +1194,12 @@ a graph database query if they don't already exist in the edge cache.</p>
     <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">Edge</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
-    <span class="c1"># @cached(cache=</span>
-    <span class="c1"># LRUCache(get_setting(&quot;edge_cache_size&quot;, int)), key=lambda cls, id: id, info=True)</span>
-
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">get_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeCache</span><span class="p">:</span>
         <span class="k">global</span> <span class="n">edge_cache</span>
         <span class="k">if</span> <span class="n">edge_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">EdgeCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;edge_cache_size&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">EdgeCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">EDGE_CACHE_SIZE</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">edge_cache</span>
 
@@ -1521,7 +1517,8 @@ if the ID is wrong.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">331</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">330</span>
+<span class="normal">331</span>
 <span class="normal">332</span>
 <span class="normal">333</span>
 <span class="normal">334</span>
@@ -1577,8 +1574,7 @@ if the ID is wrong.</p>
 <span class="normal">384</span>
 <span class="normal">385</span>
 <span class="normal">386</span>
-<span class="normal">387</span>
-<span class="normal">388</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a new edge in the database. Typically only called by Edge.save</span>
 
@@ -1709,7 +1705,8 @@ to the database, this marks the edge as deleted and returns.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">412</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">411</span>
+<span class="normal">412</span>
 <span class="normal">413</span>
 <span class="normal">414</span>
 <span class="normal">415</span>
@@ -1732,8 +1729,7 @@ to the database, this marks the edge as deleted and returns.</p>
 <span class="normal">432</span>
 <span class="normal">433</span>
 <span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="normal">435</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Deletes the specified edge from the database. If the edge has not already been persisted</span>
 <span class="sd">    to the database, this marks the edge as deleted and returns.</span>
@@ -1856,7 +1852,8 @@ Edge is returned and cached.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">260</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
+<span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
 <span class="normal">263</span>
@@ -1874,8 +1871,7 @@ Edge is returned and cached.</p>
 <span class="normal">275</span>
 <span class="normal">276</span>
 <span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Looks up an Edge based on it&#39;s ID. If the Edge is cached, the cached edge is returned;</span>
 <span class="sd">    otherwise the Edge is queried from the graph database based the ID provided and a new</span>
@@ -2016,7 +2012,8 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">281</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">280</span>
+<span class="normal">281</span>
 <span class="normal">282</span>
 <span class="normal">283</span>
 <span class="normal">284</span>
@@ -2045,8 +2042,7 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 <span class="normal">307</span>
 <span class="normal">308</span>
 <span class="normal">309</span>
-<span class="normal">310</span>
-<span class="normal">311</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">310</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads an Edge from the graph database without attempting to check if the Edge</span>
 <span class="sd">    already exists in the cache. Typically this is only called by Edge.get()</span>
@@ -2184,7 +2180,8 @@ edge already exists in the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">313</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">312</span>
+<span class="normal">313</span>
 <span class="normal">314</span>
 <span class="normal">315</span>
 <span class="normal">316</span>
@@ -2199,8 +2196,7 @@ edge already exists in the database.</p>
 <span class="normal">325</span>
 <span class="normal">326</span>
 <span class="normal">327</span>
-<span class="normal">328</span>
-<span class="normal">329</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">328</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Saves the edge to the database. Calls Edge.create if the edge is new, or Edge.update if</span>
 <span class="sd">    edge already exists in the database.</span>
@@ -2313,7 +2309,8 @@ edge already exists in the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">390</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
+<span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
 <span class="normal">393</span>
@@ -2332,8 +2329,7 @@ edge already exists in the database.</p>
 <span class="normal">406</span>
 <span class="normal">407</span>
 <span class="normal">408</span>
-<span class="normal">409</span>
-<span class="normal">410</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">409</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Updates the edge in the database. Typically only called by Edge.save</span>
 
@@ -2388,7 +2384,8 @@ EdgeList.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">453</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">452</span>
+<span class="normal">453</span>
 <span class="normal">454</span>
 <span class="normal">455</span>
 <span class="normal">456</span>
@@ -2406,8 +2403,7 @@ EdgeList.</p>
 <span class="normal">468</span>
 <span class="normal">469</span>
 <span class="normal">470</span>
-<span class="normal">471</span>
-<span class="normal">472</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeFetchIterator</span><span class="p">:</span>
+<span class="normal">471</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeFetchIterator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The implementation of an iterator for an EdgeList. Only intended to be used internally by</span>
 <span class="sd">    EdgeList.</span>
@@ -2472,7 +2468,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">475</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">474</span>
+<span class="normal">475</span>
 <span class="normal">476</span>
 <span class="normal">477</span>
 <span class="normal">478</span>
@@ -2515,8 +2512,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="normal">515</span>
 <span class="normal">516</span>
 <span class="normal">517</span>
-<span class="normal">518</span>
-<span class="normal">519</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
+<span class="normal">518</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A list of Edges that is used by Node for keeping track of the connections it has.</span>
 <span class="sd">    Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())</span>
@@ -2665,18 +2661,20 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="normal">93</span>
 <span class="normal">94</span>
 <span class="normal">95</span>
-<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">GraphDB</span><span class="p">:</span>
+<span class="normal">96</span>
+<span class="normal">97</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">GraphDB</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A graph database singleton. Settings for the graph database come from the config module.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_host&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_port&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">encrypted</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_conn_encrypted&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_username&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_password&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;db_lazy&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">)</span>
+        <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_HOST</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_PORT</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encrypted</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_CONN_ENCRYPTED</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_USERNAME</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_PASSWORD</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_LAZY</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client_name</span> <span class="o">=</span> <span class="s2">&quot;roc-graphdb-client&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">db_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 
@@ -2772,7 +2770,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">540</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">539</span>
+<span class="normal">540</span>
 <span class="normal">541</span>
 <span class="normal">542</span>
 <span class="normal">543</span>
@@ -3232,7 +3231,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
     <span class="k">def</span> <span class="nf">get_cache</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeCache</span><span class="p">:</span>
         <span class="k">global</span> <span class="n">node_cache</span>
         <span class="k">if</span> <span class="n">node_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">node_cache</span> <span class="o">=</span> <span class="n">NodeCache</span><span class="p">(</span><span class="n">get_setting</span><span class="p">(</span><span class="s2">&quot;node_cache_size&quot;</span><span class="p">,</span> <span class="nb">int</span><span class="p">))</span>
+            <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+            <span class="n">node_cache</span> <span class="o">=</span> <span class="n">NodeCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">NODE_CACHE_SIZE</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">node_cache</span>
 
@@ -4136,7 +4136,8 @@ the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">618</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">617</span>
+<span class="normal">618</span>
 <span class="normal">619</span>
 <span class="normal">620</span>
 <span class="normal">621</span>
@@ -4177,8 +4178,7 @@ the database.</p>
 <span class="normal">656</span>
 <span class="normal">657</span>
 <span class="normal">658</span>
-<span class="normal">659</span>
-<span class="normal">660</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">659</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads a node from the database. Use `Node.get` or other methods instead.</span>
 

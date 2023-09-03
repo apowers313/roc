@@ -356,9 +356,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#config.load_config" class="md-nav__link">
-    load_config()
+  <a href="#config.Config" class="md-nav__link">
+    Config
   </a>
+  
+    <nav class="md-nav" aria-label="Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#config.Config.init" class="md-nav__link">
+    init()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -550,9 +563,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#config.load_config" class="md-nav__link">
-    load_config()
+  <a href="#config.Config" class="md-nav__link">
+    Config
   </a>
+  
+    <nav class="md-nav" aria-label="Config">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#config.Config.init" class="md-nav__link">
+    init()
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -591,6 +617,130 @@
 
 
 
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="config.Config" class="doc doc-heading">
+          <code>Config</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="config.DynaconfConfig">DynaconfConfig</span></code></p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>roc/config.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">DynaconfConfig</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;forbid&quot;</span><span class="p">,</span> <span class="n">validate_default</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">DB_HOST</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;127.0.0.1&quot;</span><span class="p">)</span>
+    <span class="n">DB_PORT</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">7687</span><span class="p">)</span>
+    <span class="n">DB_CONN_ENCRYPTED</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">DB_USERNAME</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">DB_PASSWORD</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">DB_LAZY</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">NODE_CACHE_SIZE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">EDGE_CACHE_SIZE</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span><span class="o">**</span><span class="mi">11</span><span class="p">)</span>
+    <span class="n">LOG_ENABLE</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">LOG_LEVEL</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="p">)</span>
+    <span class="n">LOG_MODULES</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">DEFAULT_ACTION</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;pass&quot;</span><span class="p">)</span>
+    <span class="n">PERCEPTION_COMPONENTS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[])</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">_config_singleton</span>
+        <span class="k">if</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                <span class="s2">&quot;Getting settings before config module was initialized. Please call init() first&quot;</span><span class="p">,</span>
+                <span class="n">LogImportWarning</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">Config</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+            <span class="k">assert</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">return</span> <span class="n">_config_singleton</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">use_secrets</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initializes the settings by reading the configuration files and environment variables&quot;&quot;&quot;</span>
+
+        <span class="k">global</span> <span class="n">_config_singleton</span>
+        <span class="n">initialized</span> <span class="o">=</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">initialized</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">settings_files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;settings.toml&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">use_secrets</span><span class="p">:</span>
+            <span class="n">settings_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;.secrets.toml&quot;</span><span class="p">)</span>
+
+        <span class="n">dynaconf_settings</span> <span class="o">=</span> <span class="n">Dynaconf</span><span class="p">(</span>
+            <span class="n">envvar_prefix</span><span class="o">=</span><span class="s2">&quot;ROC&quot;</span><span class="p">,</span>
+            <span class="n">settings_files</span><span class="o">=</span><span class="n">settings_files</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">_config_singleton</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="o">**</span><span class="n">dynaconf_settings</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
 
 
 <div class="doc doc-object doc-function">
@@ -598,10 +748,14 @@
 
 
 
-<h2 id="config.load_config" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">load_config</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+<h3 id="config.Config.init" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">init</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">use_secrets</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
 
-</h2>
+</h3>
 
 
   <div class="doc doc-contents ">
@@ -610,40 +764,57 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/config.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">load_config</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">use_secrets</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the settings by reading the configuration files and environment variables&quot;&quot;&quot;</span>
-    <span class="k">global</span> <span class="n">initialized</span>
+
+    <span class="k">global</span> <span class="n">_config_singleton</span>
+    <span class="n">initialized</span> <span class="o">=</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">initialized</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force</span><span class="p">:</span>
         <span class="k">return</span>
 
-    <span class="k">global</span> <span class="n">_settings</span>
-    <span class="n">_settings</span> <span class="o">=</span> <span class="n">Dynaconf</span><span class="p">(</span>
+    <span class="n">settings_files</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;settings.toml&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">use_secrets</span><span class="p">:</span>
+        <span class="n">settings_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;.secrets.toml&quot;</span><span class="p">)</span>
+
+    <span class="n">dynaconf_settings</span> <span class="o">=</span> <span class="n">Dynaconf</span><span class="p">(</span>
         <span class="n">envvar_prefix</span><span class="o">=</span><span class="s2">&quot;ROC&quot;</span><span class="p">,</span>
-        <span class="n">settings_files</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;settings.toml&quot;</span><span class="p">,</span> <span class="s2">&quot;.secrets.toml&quot;</span><span class="p">],</span>
-        <span class="n">validators</span><span class="o">=</span><span class="n">settings_vars</span><span class="p">,</span>
+        <span class="n">settings_files</span><span class="o">=</span><span class="n">settings_files</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="n">initialized</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">config_modules</span><span class="p">()</span>
+    <span class="n">_config_singleton</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="o">**</span><span class="n">dynaconf_settings</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
 
 </div>
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
 
 
 
