@@ -60,11 +60,9 @@ class Gym(Component, ABC):
             self.send_obs(obs)
             action = self.await_action()
             logger.trace(f"Doing action: {action}")
-            # obs = self.env.step(action)
             step_res = self.env.step(action)
             obs = step_res[0]
             dump_env_record(obs)
-            # print("OBSERVATION", obs)
 
             if len(step_res) == 5:
                 done = step_res[2] or step_res[3]
