@@ -1,63 +1,14 @@
 from __future__ import annotations
 
-import functools
 import warnings
-from typing import Any, Generic, TypeVar
+from typing import Any
 
-from dynaconf import Dynaconf, Validator
+from dynaconf import Dynaconf
 from pydantic import BaseModel, Field, model_validator
 
 
 class LogImportWarning(Warning):
     pass
-
-
-ValType = TypeVar("ValType")
-
-
-class DefaultSetting(Validator, Generic[ValType]):
-    def __init__(
-        self,
-        name: str,
-        val: ValType,
-        *,
-        must_exist: bool = True,
-        is_list: bool = False,
-        list_type: Any = None,
-    ) -> None:
-        def condition_checker(val: Any, *, is_list: bool = False, list_type: Any = None) -> bool:
-            # TODO: maybe use Pydantic for this
-            print("condition_checker")
-            print("is list", is_list)
-            print("list type", list_type)
-            # checking to make sure a list is a list
-            if is_list:
-                # make sure it's a list
-                if not isinstance(val, list):
-                    return False
-
-                # iterate the list checking the type
-                if list_type is not None:
-                    for x in val:
-                        if not isinstance(x, list_type):
-                            return False
-
-            return True
-
-        condition_fn = functools.partial(
-            condition_checker,
-            is_list=is_list,
-            list_type=list_type,
-        )
-
-        super().__init__(
-            name,
-            default=val,
-            apply_default_on_none=True,
-            must_exist=must_exist,
-            condition=condition_fn
-            # cast=str,
-        )
 
 
 _config_singleton: Config | None = None
@@ -157,41 +108,6 @@ class Config(DynaconfConfig, extra="forbid", validate_default=True):
     DEFAULT_ACTION: str = Field(default="pass")
     PERCEPTION_COMPONENTS: list[str] = Field(default=[])
 
-    # @model_validator(mode="before")
-    # @classmethod
-    # # def __lowercase_property_keys__(cls, values: Any) -> Any:
-    # #     def __lower__(value: Any) -> Any:
-    # #         if isinstance(value, dict):
-    # #             d: dict[str, Any] = {}
-    # #             for k, v in value.items():
-    # #                 if k not in DynaconfConfig.model_fields.keys():
-    # #                     k = k.lower()
-    # #             # return {k.lower(): __lower__(v) for k, v in value.items()}
-    # #         return value
-
-    # #     return __lower__(values)
-
-    # def _keys_to_lower(cls, values: Any) -> Any:
-    #     def __lower__(value: Any) -> Any:
-    #         if isinstance(value, dict):
-    #             # print("\n\n\nITEMS", value.items())
-    #             d: dict[str, Any] = {}
-    #             for k, v in value.items():
-    #                 if k not in DynaconfConfig.model_fields.keys():
-    #                     print("k is NOT in DynaconfConfig.model_fields:", k)
-    #                     d[k.lower()] = __lower__(v)
-    #                 else:
-    #                     print("found k:", k)
-    #                     d[k] = __lower__(v)
-    #             return d
-    #         return value
-
-    #     print("DYNACONF KEYS", DynaconfConfig.model_fields.keys())
-    #     print("\n\n\ninput", values)
-    #     ret = __lower__(values)
-    #     print("final", ret)
-    #     return ret
-
     @staticmethod
     def get() -> Config:
         global _config_singleton
@@ -223,8 +139,3 @@ class Config(DynaconfConfig, extra="forbid", validate_default=True):
         )
 
         _config_singleton = Config(**dynaconf_settings)
-
-    # @staticmethod
-    # @property
-    # def initialized() -> bool:
-    #     return __config_singleton is not None

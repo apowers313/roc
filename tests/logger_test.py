@@ -19,7 +19,6 @@ class FakeRecord:
 
 class TestLogger:
     def test_default_log_level(self):
-        # assert config.initialized
         settings = Config.get()
         assert settings.LOG_LEVEL == "INFO"
         roc_logger.init()
@@ -29,7 +28,6 @@ class TestLogger:
         logger.info("THIS IS LOGGING")
 
     def test_log(self, capfd):
-        # def test_log(self, capsys):
         logger.info("asdf1234")
         logger.trace("qwer5678")
         captured = capfd.readouterr()

@@ -27,14 +27,6 @@ class DebugModuleLevel(BaseModel):
 
         return name
 
-    # @field_validator("log_level", mode="before")
-    # @classmethod
-    # def validate_log_level(cls, level: str | int) -> int:
-    #     if isinstance(level, int):
-    #         return level
-
-    #     return log_to_level(level)
-
 
 class LogFilter:
     def __init__(
