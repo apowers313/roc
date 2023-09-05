@@ -220,6 +220,8 @@ addopts = [
   "--cov=roc",
   "--cov-report=html",
   "--cov-report=term:skip-covered",
+  "--no-cov-on-fail",
+  # "--cov-fail-under=80",
   "--emoji",
   "-rA",
   "-s",
@@ -228,8 +230,8 @@ addopts = [
 ]
 
 [tool.coverage.run]
-source = ["tests"]
-omit = ["roc/script.py"]
+source = ["roc"]
+omit = ["roc/script.py", "roc/gymnasium.py", "roc/__init__.py"]
 
 [coverage.paths]
 source = "roc"
