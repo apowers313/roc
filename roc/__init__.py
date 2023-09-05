@@ -1,5 +1,13 @@
-# ruff: noqa: F401
+# ruff: noqa: F401 E402
 """Reinforcement Learning of Concepts"""
+
+# from icecream import install as install_icecream
+
+# install_icecream()
+
+import better_exceptions
+
+better_exceptions.hook()
 
 import roc.logger as logger
 

@@ -106,7 +106,7 @@ class Config(DynaconfConfig, extra="forbid", validate_default=True):
     LOG_LEVEL: str = Field(default="INFO")
     LOG_MODULES: str = Field(default="")
     DEFAULT_ACTION: str = Field(default="pass")
-    PERCEPTION_COMPONENTS: list[str] = Field(default=[])
+    PERCEPTION_COMPONENTS: list[str] = Field(default=["delta:perception"])
 
     @staticmethod
     def get() -> Config:

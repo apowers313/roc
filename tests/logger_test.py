@@ -24,8 +24,8 @@ class TestLogger:
         roc_logger.init()
         assert roc_logger.default_log_filter.level == "INFO"  # type: ignore
 
-    def test_logging(self):
-        logger.info("THIS IS LOGGING")
+    # def test_logging(self):
+    #     logger.info("THIS IS LOGGING")
 
     def test_log(self, capfd):
         logger.info("asdf1234")

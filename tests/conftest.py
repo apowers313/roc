@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+import gc
 from typing import Any, Generator
 
 import pytest
@@ -54,18 +56,36 @@ def clear_db() -> Generator[None, None, None]:
     db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
 
 
-@pytest.fixture(scope="function", autouse=True)
-def clear_components() -> None:
-    Component.clear_registry()
+@pytest.fixture
+def registered_test_component() -> Generator[tuple[str, str], None, None]:
+    n = "foo"
+    t = "bar"
+
+    @register_component(n, t)
+    class Bar(Component):
+        """This is a Bar doc"""
+
+        pass
+
+    yield (n, t)
+
+    Component.deregister(n, t)
 
 
 @pytest.fixture
-def fake_component() -> Component:
-    @register_component("fake", "thing")
-    class FakeComponent(Component):
-        pass
+def fake_component(registered_test_component) -> Generator[Component, None, None]:
+    n, t = registered_test_component
+    c = Component.get(n, t)
 
-    return Component.get("fake", "thing")
+    yield c
+
+    c.shutdown()
+
+
+@pytest.fixture
+def empty_components() -> None:
+    Component.reset()
+    gc.collect(2)
 
 
 @pytest.fixture
@@ -75,9 +95,8 @@ def env_bus_conn() -> BusConnection[PerceptionData]:
 
 
 @pytest.fixture
-def action_bus_conn() -> BusConnection[ActionData]:
-    c = Component()
-    return action_bus.connect(c)
+def action_bus_conn(fake_component) -> BusConnection[ActionData]:
+    return action_bus.connect(fake_component)
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:

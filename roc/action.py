@@ -27,8 +27,8 @@ action_bus = EventBus[ActionData]("action")
 ActionEvent = Event[ActionData]
 
 
-@register_component("action", "action")
-class ActionComponent(Component):
+@register_component("action", "action", auto=True)
+class Action(Component):
     def __init__(self) -> None:
         super().__init__()
         self.action_bus_conn = action_bus.connect(self)
@@ -51,6 +51,10 @@ class ActionComponent(Component):
 
         self.action_count = e.data.action_count
 
+    def shutdown(self) -> None:
+        super().shutdown()
+        self.action_bus_conn.subject.on_completed()
+
 
 ActionFn = Callable[[], int]
 default_action_registry: dict[str, ActionFn] = {}
@@ -62,7 +66,7 @@ class register_default_action:
 
     def __call__(self, fn: ActionFn) -> ActionFn:
         if self.name in default_action_registry:
-            raise ValueError(f"Registering duplicate default action '{self.name}")
+            raise ValueError(f"Registering duplicate default action '{self.name}'")
 
         default_action_registry[self.name] = fn
 
@@ -76,7 +80,7 @@ def default_pass() -> int:
 
 @register_default_action("random")
 def default_random() -> int:
-    c = ActionComponent.get("action", "action")
+    c = Action.get("action", "action")
     if c.action_count is None:
         raise ValueError("Trying to get action before actions have been configured")
 
