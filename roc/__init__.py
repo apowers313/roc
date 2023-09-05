@@ -5,10 +5,6 @@
 
 # install_icecream()
 
-import better_exceptions
-
-better_exceptions.hook()
-
 import roc.logger as logger
 
 from .action import ActionData, action_bus
