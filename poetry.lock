@@ -129,20 +129,6 @@ html5lib = ["html5lib"]
 lxml = ["lxml"]
 
 [[package]]
-name = "better-exceptions"
-version = "0.3.3"
-description = "Pretty and helpful exceptions, automatically"
-optional = false
-python-versions = "*"
-files = [
-    {file = "better_exceptions-0.3.3-py3-none-any.whl", hash = "sha256:9c70b1c61d5a179b84cd2c9d62c3324b667d74286207343645ed4306fdaad976"},
-    {file = "better_exceptions-0.3.3.tar.gz", hash = "sha256:e4e6bc18444d5f04e6e894b10381e5e921d3d544240418162c7db57e9eb3453b"},
-]
-
-[package.dependencies]
-colorama = {version = "*", markers = "sys_platform == \"win32\""}
-
-[[package]]
 name = "black"
 version = "23.7.0"
 description = "The uncompromising code formatter."
@@ -2806,4 +2792,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "453da6e0c642ffb16bbee982bb33e7ba4c25b6c01b6222c20d37e947b23092e9"
+content-hash = "33ce2f552f1454e4130569c601c763fae00359335654bedb679a4fc99d23fc8b"
