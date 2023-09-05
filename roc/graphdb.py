@@ -611,7 +611,7 @@ class Node(BaseModel, extra="allow"):
             self.__class__.save(self, db=self._db)
         except Exception as e:
             err_msg = f"error saving during del: {e}"
-            logger.warning(err_msg)
+            # logger.warning(err_msg)
             warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
     @classmethod

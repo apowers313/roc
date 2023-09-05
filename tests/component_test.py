@@ -1,39 +1,55 @@
 # mypy: disable-error-code="no-untyped-def"
 
-from roc.component import Component, component_registry, register_component
 
-# class TestComponent:
-#     def test_component_exists(self):
-#         c = Component()
-#         assert c.name == "myname"
-#         assert c.type == "mytype"
+from roc.component import (
+    Component,
+    component_registry,
+    default_components,
+    loaded_components,
+)
+
+
+class TestComponent:
+    def test_component_count(self, empty_components):
+        assert Component.get_component_count() == 0
+
+    def test_init(self, empty_components):
+        assert Component.get_component_count() == 0
+        assert len(component_registry) > 0
+        assert len(default_components) > 0
+        Component.init()
+
+        assert len(loaded_components) >= len(default_components)
+        assert Component.get_component_count() == len(loaded_components)
+
+    def test_shutdown(self, empty_components):
+        # assert Component.get_component_count() == 0
+        Component.init()
+        assert len(loaded_components) >= len(default_components)
+        assert Component.get_component_count() == len(loaded_components)
 
 
 class TestRegisterDecorator:
-    def test_decorator(self):
-        @register_component(name="foo", type="bar")
-        class Foo(Component):
-            pass
+    def test_decorator(self, registered_test_component):
+        n, t = registered_test_component
+        reg_str = f"{n}:{t}"
 
-        assert len(component_registry) == 1
-        assert "foo:bar" in component_registry
+        assert reg_str in component_registry
 
-    def test_decorator_doc(self):
-        @register_component("bar", "baz")
-        class Bar(Component):
-            """This is a Bar doc"""
+    def test_decorator_doc(self, registered_test_component):
+        n, t = registered_test_component
+        reg_str = f"{n}:{t}"
 
-        assert "bar:baz" in component_registry
-        assert component_registry["bar:baz"].__doc__ == "This is a Bar doc"
+        assert reg_str in component_registry
+        assert component_registry[reg_str].__doc__ == "This is a Bar doc"
 
-    def test_decorator_creates_class(self):
-        @register_component("bar", "baz")
-        class Bar(Component):
-            pass
+    def test_decorator_creates_class(self, registered_test_component):
+        n, t = registered_test_component
+        reg_str = f"{n}:{t}"
 
-        assert "bar:baz" in component_registry
-        c = component_registry["bar:baz"]()
+        assert reg_str in component_registry
+        c = component_registry[reg_str]()
         assert isinstance(c, Component)
-        assert isinstance(c, Bar)
-        assert c.name == "bar"
-        assert c.type == "baz"
+        # assert isinstance(c, Bar)
+        assert c.name == n
+        assert c.type == t
