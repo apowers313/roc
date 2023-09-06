@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Generic, TypeVar
+from typing import Callable, Generic, TypeVar
 
 import reactivex as rx
 from loguru import logger
+from reactivex import Observable
+from reactivex import operators as op
 from rich.pretty import pretty_repr
 
 from .component import Component
@@ -69,6 +71,23 @@ class BusConnection(Generic[EventData]):
         logger.trace(f">>> Sending {e}")
         self.attached_bus.subject.on_next(e)
 
+    def listen(
+        self,
+        listener: Callable[[Event[EventData]], None],
+        *,
+        filter: Callable[[Event[EventData]], bool] | None = None,
+    ) -> None:
+        obs: Observable[Event[EventData]] = self.subject
+        if filter is not None:
+            obs = obs.pipe(op.filter(filter))
+        obs.subscribe(listener)
+
+    def close(self) -> None:
+        logger.trace(
+            f"Closing connection {self.attached_component.name} -> {self.attached_bus.name}"
+        )
+        self.subject.on_completed()
+
 
 eventbus_names: set[str] = set()
 
@@ -102,3 +121,11 @@ class EventBus(Generic[EventData]):
     def clear_names() -> None:
         """Clears all EventBusses that have been registered, mostly used for testing."""
         eventbus_names.clear()
+
+
+# bus_registry: dict[str, EventBus[Any]] = {}
+# T = TypeVar("T")
+# def create_bus(name: str, data_type: T) -> EventBus[T]:
+#     bus = EventBus[T](name)
+#     bus_registry[name] = bus
+#     return bus

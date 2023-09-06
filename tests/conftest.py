@@ -3,6 +3,7 @@ import gc
 from typing import Any, Generator
 
 import pytest
+from helpers.util import FakeData
 
 from roc.action import ActionData, action_bus
 from roc.component import Component, register_component
@@ -65,7 +66,8 @@ def registered_test_component() -> Generator[tuple[str, str], None, None]:
     class Bar(Component):
         """This is a Bar doc"""
 
-        pass
+        def shutdown(self) -> None:
+            pass
 
     yield (n, t)
 
@@ -83,15 +85,19 @@ def fake_component(registered_test_component) -> Generator[Component, None, None
 
 
 @pytest.fixture
+def fake_bus() -> EventBus[FakeData]:
+    return EventBus[FakeData]("fake")
+
+
+@pytest.fixture
 def empty_components() -> None:
     Component.reset()
     gc.collect(2)
 
 
 @pytest.fixture
-def env_bus_conn() -> BusConnection[PerceptionData]:
-    c = Component()
-    return perception_bus.connect(c)
+def env_bus_conn(fake_component) -> BusConnection[PerceptionData]:
+    return perception_bus.connect(fake_component)
 
 
 @pytest.fixture

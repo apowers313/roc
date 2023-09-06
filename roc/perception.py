@@ -23,15 +23,11 @@ perception_bus = EventBus[PerceptionData]("perception")
 class Perception(Component):
     def __init__(self) -> None:
         super().__init__()
-        self.pb_conn = perception_bus.connect(self)
-        self.pb_conn.subject.subscribe(self.do_perception)
+        self.pb_conn = self.connect_bus(perception_bus)
+        self.pb_conn.listen(self.do_perception)
 
     def do_perception(self, e: PerceptionEvent) -> None:
         lambda e: logger.info(f"Perception got {e}")
-
-    def shutdown(self) -> None:
-        super().shutdown()
-        self.pb_conn.subject.on_completed()
 
 
 @register_component("delta", "perception")

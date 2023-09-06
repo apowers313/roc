@@ -23,13 +23,18 @@ class TestComponent:
         assert Component.get_component_count() == len(loaded_components)
 
     def test_shutdown(self, empty_components):
-        # assert Component.get_component_count() == 0
+        assert Component.get_component_count() == 0
         Component.init()
         assert len(loaded_components) >= len(default_components)
         assert Component.get_component_count() == len(loaded_components)
 
+    def test_connect_bus(self, fake_component, fake_bus):
+        fake_component.connect_bus(fake_bus)
 
-class TestRegisterDecorator:
+        assert len(fake_component.bus_conns) == 1
+
+
+class TestComponentRegisterDecorator:
     def test_decorator(self, registered_test_component):
         n, t = registered_test_component
         reg_str = f"{n}:{t}"

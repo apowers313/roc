@@ -3,14 +3,9 @@
 from unittest.mock import MagicMock
 
 import pytest
+from helpers.util import FakeData
 
 from roc.event import Event, EventBus
-
-
-class FakeData:
-    def __init__(self, foo: str, baz: int):
-        self.foo = foo
-        self.baz = baz
 
 
 class TestEventBus:
