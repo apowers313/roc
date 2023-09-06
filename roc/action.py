@@ -2,7 +2,6 @@ from random import randrange
 from typing import Annotated, Callable, Literal
 
 from pydantic import BaseModel, Field
-from reactivex import operators as op
 
 from .component import Component, register_component
 from .event import Event, EventBus
@@ -31,7 +30,7 @@ ActionEvent = Event[ActionData]
 class Action(Component):
     def __init__(self) -> None:
         super().__init__()
-        self.action_bus_conn = action_bus.connect(self)
+        self.action_bus_conn = self.connect_bus(action_bus)
 
         # XXX: function because you can't type annotate an inline lambda
         def count_filter(e: ActionEvent) -> bool:
@@ -40,9 +39,13 @@ class Action(Component):
         def go_filter(e: ActionEvent) -> bool:
             return e.data.type == "action_go"
 
-        self.action_bus_conn.subject.pipe(
-            op.filter(count_filter),
-        ).subscribe(self.recv_action_count)
+        # self.action_bus_conn.subject.pipe(
+        #     op.filter(count_filter),
+        # ).subscribe(self.recv_action_count)
+        self.action_bus_conn.listen(
+            listener=self.recv_action_count,
+            filter=count_filter,
+        )
         self.action_count: None | int = None
 
     def recv_action_count(self, e: ActionEvent) -> None:
@@ -50,10 +53,6 @@ class Action(Component):
             raise Exception("bad data received in recv_action_count")
 
         self.action_count = e.data.action_count
-
-    def shutdown(self) -> None:
-        super().shutdown()
-        self.action_bus_conn.subject.on_completed()
 
 
 ActionFn = Callable[[], int]

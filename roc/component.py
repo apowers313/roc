@@ -1,15 +1,21 @@
 from __future__ import annotations
 
+# import traceback
 from abc import ABC
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from typing_extensions import Self
 
 from .config import Config
 from .logger import logger
 
+if TYPE_CHECKING:
+    from .event import BusConnection, EventBus
+
 loaded_components: dict[str, Component] = {}
 component_count = 0
+
+T = TypeVar("T")
 
 
 class Component(ABC):
@@ -21,6 +27,7 @@ class Component(ABC):
     def __init__(self) -> None:
         global component_count
         component_count = component_count + 1
+        self.bus_conns: dict[str, BusConnection[Any]] = {}
         # print("\n\n++ incrementing component count:", self.name, self.type, self)
         # traceback.print_stack()
 
@@ -29,8 +36,19 @@ class Component(ABC):
         component_count = component_count - 1
         # print("\n\n-- decrementing component count", self.name, self.type, self)
 
+    def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:
+        if bus.name in self.bus_conns:
+            raise ValueError(
+                f"Component '{self.name}' attempting duplicate connection to bus '{bus.name}'"
+            )
+
+        conn = bus.connect(self)
+        self.bus_conns[bus.name] = conn
+        return conn
+
     def shutdown(self) -> None:
-        pass
+        for conn in self.bus_conns:
+            self.bus_conns[conn].close()
 
     @staticmethod
     def init() -> None:
