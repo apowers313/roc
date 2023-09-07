@@ -1,4 +1,7 @@
 import re
+from typing import Any
+
+import pytest
 
 
 def normalize_whitespace(s: str) -> str:
@@ -18,3 +21,17 @@ class FakeData:
     def __init__(self, foo: str, baz: int):
         self.foo = foo
         self.baz = baz
+
+
+def component_response_args(
+    name: str,
+    type: str,
+    input_conn_attr: str,
+    val: Any,
+    *,
+    output_conn_attr: str | None = None,
+) -> Any:
+    # component_name, component_type, input_conn_attr, output_conn_attr, val =
+    # request.params
+    arg_tuple = (name, type, input_conn_attr, output_conn_attr, val)
+    return pytest.mark.parametrize("component_response", [arg_tuple], indirect=True)

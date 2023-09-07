@@ -20,7 +20,7 @@ class FakeRecord:
 class TestLogger:
     def test_default_log_level(self):
         settings = Config.get()
-        assert settings.LOG_LEVEL == "INFO"
+        assert settings.log_level == "INFO"
         roc_logger.init()
         assert roc_logger.default_log_filter.level == "INFO"  # type: ignore
 

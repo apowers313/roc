@@ -8,6 +8,7 @@ from pydantic import BaseModel
 # from roc import init as roc_init
 from .action import ActionCount, action_bus
 from .component import Component
+from .config import Config
 from .logger import logger
 from .perception import VisionData, perception_bus
 
@@ -196,9 +197,9 @@ class NethackGym(Gym):
         self.send_intrinsics(obs)
 
     def send_vision(self, obs: Any) -> None:
-        spectrum = [obs["chars"], obs["colors"], obs["glyphs"]]
+        # spectrum = [obs["chars"], obs["colors"], obs["glyphs"]]
 
-        self.env_bus_conn.send(VisionData(spectrum=spectrum))
+        self.env_bus_conn.send(VisionData(screen=obs["chars"]))
 
     def send_auditory(self) -> None:
         pass
@@ -241,6 +242,9 @@ def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
 
 
 def dump_env_start() -> None:
+    if not Config.enable_gym_dump_env:
+        return
+
     global dump_env_file
     dump_env_file = open("env_dump.py", "w")
     dump_env_file.write("[\n")
@@ -250,12 +254,15 @@ count = 0
 
 
 def dump_env_record(obs: Any) -> None:
+    if not Config.enable_gym_dump_env:
+        return
+
     global dump_env_file
     assert dump_env_file
 
     global count
     count = count + 1
-    if count >= 10:
+    if count >= Config.max_dump_frames:
         return
 
     print_screen(obs["tty_chars"])
@@ -267,6 +274,9 @@ def dump_env_record(obs: Any) -> None:
 
 
 def dump_env_end() -> None:
+    if not Config.enable_gym_dump_env:
+        return
+
     global dump_env_file
     assert dump_env_file
     dump_env_file.write("]\n")

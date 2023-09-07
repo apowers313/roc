@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Callable, Generic, TypeVar
+from typing import Any, Callable, Generic, TypeVar
 
 import reactivex as rx
 from loguru import logger
@@ -78,9 +78,14 @@ class BusConnection(Generic[EventData]):
         filter: Callable[[Event[EventData]], bool] | None = None,
     ) -> None:
         obs: Observable[Event[EventData]] = self.subject
+
+        pipe_args: list[Any] = [
+            # op.filter(lambda e: e.src is not self.attached_component),
+            op.filter(self.attached_component.event_filter),
+        ]
         if filter is not None:
-            obs = obs.pipe(op.filter(filter))
-        obs.subscribe(listener)
+            pipe_args.append(op.filter(filter))
+        obs.pipe(*pipe_args).subscribe(listener)
 
     def close(self) -> None:
         logger.trace(

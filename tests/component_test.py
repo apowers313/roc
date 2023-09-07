@@ -1,5 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
+from typing import Any
 
+import pytest
 
 from roc.component import (
     Component,
@@ -7,6 +9,10 @@ from roc.component import (
     default_components,
     loaded_components,
 )
+
+
+def args(arg: int) -> Any:
+    return pytest.mark.parametrize("testing_args", [arg], indirect=True)
 
 
 class TestComponent:
@@ -32,6 +38,11 @@ class TestComponent:
         fake_component.connect_bus(fake_bus)
 
         assert len(fake_component.bus_conns) == 1
+
+    # @pytest.mark.parametrize("testing_args", [42, 69, 7], indirect=True)
+    @args(42)
+    def test_args(self, testing_args):
+        print("testing args is", testing_args)
 
 
 class TestComponentRegisterDecorator:

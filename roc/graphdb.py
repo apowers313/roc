@@ -38,12 +38,12 @@ class GraphDB:
 
     def __init__(self) -> None:
         settings = Config.get()
-        self.host = settings.DB_HOST
-        self.port = settings.DB_PORT
-        self.encrypted = settings.DB_CONN_ENCRYPTED
-        self.username = settings.DB_USERNAME
-        self.password = settings.DB_PASSWORD
-        self.lazy = settings.DB_LAZY
+        self.host = settings.db_host
+        self.port = settings.db_port
+        self.encrypted = settings.db_conn_encrypted
+        self.username = settings.db_username
+        self.password = settings.db_password
+        self.lazy = settings.db_lazy
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
 
@@ -252,7 +252,7 @@ class Edge(BaseModel, extra="allow"):
         global edge_cache
         if edge_cache is None:
             settings = Config.get()
-            edge_cache = EdgeCache(maxsize=settings.EDGE_CACHE_SIZE)
+            edge_cache = EdgeCache(maxsize=settings.edge_cache_size)
 
         return edge_cache
 
@@ -663,7 +663,7 @@ class Node(BaseModel, extra="allow"):
         global node_cache
         if node_cache is None:
             settings = Config.get()
-            node_cache = NodeCache(settings.NODE_CACHE_SIZE)
+            node_cache = NodeCache(settings.node_cache_size)
 
         return node_cache
 
