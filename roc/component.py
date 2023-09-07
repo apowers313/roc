@@ -10,7 +10,7 @@ from .config import Config
 from .logger import logger
 
 if TYPE_CHECKING:
-    from .event import BusConnection, EventBus
+    from .event import BusConnection, Event, EventBus
 
 loaded_components: dict[str, Component] = {}
 component_count = 0
@@ -46,6 +46,9 @@ class Component(ABC):
         self.bus_conns[bus.name] = conn
         return conn
 
+    def event_filter(self, e: Event[Any]) -> bool:
+        return e.src is not self
+
     def shutdown(self) -> None:
         for conn in self.bus_conns:
             self.bus_conns[conn].close()
@@ -54,7 +57,7 @@ class Component(ABC):
     def init() -> None:
         settings = Config.get()
         component_list = default_components
-        component_list = component_list.union(settings.PERCEPTION_COMPONENTS)
+        component_list = component_list.union(settings.perception_components)
 
         # TODO: shutdown previously loaded components
 

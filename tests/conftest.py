@@ -1,6 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 import gc
-from typing import Any, Generator
+from typing import Any, Generator, cast
+from unittest.mock import MagicMock
 
 import pytest
 from helpers.util import FakeData
@@ -103,6 +104,45 @@ def env_bus_conn(fake_component) -> BusConnection[PerceptionData]:
 @pytest.fixture
 def action_bus_conn(fake_component) -> BusConnection[ActionData]:
     return action_bus.connect(fake_component)
+
+
+@pytest.fixture
+def testing_args(request) -> str:
+    print("request", request)
+    print("request.param", request.param)
+    return f"ret {request.param}"
+
+
+@pytest.fixture
+def component_response(request, mocker, fake_component) -> MagicMock:
+    print("request", request)
+    # print("component_response args:", request.param)
+    component_name, component_type, input_conn_attr, output_conn_attr, val = request.param
+    c = Component.get(component_name, component_type)
+    print("got component", c.name, c.type)
+    if output_conn_attr is None:
+        output_conn_attr = input_conn_attr
+
+    assert hasattr(c, input_conn_attr)
+    assert hasattr(c, output_conn_attr)
+
+    input_conn = getattr(c, input_conn_attr)
+    output_conn = getattr(c, output_conn_attr)
+    assert isinstance(input_conn, BusConnection)
+    assert isinstance(output_conn, BusConnection)
+
+    fake_conn_send = fake_component.connect_bus(input_conn.attached_bus)
+    if input_conn is not output_conn:
+        fake_conn_recv = fake_component.connect_bus(output_conn.attached_bus)
+    else:
+        fake_conn_recv = fake_conn_send
+
+    stub = mocker.stub()
+    fake_conn_recv.listen(stub, filter=lambda e: e.data is not val)
+    # print("sending", val)
+    fake_conn_send.send(val)
+
+    return cast(MagicMock, stub)
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:

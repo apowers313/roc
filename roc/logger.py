@@ -38,11 +38,11 @@ class LogFilter:
         use_module_settings: bool = True,
     ):
         settings = Config.get()
-        self.level = level or settings.LOG_LEVEL
+        self.level = level or settings.log_level
         self.level_num = logger.level(self.level).no
         if not isinstance(log_modules, str):
             if use_module_settings:
-                log_modules = settings.LOG_MODULES
+                log_modules = settings.log_modules
             else:
                 log_modules = ""
         mod_list = self.parse_module_str(log_modules)
@@ -91,5 +91,5 @@ def init() -> None:
 
     logger.remove()
     settings = Config.get()
-    if settings.LOG_ENABLE:
+    if settings.log_enable:
         logger.add(sys.stderr, level=0, filter=default_log_filter)

@@ -9,11 +9,16 @@ from .logger import logger
 # TODO: sound input
 # TODO: other input
 class VisionData(BaseModel):
-    spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
+    # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
+    screen: tuple[tuple[int | str, ...], ...]
     # spectrum: tuple[int | str, ...]
 
 
-PerceptionData = VisionData
+class DeltaData(BaseModel):
+    wtf: int
+
+
+PerceptionData = VisionData | DeltaData
 
 PerceptionEvent = Event[PerceptionData]
 
@@ -32,5 +37,10 @@ class Perception(Component):
 
 @register_component("delta", "perception")
 class Delta(Perception):
+    def event_filter(self, e: PerceptionEvent) -> bool:
+        print(f"DOING EVENT FILTER: {e}", isinstance(e.data, VisionData))
+        return isinstance(e.data, VisionData)
+
     def do_perception(self, e: PerceptionEvent) -> None:
-        pass
+        logger.debug(f"got perception event {e}")
+        self.pb_conn.send(DeltaData(wtf=42))
