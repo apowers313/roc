@@ -15,7 +15,7 @@ _config_singleton: Config | None = None
 
 class Config(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="my_prefix",
+        env_prefix="roc_",
         env_file=".env",
         extra="forbid",
     )
