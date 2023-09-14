@@ -51,7 +51,8 @@ class Component(ABC):
 
     def shutdown(self) -> None:
         for conn in self.bus_conns:
-            self.bus_conns[conn].close()
+            for obs in self.bus_conns[conn].attached_bus.subject.observers:
+                obs.on_completed()
 
     @staticmethod
     def init() -> None:
@@ -65,14 +66,6 @@ class Component(ABC):
             logger.trace(f"Loading component: {reg_str} ...")
             (name, type) = reg_str.split(":")
             loaded_components[reg_str] = Component.get(name, type)
-
-    # @staticmethod
-    # def shutdown_all() -> None:
-    #     global loaded_components
-    #     for name in loaded_components:
-    #         logger.trace(f"Shutting down component: {name}.")
-    #         c = loaded_components[name]
-    #         c.shutdown()
 
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
@@ -99,10 +92,6 @@ class Component(ABC):
             c.shutdown()
 
         loaded_components.clear()
-
-    # @classmethod
-    # def clear_registry(cls) -> None:
-    #     component_registry.clear()
 
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)
