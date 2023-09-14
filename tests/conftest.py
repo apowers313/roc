@@ -108,18 +108,13 @@ def action_bus_conn(fake_component) -> BusConnection[ActionData]:
 
 @pytest.fixture
 def testing_args(request) -> str:
-    print("request", request)
-    print("request.param", request.param)
     return f"ret {request.param}"
 
 
 @pytest.fixture
 def component_response(request, mocker, fake_component) -> MagicMock:
-    print("request", request)
-    # print("component_response args:", request.param)
-    component_name, component_type, input_conn_attr, output_conn_attr, val = request.param
+    component_name, component_type, input_conn_attr, output_conn_attr, vals = request.param
     c = Component.get(component_name, component_type)
-    print("got component", c.name, c.type)
     if output_conn_attr is None:
         output_conn_attr = input_conn_attr
 
@@ -138,9 +133,9 @@ def component_response(request, mocker, fake_component) -> MagicMock:
         fake_conn_recv = fake_conn_send
 
     stub = mocker.stub()
-    fake_conn_recv.listen(stub, filter=lambda e: e.data is not val)
-    # print("sending", val)
-    fake_conn_send.send(val)
+    fake_conn_recv.listen(stub, filter=lambda e: e.data not in vals)
+    for val in vals:
+        fake_conn_send.send(val)
 
     return cast(MagicMock, stub)
 

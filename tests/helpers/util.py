@@ -27,11 +27,11 @@ def component_response_args(
     name: str,
     type: str,
     input_conn_attr: str,
-    val: Any,
+    vals: list[Any],
     *,
     output_conn_attr: str | None = None,
 ) -> Any:
     # component_name, component_type, input_conn_attr, output_conn_attr, val =
     # request.params
-    arg_tuple = (name, type, input_conn_attr, output_conn_attr, val)
+    arg_tuple = (name, type, input_conn_attr, output_conn_attr, vals)
     return pytest.mark.parametrize("component_response", [arg_tuple], indirect=True)

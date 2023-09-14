@@ -1,8 +1,14 @@
+from __future__ import annotations
+
+from collections.abc import Hashable
+
 from pydantic import BaseModel
 
 from .component import Component, register_component
 from .event import Event, EventBus
 from .logger import logger
+
+Grid = tuple[tuple[int | str, ...], ...]
 
 
 # TODO: vision input
@@ -10,12 +16,12 @@ from .logger import logger
 # TODO: other input
 class VisionData(BaseModel):
     # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
-    screen: tuple[tuple[int | str, ...], ...]
+    screen: Grid
     # spectrum: tuple[int | str, ...]
 
 
 class DeltaData(BaseModel):
-    wtf: int
+    diff_list: "DiffList"
 
 
 PerceptionData = VisionData | DeltaData
@@ -34,13 +40,71 @@ class Perception(Component):
     def do_perception(self, e: PerceptionEvent) -> None:
         lambda e: logger.info(f"Perception got {e}")
 
+    @staticmethod
+    def init() -> None:
+        global perception_bus
+        perception_bus = EventBus[PerceptionData]("perception")
+
+
+class Feature(Hashable):
+    pass
+
+
+class DeltaFeature(Feature):
+    def __hash__(self) -> int:
+        raise NotImplementedError("DeltaFeature hash not implemented")
+
 
 @register_component("delta", "perception")
 class Delta(Perception):
+    def __init__(self) -> None:
+        super().__init__()
+        self.prev_grid: Grid | None = None
+
     def event_filter(self, e: PerceptionEvent) -> bool:
-        print(f"DOING EVENT FILTER: {e}", isinstance(e.data, VisionData))
         return isinstance(e.data, VisionData)
 
     def do_perception(self, e: PerceptionEvent) -> None:
         logger.debug(f"got perception event {e}")
-        self.pb_conn.send(DeltaData(wtf=42))
+        # assert isinstance(e, VisionData)
+        # reveal_type(e)
+        # reveal_type(e.data)
+        data = e.data
+        assert isinstance(data, VisionData)
+
+        prev = self.prev_grid
+        self.prev_grid = curr = data.screen
+
+        if prev is None:
+            return
+
+        # roughly make sure that things are the same height
+        assert len(prev) == len(curr)
+        assert len(prev[0]) == len(curr[0])
+
+        width = len(curr)
+        height = len(curr[0])
+        diff_list: DiffList = []
+        for x in range(width):
+            for y in range(height):
+                if prev[x][y] != curr[x][y]:
+                    diff_list.append(
+                        Diff(
+                            x=x,
+                            y=y,
+                            val1=prev[x][y],
+                            val2=curr[x][y],
+                        )
+                    )
+
+        self.pb_conn.send(DeltaData(diff_list=diff_list))
+
+
+class Diff(BaseModel):
+    x: int
+    y: int
+    val1: str | int
+    val2: str | int
+
+
+DiffList = list[Diff]

@@ -7,6 +7,7 @@ import reactivex as rx
 from loguru import logger
 from reactivex import Observable
 from reactivex import operators as op
+from reactivex.abc.disposable import DisposableBase as Disposable
 from rich.pretty import pretty_repr
 
 from .component import Component
@@ -59,6 +60,7 @@ class BusConnection(Generic[EventData]):
         self.attached_bus = bus
         self.attached_component = component
         self.subject: rx.Subject[Event[EventData]] = self.attached_bus.subject
+        self.subscribers: list[Disposable] = []
 
     def send(self, data: EventData) -> None:
         """Send data over the EventBus. Internally, the data is converted to an Event
@@ -77,21 +79,23 @@ class BusConnection(Generic[EventData]):
         *,
         filter: Callable[[Event[EventData]], bool] | None = None,
     ) -> None:
-        obs: Observable[Event[EventData]] = self.subject
-
-        pipe_args: list[Any] = [
+        pipe_args: list[Callable[[Any], Observable[Event[EventData]]]] = [
             # op.filter(lambda e: e.src is not self.attached_component),
             op.filter(self.attached_component.event_filter),
         ]
         if filter is not None:
             pipe_args.append(op.filter(filter))
-        obs.pipe(*pipe_args).subscribe(listener)
+
+        sub = self.subject.pipe(*pipe_args).subscribe(listener)
+        self.subscribers.append(sub)
 
     def close(self) -> None:
         logger.trace(
             f"Closing connection {self.attached_component.name} -> {self.attached_bus.name}"
         )
-        self.subject.on_completed()
+
+        for sub in self.subscribers:
+            sub.dispose()
 
 
 eventbus_names: set[str] = set()
