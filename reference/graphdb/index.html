@@ -1219,7 +1219,7 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="k">global</span> <span class="n">edge_cache</span>
         <span class="k">if</span> <span class="n">edge_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">EdgeCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">EDGE_CACHE_SIZE</span><span class="p">)</span>
+            <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">EdgeCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">edge_cache</span>
 
@@ -2689,12 +2689,12 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_HOST</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_PORT</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">encrypted</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_CONN_ENCRYPTED</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_USERNAME</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_PASSWORD</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">DB_LAZY</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_host</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">encrypted</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_conn_encrypted</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_password</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_lazy</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client_name</span> <span class="o">=</span> <span class="s2">&quot;roc-graphdb-client&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">db_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
 
@@ -3252,7 +3252,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="k">global</span> <span class="n">node_cache</span>
         <span class="k">if</span> <span class="n">node_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">node_cache</span> <span class="o">=</span> <span class="n">NodeCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">NODE_CACHE_SIZE</span><span class="p">)</span>
+            <span class="n">node_cache</span> <span class="o">=</span> <span class="n">NodeCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">node_cache</span>
 
