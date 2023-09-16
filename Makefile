@@ -95,6 +95,7 @@ edit-docs:
 .PHONY: coverage
 coverage:
 	poetry run coverage run -m pytest
+	poetry run coverage lcov
 	poetry run coverage report
 
 .PHONY: coverage-server
