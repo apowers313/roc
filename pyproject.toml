@@ -216,10 +216,11 @@ addopts = [
   #"--tb=short",
   "--doctest-modules",
   "--doctest-continue-on-failure",
-  "--cov=roc",
-  "--cov-report=html",
-  "--cov-report=term:skip-covered",
-  "--no-cov-on-fail",
+  #"--cov=roc",
+  #"--cov-report=html",
+  #"--cov-report=term:skip-covered",
+  #"--cov-append",
+  #"--no-cov-on-fail",
   # "--cov-fail-under=80",
   "--emoji",
   #"-rA",
@@ -239,5 +240,5 @@ source = "roc"
 branch = true
 
 [coverage.report]
-fail_under = 50
+fail_under = 90
 show_missing = true
