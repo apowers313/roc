@@ -94,7 +94,12 @@ edit-docs:
 # Coverage
 .PHONY: coverage
 coverage:
-	poetry run pytest -c pyproject.toml --cov-report=lcov
+	poetry run coverage run -m pytest
+	poetry run coverage report
+
+.PHONY: coverage-server
+coverage-server:
+	cd htmlcov && python3 -m http.server 9099
 
 .PHONY: doc-coverage
 doc-coverage:
