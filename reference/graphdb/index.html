@@ -416,6 +416,20 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#graphdb.CacheControl" class="md-nav__link">
+    CacheControl
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphdb.CacheInfo" class="md-nav__link">
+    CacheInfo
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#graphdb.Edge" class="md-nav__link">
     Edge
   </a>
@@ -588,26 +602,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../intrinsic/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    intrinsic
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../logger/" class="md-nav__link">
         
   
@@ -696,6 +690,20 @@
         <li class="md-nav__item">
   <a href="#graphdb" class="md-nav__link">
     graphdb
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphdb.CacheControl" class="md-nav__link">
+    CacheControl
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#graphdb.CacheInfo" class="md-nav__link">
+    CacheInfo
   </a>
   
 </li>
@@ -878,6 +886,141 @@
 
 
 
+<h2 id="graphdb.CacheControl" class="doc doc-heading">
+          <code>CacheControl</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="typing.Generic">Generic</span>[<span title="graphdb.CacheType">CacheType</span>, <span title="graphdb.CacheId">CacheId</span>]</code></p>
+
+  
+      <p>For controlling the Node and Edge caches, such as clearing them, getting their current or max
+size, adding items to the cache (outside the automatic methods for adding cached items), etc.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/graphdb.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span>
+<span class="normal">160</span>
+<span class="normal">161</span>
+<span class="normal">162</span>
+<span class="normal">163</span>
+<span class="normal">164</span>
+<span class="normal">165</span>
+<span class="normal">166</span>
+<span class="normal">167</span>
+<span class="normal">168</span>
+<span class="normal">169</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CacheControl</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">CacheType</span><span class="p">,</span> <span class="n">CacheId</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    For controlling the Node and Edge caches, such as clearing them, getting their current or max</span>
+<span class="sd">    size, adding items to the cache (outside the automatic methods for adding cached items), etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">node_cache_control</span> <span class="o">=</span> <span class="n">NodeCacheControlAttr</span><span class="p">()</span>
+    <span class="n">edge_cache_control</span> <span class="o">=</span> <span class="n">EdgeCacheControlAttr</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cache_fn</span><span class="p">:</span> <span class="n">Any</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">:</span> <span class="n">Cache</span><span class="p">[</span><span class="n">CacheId</span><span class="p">,</span> <span class="n">CacheType</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_key</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="p">:</span> <span class="n">Lock</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_lock</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clear</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_clear</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">info</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="n">CacheInfo</span><span class="p">]</span> <span class="o">=</span> <span class="n">cache_fn</span><span class="o">.</span><span class="n">cache_info</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="graphdb.CacheInfo" class="doc doc-heading">
+          <code>CacheInfo</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="typing.NamedTuple">NamedTuple</span></code></p>
+
+  
+      <p>Information about the cache: hits, misses, max size, and current size.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/graphdb.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CacheInfo</span><span class="p">(</span><span class="n">NamedTuple</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Information about the cache: hits, misses, max size, and current size.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">hits</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">misses</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">maxsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span>
+    <span class="n">currsize</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
 <h2 id="graphdb.Edge" class="doc doc-heading">
           <code>Edge</code>
 
@@ -898,10 +1041,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">188</span>
-<span class="normal">189</span>
-<span class="normal">190</span>
-<span class="normal">191</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">191</span>
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
@@ -1135,24 +1275,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 <span class="normal">422</span>
 <span class="normal">423</span>
 <span class="normal">424</span>
-<span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
-<span class="normal">428</span>
-<span class="normal">429</span>
-<span class="normal">430</span>
-<span class="normal">431</span>
-<span class="normal">432</span>
-<span class="normal">433</span>
-<span class="normal">434</span>
-<span class="normal">435</span>
-<span class="normal">436</span>
-<span class="normal">437</span>
-<span class="normal">438</span>
-<span class="normal">439</span>
-<span class="normal">440</span>
-<span class="normal">441</span>
-<span class="normal">442</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
+<span class="normal">425</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Edge</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically</span>
 <span class="sd">    implements all phases of CRUD in the underlying graph database. This is a directional</span>
@@ -1209,49 +1332,33 @@ a graph database query if they don't already exist in the edge cache.</p>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
 
     <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">Edge</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">EdgeCache</span><span class="p">:</span>
-        <span class="k">global</span> <span class="n">edge_cache</span>
-        <span class="k">if</span> <span class="n">edge_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">EdgeCache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">edge_cache</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Looks up an Edge based on it&#39;s ID. If the Edge is cached, the cached edge is returned;</span>
 <span class="sd">        otherwise the Edge is queried from the graph database based the ID provided and a new</span>
 <span class="sd">        Edge is returned and cached.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            id (EdgeId): the unique identifier for the Edge</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: returns the Edge requested by the id</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
-        <span class="n">e</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">e</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-            <span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
-
-        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Self</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads an Edge from the graph database without attempting to check if the Edge</span>
 <span class="sd">        already exists in the cache. Typically this is only called by Edge.get()</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            id (EdgeId): the unique identifier of the Edge to fetch</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            EdgeNotFound: if the specified ID does not exist in the cache or the database</span>
@@ -1259,7 +1366,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: returns the Edge requested by the id</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">edge_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n)-[e]-(m) WHERE id(e) = </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2"> RETURN e LIMIT 1&quot;</span><span class="p">))</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="n">EdgeNotFound</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find edge ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -1277,30 +1384,28 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Saves the edge to the database. Calls Edge.create if the edge is new, or Edge.update if</span>
 <span class="sd">        edge already exists in the database.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            e (Self): The edge to save</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: The same edge that was passed in, for convenience. The Edge may be updated with a</span>
 <span class="sd">            new identifier if it was newly created in the database.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates a new edge in the database. Typically only called by Edge.save</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            e (Self): The edge to create</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            EdgeCreateFailed: Failed to write the edge to the database, for eample</span>
@@ -1312,7 +1417,7 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">e</span>
 
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">old_id</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span>
 
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
@@ -1342,7 +1447,7 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="n">e</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
             <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
             <span class="n">cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -1354,12 +1459,11 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="k">return</span> <span class="n">e</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Updates the edge in the database. Typically only called by Edge.save</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            e (Self): The edge to update</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: The same edge that was passed in, for convenience</span>
@@ -1367,7 +1471,7 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">e</span>
 
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
 
         <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
@@ -1376,29 +1480,28 @@ a graph database query if they don't already exist in the edge cache.</p>
         <span class="k">return</span> <span class="n">e</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Deletes the specified edge from the database. If the edge has not already been persisted</span>
 <span class="sd">        to the database, this marks the edge as deleted and returns.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            e (Edge): The edge to delete</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">e</span><span class="o">.</span><span class="n">_deleted</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span> <span class="o">=</span> <span class="kc">True</span>
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
 
         <span class="c1"># remove e from src and dst nodes</span>
         <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
         <span class="c1"># remove from cache</span>
-        <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+        <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">edge_cache</span><span class="p">:</span>
             <span class="k">del</span> <span class="n">edge_cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
 
         <span class="c1"># delete from db</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
             <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH ()-[e]-&gt;() WHERE id(e) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> DELETE e&quot;</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
@@ -1429,7 +1532,7 @@ a graph database query if they don't already exist in the edge cache.</p>
 
 
 <h3 id="graphdb.Edge.create" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -1467,20 +1570,6 @@ a graph database query if they don't already exist in the edge cache.</p>
           </td>
           <td>
               <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
           </td>
         </tr>
     </tbody>
@@ -1537,7 +1626,21 @@ if the ID is wrong.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">330</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">316</span>
+<span class="normal">317</span>
+<span class="normal">318</span>
+<span class="normal">319</span>
+<span class="normal">320</span>
+<span class="normal">321</span>
+<span class="normal">322</span>
+<span class="normal">323</span>
+<span class="normal">324</span>
+<span class="normal">325</span>
+<span class="normal">326</span>
+<span class="normal">327</span>
+<span class="normal">328</span>
+<span class="normal">329</span>
+<span class="normal">330</span>
 <span class="normal">331</span>
 <span class="normal">332</span>
 <span class="normal">333</span>
@@ -1579,28 +1682,12 @@ if the ID is wrong.</p>
 <span class="normal">369</span>
 <span class="normal">370</span>
 <span class="normal">371</span>
-<span class="normal">372</span>
-<span class="normal">373</span>
-<span class="normal">374</span>
-<span class="normal">375</span>
-<span class="normal">376</span>
-<span class="normal">377</span>
-<span class="normal">378</span>
-<span class="normal">379</span>
-<span class="normal">380</span>
-<span class="normal">381</span>
-<span class="normal">382</span>
-<span class="normal">383</span>
-<span class="normal">384</span>
-<span class="normal">385</span>
-<span class="normal">386</span>
-<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">372</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a new edge in the database. Typically only called by Edge.save</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        e (Self): The edge to create</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        EdgeCreateFailed: Failed to write the edge to the database, for eample</span>
@@ -1612,7 +1699,7 @@ if the ID is wrong.</p>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">e</span>
 
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
     <span class="n">old_id</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span>
 
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
@@ -1642,7 +1729,7 @@ if the ID is wrong.</p>
     <span class="n">e</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
         <span class="n">cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -1665,7 +1752,7 @@ if the ID is wrong.</p>
 
 
 <h3 id="graphdb.Edge.delete" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
@@ -1706,73 +1793,57 @@ to the database, this marks the edge as deleted and returns.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">411</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">395</span>
+<span class="normal">396</span>
+<span class="normal">397</span>
+<span class="normal">398</span>
+<span class="normal">399</span>
+<span class="normal">400</span>
+<span class="normal">401</span>
+<span class="normal">402</span>
+<span class="normal">403</span>
+<span class="normal">404</span>
+<span class="normal">405</span>
+<span class="normal">406</span>
+<span class="normal">407</span>
+<span class="normal">408</span>
+<span class="normal">409</span>
+<span class="normal">410</span>
+<span class="normal">411</span>
 <span class="normal">412</span>
 <span class="normal">413</span>
 <span class="normal">414</span>
 <span class="normal">415</span>
 <span class="normal">416</span>
 <span class="normal">417</span>
-<span class="normal">418</span>
-<span class="normal">419</span>
-<span class="normal">420</span>
-<span class="normal">421</span>
-<span class="normal">422</span>
-<span class="normal">423</span>
-<span class="normal">424</span>
-<span class="normal">425</span>
-<span class="normal">426</span>
-<span class="normal">427</span>
-<span class="normal">428</span>
-<span class="normal">429</span>
-<span class="normal">430</span>
-<span class="normal">431</span>
-<span class="normal">432</span>
-<span class="normal">433</span>
-<span class="normal">434</span>
-<span class="normal">435</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">418</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">Edge</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Deletes the specified edge from the database. If the edge has not already been persisted</span>
 <span class="sd">    to the database, this marks the edge as deleted and returns.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        e (Edge): The edge to delete</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">e</span><span class="o">.</span><span class="n">_deleted</span> <span class="o">=</span> <span class="kc">True</span>
     <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span> <span class="o">=</span> <span class="kc">True</span>
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
 
     <span class="c1"># remove e from src and dst nodes</span>
     <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
     <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">discard</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
     <span class="c1"># remove from cache</span>
-    <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+    <span class="n">edge_cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">edge_cache_control</span><span class="o">.</span><span class="n">cache</span>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">edge_cache</span><span class="p">:</span>
         <span class="k">del</span> <span class="n">edge_cache</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
 
     <span class="c1"># delete from db</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH ()-[e]-&gt;() WHERE id(e) = </span><span class="si">{</span><span class="n">e</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> DELETE e&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -1787,7 +1858,7 @@ to the database, this marks the edge as deleted and returns.</p>
 
 
 <h3 id="graphdb.Edge.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -1829,20 +1900,6 @@ Edge is returned and cached.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -1872,45 +1929,33 @@ Edge is returned and cached.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">259</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">253</span>
+<span class="normal">254</span>
+<span class="normal">255</span>
+<span class="normal">256</span>
+<span class="normal">257</span>
+<span class="normal">258</span>
+<span class="normal">259</span>
 <span class="normal">260</span>
 <span class="normal">261</span>
 <span class="normal">262</span>
 <span class="normal">263</span>
 <span class="normal">264</span>
 <span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span>
-<span class="normal">268</span>
-<span class="normal">269</span>
-<span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span>
-<span class="normal">275</span>
-<span class="normal">276</span>
-<span class="normal">277</span>
-<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">266</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">edge_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Looks up an Edge based on it&#39;s ID. If the Edge is cached, the cached edge is returned;</span>
 <span class="sd">    otherwise the Edge is queried from the graph database based the ID provided and a new</span>
 <span class="sd">    Edge is returned and cached.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        id (EdgeId): the unique identifier for the Edge</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: returns the Edge requested by the id</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">cache</span> <span class="o">=</span> <span class="n">Edge</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
-    <span class="n">e</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">e</span><span class="p">:</span>
-        <span class="n">e</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-        <span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">e</span>
-
-    <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Self</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1924,7 +1969,7 @@ Edge is returned and cached.</p>
 
 
 <h3 id="graphdb.Edge.load" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -1963,20 +2008,6 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
           </td>
           <td>
               <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
           </td>
         </tr>
     </tbody>
@@ -2032,7 +2063,19 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">280</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">268</span>
+<span class="normal">269</span>
+<span class="normal">270</span>
+<span class="normal">271</span>
+<span class="normal">272</span>
+<span class="normal">273</span>
+<span class="normal">274</span>
+<span class="normal">275</span>
+<span class="normal">276</span>
+<span class="normal">277</span>
+<span class="normal">278</span>
+<span class="normal">279</span>
+<span class="normal">280</span>
 <span class="normal">281</span>
 <span class="normal">282</span>
 <span class="normal">283</span>
@@ -2049,27 +2092,13 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 <span class="normal">294</span>
 <span class="normal">295</span>
 <span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span>
-<span class="normal">310</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">297</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">EdgeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads an Edge from the graph database without attempting to check if the Edge</span>
 <span class="sd">    already exists in the cache. Typically this is only called by Edge.get()</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        id (EdgeId): the unique identifier of the Edge to fetch</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        EdgeNotFound: if the specified ID does not exist in the cache or the database</span>
@@ -2077,7 +2106,7 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: returns the Edge requested by the id</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
     <span class="n">edge_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n)-[e]-(m) WHERE id(e) = </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2"> RETURN e LIMIT 1&quot;</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">len</span><span class="p">(</span><span class="n">edge_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
         <span class="k">raise</span> <span class="n">EdgeNotFound</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Couldn&#39;t find edge ID: </span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -2106,7 +2135,7 @@ already exists in the cache. Typically this is only called by Edge.get()</p>
 
 
 <h3 id="graphdb.Edge.save" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -2145,20 +2174,6 @@ edge already exists in the database.</p>
           </td>
           <td>
               <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
           </td>
         </tr>
     </tbody>
@@ -2200,39 +2215,37 @@ edge already exists in the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">312</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">299</span>
+<span class="normal">300</span>
+<span class="normal">301</span>
+<span class="normal">302</span>
+<span class="normal">303</span>
+<span class="normal">304</span>
+<span class="normal">305</span>
+<span class="normal">306</span>
+<span class="normal">307</span>
+<span class="normal">308</span>
+<span class="normal">309</span>
+<span class="normal">310</span>
+<span class="normal">311</span>
+<span class="normal">312</span>
 <span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span>
-<span class="normal">321</span>
-<span class="normal">322</span>
-<span class="normal">323</span>
-<span class="normal">324</span>
-<span class="normal">325</span>
-<span class="normal">326</span>
-<span class="normal">327</span>
-<span class="normal">328</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">314</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Saves the edge to the database. Calls Edge.create if the edge is new, or Edge.update if</span>
 <span class="sd">    edge already exists in the database.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        e (Self): The edge to save</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: The same edge that was passed in, for convenience. The Edge may be updated with a</span>
 <span class="sd">        new identifier if it was newly created in the database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -2246,7 +2259,7 @@ edge already exists in the database.</p>
 
 
 <h3 id="graphdb.Edge.update" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -2286,20 +2299,6 @@ edge already exists in the database.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -2329,33 +2328,31 @@ edge already exists in the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">389</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">374</span>
+<span class="normal">375</span>
+<span class="normal">376</span>
+<span class="normal">377</span>
+<span class="normal">378</span>
+<span class="normal">379</span>
+<span class="normal">380</span>
+<span class="normal">381</span>
+<span class="normal">382</span>
+<span class="normal">383</span>
+<span class="normal">384</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span>
+<span class="normal">388</span>
+<span class="normal">389</span>
 <span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
-<span class="normal">393</span>
-<span class="normal">394</span>
-<span class="normal">395</span>
-<span class="normal">396</span>
-<span class="normal">397</span>
-<span class="normal">398</span>
-<span class="normal">399</span>
-<span class="normal">400</span>
-<span class="normal">401</span>
-<span class="normal">402</span>
-<span class="normal">403</span>
-<span class="normal">404</span>
-<span class="normal">405</span>
-<span class="normal">406</span>
-<span class="normal">407</span>
-<span class="normal">408</span>
-<span class="normal">409</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">393</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Updates the edge in the database. Typically only called by Edge.save</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        e (Self): The edge to update</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: The same edge that was passed in, for convenience</span>
@@ -2363,7 +2360,7 @@ edge already exists in the database.</p>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">e</span>
 
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
 
     <span class="n">params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;props&quot;</span><span class="p">:</span> <span class="n">e</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()}</span>
 
@@ -2404,26 +2401,26 @@ EdgeList.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">452</span>
-<span class="normal">453</span>
-<span class="normal">454</span>
-<span class="normal">455</span>
-<span class="normal">456</span>
-<span class="normal">457</span>
-<span class="normal">458</span>
-<span class="normal">459</span>
-<span class="normal">460</span>
-<span class="normal">461</span>
-<span class="normal">462</span>
-<span class="normal">463</span>
-<span class="normal">464</span>
-<span class="normal">465</span>
-<span class="normal">466</span>
-<span class="normal">467</span>
-<span class="normal">468</span>
-<span class="normal">469</span>
-<span class="normal">470</span>
-<span class="normal">471</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeFetchIterator</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">431</span>
+<span class="normal">432</span>
+<span class="normal">433</span>
+<span class="normal">434</span>
+<span class="normal">435</span>
+<span class="normal">436</span>
+<span class="normal">437</span>
+<span class="normal">438</span>
+<span class="normal">439</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span>
+<span class="normal">445</span>
+<span class="normal">446</span>
+<span class="normal">447</span>
+<span class="normal">448</span>
+<span class="normal">449</span>
+<span class="normal">450</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeFetchIterator</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    The implementation of an iterator for an EdgeList. Only intended to be used internally by</span>
 <span class="sd">    EdgeList.</span>
@@ -2488,7 +2485,28 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">474</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">453</span>
+<span class="normal">454</span>
+<span class="normal">455</span>
+<span class="normal">456</span>
+<span class="normal">457</span>
+<span class="normal">458</span>
+<span class="normal">459</span>
+<span class="normal">460</span>
+<span class="normal">461</span>
+<span class="normal">462</span>
+<span class="normal">463</span>
+<span class="normal">464</span>
+<span class="normal">465</span>
+<span class="normal">466</span>
+<span class="normal">467</span>
+<span class="normal">468</span>
+<span class="normal">469</span>
+<span class="normal">470</span>
+<span class="normal">471</span>
+<span class="normal">472</span>
+<span class="normal">473</span>
+<span class="normal">474</span>
 <span class="normal">475</span>
 <span class="normal">476</span>
 <span class="normal">477</span>
@@ -2511,28 +2529,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="normal">494</span>
 <span class="normal">495</span>
 <span class="normal">496</span>
-<span class="normal">497</span>
-<span class="normal">498</span>
-<span class="normal">499</span>
-<span class="normal">500</span>
-<span class="normal">501</span>
-<span class="normal">502</span>
-<span class="normal">503</span>
-<span class="normal">504</span>
-<span class="normal">505</span>
-<span class="normal">506</span>
-<span class="normal">507</span>
-<span class="normal">508</span>
-<span class="normal">509</span>
-<span class="normal">510</span>
-<span class="normal">511</span>
-<span class="normal">512</span>
-<span class="normal">513</span>
-<span class="normal">514</span>
-<span class="normal">515</span>
-<span class="normal">516</span>
-<span class="normal">517</span>
-<span class="normal">518</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
+<span class="normal">497</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EdgeList</span><span class="p">(</span><span class="n">MutableSet</span><span class="p">[</span><span class="n">Edge</span> <span class="o">|</span> <span class="n">EdgeId</span><span class="p">],</span> <span class="n">Mapping</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">Edge</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A list of Edges that is used by Node for keeping track of the connections it has.</span>
 <span class="sd">    Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())</span>
@@ -2619,7 +2616,14 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
 <span class="normal">35</span>
 <span class="normal">36</span>
 <span class="normal">37</span>
@@ -2677,26 +2681,31 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="normal">89</span>
 <span class="normal">90</span>
 <span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span>
-<span class="normal">96</span>
-<span class="normal">97</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">GraphDB</span><span class="p">:</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">GraphDB</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A graph database singleton. Settings for the graph database come from the config module.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="k">def</span> <span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphDB</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="s2">&quot;instance&quot;</span><span class="p">):</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__new__</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span><span class="o">.</span><span class="n">__isinitialized</span> <span class="o">=</span> <span class="kc">False</span>  <span class="c1"># type: ignore</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">instance</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">__isinitialized</span><span class="p">:</span>  <span class="c1"># type: ignore</span>
+            <span class="k">return</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">__isinitialized</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">host</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_host</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_port</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">encrypted</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_conn_encrypted</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_username</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_password</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_username</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">password</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_password</span> <span class="ow">or</span> <span class="s2">&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lazy</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">db_lazy</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">client_name</span> <span class="o">=</span> <span class="s2">&quot;roc-graphdb-client&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">db_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+        <span class="c1"># self.record_callback: RecordFn | None = None</span>
 
     <span class="k">def</span> <span class="nf">raw_fetch</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2738,14 +2747,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="p">)</span>
         <span class="n">connection</span><span class="o">.</span><span class="n">autocommit</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">return</span> <span class="n">connection</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">singleton</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">GraphDB</span><span class="p">:</span>
-        <span class="k">global</span> <span class="n">graph_db_singleton</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">graph_db_singleton</span><span class="p">:</span>
-            <span class="n">graph_db_singleton</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
-
-        <span class="k">return</span> <span class="n">graph_db_singleton</span>
 </code></pre></div></td></tr></table></div>
             </details>
 
@@ -2790,7 +2791,28 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
             <details class="quote">
               <summary>Source code in <code>roc/graphdb.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">539</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">518</span>
+<span class="normal">519</span>
+<span class="normal">520</span>
+<span class="normal">521</span>
+<span class="normal">522</span>
+<span class="normal">523</span>
+<span class="normal">524</span>
+<span class="normal">525</span>
+<span class="normal">526</span>
+<span class="normal">527</span>
+<span class="normal">528</span>
+<span class="normal">529</span>
+<span class="normal">530</span>
+<span class="normal">531</span>
+<span class="normal">532</span>
+<span class="normal">533</span>
+<span class="normal">534</span>
+<span class="normal">535</span>
+<span class="normal">536</span>
+<span class="normal">537</span>
+<span class="normal">538</span>
+<span class="normal">539</span>
 <span class="normal">540</span>
 <span class="normal">541</span>
 <span class="normal">542</span>
@@ -3072,60 +3094,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="normal">818</span>
 <span class="normal">819</span>
 <span class="normal">820</span>
-<span class="normal">821</span>
-<span class="normal">822</span>
-<span class="normal">823</span>
-<span class="normal">824</span>
-<span class="normal">825</span>
-<span class="normal">826</span>
-<span class="normal">827</span>
-<span class="normal">828</span>
-<span class="normal">829</span>
-<span class="normal">830</span>
-<span class="normal">831</span>
-<span class="normal">832</span>
-<span class="normal">833</span>
-<span class="normal">834</span>
-<span class="normal">835</span>
-<span class="normal">836</span>
-<span class="normal">837</span>
-<span class="normal">838</span>
-<span class="normal">839</span>
-<span class="normal">840</span>
-<span class="normal">841</span>
-<span class="normal">842</span>
-<span class="normal">843</span>
-<span class="normal">844</span>
-<span class="normal">845</span>
-<span class="normal">846</span>
-<span class="normal">847</span>
-<span class="normal">848</span>
-<span class="normal">849</span>
-<span class="normal">850</span>
-<span class="normal">851</span>
-<span class="normal">852</span>
-<span class="normal">853</span>
-<span class="normal">854</span>
-<span class="normal">855</span>
-<span class="normal">856</span>
-<span class="normal">857</span>
-<span class="normal">858</span>
-<span class="normal">859</span>
-<span class="normal">860</span>
-<span class="normal">861</span>
-<span class="normal">862</span>
-<span class="normal">863</span>
-<span class="normal">864</span>
-<span class="normal">865</span>
-<span class="normal">866</span>
-<span class="normal">867</span>
-<span class="normal">868</span>
-<span class="normal">869</span>
-<span class="normal">870</span>
-<span class="normal">871</span>
-<span class="normal">872</span>
-<span class="normal">873</span>
-<span class="normal">874</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
+<span class="normal">821</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Node</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">,</span> <span class="n">extra</span><span class="o">=</span><span class="s2">&quot;allow&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An graph database node that automatically handles CRUD for the underlying graph database objects</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -3170,7 +3139,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="n">labels</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">src_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">dst_edges</span><span class="p">:</span> <span class="n">EdgeList</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">data</span> <span class="ow">or</span> <span class="p">{}</span>
 
@@ -3183,11 +3151,10 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="bp">self</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_no_save</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_deleted</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
 
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">id</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">True</span>  <span class="c1"># TODO: derived?</span>
-            <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
+            <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">id</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_orig_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">labels</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_src_edges</span> <span class="o">=</span> <span class="n">src_edges</span> <span class="ow">or</span> <span class="n">EdgeList</span><span class="p">([])</span>
@@ -3197,19 +3164,16 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
     <span class="k">def</span> <span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_db</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="n">err_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;error saving during del: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="c1"># logger.warning(err_msg)</span>
-            <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="n">err_msg</span><span class="p">,</span> <span class="n">ErrorSavingDuringDelWarning</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;error saving during del:&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Loads a node from the database. Use `Node.get` or other methods instead.</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            id (NodeId): The identifier of the node to fetch</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            NodeNotFound: The node specified by the identifier does not exist in the database</span>
@@ -3218,7 +3182,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 <span class="sd">            Self: The node from the database</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
             <span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
@@ -3248,37 +3212,22 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_cache</span><span class="p">(</span><span class="bp">cls</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">NodeCache</span><span class="p">:</span>
-        <span class="k">global</span> <span class="n">node_cache</span>
-        <span class="k">if</span> <span class="n">node_cache</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-            <span class="n">node_cache</span> <span class="o">=</span> <span class="n">NodeCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">)</span>
-
-        <span class="k">return</span> <span class="n">node_cache</span>
-
-    <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns a cached node with the specified id. If no node is cached, it is retrieved from</span>
 <span class="sd">        the database.</span>
 
 
 <span class="sd">        Args:</span>
 <span class="sd">            id (NodeId): The unique identifier of the node to fetch</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: the cached or newly retrieved node</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="p">:</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-            <span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
-
-        <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Self</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Save a node to persistent storage</span>
 
 <span class="sd">        Writes the specified node to the GraphDB for persistent storage. If the node does not</span>
@@ -3289,19 +3238,18 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <span class="sd">        Args:</span>
 <span class="sd">            n (Self): The Node to be saved</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: As a convenience, the node that was stored is returned. This may be useful</span>
 <span class="sd">            since the the id of the node may change if it was created in the database.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update an existing node in the GraphDB.</span>
 
 <span class="sd">        Calling `save` is preferred to using this method so that the caller doesn&#39;t need to know the</span>
@@ -3309,7 +3257,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <span class="sd">        Args:</span>
 <span class="sd">            n (Self): The node to be updated</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Self: The node that was passed in, for convenience</span>
@@ -3317,7 +3264,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">n</span>
 
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
 
         <span class="n">orig_labels</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">_orig_labels</span>
         <span class="n">curr_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
@@ -3341,7 +3288,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="k">return</span> <span class="n">n</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Creates the specified node in the GraphDB.</span>
 
 <span class="sd">        Calling `save` is preferred to using this method so that the caller doesn&#39;t need to know the</span>
@@ -3349,7 +3296,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 <span class="sd">        Args:</span>
 <span class="sd">            n (Self): the node to be created</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Raises:</span>
 <span class="sd">            NodeCreationFailed: if creating the node failed in the database</span>
@@ -3361,7 +3307,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">n</span>
 
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+        <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
         <span class="n">old_id</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span>
 
         <span class="n">label_str</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">mklabels</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
@@ -3375,9 +3321,9 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="n">new_id</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
         <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">new_id</span>
         <span class="n">n</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="c1"># update the cache; if being called during c then the cache entry may not exist</span>
+        <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+            <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span>
             <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
             <span class="n">cache</span><span class="p">[</span><span class="n">new_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -3394,21 +3340,13 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="k">return</span> <span class="n">n</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span>
-        <span class="n">src</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span>
-        <span class="n">dst</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span>
-        <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span>
-        <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Connects two nodes (creates an Edge between two nodes)</span>
 
 <span class="sd">        Args:</span>
 <span class="sd">            src (NodeId | Node): _description_</span>
 <span class="sd">            dst (NodeId | Node): _description_</span>
 <span class="sd">            type (str): _description_</span>
-<span class="sd">            db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">        Returns:</span>
 <span class="sd">            Edge: _description_</span>
@@ -3424,16 +3362,14 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
             <span class="n">dst_id</span> <span class="o">=</span> <span class="n">dst</span>
 
         <span class="n">e</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">dst_id</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
-        <span class="n">src_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-        <span class="n">dst_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+        <span class="n">src_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_id</span><span class="p">)</span>
+        <span class="n">dst_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_id</span><span class="p">)</span>
         <span class="n">src_node</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="n">dst_node</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">e</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Node</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
-
+    <span class="k">def</span> <span class="nf">delete</span><span class="p">(</span><span class="n">n</span><span class="p">:</span> <span class="n">Node</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># remove edges</span>
         <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">n</span><span class="o">.</span><span class="n">src_edges</span><span class="p">:</span>
             <span class="n">Edge</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
@@ -3442,11 +3378,12 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
             <span class="n">Edge</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
         <span class="c1"># remove from cache</span>
-        <span class="n">node_cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+        <span class="n">node_cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="ow">in</span> <span class="n">node_cache</span><span class="p">:</span>
             <span class="k">del</span> <span class="n">node_cache</span><span class="p">[</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="p">]</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
+            <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
             <span class="n">db</span><span class="o">.</span><span class="n">raw_execute</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MATCH (n) WHERE id(n) = </span><span class="si">{</span><span class="n">n</span><span class="o">.</span><span class="n">id</span><span class="si">}</span><span class="s2"> DELETE n&quot;</span><span class="p">)</span>
 
         <span class="n">n</span><span class="o">.</span><span class="n">_deleted</span> <span class="o">=</span> <span class="kc">True</span>
@@ -3483,7 +3420,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 
 <h3 id="graphdb.Node.connect" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">connect</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="nb">type</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">connect</span><span class="p">(</span><span class="n">src</span><span class="p">,</span> <span class="n">dst</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -3551,20 +3488,6 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -3594,57 +3517,41 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">807</span>
-<span class="normal">808</span>
-<span class="normal">809</span>
-<span class="normal">810</span>
-<span class="normal">811</span>
-<span class="normal">812</span>
-<span class="normal">813</span>
-<span class="normal">814</span>
-<span class="normal">815</span>
-<span class="normal">816</span>
-<span class="normal">817</span>
-<span class="normal">818</span>
-<span class="normal">819</span>
-<span class="normal">820</span>
-<span class="normal">821</span>
-<span class="normal">822</span>
-<span class="normal">823</span>
-<span class="normal">824</span>
-<span class="normal">825</span>
-<span class="normal">826</span>
-<span class="normal">827</span>
-<span class="normal">828</span>
-<span class="normal">829</span>
-<span class="normal">830</span>
-<span class="normal">831</span>
-<span class="normal">832</span>
-<span class="normal">833</span>
-<span class="normal">834</span>
-<span class="normal">835</span>
-<span class="normal">836</span>
-<span class="normal">837</span>
-<span class="normal">838</span>
-<span class="normal">839</span>
-<span class="normal">840</span>
-<span class="normal">841</span>
-<span class="normal">842</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span>
-    <span class="bp">cls</span><span class="p">,</span>
-    <span class="n">src</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span>
-    <span class="n">dst</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span>
-    <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="o">*</span><span class="p">,</span>
-    <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">763</span>
+<span class="normal">764</span>
+<span class="normal">765</span>
+<span class="normal">766</span>
+<span class="normal">767</span>
+<span class="normal">768</span>
+<span class="normal">769</span>
+<span class="normal">770</span>
+<span class="normal">771</span>
+<span class="normal">772</span>
+<span class="normal">773</span>
+<span class="normal">774</span>
+<span class="normal">775</span>
+<span class="normal">776</span>
+<span class="normal">777</span>
+<span class="normal">778</span>
+<span class="normal">779</span>
+<span class="normal">780</span>
+<span class="normal">781</span>
+<span class="normal">782</span>
+<span class="normal">783</span>
+<span class="normal">784</span>
+<span class="normal">785</span>
+<span class="normal">786</span>
+<span class="normal">787</span>
+<span class="normal">788</span>
+<span class="normal">789</span>
+<span class="normal">790</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">src</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span> <span class="n">dst</span><span class="p">:</span> <span class="n">NodeId</span> <span class="o">|</span> <span class="n">Self</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Edge</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Connects two nodes (creates an Edge between two nodes)</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        src (NodeId | Node): _description_</span>
 <span class="sd">        dst (NodeId | Node): _description_</span>
 <span class="sd">        type (str): _description_</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Edge: _description_</span>
@@ -3660,8 +3567,8 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
         <span class="n">dst_id</span> <span class="o">=</span> <span class="n">dst</span>
 
     <span class="n">e</span> <span class="o">=</span> <span class="n">Edge</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">dst_id</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span>
-    <span class="n">src_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-    <span class="n">dst_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">src_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">src_id</span><span class="p">)</span>
+    <span class="n">dst_node</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dst_id</span><span class="p">)</span>
     <span class="n">src_node</span><span class="o">.</span><span class="n">src_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
     <span class="n">dst_node</span><span class="o">.</span><span class="n">dst_edges</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">e</span>
@@ -3678,7 +3585,7 @@ Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. rea
 
 
 <h3 id="graphdb.Node.create" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -3718,20 +3625,6 @@ state of the node.</p>
           </td>
           <td>
               <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
           </td>
         </tr>
     </tbody>
@@ -3797,59 +3690,58 @@ state of the node.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">754</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">711</span>
+<span class="normal">712</span>
+<span class="normal">713</span>
+<span class="normal">714</span>
+<span class="normal">715</span>
+<span class="normal">716</span>
+<span class="normal">717</span>
+<span class="normal">718</span>
+<span class="normal">719</span>
+<span class="normal">720</span>
+<span class="normal">721</span>
+<span class="normal">722</span>
+<span class="normal">723</span>
+<span class="normal">724</span>
+<span class="normal">725</span>
+<span class="normal">726</span>
+<span class="normal">727</span>
+<span class="normal">728</span>
+<span class="normal">729</span>
+<span class="normal">730</span>
+<span class="normal">731</span>
+<span class="normal">732</span>
+<span class="normal">733</span>
+<span class="normal">734</span>
+<span class="normal">735</span>
+<span class="normal">736</span>
+<span class="normal">737</span>
+<span class="normal">738</span>
+<span class="normal">739</span>
+<span class="normal">740</span>
+<span class="normal">741</span>
+<span class="normal">742</span>
+<span class="normal">743</span>
+<span class="normal">744</span>
+<span class="normal">745</span>
+<span class="normal">746</span>
+<span class="normal">747</span>
+<span class="normal">748</span>
+<span class="normal">749</span>
+<span class="normal">750</span>
+<span class="normal">751</span>
+<span class="normal">752</span>
+<span class="normal">753</span>
+<span class="normal">754</span>
 <span class="normal">755</span>
 <span class="normal">756</span>
 <span class="normal">757</span>
 <span class="normal">758</span>
 <span class="normal">759</span>
 <span class="normal">760</span>
-<span class="normal">761</span>
-<span class="normal">762</span>
-<span class="normal">763</span>
-<span class="normal">764</span>
-<span class="normal">765</span>
-<span class="normal">766</span>
-<span class="normal">767</span>
-<span class="normal">768</span>
-<span class="normal">769</span>
-<span class="normal">770</span>
-<span class="normal">771</span>
-<span class="normal">772</span>
-<span class="normal">773</span>
-<span class="normal">774</span>
-<span class="normal">775</span>
-<span class="normal">776</span>
-<span class="normal">777</span>
-<span class="normal">778</span>
-<span class="normal">779</span>
-<span class="normal">780</span>
-<span class="normal">781</span>
-<span class="normal">782</span>
-<span class="normal">783</span>
-<span class="normal">784</span>
-<span class="normal">785</span>
-<span class="normal">786</span>
-<span class="normal">787</span>
-<span class="normal">788</span>
-<span class="normal">789</span>
-<span class="normal">790</span>
-<span class="normal">791</span>
-<span class="normal">792</span>
-<span class="normal">793</span>
-<span class="normal">794</span>
-<span class="normal">795</span>
-<span class="normal">796</span>
-<span class="normal">797</span>
-<span class="normal">798</span>
-<span class="normal">799</span>
-<span class="normal">800</span>
-<span class="normal">801</span>
-<span class="normal">802</span>
-<span class="normal">803</span>
-<span class="normal">804</span>
-<span class="normal">805</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">761</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates the specified node in the GraphDB.</span>
 
 <span class="sd">    Calling `save` is preferred to using this method so that the caller doesn&#39;t need to know the</span>
@@ -3857,7 +3749,6 @@ state of the node.</p>
 
 <span class="sd">    Args:</span>
 <span class="sd">        n (Self): the node to be created</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        NodeCreationFailed: if creating the node failed in the database</span>
@@ -3869,7 +3760,7 @@ state of the node.</p>
     <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">n</span>
 
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
     <span class="n">old_id</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">id</span>
 
     <span class="n">label_str</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">mklabels</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
@@ -3883,9 +3774,9 @@ state of the node.</p>
     <span class="n">new_id</span> <span class="o">=</span> <span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;id&quot;</span><span class="p">]</span>
     <span class="n">n</span><span class="o">.</span><span class="n">id</span> <span class="o">=</span> <span class="n">new_id</span>
     <span class="n">n</span><span class="o">.</span><span class="n">_new</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="c1"># update the cache; if being called during c then the cache entry may not exist</span>
+    <span class="c1"># update the cache; if being called during __del__ then the cache entry may not exist</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
+        <span class="n">cache</span> <span class="o">=</span> <span class="n">CacheControl</span><span class="o">.</span><span class="n">node_cache_control</span><span class="o">.</span><span class="n">cache</span>
         <span class="k">del</span> <span class="n">cache</span><span class="p">[</span><span class="n">old_id</span><span class="p">]</span>
         <span class="n">cache</span><span class="p">[</span><span class="n">new_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
     <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
@@ -3913,7 +3804,7 @@ state of the node.</p>
 
 
 <h3 id="graphdb.Node.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -3954,20 +3845,6 @@ the database.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -3997,45 +3874,33 @@ the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">670</span>
-<span class="normal">671</span>
-<span class="normal">672</span>
-<span class="normal">673</span>
-<span class="normal">674</span>
-<span class="normal">675</span>
-<span class="normal">676</span>
-<span class="normal">677</span>
-<span class="normal">678</span>
-<span class="normal">679</span>
-<span class="normal">680</span>
-<span class="normal">681</span>
-<span class="normal">682</span>
-<span class="normal">683</span>
-<span class="normal">684</span>
-<span class="normal">685</span>
-<span class="normal">686</span>
-<span class="normal">687</span>
-<span class="normal">688</span>
-<span class="normal">689</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">635</span>
+<span class="normal">636</span>
+<span class="normal">637</span>
+<span class="normal">638</span>
+<span class="normal">639</span>
+<span class="normal">640</span>
+<span class="normal">641</span>
+<span class="normal">642</span>
+<span class="normal">643</span>
+<span class="normal">644</span>
+<span class="normal">645</span>
+<span class="normal">646</span>
+<span class="normal">647</span>
+<span class="normal">648</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="nd">@cached</span><span class="p">(</span><span class="n">cache</span><span class="o">=</span><span class="n">LRUCache</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">node_cache_size</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="nb">id</span><span class="p">,</span> <span class="n">info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns a cached node with the specified id. If no node is cached, it is retrieved from</span>
 <span class="sd">    the database.</span>
 
 
 <span class="sd">    Args:</span>
 <span class="sd">        id (NodeId): The unique identifier of the node to fetch</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: the cached or newly retrieved node</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">cache</span> <span class="o">=</span> <span class="n">Node</span><span class="o">.</span><span class="n">get_cache</span><span class="p">()</span>
-    <span class="n">n</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">n</span><span class="p">:</span>
-        <span class="n">n</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
-        <span class="n">cache</span><span class="p">[</span><span class="nb">id</span><span class="p">]</span> <span class="o">=</span> <span class="n">n</span>
-
-    <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="n">Self</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -4049,7 +3914,7 @@ the database.</p>
 
 
 <h3 id="graphdb.Node.load" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">load</span><span class="p">(</span><span class="nb">id</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -4087,20 +3952,6 @@ the database.</p>
           </td>
           <td>
               <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
           </td>
         </tr>
     </tbody>
@@ -4156,7 +4007,32 @@ the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">617</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">592</span>
+<span class="normal">593</span>
+<span class="normal">594</span>
+<span class="normal">595</span>
+<span class="normal">596</span>
+<span class="normal">597</span>
+<span class="normal">598</span>
+<span class="normal">599</span>
+<span class="normal">600</span>
+<span class="normal">601</span>
+<span class="normal">602</span>
+<span class="normal">603</span>
+<span class="normal">604</span>
+<span class="normal">605</span>
+<span class="normal">606</span>
+<span class="normal">607</span>
+<span class="normal">608</span>
+<span class="normal">609</span>
+<span class="normal">610</span>
+<span class="normal">611</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
 <span class="normal">618</span>
 <span class="normal">619</span>
 <span class="normal">620</span>
@@ -4172,39 +4048,12 @@ the database.</p>
 <span class="normal">630</span>
 <span class="normal">631</span>
 <span class="normal">632</span>
-<span class="normal">633</span>
-<span class="normal">634</span>
-<span class="normal">635</span>
-<span class="normal">636</span>
-<span class="normal">637</span>
-<span class="normal">638</span>
-<span class="normal">639</span>
-<span class="normal">640</span>
-<span class="normal">641</span>
-<span class="normal">642</span>
-<span class="normal">643</span>
-<span class="normal">644</span>
-<span class="normal">645</span>
-<span class="normal">646</span>
-<span class="normal">647</span>
-<span class="normal">648</span>
-<span class="normal">649</span>
-<span class="normal">650</span>
-<span class="normal">651</span>
-<span class="normal">652</span>
-<span class="normal">653</span>
-<span class="normal">654</span>
-<span class="normal">655</span>
-<span class="normal">656</span>
-<span class="normal">657</span>
-<span class="normal">658</span>
-<span class="normal">659</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="normal">633</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="nb">id</span><span class="p">:</span> <span class="n">NodeId</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Loads a node from the database. Use `Node.get` or other methods instead.</span>
 
 <span class="sd">    Args:</span>
 <span class="sd">        id (NodeId): The identifier of the node to fetch</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Raises:</span>
 <span class="sd">        NodeNotFound: The node specified by the identifier does not exist in the database</span>
@@ -4213,7 +4062,7 @@ the database.</p>
 <span class="sd">        Self: The node from the database</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
     <span class="n">res</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
         <span class="n">db</span><span class="o">.</span><span class="n">raw_fetch</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
@@ -4269,15 +4118,15 @@ the database.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">866</span>
-<span class="normal">867</span>
-<span class="normal">868</span>
-<span class="normal">869</span>
-<span class="normal">870</span>
-<span class="normal">871</span>
-<span class="normal">872</span>
-<span class="normal">873</span>
-<span class="normal">874</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">813</span>
+<span class="normal">814</span>
+<span class="normal">815</span>
+<span class="normal">816</span>
+<span class="normal">817</span>
+<span class="normal">818</span>
+<span class="normal">819</span>
+<span class="normal">820</span>
+<span class="normal">821</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">mklabels</span><span class="p">(</span><span class="n">labels</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="s2">&quot;Converts a list of strings into proper Cypher syntax for a graph database query&quot;</span>
     <span class="n">labels_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">]</span>
@@ -4299,7 +4148,7 @@ the database.</p>
 
 
 <h3 id="graphdb.Node.save" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">save</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -4343,20 +4192,6 @@ is updated via the <code>update</code> method.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -4396,29 +4231,28 @@ is updated via the <code>update</code> method.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">691</span>
-<span class="normal">692</span>
-<span class="normal">693</span>
-<span class="normal">694</span>
-<span class="normal">695</span>
-<span class="normal">696</span>
-<span class="normal">697</span>
-<span class="normal">698</span>
-<span class="normal">699</span>
-<span class="normal">700</span>
-<span class="normal">701</span>
-<span class="normal">702</span>
-<span class="normal">703</span>
-<span class="normal">704</span>
-<span class="normal">705</span>
-<span class="normal">706</span>
-<span class="normal">707</span>
-<span class="normal">708</span>
-<span class="normal">709</span>
-<span class="normal">710</span>
-<span class="normal">711</span>
-<span class="normal">712</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">650</span>
+<span class="normal">651</span>
+<span class="normal">652</span>
+<span class="normal">653</span>
+<span class="normal">654</span>
+<span class="normal">655</span>
+<span class="normal">656</span>
+<span class="normal">657</span>
+<span class="normal">658</span>
+<span class="normal">659</span>
+<span class="normal">660</span>
+<span class="normal">661</span>
+<span class="normal">662</span>
+<span class="normal">663</span>
+<span class="normal">664</span>
+<span class="normal">665</span>
+<span class="normal">666</span>
+<span class="normal">667</span>
+<span class="normal">668</span>
+<span class="normal">669</span>
+<span class="normal">670</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Save a node to persistent storage</span>
 
 <span class="sd">    Writes the specified node to the GraphDB for persistent storage. If the node does not</span>
@@ -4429,16 +4263,15 @@ is updated via the <code>update</code> method.</p>
 
 <span class="sd">    Args:</span>
 <span class="sd">        n (Self): The Node to be saved</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: As a convenience, the node that was stored is returned. This may be useful</span>
 <span class="sd">        since the the id of the node may change if it was created in the database.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_new</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="n">db</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -4452,7 +4285,7 @@ is updated via the <code>update</code> method.</p>
 
 
 <h3 id="graphdb.Node.update" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+          <code class="highlight language-python"><span class="n">update</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
   
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
@@ -4494,20 +4327,6 @@ state of the node.</p>
               <em>required</em>
           </td>
         </tr>
-        <tr>
-          <td><code>db</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="graphdb.GraphDB" href="#graphdb.GraphDB">GraphDB</a> | None</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>the graph database to use, or None to use the GraphDB singleton</p>
-            </div>
-          </td>
-          <td>
-                <code>None</code>
-          </td>
-        </tr>
     </tbody>
   </table>
 
@@ -4537,46 +4356,45 @@ state of the node.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/graphdb.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">714</span>
-<span class="normal">715</span>
-<span class="normal">716</span>
-<span class="normal">717</span>
-<span class="normal">718</span>
-<span class="normal">719</span>
-<span class="normal">720</span>
-<span class="normal">721</span>
-<span class="normal">722</span>
-<span class="normal">723</span>
-<span class="normal">724</span>
-<span class="normal">725</span>
-<span class="normal">726</span>
-<span class="normal">727</span>
-<span class="normal">728</span>
-<span class="normal">729</span>
-<span class="normal">730</span>
-<span class="normal">731</span>
-<span class="normal">732</span>
-<span class="normal">733</span>
-<span class="normal">734</span>
-<span class="normal">735</span>
-<span class="normal">736</span>
-<span class="normal">737</span>
-<span class="normal">738</span>
-<span class="normal">739</span>
-<span class="normal">740</span>
-<span class="normal">741</span>
-<span class="normal">742</span>
-<span class="normal">743</span>
-<span class="normal">744</span>
-<span class="normal">745</span>
-<span class="normal">746</span>
-<span class="normal">747</span>
-<span class="normal">748</span>
-<span class="normal">749</span>
-<span class="normal">750</span>
-<span class="normal">751</span>
-<span class="normal">752</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
-<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">db</span><span class="p">:</span> <span class="n">GraphDB</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">672</span>
+<span class="normal">673</span>
+<span class="normal">674</span>
+<span class="normal">675</span>
+<span class="normal">676</span>
+<span class="normal">677</span>
+<span class="normal">678</span>
+<span class="normal">679</span>
+<span class="normal">680</span>
+<span class="normal">681</span>
+<span class="normal">682</span>
+<span class="normal">683</span>
+<span class="normal">684</span>
+<span class="normal">685</span>
+<span class="normal">686</span>
+<span class="normal">687</span>
+<span class="normal">688</span>
+<span class="normal">689</span>
+<span class="normal">690</span>
+<span class="normal">691</span>
+<span class="normal">692</span>
+<span class="normal">693</span>
+<span class="normal">694</span>
+<span class="normal">695</span>
+<span class="normal">696</span>
+<span class="normal">697</span>
+<span class="normal">698</span>
+<span class="normal">699</span>
+<span class="normal">700</span>
+<span class="normal">701</span>
+<span class="normal">702</span>
+<span class="normal">703</span>
+<span class="normal">704</span>
+<span class="normal">705</span>
+<span class="normal">706</span>
+<span class="normal">707</span>
+<span class="normal">708</span>
+<span class="normal">709</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Update an existing node in the GraphDB.</span>
 
 <span class="sd">    Calling `save` is preferred to using this method so that the caller doesn&#39;t need to know the</span>
@@ -4584,7 +4402,6 @@ state of the node.</p>
 
 <span class="sd">    Args:</span>
 <span class="sd">        n (Self): The node to be updated</span>
-<span class="sd">        db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton</span>
 
 <span class="sd">    Returns:</span>
 <span class="sd">        Self: The node that was passed in, for convenience</span>
@@ -4592,7 +4409,7 @@ state of the node.</p>
     <span class="k">if</span> <span class="n">n</span><span class="o">.</span><span class="n">_no_save</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">n</span>
 
-    <span class="n">db</span> <span class="o">=</span> <span class="n">db</span> <span class="ow">or</span> <span class="n">GraphDB</span><span class="o">.</span><span class="n">singleton</span><span class="p">()</span>
+    <span class="n">db</span> <span class="o">=</span> <span class="n">GraphDB</span><span class="p">()</span>
 
     <span class="n">orig_labels</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">_orig_labels</span>
     <span class="n">curr_labels</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">labels</span><span class="p">)</span>
