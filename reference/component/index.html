@@ -377,26 +377,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../environment/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    environment
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../event/" class="md-nav__link">
         
   
@@ -599,6 +579,10 @@
 
 <a id="component"></a>
   <div class="doc doc-contents first">
+  
+      <p>This module defines the Component base class, which is instantiated for
+nearly every part of the system. It implements interfaces for communications,
+initialization, shutdown, etc.</p>
 
   
 
@@ -632,11 +616,7 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/component.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
-<span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
 <span class="normal">28</span>
@@ -705,7 +685,11 @@
 <span class="normal">91</span>
 <span class="normal">92</span>
 <span class="normal">93</span>
-<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Component</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span>
+<span class="normal">97</span>
+<span class="normal">98</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Component</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An abstract component class for building pieces of ROC that will talk to each other.&quot;&quot;&quot;</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&lt;name unassigned&gt;&quot;</span>
