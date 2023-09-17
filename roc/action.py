@@ -1,3 +1,5 @@
+"""The action module decides what action the agent should perform."""
+
 from random import randrange
 from typing import Annotated, Callable, Literal
 

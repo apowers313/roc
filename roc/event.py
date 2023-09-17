@@ -1,3 +1,5 @@
+"""This module defines all the communications and eventing interfaces for the system."""
+
 from __future__ import annotations
 
 from abc import ABC
