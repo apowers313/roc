@@ -1,3 +1,6 @@
+"""This module is a wrapper around a graph database and abstracts away all the
+database-specific features as various classes (GraphDB, Node, Edge, etc)"""
+
 from __future__ import annotations
 
 import warnings

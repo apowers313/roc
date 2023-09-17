@@ -1,3 +1,5 @@
+"""This module defines the logging interface for storing system logs."""
+
 import pkgutil
 import sys
 from typing import Any

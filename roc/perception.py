@@ -1,3 +1,6 @@
+"""The Perception system breaks down the environment into features that can be
+re-assembled as concepts."""
+
 from __future__ import annotations
 
 from collections.abc import Hashable

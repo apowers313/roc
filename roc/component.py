@@ -1,3 +1,7 @@
+"""This module defines the Component base class, which is instantiated for
+nearly every part of the system. It implements interfaces for communications,
+initialization, shutdown, etc."""
+
 from __future__ import annotations
 
 # import traceback

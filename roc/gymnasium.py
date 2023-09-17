@@ -1,3 +1,6 @@
+"""This module is a wrapper around the Gym / Gymnasium interfaces and drives all
+the interactions between the agent and the system, including the main event loop."""
+
 # pragma: no cover
 from abc import ABC, abstractmethod
 from enum import IntEnum

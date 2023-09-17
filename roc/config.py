@@ -1,3 +1,5 @@
+"""This module contains all the settings for the system."""
+
 from __future__ import annotations
 
 import warnings
