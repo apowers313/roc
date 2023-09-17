@@ -50,14 +50,14 @@ class TestModuleParsing:
         assert ret[0].log_level == "INFO"
 
     def test_parse_module_str_many(self):
-        ret = LogFilter.parse_module_str("logger:INFO;config:TRACE;environment:CRITICAL")
+        ret = LogFilter.parse_module_str("logger:INFO;config:TRACE;component:CRITICAL")
 
         assert len(ret) == 3
         assert ret[0].module_name == "logger"
         assert ret[0].log_level == "INFO"
         assert ret[1].module_name == "config"
         assert ret[1].log_level == "TRACE"
-        assert ret[2].module_name == "environment"
+        assert ret[2].module_name == "component"
         assert ret[2].log_level == "CRITICAL"
 
     def test_parse_module_str_bad_level(self):
@@ -98,7 +98,7 @@ class TestLogFilter:
         assert filter(FakeRecord("CRITICAL", "event"))
 
     def test_filter_module_levels(self):
-        filter = LogFilter(log_modules="logger:INFO;config:TRACE;environment:CRITICAL")
+        filter = LogFilter(log_modules="logger:INFO;config:TRACE;component:CRITICAL")
 
         # doesn't mess up default level
         assert filter.level == "INFO"
@@ -107,13 +107,13 @@ class TestLogFilter:
         assert len(filter.module_levels) == 3
         assert filter.module_levels["logger"] == "INFO"
         assert filter.module_levels["config"] == "TRACE"
-        assert filter.module_levels["environment"] == "CRITICAL"
+        assert filter.module_levels["component"] == "CRITICAL"
         # filters correctly
         assert filter(FakeRecord("INFO", "logger"))
         assert not filter(FakeRecord("DEBUG", "logger"))
         assert filter(FakeRecord("CRITICAL", "logger"))
         assert filter(FakeRecord("TRACE", "config"))
         assert filter(FakeRecord("CRITICAL", "config"))
-        assert not filter(FakeRecord("TRACE", "environment"))
-        assert not filter(FakeRecord("ERROR", "environment"))
-        assert filter(FakeRecord("CRITICAL", "environment"))
+        assert not filter(FakeRecord("TRACE", "component"))
+        assert not filter(FakeRecord("ERROR", "component"))
+        assert filter(FakeRecord("CRITICAL", "component"))
