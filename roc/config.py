@@ -8,7 +8,9 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class LogImportWarning(Warning):
+class ConfigInitWarning(Warning):
+    """A Warning for when attempting to access config before it has been initialized."""
+
     pass
 
 
@@ -16,6 +18,8 @@ _config_singleton: Config | None = None
 
 
 class Config(BaseSettings):
+    """A Pydantic settings model for configuration of the agent."""
+
     model_config = SettingsConfigDict(
         env_prefix="roc_",
         env_file=".env",
@@ -44,7 +48,7 @@ class Config(BaseSettings):
         if _config_singleton is None:
             warnings.warn(
                 "Getting settings before config module was initialized. Please call init() first",
-                LogImportWarning,
+                ConfigInitWarning,
             )
             Config.init()
             assert _config_singleton is not None

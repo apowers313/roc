@@ -25,6 +25,10 @@ except ModuleNotFoundError:
 
 
 class Gym(Component, ABC):
+    """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
+    loop and interfaces to the ROC agent.
+    """
+
     def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
         super().__init__()
         gym_opts = gym_opts or {}
@@ -90,6 +94,10 @@ class Gym(Component, ABC):
 
 
 class blstat_offsets(IntEnum):
+    """An enumeration of Nethack bottom line statistics (intelligence, strength,
+    charisma, position, hit points, etc.)
+    """
+
     # fmt: off
     X =         0
     Y =         1
@@ -122,6 +130,10 @@ class blstat_offsets(IntEnum):
 
 
 class condition_bits(IntEnum):
+    """Bits for decoding the `CONDITION` bottomline stat to determin if the
+    player is flying, deaf, food poisoned, etc.
+    """
+
     # fmt: off
     BAREH =     0x00000001
     BLIND =     0x00000002
@@ -157,6 +169,8 @@ class condition_bits(IntEnum):
 
 
 class BaselineStats(BaseModel):
+    """A Pydantic model representing the Nethack bottom line statistics."""
+
     X: int
     Y: int
     STR25: int
@@ -187,6 +201,9 @@ class BaselineStats(BaseModel):
 
 
 class NethackGym(Gym):
+    """Wrapper around the Gym class for driving the Nethack interface to the ROC
+    agent. Decodes Nethack specific data and sends it to the agent as Events."""
+
     def __init__(self, *, gym_opts: dict[str, Any] | None = None) -> None:
         gym_opts = gym_opts or {}
         super().__init__("NetHackScore-v0", **gym_opts)

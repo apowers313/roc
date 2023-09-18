@@ -23,6 +23,8 @@ intrinsic_registry: dict[str, IntrinsicFn] = {}
 
 
 class register_intrinsic:
+    """Decorator for registering intrinsics."""
+
     def __init__(self, name: str) -> None:
         self.name = name
 

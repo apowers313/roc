@@ -18,12 +18,16 @@ Grid = tuple[tuple[int | str, ...], ...]
 # TODO: sound input
 # TODO: other input
 class VisionData(BaseModel):
+    """A Pydantic model for the vision perception data."""
+
     # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
     screen: Grid
     # spectrum: tuple[int | str, ...]
 
 
 class DeltaData(BaseModel):
+    """A Pydantic model for delta features."""
+
     diff_list: "DiffList"
 
 
@@ -35,6 +39,9 @@ perception_bus = EventBus[PerceptionData]("perception")
 
 
 class Perception(Component):
+    """The abstract class for Perception components. Handles perception bus
+    connections and corresponding clean-up."""
+
     def __init__(self) -> None:
         super().__init__()
         self.pb_conn = self.connect_bus(perception_bus)
@@ -50,16 +57,22 @@ class Perception(Component):
 
 
 class Feature(Hashable):
+    """An abstract feature for communicating features that have been detected."""
+
     pass
 
 
 class DeltaFeature(Feature):
+    """A feature for representing vision changes (deltas)"""
+
     def __hash__(self) -> int:
         raise NotImplementedError("DeltaFeature hash not implemented")
 
 
 @register_component("delta", "perception")
 class Delta(Perception):
+    """A component for detecting changes in vision."""
+
     def __init__(self) -> None:
         super().__init__()
         self.prev_grid: Grid | None = None
@@ -104,6 +117,8 @@ class Delta(Perception):
 
 
 class Diff(BaseModel):
+    """A Pydantic model for representing a changes in vision."""
+
     x: int
     y: int
     val1: str | int

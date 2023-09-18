@@ -28,6 +28,8 @@ __all__ = [
 
 
 def init() -> None:
+    """Initializes the agent before starting the agent."""
+
     Config.init()
     logger.init()
     Component.init()
@@ -35,5 +37,7 @@ def init() -> None:
 
 
 def start() -> None:
+    """Starts the agent."""
+
     g = NethackGym()
     g.start()
