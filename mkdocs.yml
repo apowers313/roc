@@ -15,3 +15,5 @@ plugins:
     handlers:
       python:
         paths: [roc]    
+        options:
+          show_if_no_docstring: true
