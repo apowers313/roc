@@ -17,6 +17,9 @@ module_names = [name for _, name, _ in pkgutil.iter_modules(["roc"])]
 
 
 class DebugModuleLevel(BaseModel):
+    """A Pydantic model for storing the logging level. Used primarily for
+    setting per-module logging levels."""
+
     module_name: str
     log_level: str = Field(pattern=r"TRACE|DEBUG|INFO|SUCCESS|WARNING|ERROR|CRITICAL")
 
@@ -31,6 +34,9 @@ class DebugModuleLevel(BaseModel):
 
 
 class LogFilter:
+    """A Callable filter that determines if the loguru record should be logged
+    or not."""
+
     def __init__(
         self,
         *,
@@ -88,6 +94,9 @@ default_log_filter = None
 
 
 def init() -> None:
+    """Initializes the logging module. Installs the filter, fetches the
+    settings, etc."""
+
     global default_log_filter
     default_log_filter = LogFilter()
 

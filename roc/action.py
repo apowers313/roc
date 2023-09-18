@@ -10,11 +10,17 @@ from .event import Event, EventBus
 
 
 class ActionCount(BaseModel):
+    """A Pydantic model for communicating the number of actions that can be
+    taken."""
+
     type: Literal["action_count"] = "action_count"
     action_count: int
 
 
 class ActionGo(BaseModel):
+    """A Pydantic model for communicating that the Gym is waiting for the agent
+    to take an action."""
+
     type: Literal["action_go"] = "action_go"
     go: bool
 
@@ -30,6 +36,8 @@ ActionEvent = Event[ActionData]
 
 @register_component("action", "action", auto=True)
 class Action(Component):
+    """Component for determining which action to take."""
+
     def __init__(self) -> None:
         super().__init__()
         self.action_bus_conn = self.connect_bus(action_bus)
@@ -62,6 +70,9 @@ default_action_registry: dict[str, ActionFn] = {}
 
 
 class register_default_action:
+    """Decorator for registering potential default actions. Default actions are
+    set in the configuration."""
+
     def __init__(self, name: str) -> None:
         self.name = name
 
@@ -76,11 +87,15 @@ class register_default_action:
 
 @register_default_action("pass")
 def default_pass() -> int:
+    """Default action for Nethack that passes (the `.` character in the game)"""
+
     return 19
 
 
 @register_default_action("random")
 def default_random() -> int:
+    """A default action for taking random Nethack actions."""
+
     c = Action.get("action", "action")
     if c.action_count is None:
         raise ValueError("Trying to get action before actions have been configured")
