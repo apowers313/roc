@@ -315,6 +315,48 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#action.Action" class="md-nav__link">
+    Action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.ActionCount" class="md-nav__link">
+    ActionCount
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.ActionGo" class="md-nav__link">
+    ActionGo
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.register_default_action" class="md-nav__link">
+    register_default_action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.default_pass" class="md-nav__link">
+    default_pass()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.default_random" class="md-nav__link">
+    default_random()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -542,6 +584,48 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#action.Action" class="md-nav__link">
+    Action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.ActionCount" class="md-nav__link">
+    ActionCount
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.ActionGo" class="md-nav__link">
+    ActionGo
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.register_default_action" class="md-nav__link">
+    register_default_action
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.default_pass" class="md-nav__link">
+    default_pass()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#action.default_random" class="md-nav__link">
+    default_random()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -579,6 +663,363 @@
 
 
 
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="action.Action" class="doc doc-heading">
+          <code>Action</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="action.component.Component">Component</span></code></p>
+
+  
+      <p>Component for determining which action to take.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Action</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Component for determining which action to take.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_bus_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">action_bus</span><span class="p">)</span>
+
+        <span class="c1"># XXX: function because you can&#39;t type annotate an inline lambda</span>
+        <span class="k">def</span> <span class="nf">count_filter</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">ActionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;action_count&quot;</span>
+
+        <span class="k">def</span> <span class="nf">go_filter</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">ActionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;action_go&quot;</span>
+
+        <span class="c1"># self.action_bus_conn.subject.pipe(</span>
+        <span class="c1">#     op.filter(count_filter),</span>
+        <span class="c1"># ).subscribe(self.recv_action_count)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_bus_conn</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span>
+            <span class="n">listener</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">recv_action_count</span><span class="p">,</span>
+            <span class="nb">filter</span><span class="o">=</span><span class="n">count_filter</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">recv_action_count</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">ActionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">type</span> <span class="o">!=</span> <span class="s2">&quot;action_count&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;bad data received in recv_action_count&quot;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">action_count</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="action.ActionCount" class="doc doc-heading">
+          <code>ActionCount</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+  
+      <p>A Pydantic model for communicating the number of actions that can be
+taken.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ActionCount</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model for communicating the number of actions that can be</span>
+<span class="sd">    taken.&quot;&quot;&quot;</span>
+
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;action_count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;action_count&quot;</span>
+    <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="action.ActionGo" class="doc doc-heading">
+          <code>ActionGo</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+  
+      <p>A Pydantic model for communicating that the Gym is waiting for the agent
+to take an action.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ActionGo</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model for communicating that the Gym is waiting for the agent</span>
+<span class="sd">    to take an action.&quot;&quot;&quot;</span>
+
+    <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;action_go&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;action_go&quot;</span>
+    <span class="n">go</span><span class="p">:</span> <span class="nb">bool</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="action.register_default_action" class="doc doc-heading">
+          <code>register_default_action</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+
+  
+      <p>Decorator for registering potential default actions. Default actions are
+set in the configuration.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">register_default_action</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decorator for registering potential default actions. Default actions are</span>
+<span class="sd">    set in the configuration.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">:</span> <span class="n">ActionFn</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">ActionFn</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">default_action_registry</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Registering duplicate default action &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">default_action_registry</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn</span>
+
+        <span class="k">return</span> <span class="n">fn</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="action.default_pass" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">default_pass</span><span class="p">()</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Default action for Nethack that passes (the <code>.</code> character in the game)</p>
+
+          <details class="quote">
+            <summary>Source code in <code>roc/action.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">88</span>
+<span class="normal">89</span>
+<span class="normal">90</span>
+<span class="normal">91</span>
+<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_default_action</span><span class="p">(</span><span class="s2">&quot;pass&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">default_pass</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Default action for Nethack that passes (the `.` character in the game)&quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="mi">19</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="action.default_random" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">default_random</span><span class="p">()</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>A default action for taking random Nethack actions.</p>
+
+          <details class="quote">
+            <summary>Source code in <code>roc/action.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_default_action</span><span class="p">(</span><span class="s2">&quot;random&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">default_random</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A default action for taking random Nethack actions.&quot;&quot;&quot;</span>
+
+    <span class="n">c</span> <span class="o">=</span> <span class="n">Action</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;action&quot;</span><span class="p">,</span> <span class="s2">&quot;action&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">action_count</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Trying to get action before actions have been configured&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">randrange</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">action_count</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
 
 
 

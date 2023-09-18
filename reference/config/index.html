@@ -375,6 +375,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#config.ConfigInitWarning" class="md-nav__link">
+    ConfigInitWarning
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -582,6 +589,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#config.ConfigInitWarning" class="md-nav__link">
+    ConfigInitWarning
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -635,12 +649,12 @@
           <p class="doc doc-class-bases">
             Bases: <code><span title="pydantic_settings.BaseSettings">BaseSettings</span></code></p>
 
+  
+      <p>A Pydantic settings model for configuration of the agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
 <span class="normal">21</span>
 <span class="normal">22</span>
 <span class="normal">23</span>
@@ -682,7 +696,13 @@
 <span class="normal">59</span>
 <span class="normal">60</span>
 <span class="normal">61</span>
-<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic settings model for configuration of the agent.&quot;&quot;&quot;</span>
+
     <span class="n">model_config</span> <span class="o">=</span> <span class="n">SettingsConfigDict</span><span class="p">(</span>
         <span class="n">env_prefix</span><span class="o">=</span><span class="s2">&quot;roc_&quot;</span><span class="p">,</span>
         <span class="n">env_file</span><span class="o">=</span><span class="s2">&quot;.env&quot;</span><span class="p">,</span>
@@ -711,7 +731,7 @@
         <span class="k">if</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
                 <span class="s2">&quot;Getting settings before config module was initialized. Please call init() first&quot;</span><span class="p">,</span>
-                <span class="n">LogImportWarning</span><span class="p">,</span>
+                <span class="n">ConfigInitWarning</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">Config</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
             <span class="k">assert</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
@@ -764,16 +784,16 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/config.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">53</span>
-<span class="normal">54</span>
-<span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
 <span class="normal">60</span>
 <span class="normal">61</span>
-<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">init</span><span class="p">(</span><span class="o">*</span><span class="p">,</span> <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">use_secrets</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the settings by reading the configuration files and environment variables&quot;&quot;&quot;</span>
 
@@ -792,6 +812,41 @@
 
 
   </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="config.ConfigInitWarning" class="doc doc-heading">
+          <code>ConfigInitWarning</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code>Warning</code></p>
+
+  
+      <p>A Warning for when attempting to access config before it has been initialized.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/config.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
+<span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ConfigInitWarning</span><span class="p">(</span><span class="ne">Warning</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Warning for when attempting to access config before it has been initialized.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span>
+</code></pre></div></td></tr></table></div>
+            </details>
 
   </div>
 

@@ -475,6 +475,55 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#perception.Delta" class="md-nav__link">
+    Delta
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.DeltaData" class="md-nav__link">
+    DeltaData
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.DeltaFeature" class="md-nav__link">
+    DeltaFeature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Diff" class="md-nav__link">
+    Diff
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Feature" class="md-nav__link">
+    Feature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Perception" class="md-nav__link">
+    Perception
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.VisionData" class="md-nav__link">
+    VisionData
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -542,6 +591,55 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#perception.Delta" class="md-nav__link">
+    Delta
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.DeltaData" class="md-nav__link">
+    DeltaData
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.DeltaFeature" class="md-nav__link">
+    DeltaFeature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Diff" class="md-nav__link">
+    Diff
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Feature" class="md-nav__link">
+    Feature
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.Perception" class="md-nav__link">
+    Perception
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#perception.VisionData" class="md-nav__link">
+    VisionData
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -579,6 +677,464 @@ re-assembled as concepts.</p>
 
 
 
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.Delta" class="doc doc-heading">
+          <code>Delta</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><a class="autorefs autorefs-internal" title="perception.Perception" href="#perception.Perception">Perception</a></code></p>
+
+  
+      <p>A component for detecting changes in vision.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Delta</span><span class="p">(</span><span class="n">Perception</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for detecting changes in vision.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_grid</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_perception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;got perception event </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># assert isinstance(e, VisionData)</span>
+        <span class="c1"># reveal_type(e)</span>
+        <span class="c1"># reveal_type(e.data)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
+
+        <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_grid</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_grid</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">screen</span>
+
+        <span class="k">if</span> <span class="n">prev</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="c1"># roughly make sure that things are the same height</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">prev</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr</span><span class="p">)</span>
+        <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">prev</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="n">width</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr</span><span class="p">)</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">curr</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">diff_list</span><span class="p">:</span> <span class="n">DiffList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">height</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">prev</span><span class="p">[</span><span class="n">x</span><span class="p">][</span><span class="n">y</span><span class="p">]</span> <span class="o">!=</span> <span class="n">curr</span><span class="p">[</span><span class="n">x</span><span class="p">][</span><span class="n">y</span><span class="p">]:</span>
+                    <span class="n">diff_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                        <span class="n">Diff</span><span class="p">(</span>
+                            <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span>
+                            <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span>
+                            <span class="n">val1</span><span class="o">=</span><span class="n">prev</span><span class="p">[</span><span class="n">x</span><span class="p">][</span><span class="n">y</span><span class="p">],</span>
+                            <span class="n">val2</span><span class="o">=</span><span class="n">curr</span><span class="p">[</span><span class="n">x</span><span class="p">][</span><span class="n">y</span><span class="p">],</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DeltaData</span><span class="p">(</span><span class="n">diff_list</span><span class="o">=</span><span class="n">diff_list</span><span class="p">))</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.DeltaData" class="doc doc-heading">
+          <code>DeltaData</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+  
+      <p>A Pydantic model for delta features.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DeltaData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model for delta features.&quot;&quot;&quot;</span>
+
+    <span class="n">diff_list</span><span class="p">:</span> <span class="s2">&quot;DiffList&quot;</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.DeltaFeature" class="doc doc-heading">
+          <code>DeltaFeature</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><a class="autorefs autorefs-internal" title="perception.Feature" href="#perception.Feature">Feature</a></code></p>
+
+  
+      <p>A feature for representing vision changes (deltas)</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DeltaFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A feature for representing vision changes (deltas)&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DeltaFeature hash not implemented&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.Diff" class="doc doc-heading">
+          <code>Diff</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+  
+      <p>A Pydantic model for representing a changes in vision.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Diff</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model for representing a changes in vision.&quot;&quot;&quot;</span>
+
+    <span class="n">x</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">y</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">val1</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span>
+    <span class="n">val2</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.Feature" class="doc doc-heading">
+          <code>Feature</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="collections.abc.Hashable">Hashable</span></code></p>
+
+  
+      <p>An abstract feature for communicating features that have been detected.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Feature</span><span class="p">(</span><span class="n">Hashable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An abstract feature for communicating features that have been detected.&quot;&quot;&quot;</span>
+
+    <span class="k">pass</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.Perception" class="doc doc-heading">
+          <code>Perception</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="perception.component.Component">Component</span></code></p>
+
+  
+      <p>The abstract class for Perception components. Handles perception bus
+connections and corresponding clean-up.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Perception</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The abstract class for Perception components. Handles perception bus</span>
+<span class="sd">    connections and corresponding clean-up.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">perception_bus</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">do_perception</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">do_perception</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Perception got </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">init</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">global</span> <span class="n">perception_bus</span>
+        <span class="n">perception_bus</span> <span class="o">=</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">PerceptionData</span><span class="p">](</span><span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="perception.VisionData" class="doc doc-heading">
+          <code>VisionData</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+          <p class="doc doc-class-bases">
+            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+
+  
+      <p>A Pydantic model for the vision perception data.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/perception.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">VisionData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model for the vision perception data.&quot;&quot;&quot;</span>
+
+    <span class="c1"># spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]</span>
+    <span class="n">screen</span><span class="p">:</span> <span class="n">Grid</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
 
 
 

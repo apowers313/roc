@@ -435,6 +435,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#intrinsic.register_intrinsic" class="md-nav__link">
+    register_intrinsic
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -542,6 +549,13 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#intrinsic.register_intrinsic" class="md-nav__link">
+    register_intrinsic
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -576,6 +590,73 @@
 
 
 
+
+<div class="doc doc-object doc-class">
+
+
+
+
+<h2 id="intrinsic.register_intrinsic" class="doc doc-heading">
+          <code>register_intrinsic</code>
+
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+
+  
+      <p>Decorator for registering intrinsics.</p>
+
+            <details class="quote">
+              <summary>Source code in <code>roc/intrinsic.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">register_intrinsic</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Decorator for registering intrinsics.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+    <span class="k">def</span> <span class="fm">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fn</span><span class="p">:</span> <span class="n">IntrinsicFn</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">IntrinsicFn</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">intrinsic_registry</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Registering duplicate intrinsic &#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+
+        <span class="n">intrinsic_registry</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">fn</span>
+
+        <span class="k">return</span> <span class="n">fn</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+
+  
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+  </div>
+
+</div>
 
 
 

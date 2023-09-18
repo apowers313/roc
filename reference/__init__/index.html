@@ -302,6 +302,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#__init__.init" class="md-nav__link">
+    init()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#__init__.start" class="md-nav__link">
+    start()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -556,6 +570,20 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#__init__.init" class="md-nav__link">
+    init()
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#__init__.start" class="md-nav__link">
+    start()
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -784,6 +812,74 @@
 
 </div>
 
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="__init__.init" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">init</span><span class="p">()</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Initializes the agent before starting the agent.</p>
+
+          <details class="quote">
+            <summary>Source code in <code>roc/__init__.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">init</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the agent before starting the agent.&quot;&quot;&quot;</span>
+
+    <span class="n">Config</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+    <span class="n">Component</span><span class="o">.</span><span class="n">init</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+
+<h2 id="__init__.start" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">start</span><span class="p">()</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  
+      <p>Starts the agent.</p>
+
+          <details class="quote">
+            <summary>Source code in <code>roc/__init__.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">start</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Starts the agent.&quot;&quot;&quot;</span>
+
+    <span class="n">g</span> <span class="o">=</span> <span class="n">NethackGym</span><span class="p">()</span>
+    <span class="n">g</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
 
 
 
