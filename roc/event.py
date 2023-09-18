@@ -110,6 +110,11 @@ class EventBus(Generic[EventData]):
         Generic (EventData): The data type that is allowed to be sent over the bus
     """
 
+    name: str
+    """The name of the bus. Used to ensure uniqueness."""
+    subject: rx.Subject[Event[EventData]]
+    """The RxPy Subject that the bus uses to communicate."""
+
     def __init__(self, name: str) -> None:
         if name in eventbus_names:
             raise Exception(f"Duplicate EventBus name: {name}")
