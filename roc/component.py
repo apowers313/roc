@@ -54,6 +54,9 @@ class Component(ABC):
         return e.src is not self
 
     def shutdown(self) -> None:
+        """De-initializes the component, removing any bus connections and any
+        other clean-up that needs to be performed"""
+
         for conn in self.bus_conns:
             for obs in self.bus_conns[conn].attached_bus.subject.observers:
                 obs.on_completed()
