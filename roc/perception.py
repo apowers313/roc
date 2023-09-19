@@ -3,7 +3,10 @@ re-assembled as concepts."""
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from collections.abc import Hashable
+from dataclasses import dataclass
+from typing import cast
 
 from pydantic import BaseModel
 
@@ -25,20 +28,25 @@ class VisionData(BaseModel):
     # spectrum: tuple[int | str, ...]
 
 
-class DeltaData(BaseModel):
-    """A Pydantic model for delta features."""
+# class DeltaData(BaseModel):
+#     """A Pydantic model for delta features."""
 
-    diff_list: "DiffList"
+#     diff_list: "DiffList"
 
 
-PerceptionData = VisionData | DeltaData
+@dataclass
+class FeatureData:
+    feature: Feature
+
+
+PerceptionData = VisionData | FeatureData
 
 PerceptionEvent = Event[PerceptionData]
 
 perception_bus = EventBus[PerceptionData]("perception")
 
 
-class Perception(Component):
+class Perception(Component, ABC):
     """The abstract class for Perception components. Handles perception bus
     connections and corresponding clean-up."""
 
@@ -47,8 +55,9 @@ class Perception(Component):
         self.pb_conn = self.connect_bus(perception_bus)
         self.pb_conn.listen(self.do_perception)
 
+    @abstractmethod
     def do_perception(self, e: PerceptionEvent) -> None:
-        lambda e: logger.info(f"Perception got {e}")
+        ...
 
     @staticmethod
     def init() -> None:
@@ -56,21 +65,58 @@ class Perception(Component):
         perception_bus = EventBus[PerceptionData]("perception")
 
 
+class FeatureExtractor(Perception, ABC):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def do_perception(self, e: PerceptionEvent) -> None:
+        f = self.get_feature(e)
+        if f is None:
+            f = NONE_FEATURE
+
+        feature_data = FeatureData(feature=f)
+        self.pb_conn.send(feature_data)
+
+    @abstractmethod
+    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+        ...
+
+
 class Feature(Hashable):
     """An abstract feature for communicating features that have been detected."""
 
+    origin: Component
+
+    def __init__(self, origin: Component) -> None:
+        self.origin = origin
+
+
+class HashingNoneFeature(Exception):
     pass
+
+
+class NoneFeature:
+    def __hash__(self) -> int:
+        raise HashingNoneFeature("Attempting to hash None feature")
+
+
+# sentinal
+NONE_FEATURE: Feature = cast(Feature, NoneFeature())
 
 
 class DeltaFeature(Feature):
     """A feature for representing vision changes (deltas)"""
+
+    def __init__(self, origin: Component, diff_list: DiffList) -> None:
+        super().__init__(origin)
+        self.diff_list = diff_list
 
     def __hash__(self) -> int:
         raise NotImplementedError("DeltaFeature hash not implemented")
 
 
 @register_component("delta", "perception")
-class Delta(Perception):
+class Delta(FeatureExtractor):
     """A component for detecting changes in vision."""
 
     def __init__(self) -> None:
@@ -80,7 +126,7 @@ class Delta(Perception):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def do_perception(self, e: PerceptionEvent) -> None:
+    def get_feature(self, e: PerceptionEvent) -> Feature | None:
         logger.debug(f"got perception event {e}")
         # assert isinstance(e, VisionData)
         # reveal_type(e)
@@ -92,7 +138,7 @@ class Delta(Perception):
         self.prev_grid = curr = data.screen
 
         if prev is None:
-            return
+            return None
 
         # roughly make sure that things are the same height
         assert len(prev) == len(curr)
@@ -113,7 +159,7 @@ class Delta(Perception):
                         )
                     )
 
-        self.pb_conn.send(DeltaData(diff_list=diff_list))
+        return DeltaFeature(self, diff_list)
 
 
 class Diff(BaseModel):
