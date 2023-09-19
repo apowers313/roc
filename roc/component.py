@@ -41,6 +41,18 @@ class Component(ABC):
         # print("\n\n-- decrementing component count", self.name, self.type, self)
 
     def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:
+        """Create a new bus connection for the component, storing the result for
+        later shutdown.
+
+        Args:
+            bus (EventBus[T]): The event bus to attach to
+
+        Raises:
+            ValueError: if the bus has already been connected to by this component
+
+        Returns:
+            BusConnection[T]: The bus connection for listening or sending events
+        """
         if bus.name in self.bus_conns:
             raise ValueError(
                 f"Component '{self.name}' attempting duplicate connection to bus '{bus.name}'"
@@ -51,6 +63,16 @@ class Component(ABC):
         return conn
 
     def event_filter(self, e: Event[Any]) -> bool:
+        """A filter for any incoming events. By default it filters out events
+        sent by itself, but it is especially useful for creating new filters in
+        sub-classes.
+
+        Args:
+            e (Event[Any]): The event to be evaluated
+
+        Returns:
+            bool: True if the event should be sent, False if it should be dropped
+        """
         return e.src is not self
 
     def shutdown(self) -> None:
@@ -63,6 +85,9 @@ class Component(ABC):
 
     @staticmethod
     def init() -> None:
+        """Loads all components registered as `auto` and perception components
+        in the `perception_components` config field."""
+
         settings = Config.get()
         component_list = default_components
         component_list = component_list.union(settings.perception_components)
@@ -76,21 +101,54 @@ class Component(ABC):
 
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
+        """Retreives a component with the specified name from the registry and
+        creates a new version of it with the specified args. Used by
+        `Config.init` and for testing.
+
+        Args:
+            name (str): The name of the component to get, as specified during
+                its registration
+            type (str): The type of the component to get, as specified during
+                its registration
+            args (Any): Fixed position arguments to pass to the Component
+                constructor
+            kwargs (Any): Keyword args to pass to the Component constructor
+
+        Returns:
+            Self: the component that was created, casted as the calling class.
+            (e.g. `Perception.get(...)` will return a Perception component and
+            `Action.get(...)` will return an Action component)
+        """
+
         reg_str = _component_registry_key(name, type)
         return cast(Self, component_registry[reg_str](*args, **kwargs))
 
     @staticmethod
     def get_component_count() -> int:
+        """Returns the number of currently created Components. The number goes
+        up on __init__ and down on __del__. Primarily used for testing to ensure
+        Components are being shutdown appropriately.
+
+        Returns:
+            int: The number of currently active Component instances
+        """
         global component_count
         return component_count
 
     @staticmethod
     def deregister(name: str, type: str) -> None:
+        """Removes a component from the Component registry. Primarlly used for testing.
+
+        Args:
+            name (str): The name of the Component to deregister
+            type (str): The type of the Component to deregister
+        """
         reg_str = _component_registry_key(name, type)
         del component_registry[reg_str]
 
     @staticmethod
     def reset() -> None:
+        """Shuts down all components"""
         # shutdown all components
         global loaded_components
         for name in loaded_components:
