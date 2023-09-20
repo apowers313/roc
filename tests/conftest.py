@@ -11,7 +11,7 @@ from roc.component import Component, register_component
 from roc.config import Config
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
-from roc.perception import PerceptionData, perception_bus
+from roc.perception import Perception, PerceptionData
 
 
 @pytest.fixture(autouse=True)
@@ -43,7 +43,14 @@ def eb_reset() -> None:
 
 
 @pytest.fixture(scope="function", autouse=True)
-def do_init() -> None:
+def do_init() -> Generator[None, None, None]:
+    Config.reset()
+    Config.init()
+
+    yield
+
+    # cleanup for clear_db fixture
+    Config.reset()
     Config.init()
 
 
@@ -98,7 +105,7 @@ def empty_components() -> None:
 
 @pytest.fixture
 def env_bus_conn(fake_component) -> BusConnection[PerceptionData]:
-    return perception_bus.connect(fake_component)
+    return Perception.bus.connect(fake_component)
 
 
 @pytest.fixture
