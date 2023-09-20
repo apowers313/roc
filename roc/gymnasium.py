@@ -13,7 +13,7 @@ from .action import ActionCount, action_bus
 from .component import Component
 from .config import Config
 from .logger import logger
-from .perception import VisionData, perception_bus
+from .perception import Perception, VisionData
 
 # TODO: try to import 'gym' and 'gymnasium' for proper typing
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
@@ -35,7 +35,7 @@ class Gym(Component, ABC):
         self.env = gym.make(gym_id, **gym_opts)
 
         # setup communications
-        self.env_bus = perception_bus
+        self.env_bus = Perception.bus
         self.action_bus = action_bus
         self.env_bus_conn = self.env_bus.connect(self)
         self.action_bus_conn = self.action_bus.connect(self)
@@ -168,7 +168,7 @@ class condition_bits(IntEnum):
     # fmt: on
 
 
-class BaselineStats(BaseModel):
+class BottomlineStats(BaseModel):
     """A Pydantic model representing the Nethack bottom line statistics."""
 
     X: int
@@ -230,16 +230,16 @@ class NethackGym(Gym):
     def send_intrinsics(self, obs: Any) -> None:
         pass
         # NOTE: obs["blstats"] is an ndarray object from numpy
-        # bl = obs["blstats"].tolist()
-        # blstat_args = {e.name: bl[e.value] for e in blstat_offsets}
+        bl = obs["blstats"].tolist()
+        blstat_args = {e.name: bl[e.value] for e in blstat_offsets}
         # print("blstat_args", blstat_args)
 
-        # blstats = BaselineStats(**blstat_args)
+        blstats = BottomlineStats(**blstat_args)
         # print("blstats", blstats.model_dump())
-        # blstat_conds = {bit.name for bit in condition_bits if blstats.CONDITION & bit.value}
-        # # TODO: remove... just curious if conditions ever get set
-        # if len(blstat_conds):
-        #     logger.warning("!!! FOUND CONDITIONS", blstat_conds)
+        blstat_conds = {bit.name for bit in condition_bits if blstats.CONDITION & bit.value}
+        # TODO: remove... just curious if conditions ever get set
+        if len(blstat_conds):
+            logger.warning("!!! FOUND CONDITIONS", blstat_conds)
 
 
 dump_env_file: Any = None

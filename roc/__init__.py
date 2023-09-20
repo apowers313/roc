@@ -11,7 +11,7 @@ from .action import ActionData, action_bus
 from .component import Component
 from .config import Config
 from .gymnasium import NethackGym
-from .perception import PerceptionData, perception_bus
+from .perception import Perception, PerceptionData
 
 __all__ = [
     # Component Exports
@@ -19,7 +19,7 @@ __all__ = [
     # Gym Exports
     "GymComponent",
     # Perception Interface Exports
-    "perception_bus",
+    "Perception",
     "PerceptionData",
     # Action Exports
     "action_bus",

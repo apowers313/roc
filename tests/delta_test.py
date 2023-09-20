@@ -6,7 +6,8 @@ from helpers.nethack_screens import screens
 from helpers.util import component_response_args
 
 from roc.event import Event
-from roc.perception import NONE_FEATURE, DeltaFeature, VisionData
+from roc.feature_extractors.delta import DeltaFeature
+from roc.perception import NONE_FEATURE, VisionData
 
 screen0 = VisionData(screen=screens[0]["chars"])
 screen1 = VisionData(screen=screens[1]["chars"])
