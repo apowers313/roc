@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -55,12 +56,27 @@ class Config(BaseSettings):
         return _config_singleton
 
     @staticmethod
-    def init(*, force: bool = False, use_secrets: bool = True) -> None:
+    def init(
+        config: dict[str, Any] | None = None,
+        *,
+        force: bool = False,
+        use_secrets: bool = True,
+    ) -> None:
         """Initializes the settings by reading the configuration files and environment variables"""
 
         global _config_singleton
         initialized = _config_singleton is not None
         if initialized and not force:
+            warnings.warn(
+                "Config already initialized, returning existing configuration.",
+                ConfigInitWarning,
+            )
             return
 
-        _config_singleton = Config()
+        passed_conf = config or {}
+        _config_singleton = Config(**passed_conf)
+
+    @staticmethod
+    def reset() -> None:
+        global _config_singleton
+        _config_singleton = None
