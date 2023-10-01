@@ -30,7 +30,7 @@ classifiers = [ #! Update me
 [tool.poetry.dependencies]
 python = "^3.10"
 reactivex = "^4.0.4"
-loguru = "^0.7.0"
+loguru = "^0.7.2"
 click = "^8.1.4"
 gym = "0.23"
 cachetools = "^5.3.1"
