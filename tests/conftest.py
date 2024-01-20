@@ -120,6 +120,14 @@ def testing_args(request) -> str:
 
 @pytest.fixture
 def component_response(request, mocker, fake_component) -> MagicMock:
+    # requires that request.param contain the following tuple:
+    # component_name: the name of the component to test
+    # component_type: the type of component to test; name and type will be
+    #     passed to Component.get
+    # input_conn_attr: the attribute that contains the input bus for events
+    # output_conn_attr: the attribute that contains the output bus for events;
+    #     if None, the input bus will be used
+    # vals: the values to send as events
     component_name, component_type, input_conn_attr, output_conn_attr, vals = request.param
     c = Component.get(component_name, component_type)
     if output_conn_attr is None:
