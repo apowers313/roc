@@ -24,11 +24,17 @@ class FakeData:
 
 
 def component_response_args(
+    # name of the component to test
     name: str,
+    # type of the component to test
     type: str,
+    # name of the class attribute that is the bus to send events on
     input_conn_attr: str,
+    # values to send to the component as events
     vals: list[Any],
     *,
+    # optional class attribute of where the result events can be found
+    # defaults to input bus
     output_conn_attr: str | None = None,
 ) -> Any:
     # component_name, component_type, input_conn_attr, output_conn_attr, val =
