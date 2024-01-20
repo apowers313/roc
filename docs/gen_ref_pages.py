@@ -13,7 +13,7 @@ for path in sorted(Path(BASEDIR).rglob("*.py")):
     doc_path = path.relative_to(BASEDIR).with_suffix(".md")
     full_doc_path = Path("reference", doc_path)
 
-    parts = list(module_path.parts)
+    parts = tuple(module_path.parts)
 
     # if parts[-1] == "__init__":
     #     parts = parts[:-1]

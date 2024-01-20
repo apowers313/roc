@@ -198,9 +198,11 @@ class Edge(BaseModel, extra="allow"):
     """
 
     id: EdgeId = Field(exclude=True)
-    type: str = Field(literal=True, exclude=True)
-    src_id: NodeId = Field(literal=True, exclude=True)
-    dst_id: NodeId = Field(literal=True, exclude=True)
+    # XXX: type, src_id, and dst_id used to be pydantic literals, but updating
+    # the pydantic version broke them
+    type: str = Field(exclude=True)
+    src_id: NodeId = Field(exclude=True)
+    dst_id: NodeId = Field(exclude=True)
 
     @field_validator("id", mode="before")
     def default_id(cls, id: EdgeId | None) -> EdgeId:
