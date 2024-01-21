@@ -54,8 +54,19 @@ def do_init() -> Generator[None, None, None]:
     Config.init()
 
 
+# @pytest.fixture(scope="session", autouse=True)
+# def clear_db() -> Generator[None, None, None]:
+#     yield
+
+#     db = GraphDB.singleton()
+#     # delete all test nodes (which may have edges that need to be detached)
+#     db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
+#     # delete all nodes without relationships
+#     db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
+
+
 @pytest.fixture(scope="session", autouse=True)
-def clear_db() -> Generator[None, None, None]:
+def close_db() -> Generator[None, None, None]:
     yield
 
     db = GraphDB.singleton()
@@ -63,6 +74,8 @@ def clear_db() -> Generator[None, None, None]:
     db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
     # delete all nodes without relationships
     db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
+
+    db.close()
 
 
 @pytest.fixture
