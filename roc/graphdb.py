@@ -49,6 +49,7 @@ class GraphDB:
         self.lazy = settings.db_lazy
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
+        self.closed = False
 
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
@@ -91,12 +92,17 @@ class GraphDB:
         connection.autocommit = True
         return connection
 
+    def close(self) -> None:
+        self.db_conn.close()
+        self.closed = True
+
     @classmethod
     def singleton(cls) -> GraphDB:
         global graph_db_singleton
         if not graph_db_singleton:
             graph_db_singleton = GraphDB()
 
+        assert graph_db_singleton.closed is False
         return graph_db_singleton
 
 
