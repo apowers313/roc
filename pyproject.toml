@@ -203,6 +203,7 @@ filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
   "ignore::roc.graphdb.ErrorSavingDuringDelWarning",
+  "ignore::ResourceWarning",
 ]
 
 markers = [
@@ -222,7 +223,7 @@ addopts = [
   #"--cov-append",
   #"--no-cov-on-fail",
   # "--cov-fail-under=80",
-  "--emoji",
+  # "--emoji",
   #"-rA",
   "-s",
   "-m not slow",
