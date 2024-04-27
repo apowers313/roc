@@ -143,7 +143,7 @@ exclude = ["tests/helpers/nethack_screens.py"]
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
-python_version = "3.10"
+python_version = "3.11"
 pretty = true
 show_traceback = true
 color_output = true
