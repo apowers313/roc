@@ -20,5 +20,8 @@ Reinforcement Learning of Concepts
 
 * Installation:
   * make setup
+  * make test
   * poetry run play
-  * make check-codestyle
+
+* Dev Tools
+  * make lint
