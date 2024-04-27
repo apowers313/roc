@@ -74,7 +74,7 @@ mypy:
 .PHONY: check-safety
 check-safety:
 	poetry check
-	poetry run safety check --full-report -i 51457 -i 62044 -i 66742
+	poetry run safety check --full-report -i 51457
 	poetry run bandit -ll --recursive roc tests
 
 .PHONY: update-dev-deps
