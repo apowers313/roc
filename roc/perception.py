@@ -54,8 +54,7 @@ class Perception(Component, ABC):
         self.pb_conn.listen(self.do_perception)
 
     @abstractmethod
-    def do_perception(self, e: PerceptionEvent) -> None:
-        ...
+    def do_perception(self, e: PerceptionEvent) -> None: ...
 
     @classmethod
     def init(cls) -> None:
@@ -76,8 +75,7 @@ class FeatureExtractor(Perception, ABC):
         self.pb_conn.send(feature_data)
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
-        ...
+    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
 
 
 class Feature(Hashable):
