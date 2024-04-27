@@ -143,7 +143,7 @@ class TestNode:
         Node.save(n)
         assert not n.new
         assert n.id > 0
-        n.foo = "bar"
+        n.foo = "bar"  # type: ignore
         del n.testname  # type: ignore
         n.labels.add("Bob")
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
@@ -228,8 +228,8 @@ class TestNode:
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
         n.labels.add("TestNode")
-        n.beer = "yum"
-        n.number = 42
+        n.beer = "yum"  # type: ignore
+        n.number = 42  # type: ignore
         Node.update(n)
 
         spy.assert_called_once()
@@ -287,8 +287,8 @@ class TestNode:
         n = Node.create(Node(labels=["TestNode"]))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
-        n.foo = "bar"
-        n.baz = "bat"
+        n.foo = "bar"  # type: ignore
+        n.baz = "bat"  # type: ignore
         Node.update(n)
 
         spy.assert_called_once()
@@ -438,7 +438,7 @@ class TestEdgeList:
 
         assert e in n.src_edges
         assert e.id in n.src_edges
-        assert "bob" not in n.src_edges
+        assert "bob" not in n.src_edges  # type: ignore
 
 
 class TestEdge:
@@ -563,7 +563,7 @@ class TestEdge:
 
     def test_edge_create_on_delete(self, mocker) -> None:
         e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
-        e.foo = "deleting-edge"
+        e.foo = "deleting-edge"  # type: ignore
         Edge.create(e)
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
 
@@ -607,9 +607,8 @@ class TestEdge:
     def test_edge_update(self, mocker) -> None:
         e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
-
-        e.wine = "cab"
-        e.more = True
+        e.wine = "cab"  # type: ignore
+        e.more = True  # type: ignore
         Edge.update(e)
 
         spy.assert_called_once()
