@@ -42,7 +42,7 @@ pydantic-settings = "^2.0.3"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.1"
-black = { version = "^23.3.0" }
+black = "^24.4.2"
 darglint = "^1.8.1"
 isort = { extras = ["colors"], version = "^5.10.1" }
 mypy = "^1.4.1"
@@ -95,7 +95,7 @@ DEP001 = ["gymnasium"]
 
 [tool.black]
 # https://github.com/psf/black
-target-version = ["py310"]
+target-version = ["py311"]
 line-length = 100
 
 exclude = '''
