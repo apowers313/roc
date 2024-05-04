@@ -1,6 +1,4 @@
 {
-    "python.linting.mypyEnabled": true,
-    "python.formatting.provider": "black",
     "python.testing.pytestArgs": [
         "-s",
         "."
@@ -11,5 +9,9 @@
     "editor.codeActionsOnSave": {
         "source.organizeImports": "explicit",
         "source.fixAll": "explicit"
-    }
+    },
+    "mypy-type-checker.importStrategy": "fromEnvironment",
+    "mypy-type-checker.path": [
+        "./.venv/bin/mypy"
+    ]
 }
