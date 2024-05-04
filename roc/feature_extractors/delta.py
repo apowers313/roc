@@ -3,7 +3,6 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from ..component import Component, register_component
-from ..logger import logger
 from ..perception import Feature, FeatureExtractor, Grid, PerceptionEvent, VisionData
 
 
@@ -30,7 +29,6 @@ class Delta(FeatureExtractor):
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
-        logger.debug(f"got perception event {e}")
         # assert isinstance(e, VisionData)
         # reveal_type(e)
         # reveal_type(e.data)

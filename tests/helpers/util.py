@@ -1,7 +1,11 @@
 import re
-from typing import Any
+from typing import Any, Generic, TypeVar, cast
+from unittest.mock import MagicMock
 
 import pytest
+
+from roc.component import Component
+from roc.event import BusConnection, EventBus
 
 
 def normalize_whitespace(s: str) -> str:
@@ -21,6 +25,41 @@ class FakeData:
     def __init__(self, foo: str, baz: int):
         self.foo = foo
         self.baz = baz
+
+
+RecvBusDataType = TypeVar("RecvBusDataType")
+SendBusDataType = TypeVar("SendBusDataType")
+
+
+class StubComponent(Component, Generic[RecvBusDataType, SendBusDataType]):
+    """A dummy component for testing communications and capturing the results for inspection"""
+
+    name: str = "testing-stub"
+    type: str = "stub"
+
+    def __init__(
+        self,
+        send_bus: EventBus[SendBusDataType],
+        recv_bus: EventBus[RecvBusDataType],
+        *,
+        name: str = "testing-stub",
+        # filter: Callable[[Event[EventData]], None] | None = None,
+    ):
+        self.name = name
+        super().__init__()
+
+        # setup listening
+        self.recv_bus = recv_bus
+        self.recv_conn = self.connect_bus(recv_bus)
+        self.recv = MagicMock(spec=lambda *args, **kwargs: None, name="name")
+        self.recv_conn.listen(self.recv)
+
+        # setup sending
+        self.send_bus = send_bus
+        if send_bus is not recv_bus:
+            self.send_conn = self.connect_bus(send_bus)
+        else:
+            self.send_conn = cast(BusConnection[SendBusDataType], self.recv_conn)
 
 
 def component_response_args(

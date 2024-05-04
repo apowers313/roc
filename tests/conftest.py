@@ -1,7 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 import gc
-from typing import Any, Generator, cast
-from unittest.mock import MagicMock
+from typing import Any, Generator
 
 import pytest
 from helpers.util import FakeData
@@ -54,17 +53,6 @@ def do_init() -> Generator[None, None, None]:
     Config.init()
 
 
-# @pytest.fixture(scope="session", autouse=True)
-# def clear_db() -> Generator[None, None, None]:
-#     yield
-
-#     db = GraphDB.singleton()
-#     # delete all test nodes (which may have edges that need to be detached)
-#     db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
-#     # delete all nodes without relationships
-#     db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
-
-
 @pytest.fixture(scope="session", autouse=True)
 def close_db() -> Generator[None, None, None]:
     yield
@@ -111,9 +99,16 @@ def fake_bus() -> EventBus[FakeData]:
 
 
 @pytest.fixture
-def empty_components() -> None:
+def empty_components() -> Generator[None, None, None]:
     Component.reset()
     gc.collect(2)
+    assert Component.get_component_count() == 0
+
+    yield
+
+    Component.reset()
+    gc.collect(2)
+    assert Component.get_component_count() == 0
 
 
 @pytest.fixture
@@ -129,43 +124,6 @@ def action_bus_conn(fake_component) -> BusConnection[ActionData]:
 @pytest.fixture
 def testing_args(request) -> str:
     return f"ret {request.param}"
-
-
-@pytest.fixture
-def component_response(request, mocker, fake_component) -> MagicMock:
-    # requires that request.param contain the following tuple:
-    # component_name: the name of the component to test
-    # component_type: the type of component to test; name and type will be
-    #     passed to Component.get
-    # input_conn_attr: the attribute that contains the input bus for events
-    # output_conn_attr: the attribute that contains the output bus for events;
-    #     if None, the input bus will be used
-    # vals: the values to send as events
-    component_name, component_type, input_conn_attr, output_conn_attr, vals = request.param
-    c = Component.get(component_name, component_type)
-    if output_conn_attr is None:
-        output_conn_attr = input_conn_attr
-
-    assert hasattr(c, input_conn_attr)
-    assert hasattr(c, output_conn_attr)
-
-    input_conn = getattr(c, input_conn_attr)
-    output_conn = getattr(c, output_conn_attr)
-    assert isinstance(input_conn, BusConnection)
-    assert isinstance(output_conn, BusConnection)
-
-    fake_conn_send = fake_component.connect_bus(input_conn.attached_bus)
-    if input_conn is not output_conn:
-        fake_conn_recv = fake_component.connect_bus(output_conn.attached_bus)
-    else:
-        fake_conn_recv = fake_conn_send
-
-    stub = mocker.stub()
-    fake_conn_recv.listen(stub, filter=lambda e: e.data not in vals)
-    for val in vals:
-        fake_conn_send.send(val)
-
-    return cast(MagicMock, stub)
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:
