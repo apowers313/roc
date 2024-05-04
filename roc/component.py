@@ -7,6 +7,7 @@ from __future__ import annotations
 # import traceback
 from abc import ABC
 from typing import TYPE_CHECKING, Any, TypeVar, cast
+from weakref import WeakSet
 
 from typing_extensions import Self
 
@@ -17,7 +18,7 @@ if TYPE_CHECKING:
     from .event import BusConnection, Event, EventBus
 
 loaded_components: dict[str, Component] = {}
-component_count = 0
+component_set: WeakSet[Component] = WeakSet()
 
 T = TypeVar("T")
 
@@ -29,15 +30,15 @@ class Component(ABC):
     type: str = "<type unassigned>"
 
     def __init__(self) -> None:
-        global component_count
-        component_count = component_count + 1
+        global component_set
+        component_set.add(self)
         self.bus_conns: dict[str, BusConnection[Any]] = {}
         # print("\n\n++ incrementing component count:", self.name, self.type, self)
         # traceback.print_stack()
 
     def __del__(self) -> None:
-        global component_count
-        component_count = component_count - 1
+        global component_set
+        component_set.add(self)
         # print("\n\n-- decrementing component count", self.name, self.type, self)
 
     def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:
@@ -132,8 +133,10 @@ class Component(ABC):
         Returns:
             int: The number of currently active Component instances
         """
-        global component_count
-        return component_count
+        # global component_count
+        # return component_count
+        global component_set
+        return len(component_set)
 
     @staticmethod
     def deregister(name: str, type: str) -> None:
@@ -157,6 +160,10 @@ class Component(ABC):
             c.shutdown()
 
         loaded_components.clear()
+
+        global component_set
+        for c in component_set:
+            c.shutdown()
 
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)

@@ -1,12 +1,12 @@
 # mypy: disable-error-code="no-untyped-def"
 
-from unittest.mock import MagicMock
 
 from helpers.nethack_screens import screens
-from helpers.util import component_response_args
+from helpers.util import StubComponent
 
+from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.delta import DeltaFeature
+from roc.feature_extractors.delta import Delta, DeltaFeature
 from roc.perception import NONE_FEATURE, VisionData
 
 screen0 = VisionData(screen=screens[0]["chars"])
@@ -14,20 +14,27 @@ screen1 = VisionData(screen=screens[1]["chars"])
 
 
 class TestDelta:
-    @component_response_args("delta", "perception", "pb_conn", [screen0, screen1])
-    def test_basic(self, empty_components, component_response) -> None:
-        assert isinstance(component_response, MagicMock)
-        assert component_response.call_count == 2
-        assert len(component_response.call_args_list[0].args) == 1
+    def test_basic(self, empty_components) -> None:
+        c = Component.get("delta", "perception")
+        assert isinstance(c, Delta)
+        s = StubComponent(
+            send_bus=c.pb_conn.attached_bus,
+            recv_bus=c.pb_conn.attached_bus,
+        )
+
+        s.send_conn.send(screen0)
+        s.send_conn.send(screen1)
+
+        print("mock call count", s.recv.call_count)
 
         # first event
-        e = component_response.call_args_list[0].args[0]
+        e = s.recv.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert e.data.feature is NONE_FEATURE
 
         # second event
-        assert len(component_response.call_args_list) == 2
-        e = component_response.call_args_list[1].args[0]
+        assert len(s.recv.call_args_list) == 2
+        e = s.recv.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data.feature, DeltaFeature)
         diff_list = e.data.feature.diff_list
