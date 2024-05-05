@@ -27,11 +27,11 @@ class FakeData:
         self.baz = baz
 
 
-RecvBusDataType = TypeVar("RecvBusDataType")
-SendBusDataType = TypeVar("SendBusDataType")
+OutputDataType = TypeVar("OutputDataType")
+InputDataType = TypeVar("InputDataType")
 
 
-class StubComponent(Component, Generic[RecvBusDataType, SendBusDataType]):
+class StubComponent(Component, Generic[OutputDataType, InputDataType]):
     """A dummy component for testing communications and capturing the results for inspection"""
 
     name: str = "testing-stub"
@@ -39,8 +39,8 @@ class StubComponent(Component, Generic[RecvBusDataType, SendBusDataType]):
 
     def __init__(
         self,
-        send_bus: EventBus[SendBusDataType],
-        recv_bus: EventBus[RecvBusDataType],
+        input_bus: EventBus[InputDataType],
+        output_bus: EventBus[OutputDataType],
         *,
         name: str = "testing-stub",
         # filter: Callable[[Event[EventData]], None] | None = None,
@@ -48,18 +48,18 @@ class StubComponent(Component, Generic[RecvBusDataType, SendBusDataType]):
         self.name = name
         super().__init__()
 
-        # setup listening
-        self.recv_bus = recv_bus
-        self.recv_conn = self.connect_bus(recv_bus)
-        self.recv = MagicMock(spec=lambda *args, **kwargs: None, name="name")
-        self.recv_conn.listen(self.recv)
+        # setup output
+        self.output_bus = output_bus
+        self.output_conn = self.connect_bus(output_bus)
+        self.output = MagicMock(spec=lambda *args, **kwargs: None, name="name")
+        self.output_conn.listen(self.output)
 
-        # setup sending
-        self.send_bus = send_bus
-        if send_bus is not recv_bus:
-            self.send_conn = self.connect_bus(send_bus)
+        # setup input
+        self.input_bus = input_bus
+        if input_bus is not output_bus:
+            self.input_conn = self.connect_bus(input_bus)
         else:
-            self.send_conn = cast(BusConnection[SendBusDataType], self.recv_conn)
+            self.input_conn = cast(BusConnection[InputDataType], self.output_conn)
 
 
 def component_response_args(
