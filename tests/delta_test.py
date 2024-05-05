@@ -18,23 +18,21 @@ class TestDelta:
         c = Component.get("delta", "perception")
         assert isinstance(c, Delta)
         s = StubComponent(
-            send_bus=c.pb_conn.attached_bus,
-            recv_bus=c.pb_conn.attached_bus,
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
         )
 
-        s.send_conn.send(screen0)
-        s.send_conn.send(screen1)
-
-        print("mock call count", s.recv.call_count)
+        s.input_conn.send(screen0)
+        s.input_conn.send(screen1)
 
         # first event
-        e = s.recv.call_args_list[0].args[0]
+        e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert e.data.feature is NONE_FEATURE
 
         # second event
-        assert len(s.recv.call_args_list) == 2
-        e = s.recv.call_args_list[1].args[0]
+        assert len(s.output.call_args_list) == 2
+        e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data.feature, DeltaFeature)
         diff_list = e.data.feature.diff_list
