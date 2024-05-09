@@ -6,7 +6,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import cast
 
 from pydantic import BaseModel
 
@@ -27,18 +26,21 @@ class VisionData(BaseModel):
     # spectrum: tuple[int | str, ...]
 
 
-# class DeltaData(BaseModel):
-#     """A Pydantic model for delta features."""
-
-#     diff_list: "DiffList"
-
-
 @dataclass
-class FeatureData:
-    feature: Feature
+class Settled:
+    pass
 
 
-PerceptionData = VisionData | FeatureData
+class Feature(Hashable):
+    """An abstract feature for communicating features that have been detected."""
+
+    origin: Component
+
+    def __init__(self, origin: Component) -> None:
+        self.origin = origin
+
+
+PerceptionData = VisionData | Feature | Settled
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -69,32 +71,29 @@ class FeatureExtractor(Perception, ABC):
     def do_perception(self, e: PerceptionEvent) -> None:
         f = self.get_feature(e)
         if f is None:
-            f = NONE_FEATURE
+            return
 
-        feature_data = FeatureData(feature=f)
-        self.pb_conn.send(feature_data)
+        self.pb_conn.send(f)
+
+    def settled(self) -> None:
+        self.pb_conn.send(Settled())
 
     @abstractmethod
     def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
-
-
-class Feature(Hashable):
-    """An abstract feature for communicating features that have been detected."""
-
-    origin: Component
-
-    def __init__(self, origin: Component) -> None:
-        self.origin = origin
 
 
 class HashingNoneFeature(Exception):
     pass
 
 
-class NoneFeature:
-    def __hash__(self) -> int:
-        raise HashingNoneFeature("Attempting to hash None feature")
+# @dataclass
+# class FeatureData:
+#     feature: Feature
 
 
-# sentinal
-NONE_FEATURE: Feature = cast(Feature, NoneFeature())
+# class SettledData:
+#     def __hash__(self) -> int:
+#         raise HashingNoneFeature("Attempting to hash None feature")
+
+#     def __repr__(self) -> str:
+#         return "<<SETTLED>>"
