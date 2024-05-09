@@ -51,6 +51,10 @@ class Event(ABC, Generic[EventData]):
         return f"[EVENT: {self.src.name} >>> {self.bus.name}]: {data_str}"
 
 
+EventFilter = Callable[[Event[EventData]], bool]
+EventListener = Callable[[Event[EventData]], None]
+
+
 class BusConnection(Generic[EventData]):
     """A connection between an EventBus and a Component, used to send Events
 
@@ -77,9 +81,9 @@ class BusConnection(Generic[EventData]):
 
     def listen(
         self,
-        listener: Callable[[Event[EventData]], None],
+        listener: EventListener[EventData],
         *,
-        filter: Callable[[Event[EventData]], bool] | None = None,
+        filter: EventFilter[EventData] | None = None,
     ) -> None:
         pipe_args: list[Callable[[Any], Observable[Event[EventData]]]] = [
             # op.filter(lambda e: e.src is not self.attached_component),

@@ -1,11 +1,11 @@
 import re
-from typing import Any, Generic, TypeVar, cast
+from typing import Any, Callable, Generic, TypeVar, cast
 from unittest.mock import MagicMock
 
 import pytest
 
 from roc.component import Component
-from roc.event import BusConnection, EventBus
+from roc.event import BusConnection, Event, EventBus, EventFilter
 
 
 def normalize_whitespace(s: str) -> str:
@@ -43,16 +43,26 @@ class StubComponent(Component, Generic[OutputDataType, InputDataType]):
         output_bus: EventBus[OutputDataType],
         *,
         name: str = "testing-stub",
-        # filter: Callable[[Event[EventData]], None] | None = None,
+        filter: Callable[[Event[OutputDataType]], bool] | None = None,
     ):
         self.name = name
         super().__init__()
+
+        # setup output filter
+        def pass_filter(e: Event[OutputDataType]) -> bool:
+            return True
+
+        if filter is not None:
+            self.filter: EventFilter[OutputDataType] = filter
+        else:
+            self.filter = pass_filter
 
         # setup output
         self.output_bus = output_bus
         self.output_conn = self.connect_bus(output_bus)
         self.output = MagicMock(spec=lambda *args, **kwargs: None, name="name")
-        self.output_conn.listen(self.output)
+        self.output_conn.listen(self.output, filter=self.filter)
+        # self.output_conn.listen(self.output)
 
         # setup input
         self.input_bus = input_bus
