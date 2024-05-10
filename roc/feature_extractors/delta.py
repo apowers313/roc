@@ -57,16 +57,16 @@ class Delta(FeatureExtractor):
         assert len(prev) == len(curr)
         assert len(prev[0]) == len(curr[0])
 
-        width = len(curr)
-        height = len(curr[0])
-        for x in range(width):
-            for y in range(height):
-                if prev[x][y] != curr[x][y]:
+        height = len(curr)
+        width = len(curr[0])
+        for y in range(height):
+            for x in range(width):
+                if prev[y][x] != curr[y][x]:
                     d = Diff(
                         x=x,
                         y=y,
-                        old_val=prev[x][y],
-                        new_val=curr[x][y],
+                        old_val=prev[y][x],
+                        new_val=curr[y][x],
                     )
                     f = DeltaFeature(self, d)
                     # diff_list.append(d)
