@@ -41,8 +41,8 @@ class TestDelta:
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
         # Diff(x=6, y=16, val1=102, val2=46), Diff(x=6, y=17, val1=46, val2=102)])
-        assert d.x == 6
-        assert d.y == 16
+        assert d.x == 16
+        assert d.y == 6
         assert d.old_val == 102  # f
         assert d.new_val == 46  # .
 
@@ -51,8 +51,8 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
-        assert d.x == 6
-        assert d.y == 17
+        assert d.x == 17
+        assert d.y == 6
         assert d.old_val == 46  # .
         assert d.new_val == 102  # f
         # kitten moved right!
@@ -117,8 +117,8 @@ class TestDelta:
         d = e.data.diff
 
         # Diff(x=6, y=16, val1=102, val2=46), Diff(x=6, y=17, val1=46, val2=102)])
-        assert d.x == 6
-        assert d.y == 16
+        assert d.x == 16
+        assert d.y == 6
         assert d.old_val == 102  # f
         assert d.new_val == 46  # .
 
@@ -126,8 +126,8 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
-        assert d.x == 6
-        assert d.y == 17
+        assert d.x == 17
+        assert d.y == 6
         assert d.old_val == 46  # .
         assert d.new_val == 102  # f
 
@@ -148,8 +148,8 @@ class TestDelta:
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
         # (5, 18): 120 -> 36
-        assert d.x == 5
-        assert d.y == 18
+        assert d.x == 18
+        assert d.y == 5
         assert d.old_val == 120  # x
         assert d.new_val == 36  # $
         # grid bug dies and drops money
@@ -167,8 +167,8 @@ class TestDelta:
         d = e.data.diff
 
         # (5, 18): 36 -> 102
-        assert d.x == 5
-        assert d.y == 18
+        assert d.x == 18
+        assert d.y == 5
         assert d.old_val == 36  # $
         assert d.new_val == 102  # f
 
@@ -177,8 +177,8 @@ class TestDelta:
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
         # (6, 17): 102 -> 46
-        assert d.x == 6
-        assert d.y == 17
+        assert d.x == 17
+        assert d.y == 6
         assert d.old_val == 102  # f
         assert d.new_val == 46  # .
 
