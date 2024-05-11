@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, Grid, PerceptionEvent, VisionData
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
 class DeltaFeature(Feature):
@@ -34,7 +34,7 @@ class Delta(FeatureExtractor):
 
     def __init__(self) -> None:
         super().__init__()
-        self.prev_grid: Grid | None = None
+        self.prev_viz: VisionData | None = None
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
@@ -46,32 +46,44 @@ class Delta(FeatureExtractor):
         data = e.data
         assert isinstance(data, VisionData)
 
-        prev = self.prev_grid
-        self.prev_grid = curr = data.screen
+        prev = self.prev_viz
+        self.prev_viz = curr = data
 
         if prev is None:
+            # can't get difference when there was nothing before this
             self.settled()
             return None
 
-        # roughly make sure that things are the same height
-        assert len(prev) == len(curr)
-        assert len(prev[0]) == len(curr[0])
+        # roughly make sure that things are the same size
+        assert prev.height == curr.height
+        assert prev.width == curr.width
 
-        height = len(curr)
-        width = len(curr[0])
-        for y in range(height):
-            for x in range(width):
-                if prev[y][x] != curr[y][x]:
-                    d = Diff(
-                        x=x,
-                        y=y,
-                        old_val=prev[y][x],
-                        new_val=curr[y][x],
-                    )
-                    f = DeltaFeature(self, d)
-                    # diff_list.append(d)
-                    self.pb_conn.send(f)
-
+        # height = len(curr)
+        # width = len(curr[0])
+        # for y in range(height):
+        #     for x in range(width):
+        #         if prev[y][x] != curr[y][x]:
+        #             d = Diff(
+        #                 x=x,
+        #                 y=y,
+        #                 old_val=prev[y][x],
+        #                 new_val=curr[y][x],
+        #             )
+        #             f = DeltaFeature(self, d)
+        #             # diff_list.append(d)
+        #             self.pb_conn.send(f)
+        for new_point in curr:
+            old_point = prev.get_point(new_point.x, new_point.y)
+            if old_point.val != new_point.val:
+                d = Diff(
+                    x=new_point.x,
+                    y=new_point.y,
+                    old_val=old_point.val,
+                    new_val=new_point.val,
+                )
+                f = DeltaFeature(self, d)
+                # diff_list.append(d)
+                self.pb_conn.send(f)
         # if len(diff_list) == 0:
         #     return None
 

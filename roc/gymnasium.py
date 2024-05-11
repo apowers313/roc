@@ -219,7 +219,7 @@ class NethackGym(Gym):
     def send_vision(self, obs: Any) -> None:
         # spectrum = [obs["chars"], obs["colors"], obs["glyphs"]]
 
-        self.env_bus_conn.send(VisionData(screen=obs["chars"]))
+        self.env_bus_conn.send(VisionData(obs["chars"]))
 
     def send_auditory(self) -> None:
         pass
