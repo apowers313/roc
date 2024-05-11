@@ -9,11 +9,11 @@ from roc.event import Event
 from roc.feature_extractors.delta import Delta, DeltaFeature
 from roc.perception import Settled, VisionData
 
-screen0 = VisionData(screen=screens[0]["chars"])
-screen1 = VisionData(screen=screens[1]["chars"])
-screen2 = VisionData(screen=screens[2]["chars"])
-screen3 = VisionData(screen=screens[3]["chars"])
-screen4 = VisionData(screen=screens[4]["chars"])
+screen0 = VisionData(screens[0]["chars"])
+screen1 = VisionData(screens[1]["chars"])
+screen2 = VisionData(screens[2]["chars"])
+screen3 = VisionData(screens[3]["chars"])
+screen4 = VisionData(screens[4]["chars"])
 
 
 class TestDelta:

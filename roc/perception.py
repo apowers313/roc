@@ -7,23 +7,50 @@ from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
 
-from pydantic import BaseModel
-
 from .component import Component
 from .event import Event, EventBus
+from .point import Grid
 
-Grid = tuple[tuple[int | str, ...], ...]
+# Grid = tuple[tuple[int | str, ...], ...]
+# Screen = tuple[tuple[int | str, ...], ...]
+# Screen = list[list[int]]
 
+# val, x, y
+# GridTriple = tuple[str | int, int, int]
+
+
+# class VisionData:
+#     def __init__(self, screen: Screen) -> None:
+#         self.screen = screen
+
+#     def __iter__(self) -> Iterator[GridTriple]:
+#         for y in range(self.height):
+#             for x in range(self.width):
+#                 val = self.screen[y][x]
+#                 yield (val, x, y)
+
+#     def get(self, x: int, y: int) -> int | str:
+#         return self.screen[y][x]
+
+#     @property
+#     def width(self) -> int:
+#         return len(self.screen[0])
+
+#     @property
+#     def height(self) -> int:
+#         return len(self.screen)
+
+VisionData = Grid
 
 # TODO: vision input
 # TODO: sound input
 # TODO: other input
-class VisionData(BaseModel):
-    """A Pydantic model for the vision perception data."""
+# class VisionData(BaseModel):
+#     """A Pydantic model for the vision perception data."""
 
-    # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
-    screen: Grid
-    # spectrum: tuple[int | str, ...]
+#     # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
+#     screen: Grid
+#     # spectrum: tuple[int | str, ...]
 
 
 @dataclass
