@@ -58,10 +58,14 @@ class Settled:
     pass
 
 
+# FeatureType = TypeVar("FeatureType")
+
+
 class Feature(Hashable):
     """An abstract feature for communicating features that have been detected."""
 
     origin: Component
+    # feature: FeatureType
 
     def __init__(self, origin: Component) -> None:
         self.origin = origin

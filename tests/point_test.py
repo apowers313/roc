@@ -1,8 +1,9 @@
 # mypy: disable-error-code="no-untyped-def"
 
+import pytest
 from helpers.nethack_screens import screens
 
-from roc.point import Grid, Point
+from roc.point import Grid, Point, PointCollection, TypedPointCollection
 
 
 class TestPoint:
@@ -52,3 +53,77 @@ class TestGrid:
 
         screen0 = Grid(screens[0]["chars"])
         print(screen0)
+
+
+class TestPointCollection:
+    def test_create(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 128)
+        p3 = Point(5, 6, 64)
+        pc = PointCollection([p1, p2])
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert not pc.contains(p3)
+
+    def test_add(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 128)
+        p3 = Point(5, 6, 64)
+        pc = PointCollection([p1, p2])
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert not pc.contains(p3)
+        pc.add(p3)
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert pc.contains(p3)
+
+    def test_get_points(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 128)
+        p3 = Point(5, 6, 64)
+        pc = PointCollection([p1, p2, p3])
+        assert pc.points == [p1, p2, p3]
+
+
+class TestTypedPointCollection:
+    def test_create(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 255)
+        p3 = Point(5, 6, 255)
+        pc = TypedPointCollection(255, [p1, p2])
+        assert pc.type == 255
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert not pc.contains(p3)
+
+    def test_create_wrong_type(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 255)
+        p3 = Point(5, 6, 64)
+        with pytest.raises(TypeError):
+            TypedPointCollection(255, [p1, p2, p3])
+
+    def test_add(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 255)
+        p3 = Point(5, 6, 255)
+        pc = TypedPointCollection(255, [p1, p2])
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert not pc.contains(p3)
+        pc.add(p3)
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert pc.contains(p3)
+
+    def test_add_wrong_type(self) -> None:
+        p1 = Point(1, 2, 255)
+        p2 = Point(3, 4, 255)
+        p3 = Point(5, 6, 64)
+        pc = TypedPointCollection(255, [p1, p2])
+        assert pc.contains(p1)
+        assert pc.contains(p2)
+        assert not pc.contains(p3)
+        with pytest.raises(TypeError):
+            pc.add(p3)
