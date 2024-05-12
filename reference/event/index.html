@@ -373,6 +373,24 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#event.EventFilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      EventFilter
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event.EventListener" class="md-nav__link">
+    <span class="md-ellipsis">
+      EventListener
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#event.eventbus_names" class="md-nav__link">
     <span class="md-ellipsis">
       eventbus_names
@@ -653,6 +671,48 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature_extractors/flood/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    flood
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature_extractors/motion/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    motion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -773,6 +833,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../point/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    point
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../script/" class="md-nav__link">
         
   
@@ -831,6 +912,24 @@
   <a href="#event.EventData" class="md-nav__link">
     <span class="md-ellipsis">
       EventData
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event.EventFilter" class="md-nav__link">
+    <span class="md-ellipsis">
+      EventFilter
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#event.EventListener" class="md-nav__link">
+    <span class="md-ellipsis">
+      EventListener
     </span>
   </a>
   
@@ -1111,6 +1210,44 @@
 
 
 
+<h2 id="event.EventFilter" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">EventFilter</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">]</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h2 id="event.EventListener" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">EventListener</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+  </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h2 id="event.eventbus_names" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">eventbus_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span></code>
   
@@ -1177,11 +1314,7 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/event.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 54</span>
-<span class="normal"> 55</span>
-<span class="normal"> 56</span>
-<span class="normal"> 57</span>
-<span class="normal"> 58</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 58</span>
 <span class="normal"> 59</span>
 <span class="normal"> 60</span>
 <span class="normal"> 61</span>
@@ -1223,7 +1356,11 @@
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">BusConnection</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EventData</span><span class="p">]):</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">BusConnection</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EventData</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A connection between an EventBus and a Component, used to send Events</span>
 
 <span class="sd">    Args:</span>
@@ -1249,9 +1386,9 @@
 
     <span class="k">def</span> <span class="nf">listen</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">listener</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">[</span><span class="n">EventData</span><span class="p">],</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="nb">filter</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="nb">filter</span><span class="p">:</span> <span class="n">EventFilter</span><span class="p">[</span><span class="n">EventData</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">pipe_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Observable</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]]]</span> <span class="o">=</span> <span class="p">[</span>
             <span class="c1"># op.filter(lambda e: e.src is not self.attached_component),</span>
@@ -1376,11 +1513,11 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bus</span><span class="p">:</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">EventData</span><span class="p">],</span> <span class="n">component</span><span class="p">:</span> <span class="n">Component</span><span class="p">):</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bus</span><span class="p">:</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">EventData</span><span class="p">],</span> <span class="n">component</span><span class="p">:</span> <span class="n">Component</span><span class="p">):</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span> <span class="o">=</span> <span class="n">bus</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">attached_component</span> <span class="o">=</span> <span class="n">component</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">subject</span>
@@ -1406,13 +1543,13 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">close</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span>
         <span class="sa">f</span><span class="s2">&quot;Closing connection </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">attached_component</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
     <span class="p">)</span>
@@ -1440,11 +1577,7 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">82</span>
 <span class="normal">83</span>
 <span class="normal">84</span>
 <span class="normal">85</span>
@@ -1454,11 +1587,15 @@
 <span class="normal">89</span>
 <span class="normal">90</span>
 <span class="normal">91</span>
-<span class="normal">92</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">listen</span><span class="p">(</span>
+<span class="normal">92</span>
+<span class="normal">93</span>
+<span class="normal">94</span>
+<span class="normal">95</span>
+<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">listen</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
-    <span class="n">listener</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="kc">None</span><span class="p">],</span>
+    <span class="n">listener</span><span class="p">:</span> <span class="n">EventListener</span><span class="p">[</span><span class="n">EventData</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
-    <span class="nb">filter</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="nb">filter</span><span class="p">:</span> <span class="n">EventFilter</span><span class="p">[</span><span class="n">EventData</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">pipe_args</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Callable</span><span class="p">[[</span><span class="n">Any</span><span class="p">],</span> <span class="n">Observable</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]]]</span> <span class="o">=</span> <span class="p">[</span>
         <span class="c1"># op.filter(lambda e: e.src is not self.attached_component),</span>
@@ -1523,16 +1660,16 @@ with the relevant data (such as the source Component).</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">71</span>
 <span class="normal">72</span>
 <span class="normal">73</span>
 <span class="normal">74</span>
 <span class="normal">75</span>
-<span class="normal">76</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">EventData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">EventData</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Send data over the EventBus. Internally, the data is converted to an Event</span>
 <span class="sd">    with the relevant data (such as the source Component).</span>
 
@@ -1961,11 +2098,7 @@ with the relevant data (such as the source Component).</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/event.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">106</span>
-<span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
 <span class="normal">113</span>
@@ -1994,7 +2127,11 @@ with the relevant data (such as the source Component).</p>
 <span class="normal">136</span>
 <span class="normal">137</span>
 <span class="normal">138</span>
-<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EventBus</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EventData</span><span class="p">]):</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">EventBus</span><span class="p">(</span><span class="n">Generic</span><span class="p">[</span><span class="n">EventData</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A communication channel for sending events between Components</span>
 
 <span class="sd">    Args:</span>
@@ -2100,12 +2237,12 @@ with the relevant data (such as the source Component).</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">eventbus_names</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Duplicate EventBus name: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
@@ -2138,10 +2275,10 @@ with the relevant data (such as the source Component).</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">clear_names</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Clears all EventBusses that have been registered, mostly used for testing.&quot;&quot;&quot;</span>
     <span class="n">eventbus_names</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
@@ -2222,16 +2359,16 @@ with the relevant data (such as the source Component).</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">129</span>
 <span class="normal">130</span>
 <span class="normal">131</span>
 <span class="normal">132</span>
 <span class="normal">133</span>
-<span class="normal">134</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="n">Component</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BusConnection</span><span class="p">[</span><span class="n">EventData</span><span class="p">]:</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">connect</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">:</span> <span class="n">Component</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">BusConnection</span><span class="p">[</span><span class="n">EventData</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Creates a connection between an EventBus and a Component for sending Events</span>
 
 <span class="sd">    Args:</span>

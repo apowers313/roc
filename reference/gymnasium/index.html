@@ -383,6 +383,48 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature_extractors/flood/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    flood
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feature_extractors/motion/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    motion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1597,6 +1639,27 @@
   
   <span class="md-ellipsis">
     perception
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../point/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    point
   </span>
   
 
@@ -4031,7 +4094,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
     <span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># spectrum = [obs[&quot;chars&quot;], obs[&quot;colors&quot;], obs[&quot;glyphs&quot;]]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">screen</span><span class="o">=</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
 
     <span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">pass</span>
@@ -4260,7 +4323,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">222</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># spectrum = [obs[&quot;chars&quot;], obs[&quot;colors&quot;], obs[&quot;glyphs&quot;]]</span>
 
-    <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">screen</span><span class="o">=</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
