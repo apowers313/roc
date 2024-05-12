@@ -23,6 +23,9 @@ class Point:
         return self.x == p.x and self.y == p.y and self.val == p.val
 
 
+PointList = list[Point]
+
+
 class ChangedPoint(Point):
     def __init_(self, x: int, y: int, val: int, old_val: int) -> None:
         super().__init__(x, y, val)
@@ -39,11 +42,16 @@ class Grid:
     def __iter__(self) -> Iterator[Point]:
         for y in range(self.height):
             for x in range(self.width):
-                val = self.val_list[y][x]
-                yield Point(x, y, val)
+                yield self.get_point(x, y)
 
     def get_point(self, x: int, y: int) -> Point:
-        return Point(x, y, self.val_list[y][x])
+        return Point(x, y, self.get_val(x, y))
+
+    def get_val(self, x: int, y: int) -> int:
+        return self.val_list[y][x]
+
+    def set_val(self, x: int, y: int, val: int) -> None:
+        self.val_list[y][x] = val
 
     @property
     def width(self) -> int:
@@ -69,15 +77,43 @@ class Grid:
 
 
 class PointCollection:
-    def __init__(self) -> None:
-        self.points: dict[int, Point] = {}
+    def __init__(self, point_list: PointList) -> None:
+        self._point_hash: dict[int, Point] = {}
+        for p in point_list:
+            self.add(p)
 
     def add(self, p: Point) -> None:
-        self.points[hash(p)] = p
+        hash_val = self.do_hash(p)
+        self._point_hash[hash_val] = p
 
     def contains(self, p: Point) -> bool:
-        return hash(p) in self.points
+        hash_val = self.do_hash(p)
+        return hash_val in self._point_hash
+
+    def do_hash(self, p: Point) -> int:
+        return hash((p.x, p.y))
 
     @property
     def size(self) -> int:
-        return len(self.points)
+        return len(self._point_hash)
+
+    @property
+    def points(self) -> PointList:
+        return list(self._point_hash.values())
+
+
+class TypedPointCollection(PointCollection):
+    def __init__(self, type: int, point_list: PointList) -> None:
+        self.type = type
+        super().__init__(point_list)
+
+    def do_hash(self, p: Point) -> int:
+        return hash(p)
+
+    def add(self, p: Point) -> None:
+        if p.val != self.type:
+            raise TypeError(
+                f"Trying to add '{p.val}' to TypedPointCollection with type '{self.type}"
+            )
+
+        super().add(p)
