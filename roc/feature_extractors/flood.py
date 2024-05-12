@@ -6,6 +6,8 @@ MIN_FLOOD_SIZE = 5
 
 
 class FloodFeature(Feature):
+    """A collection of points representing similar values that are all adjacent to each other"""
+
     def __init__(self, origin: Component, points: TypedPointCollection) -> None:
         super().__init__(origin)
         self.points = points
@@ -15,6 +17,8 @@ class FloodFeature(Feature):
 
 
 class CheckMap:
+    """Internal utility class for tracking which points in a flood have already been checked"""
+
     def __init__(self, width: int, height: int) -> None:
         self.grid = Grid.filled(0, width, height)
 
@@ -36,6 +40,9 @@ class CheckMap:
 
 @register_component("flood", "perception")
 class Flood(FeatureExtractor):
+    """A component for creating Flood features -- collections of adjacent points
+    that all have the same value"""
+
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
