@@ -621,15 +621,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.motion.MotionFeature.motion_vector" class="md-nav__link">
-    <span class="md-ellipsis">
-      motion_vector
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#feature_extractors.motion.MotionFeature.__hash__" class="md-nav__link">
     <span class="md-ellipsis">
       __hash__
@@ -767,15 +758,6 @@
   <a href="#feature_extractors.motion.emit_motion" class="md-nav__link">
     <span class="md-ellipsis">
       emit_motion
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.motion.isadjacent" class="md-nav__link">
-    <span class="md-ellipsis">
-      isadjacent
     </span>
   </a>
   
@@ -1143,15 +1125,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.motion.MotionFeature.motion_vector" class="md-nav__link">
-    <span class="md-ellipsis">
-      motion_vector
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#feature_extractors.motion.MotionFeature.__hash__" class="md-nav__link">
     <span class="md-ellipsis">
       __hash__
@@ -1294,15 +1267,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#feature_extractors.motion.isadjacent" class="md-nav__link">
-    <span class="md-ellipsis">
-      isadjacent
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -1375,15 +1339,15 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Direction</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Direction</span><span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">Enum</span><span class="p">):</span>
     <span class="n">up</span> <span class="o">=</span> <span class="s2">&quot;UP&quot;</span>
     <span class="n">down</span> <span class="o">=</span> <span class="s2">&quot;DOWN&quot;</span>
     <span class="n">left</span> <span class="o">=</span> <span class="s2">&quot;LEFT&quot;</span>
@@ -1589,24 +1553,12 @@
 
   <div class="doc doc-contents ">
           <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span></code></p>
+            Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.motion.MotionFeature" href="#feature_extractors.motion.MotionFeature">MotionFeature</a>]</code></p>
 
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
@@ -1624,8 +1576,20 @@
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;motion&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">Motion</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">):</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;motion&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Motion</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">MotionFeature</span><span class="p">]):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span> <span class="n">DiffList</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1636,7 +1600,7 @@
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MotionFeature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
@@ -1646,7 +1610,7 @@
         <span class="n">d1</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">diff</span>
 
         <span class="k">for</span> <span class="n">d2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">isadjacent</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">Point</span><span class="o">.</span><span class="n">isadjacent</span><span class="p">(</span><span class="n">x1</span><span class="o">=</span><span class="n">d1</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="o">=</span><span class="n">d1</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">x2</span><span class="o">=</span><span class="n">d2</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y2</span><span class="o">=</span><span class="n">d2</span><span class="o">.</span><span class="n">y</span><span class="p">):</span>
                 <span class="k">if</span> <span class="n">d2</span><span class="o">.</span><span class="n">old_val</span> <span class="o">==</span> <span class="n">d1</span><span class="o">.</span><span class="n">new_val</span><span class="p">:</span>
                     <span class="n">emit_motion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d2</span><span class="p">,</span> <span class="n">d1</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">d1</span><span class="o">.</span><span class="n">old_val</span> <span class="o">==</span> <span class="n">d2</span><span class="o">.</span><span class="n">new_val</span><span class="p">:</span>
@@ -1704,9 +1668,9 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">30</span>
-<span class="normal">31</span>
-<span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span> <span class="n">DiffList</span> <span class="o">=</span> <span class="p">[]</span>
 </code></pre></div></td></tr></table></div>
@@ -1730,11 +1694,11 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="c1"># only listen to delta:perception events</span>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
@@ -1760,25 +1724,25 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span>
-<span class="normal">44</span>
-<span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MotionFeature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
@@ -1788,7 +1752,7 @@
     <span class="n">d1</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">diff</span>
 
     <span class="k">for</span> <span class="n">d2</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">isadjacent</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">Point</span><span class="o">.</span><span class="n">isadjacent</span><span class="p">(</span><span class="n">x1</span><span class="o">=</span><span class="n">d1</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y1</span><span class="o">=</span><span class="n">d1</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="n">x2</span><span class="o">=</span><span class="n">d2</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">y2</span><span class="o">=</span><span class="n">d2</span><span class="o">.</span><span class="n">y</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">d2</span><span class="o">.</span><span class="n">old_val</span> <span class="o">==</span> <span class="n">d1</span><span class="o">.</span><span class="n">new_val</span><span class="p">:</span>
                 <span class="n">emit_motion</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">d2</span><span class="p">,</span> <span class="n">d1</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">d1</span><span class="o">.</span><span class="n">old_val</span> <span class="o">==</span> <span class="n">d2</span><span class="o">.</span><span class="n">new_val</span><span class="p">:</span>
@@ -1825,31 +1789,29 @@
 
   <div class="doc doc-contents ">
           <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.Feature">Feature</span></code></p>
+            Bases: <code><span title="feature_extractors.perception.Feature">Feature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.motion.MotionVector" href="#feature_extractors.motion.MotionVector">MotionVector</a>]</code></p>
 
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span>
-<span class="normal">17</span>
-<span class="normal">18</span>
-<span class="normal">19</span>
-<span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">[</span><span class="n">MotionVector</span><span class="p">]):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">motion_vector</span> <span class="o">=</span> <span class="n">v</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DeltaFeature hash not implemented&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_vector</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">val</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s2">: (</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">start_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">start_y</span><span class="si">}</span><span class="s2">) -&gt; (</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">end_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">end_y</span><span class="si">}</span><span class="s2">)&quot;</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1863,25 +1825,6 @@
 
 
 
-
-<div class="doc doc-object doc-attribute">
-
-
-
-<h3 id="feature_extractors.motion.MotionFeature.motion_vector" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">motion_vector</span> <span class="o">=</span> <span class="n">v</span></code>
-  
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
-  </span>
-
-</h3>
-
-
-  <div class="doc doc-contents ">
-  </div>
-
-</div>
 
 
 
@@ -1900,8 +1843,8 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
-<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DeltaFeature hash not implemented&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -1924,11 +1867,9 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">motion_vector</span> <span class="o">=</span> <span class="n">v</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">26</span>
+<span class="normal">27</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1950,10 +1891,10 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
-<span class="normal">21</span>
-<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">motion_vector</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">feature</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">val</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s2">: (</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">start_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">start_y</span><span class="si">}</span><span class="s2">) -&gt; (</span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">end_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">v</span><span class="o">.</span><span class="n">end_y</span><span class="si">}</span><span class="s2">)&quot;</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -1988,16 +1929,16 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span>
-<span class="normal">76</span>
-<span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionVector</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionVector</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
     <span class="n">direction</span><span class="p">:</span> <span class="n">Direction</span>
     <span class="n">start_x</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">start_y</span><span class="p">:</span> <span class="nb">int</span>
@@ -2151,8 +2092,8 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">80</span>
-<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
     <span class="n">use_enum_values</span> <span class="o">=</span> <span class="kc">True</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2286,20 +2227,20 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
 <span class="normal">117</span>
 <span class="normal">118</span>
 <span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
-<span class="normal">123</span>
-<span class="normal">124</span>
-<span class="normal">125</span>
-<span class="normal">126</span>
-<span class="normal">127</span>
-<span class="normal">128</span>
-<span class="normal">129</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">emit_motion</span><span class="p">(</span><span class="n">mc</span><span class="p">:</span> <span class="n">Motion</span><span class="p">,</span> <span class="n">old_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">new_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">120</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">emit_motion</span><span class="p">(</span><span class="n">mc</span><span class="p">:</span> <span class="n">Motion</span><span class="p">,</span> <span class="n">old_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">new_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">mc</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
         <span class="n">MotionFeature</span><span class="p">(</span>
             <span class="n">mc</span><span class="p">,</span>
@@ -2313,40 +2254,6 @@
             <span class="p">),</span>
         <span class="p">)</span>
     <span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-          </details>
-  </div>
-
-</div>
-
-
-<div class="doc doc-object doc-function">
-
-
-
-<h2 id="feature_extractors.motion.isadjacent" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">isadjacent</span><span class="p">(</span><span class="n">d1</span><span class="p">,</span> <span class="n">d2</span><span class="p">)</span></code>
-
-</h2>
-
-
-  <div class="doc doc-contents ">
-
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">107</span>
-<span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">isadjacent</span><span class="p">(</span><span class="n">d1</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">d2</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="n">dx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">d1</span><span class="o">.</span><span class="n">x</span> <span class="o">-</span> <span class="n">d2</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
-    <span class="n">dy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">d1</span><span class="o">.</span><span class="n">y</span> <span class="o">-</span> <span class="n">d2</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">dx</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">dy</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">return</span> <span class="kc">False</span>
-
-    <span class="k">return</span> <span class="n">dx</span> <span class="o">&lt;=</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">dy</span> <span class="o">&lt;=</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
