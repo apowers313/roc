@@ -11,7 +11,6 @@ from roc.feature_extractors.motion import (
     MotionFeature,
     MotionVector,
     adjacent_direction,
-    isadjacent,
 )
 from roc.perception import Settled, VisionData
 
@@ -49,23 +48,6 @@ class TestMotion:
         assert d == "UP_LEFT"
         d = adjacent_direction(origin, Diff(x=1, y=-1, old_val=0, new_val=120))
         assert d == "UP_RIGHT"
-
-    def test_adjacent(self) -> None:
-        origin = Diff(x=0, y=0, old_val=120, new_val=0)
-        res = isadjacent(origin, Diff(x=0, y=1, old_val=0, new_val=120))
-        assert res is True
-        res = isadjacent(origin, Diff(x=0, y=2, old_val=0, new_val=120))
-        assert res is False
-        res = isadjacent(origin, Diff(x=1, y=0, old_val=0, new_val=120))
-        assert res is True
-        res = isadjacent(origin, Diff(x=2, y=0, old_val=0, new_val=120))
-        assert res is False
-        res = isadjacent(origin, Diff(x=1, y=1, old_val=0, new_val=120))
-        assert res is True
-        res = isadjacent(origin, Diff(x=2, y=1, old_val=0, new_val=120))
-        assert res is False
-        res = isadjacent(origin, origin)
-        assert res is False
 
     def test_basic(self, empty_components) -> None:
         d = Component.get("delta", "perception")
@@ -106,8 +88,8 @@ class TestMotion:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert isinstance(e.data.motion_vector, MotionVector)
-        v = e.data.motion_vector
+        assert isinstance(e.data.feature, MotionVector)
+        v = e.data.feature
         assert v.start_x == 16
         assert v.start_y == 6
         assert v.end_x == 17
@@ -119,8 +101,8 @@ class TestMotion:
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert isinstance(e.data.motion_vector, MotionVector)
-        v = e.data.motion_vector
+        assert isinstance(e.data.feature, MotionVector)
+        v = e.data.feature
         assert v.start_x == 17
         assert v.start_y == 6
         assert v.end_x == 16
@@ -138,8 +120,8 @@ class TestMotion:
         e = s.output.call_args_list[4].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert isinstance(e.data.motion_vector, MotionVector)
-        v = e.data.motion_vector
+        assert isinstance(e.data.feature, MotionVector)
+        v = e.data.feature
         assert v.start_x == 17
         assert v.start_y == 6
         assert v.end_x == 18
@@ -157,8 +139,8 @@ class TestMotion:
         e = s.output.call_args_list[6].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert isinstance(e.data.motion_vector, MotionVector)
-        v = e.data.motion_vector
+        assert isinstance(e.data.feature, MotionVector)
+        v = e.data.feature
         assert v.start_x == 18
         assert v.start_y == 5
         assert v.end_x == 18

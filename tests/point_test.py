@@ -30,6 +30,41 @@ class TestPoint:
         p1 = Point(42, 69, 255)
         assert repr(p1) == "(42, 69): 255"
 
+    def test_isadjacent(self) -> None:
+        p1 = Point(42, 69, 255)
+        p2 = Point(42, 70, 255)
+        p3 = Point(42, 71, 255)
+
+        assert Point.isadjacent(p1=p1, p2=p2)
+        assert not Point.isadjacent(p1=p1, p2=p3)
+
+    def test_isadjacent_args(self) -> None:
+        p1 = Point(42, 69, 255)
+        # p2 = Point(42, 70, 255)
+        # p3 = Point(42, 71, 255)
+
+        assert Point.isadjacent(p1=p1, x2=42, y2=70)
+        assert Point.isadjacent(x1=42, y1=69, x2=42, y2=70)
+        # with pytest.raises(TypeError):
+        #     assert Point.isadjacent(p1=p1, x1=42, y1=70)
+
+    def test_adjacent(self) -> None:
+        origin = Point(x=0, y=0, val=0)
+        res = Point.isadjacent(p1=origin, p2=Point(x=0, y=1, val=120))
+        assert res is True
+        res = Point.isadjacent(p1=origin, p2=Point(x=0, y=2, val=120))
+        assert res is False
+        res = Point.isadjacent(p1=origin, p2=Point(x=1, y=0, val=120))
+        assert res is True
+        res = Point.isadjacent(p1=origin, p2=Point(x=2, y=0, val=120))
+        assert res is False
+        res = Point.isadjacent(p1=origin, p2=Point(x=1, y=1, val=120))
+        assert res is True
+        res = Point.isadjacent(p1=origin, p2=Point(x=2, y=1, val=120))
+        assert res is False
+        res = Point.isadjacent(p1=origin, p2=origin)
+        assert res is False
+
 
 class TestGrid:
     def test_grid(self) -> None:

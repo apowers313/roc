@@ -1,3 +1,5 @@
+from typing import Any
+
 from ..component import Component, register_component
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 from ..point import Grid, Point, PointList, TypedPointCollection
@@ -5,12 +7,11 @@ from ..point import Grid, Point, PointList, TypedPointCollection
 MIN_FLOOD_SIZE = 5
 
 
-class FloodFeature(Feature):
+class FloodFeature(Feature[TypedPointCollection]):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     def __init__(self, origin: Component, points: TypedPointCollection) -> None:
-        super().__init__(origin)
-        self.points = points
+        super().__init__(origin, points)
 
     def __hash__(self) -> int:
         raise NotImplementedError("FloodFeature hash not implemented")
@@ -39,14 +40,14 @@ class CheckMap:
 
 
 @register_component("flood", "perception")
-class Flood(FeatureExtractor):
+class Flood(FeatureExtractor[TypedPointCollection]):
     """A component for creating Flood features -- collections of adjacent points
     that all have the same value"""
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> Feature[Any] | None:
         data = e.data
         assert isinstance(data, VisionData)
 
