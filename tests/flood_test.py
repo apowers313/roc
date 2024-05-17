@@ -38,7 +38,7 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 10
         assert flood.type == 0
         p0 = flood.points[0]
@@ -48,7 +48,7 @@ class TestFlood:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 5
         assert flood.type == 1
         p0 = flood.points[0]
@@ -58,7 +58,7 @@ class TestFlood:
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 10
         assert flood.type == 0
         p0 = flood.points[0]
@@ -95,7 +95,7 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 10
         assert flood.type == 0
         p0 = flood.points[0]
@@ -105,7 +105,7 @@ class TestFlood:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 5
         assert flood.type == 1
         p0 = flood.points[0]
@@ -115,7 +115,7 @@ class TestFlood:
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 10
         assert flood.type == 0
         p0 = flood.points[0]
@@ -152,7 +152,7 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 5
         assert flood.type == 1
         p0 = flood.points[0]
@@ -162,7 +162,7 @@ class TestFlood:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 20
         assert flood.type == 0
         p0 = flood.points[0]
@@ -199,7 +199,7 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 20
         assert flood.type == 0
         p0 = flood.points[0]
@@ -209,7 +209,7 @@ class TestFlood:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data.points
+        flood = e.data.feature
         assert flood.size == 5
         assert flood.type == 1
         p0 = flood.points[0]

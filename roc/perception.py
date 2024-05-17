@@ -6,6 +6,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
+from typing import Any, Generic, TypeVar
 
 from .component import Component
 from .event import Event, EventBus
@@ -58,20 +59,21 @@ class Settled:
     pass
 
 
-# FeatureType = TypeVar("FeatureType")
+FeatureType = TypeVar("FeatureType")
 
 
-class Feature(Hashable):
+class Feature(Hashable, Generic[FeatureType]):
     """An abstract feature for communicating features that have been detected."""
 
     origin: Component
-    # feature: FeatureType
+    feature: FeatureType
 
-    def __init__(self, origin: Component) -> None:
+    def __init__(self, origin: Component, feature: FeatureType) -> None:
         self.origin = origin
+        self.feature = feature
 
 
-PerceptionData = VisionData | Feature | Settled
+PerceptionData = VisionData | Feature[Any] | Settled
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -95,7 +97,7 @@ class Perception(Component, ABC):
         cls.bus = EventBus[PerceptionData]("perception")
 
 
-class FeatureExtractor(Perception, ABC):
+class FeatureExtractor(Perception, Generic[FeatureType], ABC):
     def __init__(self) -> None:
         super().__init__()
 
@@ -110,7 +112,7 @@ class FeatureExtractor(Perception, ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature[FeatureType] | None: ...
 
 
 class HashingNoneFeature(Exception):

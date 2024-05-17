@@ -7,18 +7,30 @@ from pydantic import BaseModel
 from ..component import Component, register_component
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
 from .delta import DeltaFeature, Diff
+from .point import Point
 
 
-class MotionFeature(Feature):
+class MotionVector(BaseModel):
+    direction: Direction
+    start_x: int
+    start_y: int
+    end_x: int
+    end_y: int
+    val: str | int
+
+    class Config:
+        use_enum_values = True
+
+
+class MotionFeature(Feature[MotionVector]):
     def __init__(self, origin: Component, v: MotionVector) -> None:
-        super().__init__(origin)
-        self.motion_vector = v
+        super().__init__(origin, v)
 
     def __hash__(self) -> int:
         raise NotImplementedError("DeltaFeature hash not implemented")
 
     def __repr__(self) -> str:
-        v = self.motion_vector
+        v = self.feature
         return f"{v.val} {v.direction}: ({v.start_x}, {v.start_y}) -> ({v.end_x}, {v.end_y})"
 
 
@@ -26,7 +38,7 @@ DiffList = list[Diff]
 
 
 @register_component("motion", "perception")
-class Motion(FeatureExtractor):
+class Motion(FeatureExtractor[MotionFeature]):
     def __init__(self) -> None:
         super().__init__()
         self.diff_list: DiffList = []
@@ -37,7 +49,7 @@ class Motion(FeatureExtractor):
             return True
         return False
 
-    def get_feature(self, e: PerceptionEvent) -> MotionFeature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         if isinstance(e.data, Settled):
             self.diff_list.clear()
             self.settled()
@@ -47,7 +59,7 @@ class Motion(FeatureExtractor):
         d1 = e.data.diff
 
         for d2 in self.diff_list:
-            if isadjacent(d1, d2):
+            if Point.isadjacent(x1=d1.x, y1=d1.y, x2=d2.x, y2=d2.y):
                 if d2.old_val == d1.new_val:
                     emit_motion(self, d2, d1)
                 if d1.old_val == d2.new_val:
@@ -67,18 +79,6 @@ class Direction(str, Enum):
     up_left = "UP_LEFT"
     down_right = "DOWN_RIGHT"
     down_left = "DOWN_LEFT"
-
-
-class MotionVector(BaseModel):
-    direction: Direction
-    start_x: int
-    start_y: int
-    end_x: int
-    end_y: int
-    val: str | int
-
-    class Config:
-        use_enum_values = True
 
 
 def adjacent_direction(d1: Diff, d2: Diff) -> str:
@@ -102,15 +102,6 @@ def adjacent_direction(d1: Diff, d2: Diff) -> str:
     # return Direction(f"{ud_str}{join_str}{lr_str}")
     dir = f"{ud_str}{join_str}{lr_str}"
     return dir
-
-
-def isadjacent(d1: Diff, d2: Diff) -> bool:
-    dx = abs(d1.x - d2.x)
-    dy = abs(d1.y - d2.y)
-    if dx == 0 and dy == 0:
-        return False
-
-    return dx <= 1 and dy <= 1
 
 
 def emit_motion(mc: Motion, old_diff: Diff, new_diff: Diff) -> None:

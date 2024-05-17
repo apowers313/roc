@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterator
+from typing import Any, Iterator, overload
 
 ValList = list[list[int]]
 
@@ -21,6 +21,48 @@ class Point:
         if not isinstance(p, Point):
             return False
         return self.x == p.x and self.y == p.y and self.val == p.val
+
+    @overload
+    @staticmethod
+    def isadjacent(*, x1: int, y1: int, x2: int, y2: int) -> bool: ...
+
+    @overload
+    @staticmethod
+    def isadjacent(*, p1: Point, x2: int, y2: int) -> bool: ...
+
+    @overload
+    @staticmethod
+    def isadjacent(*, p1: Point, p2: Point) -> bool: ...
+
+    @staticmethod
+    def isadjacent(
+        # o1: int | Point, o2: int | Point, o3: int | None = None, o4: int | None = None
+        *,
+        x1: int | None = None,
+        y1: int | None = None,
+        x2: int | None = None,
+        y2: int | None = None,
+        p1: Point | None = None,
+        p2: Point | None = None,
+    ) -> bool:
+        if isinstance(p1, Point):
+            x1 = p1.x
+            y1 = p1.y
+        elif not isinstance(x1, int) or not isinstance(y1, int):
+            raise TypeError("bad p1 arguments in isadjacent()")
+
+        if isinstance(p2, Point):
+            x2 = p2.x
+            y2 = p2.y
+        elif not isinstance(x2, int) or not isinstance(y2, int):
+            raise TypeError("bad p2 arguments in isadjacent()")
+
+        dx = abs(x1 - x2)
+        dy = abs(y1 - y2)
+        if dx == 0 and dy == 0:
+            return False
+
+        return dx <= 1 and dy <= 1
 
 
 PointList = list[Point]

@@ -6,11 +6,20 @@ from ..component import Component, register_component
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
-class DeltaFeature(Feature):
+class Diff(BaseModel):
+    """A Pydantic model for representing a changes in vision."""
+
+    x: int
+    y: int
+    old_val: str | int
+    new_val: str | int
+
+
+class DeltaFeature(Feature[Diff]):
     """A feature for representing vision changes (deltas)"""
 
     def __init__(self, origin: Component, diff: Diff) -> None:
-        super().__init__(origin)
+        super().__init__(origin, diff)
         # self.diff_list = diff_list
         self.diff = diff
 
@@ -29,7 +38,7 @@ class DeltaFeature(Feature):
 
 
 @register_component("delta", "perception")
-class Delta(FeatureExtractor):
+class Delta(FeatureExtractor[Diff]):
     """A component for detecting changes in vision."""
 
     def __init__(self) -> None:
@@ -39,7 +48,7 @@ class Delta(FeatureExtractor):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> Feature[Diff] | None:
         # assert isinstance(e, VisionData)
         # reveal_type(e)
         # reveal_type(e.data)
@@ -90,15 +99,6 @@ class Delta(FeatureExtractor):
         # return DeltaFeature(self, diff_list)
         self.settled()
         return None
-
-
-class Diff(BaseModel):
-    """A Pydantic model for representing a changes in vision."""
-
-    x: int
-    y: int
-    old_val: str | int
-    new_val: str | int
 
 
 # DiffList = list[Diff]
