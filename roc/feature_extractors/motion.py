@@ -6,8 +6,8 @@ from pydantic import BaseModel
 
 from ..component import Component, register_component
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
+from ..point import Point
 from .delta import DeltaFeature, Diff
-from .point import Point
 
 
 class MotionVector(BaseModel):
