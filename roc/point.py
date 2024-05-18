@@ -15,7 +15,7 @@ class Point:
         return hash((self.x, self.y))
 
     def __repr__(self) -> str:
-        return f"({self.x}, {self.y}): {self.val}"
+        return f"({self.x}, {self.y}): {self.val} '{chr(self.val)}'"
 
     def __eq__(self, p: Any) -> bool:
         if not isinstance(p, Point):
@@ -74,7 +74,7 @@ class ChangedPoint(Point):
         self.old_val = old_val
 
     def __repr__(self) -> str:
-        return f"({self.x}, {self.y}): {self.old_val} -> {self.val}"
+        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"  # noqa: E501
 
 
 class Grid:
