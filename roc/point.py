@@ -167,6 +167,9 @@ class TypedPointCollection(PointCollection):
         self.type = type
         super().__init__(point_list)
 
+    def __repr__(self) -> str:
+        return f"{len(self._point_hash)} Points: {self.type} ({chr(self.type)})"
+
     def do_hash(self, p: Point) -> int:
         return hash(p)
 
