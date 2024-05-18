@@ -27,8 +27,8 @@ class TestPoint:
         assert h1 != h2
 
     def test_repr(self) -> None:
-        p1 = Point(42, 69, 255)
-        assert repr(p1) == "(42, 69): 255"
+        p1 = Point(42, 69, 65)
+        assert repr(p1) == "(42, 69): 65 'A'"
 
     def test_isadjacent(self) -> None:
         p1 = Point(42, 69, 255)
