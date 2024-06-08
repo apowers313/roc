@@ -35,9 +35,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
             nonlocal points
 
             if len(points) >= MIN_LINE_COUNT:
-                print("try emit points", points)
                 tpc = TypedPointCollection(points[0].val, points)
-                print("emit line", tpc)
                 ln.pb_conn.send(LineFeature(ln, tpc))
             points = []
 
