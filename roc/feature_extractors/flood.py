@@ -87,12 +87,9 @@ class Flood(FeatureExtractor[TypedPointCollection]):
             return point_list
 
         while p := check_map.find_first_unused_point():
-            print("checking point", p)
             val = data.get_val(p.x, p.y)
             point_list = recursive_flood_check(val, p.x, p.y, [])
-            print("final point list:", point_list)
             if len(point_list) >= MIN_FLOOD_SIZE:
-                print("DO EMIT")
                 self.pb_conn.send(FloodFeature(self, TypedPointCollection(val, point_list)))
             check_map.set(p.x, p.y)
 
