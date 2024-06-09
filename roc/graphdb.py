@@ -509,6 +509,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         return e_id in self.__edges
 
     def add(self, e: Edge | EdgeId) -> None:
+        """Adds a new Edge to the list"""
         e_id = Edge.to_id(e)
 
         if e_id in self.__edges:
@@ -517,11 +518,14 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         self.__edges.append(e_id)
 
     def discard(self, e: Edge | EdgeId) -> None:
+        """Removes an edge to the list"""
         e_id = Edge.to_id(e)
 
         self.__edges.remove(e_id)
 
     def replace(self, old: Edge | EdgeId, new: Edge | EdgeId) -> None:
+        """Replaces all instances of an old Edge with a new Edge. Useful for when an Edge is
+        persisted to the graph database and its permanent ID is assigned"""
         old_id = Edge.to_id(old)
         new_id = Edge.to_id(new)
         for i in range(len(self.__edges)):
@@ -533,10 +537,14 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 # NODE
 #######
 class NodeNotFound(Exception):
+    """An exception raised when trying to retreive a Node that doesn't exist."""
+
     pass
 
 
 class NodeCreationFailed(Exception):
+    """An exception raised when trying to create a Node in the graph database fails"""
+
     pass
 
 
@@ -547,30 +555,31 @@ def get_next_new_node_id() -> NodeId:
     return id
 
 
+# class Node(BaseModel, extra="allow", arbitrary_types_allowed=True):
+
+
 class Node(BaseModel, extra="allow"):
     """
     An graph database node that automatically handles CRUD for the underlying graph database objects
     """
 
-    id: NodeId = Field(exclude=True)
-    labels: set[str] = Field(exclude=True)
+    _id: NodeId
+    labels: set[str] = Field(exclude=True, default_factory=lambda: set())
+    _orig_labels: set[str]
+    _src_edges: EdgeList
+    _dst_edges: EdgeList
+    _db: GraphDB
+    _new: bool
+    _no_save: bool
+    _deleted: bool
 
-    @field_validator("id", mode="before")
-    def default_id(cls, id: NodeId | None) -> NodeId:
-        if isinstance(id, int):
-            return id
+    @property
+    def id(self) -> NodeId:
+        return self._id
 
-        return get_next_new_node_id()
-
-    @field_validator("labels", mode="before")
-    def default_labels(cls, labels: list[str] | set[str] | None) -> set[str]:
-        if not labels:
-            return set()
-
-        if isinstance(labels, list):
-            return set(labels)
-
-        return labels
+    # @property
+    # def labels(self) -> set[str]:
+    #     return self._labels
 
     @property
     def src_edges(self) -> EdgeList:
@@ -586,36 +595,26 @@ class Node(BaseModel, extra="allow"):
 
     def __init__(
         self,
-        *,
-        id: NodeId | None = None,
-        data: dict[Any, Any] | None = None,
-        labels: set[str] | list[str] | None = None,
-        src_edges: EdgeList | None = None,
-        dst_edges: EdgeList | None = None,
-        db: GraphDB | None = None,
+        **kwargs: Any,
     ):
-        data = data or {}
+        super().__init__(**kwargs)
 
-        super().__init__(
-            id=id,
-            labels=labels,
-            **data,
-        )
+        # set passed-in private values or their defaults
+        self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
+        self._id = kwargs["_id"] if "_id" in kwargs else get_next_new_node_id()
+        self._src_edges = kwargs["_src_edges"] if "_src_edges" in kwargs else EdgeList([])
+        self._dst_edges = kwargs["_dst_edges"] if "_dst_edges" in kwargs else EdgeList([])
 
+        # set private values
         self._new = False
         self._no_save = False
         self._deleted = False
-        self._db = db or GraphDB.singleton()
 
         if self.id < 0:
             self._new = True  # TODO: derived?
             Node.get_cache()[self.id] = self
 
         self._orig_labels = self.labels.copy()
-        self._src_edges = src_edges or EdgeList([])
-        self._dst_edges = dst_edges or EdgeList([])
-        # TODO: ignore fields on save
-        # self._ignored_fields = ["new", "no_save", "deleted"]
 
     def __del__(self) -> None:
         try:
@@ -662,11 +661,11 @@ class Node(BaseModel, extra="allow"):
         src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
         dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
         return cls(
-            id=id,
-            src_edges=EdgeList(src_edges),
-            dst_edges=EdgeList(dst_edges),
+            _id=id,
+            _src_edges=EdgeList(src_edges),
+            _dst_edges=EdgeList(dst_edges),
             labels=n.labels,
-            data=n.properties,
+            **n.properties,
         )
 
     @classmethod
@@ -792,10 +791,10 @@ class Node(BaseModel, extra="allow"):
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
         if not len(res) >= 1:
-            raise NodeCreationFailed(f"Couldn't find node ID: {id}")
+            raise NodeCreationFailed(f"Couldn't create node ID: {id}")
 
         new_id = res[0]["id"]
-        n.id = new_id
+        n._id = new_id
         n._new = False
         # update the cache; if being called during c then the cache entry may not exist
         try:

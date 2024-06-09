@@ -10,6 +10,7 @@ from typing import Any, Generic, TypeVar
 
 from .component import Component
 from .event import Event, EventBus
+from .graphdb import Node
 from .point import Grid
 
 # Grid = tuple[tuple[int | str, ...], ...]
@@ -62,6 +63,49 @@ class Settled:
 FeatureType = TypeVar("FeatureType")
 
 
+class ElementSize(Node, extra="forbid"):
+    size: int
+
+
+class ElementType(Node, extra="forbid"):
+    type: int
+
+
+class ElementPoint(Node, extra="forbid"):
+    x: int
+    y: int
+
+
+class ElementTypedPoint(Node, extra="forbid"):
+    type: int
+    x: int
+    y: int
+
+
+class ElementOrientation(Node, extra="forbid"):
+    pass
+
+
+class NewFeature(Node, ABC):
+    def __init__(self, label: str) -> None:
+        super().__init__(labels={"Feature", label})
+
+    def add_type(self, type: int) -> ElementType:
+        f = ElementType(type=type)
+        Node.connect(self, f, "Type")
+        return f
+
+    def add_point(self, x: int, y: int) -> ElementPoint:
+        p = ElementPoint(x=x, y=y)
+        Node.connect(self, p, "Location")
+        return p
+
+    def add_size(self, size: int) -> ElementSize:
+        s = ElementSize(size=size)
+        Node.connect(self, s, "Size")
+        return s
+
+
 class Feature(Hashable, Generic[FeatureType]):
     """An abstract feature for communicating features that have been detected."""
 
@@ -73,7 +117,7 @@ class Feature(Hashable, Generic[FeatureType]):
         self.feature = feature
 
 
-PerceptionData = VisionData | Feature[Any] | Settled
+PerceptionData = VisionData | Feature[Any] | Settled | NewFeature
 PerceptionEvent = Event[PerceptionData]
 
 
