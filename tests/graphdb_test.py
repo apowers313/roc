@@ -129,7 +129,7 @@ class TestNode:
 
     def test_node_create_on_delete(self, mocker, clear_cache) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
-        n = Node(labels=["TestNode"], data={"testname": "test_node_save_on_delete"})
+        n = Node(labels=["TestNode"], testname="test_node_save_on_delete")
 
         del n
         Node.get_cache().clear()
@@ -139,7 +139,7 @@ class TestNode:
         assert spy.call_args[1]["params"] == {"props": {"testname": "test_node_save_on_delete"}}
 
     def test_node_update_on_delete(self, mocker) -> None:
-        n = Node(labels={"TestNode"}, data={"testname": "test_node_save_on_delete"})
+        n = Node(labels={"TestNode"}, testname="test_node_update_on_delete")
         Node.save(n)
         assert not n.new
         assert n.id > 0
@@ -216,7 +216,7 @@ class TestNode:
 
     def test_node_create_with_data(self, mocker) -> None:
         spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
-        n = Node(labels=["Foo"], data={"answer": 42})
+        n = Node(labels=["Foo"], answer=42)
 
         Node.create(n)
         spy.assert_called_once()
@@ -452,8 +452,10 @@ class TestEdge:
         assert isinstance(c, Cache)
 
     def test_src(self) -> None:
+        print("!!!! POOOOOOOOOOOPPP")
         n0 = Node.get(cast(NodeId, 0))
         n2 = Node.get(cast(NodeId, 2))
+        print("n0.src_edges", len(n0.src_edges))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
@@ -696,3 +698,8 @@ class TestTypes:
 
         assert id(n) == id(c)
         assert id(Node.get_cache()) == id(GotCharacter.get_cache())
+
+    def test_missing_args(self):
+        GotCharacter(name="bob", labels=set())
+        GotCharacter(name="bob", id=None)
+        GotCharacter(name="bob")

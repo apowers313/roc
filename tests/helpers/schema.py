@@ -1,9 +1,8 @@
 from roc.graphdb import Node
 
 
-class GotCharacter(Node, extra="forbid"):
+class GotCharacter(Node, extra="ignore"):
     name: str
-    # foo: int
 
 
 class GotSeason(Node, extra="forbid"):

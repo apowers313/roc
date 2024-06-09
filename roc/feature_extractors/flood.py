@@ -1,17 +1,21 @@
 from typing import Any
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import Feature, FeatureExtractor, NewFeature, PerceptionEvent, VisionData
 from ..point import Grid, Point, PointList, TypedPointCollection
 
 MIN_FLOOD_SIZE = 5
 
 
-class FloodFeature(Feature[TypedPointCollection]):
+class FloodFeature(NewFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
-    def __init__(self, origin: Component, points: TypedPointCollection) -> None:
-        super().__init__(origin, points)
+    def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
+        super().__init__("Flood")
+        self.add_type(type)
+        self.add_size(len(point_list))
+        for point in point_list:
+            self.add_point(point.x, point.y)
 
     def __hash__(self) -> int:
         raise NotImplementedError("FloodFeature hash not implemented")
@@ -90,7 +94,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
             val = data.get_val(p.x, p.y)
             point_list = recursive_flood_check(val, p.x, p.y, [])
             if len(point_list) >= MIN_FLOOD_SIZE:
-                self.pb_conn.send(FloodFeature(self, TypedPointCollection(val, point_list)))
+                self.pb_conn.send(FloodFeature(self, point_list, val))
             check_map.set(p.x, p.y)
 
         self.settled()
