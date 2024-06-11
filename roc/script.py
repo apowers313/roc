@@ -33,9 +33,9 @@ def int_list(al: list[int]) -> str:
 def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
     for row in screen:
         if not as_int:
-            print(ascii_list(row))
+            print(ascii_list(row))  # noqa: T201
         else:
-            print(int_list(row))
+            print(int_list(row))  # noqa: T201
 
 
 @click.command

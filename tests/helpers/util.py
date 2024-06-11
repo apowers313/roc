@@ -135,4 +135,4 @@ def print_points(n: object) -> None:
         assert isinstance(p, ElementPoint)
         pt = (p.x, p.y)
         ln += f"{pt}, "
-    print("Points:", ln)
+    print("Points:", ln)  # noqa: T201
