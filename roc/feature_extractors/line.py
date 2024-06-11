@@ -1,17 +1,21 @@
 from typing import Any
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import Feature, FeatureExtractor, NewFeature, PerceptionEvent, VisionData
 from ..point import Point, PointList, TypedPointCollection
 
 MIN_LINE_COUNT = 4
 
 
-class LineFeature(Feature[TypedPointCollection]):
+class LineFeature(NewFeature):
     """A collection of points representing a line"""
 
-    def __init__(self, origin: Component, points: TypedPointCollection) -> None:
-        super().__init__(origin, points)
+    def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
+        super().__init__("Line")
+        self.add_type(type)
+        self.add_size(len(point_list))
+        for point in point_list:
+            self.add_point(point.x, point.y)
 
     def __hash__(self) -> int:
         raise NotImplementedError("LineFeature hash not implemented")
@@ -35,8 +39,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
             nonlocal points
 
             if len(points) >= MIN_LINE_COUNT:
-                tpc = TypedPointCollection(points[0].val, points)
-                ln.pb_conn.send(LineFeature(ln, tpc))
+                ln.pb_conn.send(LineFeature(self, points, points[0].val))
             points = []
 
         ## iterate points by 'x' to identify horizontal lines
