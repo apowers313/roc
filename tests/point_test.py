@@ -86,9 +86,6 @@ class TestGrid:
         g = Grid(val)
         assert repr(g) == "   \n123\nabc\n"
 
-        screen0 = Grid(screens[0]["chars"])
-        print(screen0)
-
 
 class TestPointCollection:
     def test_create(self) -> None:
