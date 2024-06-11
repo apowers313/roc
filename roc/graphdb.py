@@ -482,6 +482,9 @@ class EdgeFetchIterator:
         return Edge.get(id)
 
 
+EdgeFilter = Callable[[Edge], bool] | str | EdgeId | None
+
+
 class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     """
     A list of Edges that is used by Node for keeping track of the connections it has.
@@ -531,6 +534,23 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         for i in range(len(self.__edges)):
             if self.__edges[i] == old_id:
                 self.__edges[i] = new_id
+
+    def count(self, f: EdgeFilter = None) -> int:
+        return len(self.get_edges(f))
+
+    def get_edges(self, f: EdgeFilter = None) -> list[Edge]:
+        if not f:
+            return list(self.__iter__())
+
+        if isinstance(f, str):
+            s = f
+            f = lambda e: e.type == s  # noqa: E731
+
+        if isinstance(f, int):
+            n = f
+            f = lambda e: e.id == n  # noqa: E731
+
+        return list(filter(f, self.__iter__()))
 
 
 #######
