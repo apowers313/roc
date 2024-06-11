@@ -9,7 +9,7 @@ from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
 from pydantic import ValidationError
 
-from roc.graphdb import Edge, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
+from roc.graphdb import Edge, EdgeId, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
 
 
 class TestGraphDB:
@@ -25,11 +25,11 @@ class TestGraphDB:
             )
         )
         assert len(res) == 3
-        print("!!! RES:", res)
-        print("!!! REPR:", repr(res))
+        print("!!! RES:", res)  # noqa: T201
+        print("!!! REPR:", repr(res))  # noqa: T201
         # assert res != None
         for row in res:
-            print("!!! ROW:", repr(row))
+            print("!!! ROW:", repr(row))  # noqa: T201
 
     def test_singleton(self) -> None:
         db1 = GraphDB.singleton()
@@ -64,8 +64,8 @@ class TestGraphDB:
                 return
             else:
                 cache.add(id)
-            print("walking node", id)
-            print(f"*** MAX {cnt}/{max}")
+            print("walking node", id)  # noqa: T201
+            print(f"*** MAX {cnt}/{max}")  # noqa: T201
 
             cnt = cnt + 1
             n = Node.get(cast(NodeId, id))
@@ -77,24 +77,24 @@ class TestGraphDB:
                 if cnt > max:
                     return
 
-                print(f"+++ id:{id} --> dst:{e.dst.id}")
+                print(f"+++ id:{id} --> dst:{e.dst.id}")  # noqa: T201
                 walk_node(e.dst.id)
 
             for e in dst_edges:
                 if cnt > max:
                     return
 
-                print(f"--- id{id} <-- {e.src.id}")
+                print(f"--- id{id} <-- {e.src.id}")  # noqa: T201
                 walk_node(e.src.id)
 
         walk_node(0)
-        print("CNT", cnt)
-        print("MAX", max)
-        print("MAXSIZE", maxsize)
+        print("CNT", cnt)  # noqa: T201
+        print("MAX", max)  # noqa: T201
+        print("MAXSIZE", maxsize)  # noqa: T201
         c = Node.get_cache()
-        print("HITS", c.hits)
-        print("MISSES", c.misses)
-        print("CURRENT", c.currsize)
+        print("HITS", c.hits)  # noqa: T201
+        print("MISSES", c.misses)  # noqa: T201
+        print("CURRENT", c.currsize)  # noqa: T201
         assert cnt == c.misses
         assert c.currsize == c.maxsize
 
@@ -440,6 +440,53 @@ class TestEdgeList:
         assert e.id in n.src_edges
         assert "bob" not in n.src_edges  # type: ignore
 
+    def test_get_edges(self) -> None:
+        n = Node.get(cast(NodeId, 2))
+        src_edges = n.src_edges.get_edges()
+
+        assert isinstance(src_edges, list)
+        assert len(src_edges) == 15
+
+    def test_get_edges_by_type(self) -> None:
+        n = Node.get(cast(NodeId, 2))
+        src_edges = n.src_edges.get_edges("LOYAL_TO")
+
+        assert isinstance(src_edges, list)
+        assert len(src_edges) == 2
+
+    def test_get_edges_by_id(self) -> None:
+        n = Node.get(cast(NodeId, 2))
+        src_edges = n.src_edges.get_edges(cast(EdgeId, 2))
+
+        assert isinstance(src_edges, list)
+        assert len(src_edges) == 1
+        assert src_edges[0].type == "LOYAL_TO"
+        assert src_edges[0].src_id == 2
+        assert src_edges[0].dst_id == 3
+
+    def test_count(self) -> None:
+        n = Node.get(cast(NodeId, 2))
+        src_edge_count = n.src_edges.count()
+        dst_edge_count = n.dst_edges.count()
+
+        assert src_edge_count == 15
+        assert dst_edge_count == 1
+
+    def test_count_filter(self) -> None:
+        n = Node.get(cast(NodeId, 2))
+
+        loyal_count = n.src_edges.count(lambda e: e.type == "LOYAL_TO")
+        assert loyal_count == 2
+
+        killer_count = n.src_edges.count(lambda e: e.type == "KILLER_IN")
+        assert killer_count == 6
+
+        victim_count = n.src_edges.count(lambda e: e.type == "VICTIM_IN")
+        assert victim_count == 1
+
+        killed_count = n.src_edges.count(lambda e: e.type == "KILLED")
+        assert killed_count == 6
+
 
 class TestEdge:
     def test_edge_cache_control(self) -> None:
@@ -452,10 +499,8 @@ class TestEdge:
         assert isinstance(c, Cache)
 
     def test_src(self) -> None:
-        print("!!!! POOOOOOOOOOOPPP")
         n0 = Node.get(cast(NodeId, 0))
         n2 = Node.get(cast(NodeId, 2))
-        print("n0.src_edges", len(n0.src_edges))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
