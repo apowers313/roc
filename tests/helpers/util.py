@@ -6,6 +6,8 @@ import pytest
 
 from roc.component import Component
 from roc.event import BusConnection, Event, EventBus, EventFilter
+from roc.graphdb import Node
+from roc.perception import ElementPoint, ElementSize, ElementType
 
 
 def normalize_whitespace(s: str) -> str:
@@ -90,3 +92,47 @@ def component_response_args(
     # request.params
     arg_tuple = (name, type, input_conn_attr, output_conn_attr, vals)
     return pytest.mark.parametrize("component_response", [arg_tuple], indirect=True)
+
+
+def check_num_src_edges(n: object, num_edges: int) -> None:
+    assert isinstance(n, Node)
+    assert n.src_edges.count() == num_edges
+
+
+def check_size(n: object, sz: int) -> None:
+    assert isinstance(n, Node)
+    assert n.src_edges.count("Size") == 1
+    sz_node = n.src_edges.get_edges("Size")[0].dst
+    assert isinstance(sz_node, ElementSize)
+    assert sz_node.size == sz
+
+
+def check_type(n: object, t: int) -> None:
+    assert isinstance(n, Node)
+    assert n.src_edges.count("Type") == 1
+    type_node = n.src_edges.get_edges("Type")[0].dst
+    assert isinstance(type_node, ElementType)
+    assert type_node.type == t
+
+
+def check_points(n: object, points: set[tuple[int, int]]) -> None:
+    assert isinstance(n, Node)
+    assert n.src_edges.count("Location") == len(points)
+    points_nodes = n.src_edges.get_edges("Location")
+    for pn in points_nodes:
+        p = pn.dst
+        assert isinstance(p, ElementPoint)
+        pt = (p.x, p.y)
+        assert pt in points
+
+
+def print_points(n: object) -> None:
+    assert isinstance(n, Node)
+    ln = ""
+    points_nodes = n.src_edges.get_edges("Location")
+    for pn in points_nodes:
+        p = pn.dst
+        assert isinstance(p, ElementPoint)
+        pt = (p.x, p.y)
+        ln += f"{pt}, "
+    print("Points:", ln)

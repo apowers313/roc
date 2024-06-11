@@ -1,15 +1,17 @@
 from typing import Any
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import Feature, FeatureExtractor, NewFeature, PerceptionEvent, VisionData
 from ..point import Point
 
 
-class SingleFeature(Feature[Point]):
+class SingleFeature(NewFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
-    def __init__(self, origin: Component, points: Point) -> None:
-        super().__init__(origin, points)
+    def __init__(self, origin: Component, point: Point) -> None:
+        super().__init__("Single")
+        self.add_point(point.x, point.y)
+        self.add_type(point.val)
 
     def __hash__(self) -> int:
         raise NotImplementedError("SingleFeature hash not implemented")
@@ -53,7 +55,6 @@ class Single(FeatureExtractor[Point]):
                 # down right
                 data.get_val(point.x + 1, point.y + 1) != point.val
             ):
-                print("emit val", point)
                 self.pb_conn.send(SingleFeature(self, point))
         self.settled()
         return None
