@@ -143,7 +143,6 @@ class TestDelta:
 
         # fourth screen
         e = s.output.call_args_list[5].args[0]
-        print("fourth event", e)
         assert isinstance(e, Event)
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
@@ -161,7 +160,6 @@ class TestDelta:
 
         # fifth screen
         e = s.output.call_args_list[7].args[0]
-        print("fifth event", e)
         assert isinstance(e, Event)
         assert isinstance(e.data, DeltaFeature)
         d = e.data.diff
