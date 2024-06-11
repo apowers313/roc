@@ -1,12 +1,19 @@
 # mypy: disable-error-code="no-untyped-def"
 
-from helpers.util import StubComponent
+from helpers.nethack_screens import screens
+from helpers.util import (
+    StubComponent,
+    check_num_src_edges,
+    check_points,
+    check_size,
+    check_type,
+    print_points,
+)
 
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.flood import Flood, FloodFeature
-from roc.graphdb import Node
-from roc.perception import VisionData
+from roc.perception import Settled, VisionData
 
 
 class TestFlood:
@@ -39,232 +46,301 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        flood = e.data
-        assert isinstance(flood, Node)
-        # assert flood.size == 10
-        # assert flood.type == 0
-        # p0 = flood.points[0]
-        # assert p0.x == 0 and p0.y == 0
+        check_num_src_edges(e.data, 12)
+        check_size(e.data, 10)
+        check_type(e.data, 0)
+        check_points(
+            e.data,
+            {(0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2), (0, 3), (1, 3), (0, 4), (1, 4)},
+        )
 
-        # # event 2
-        # e = s.output.call_args_list[1].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, FloodFeature)
-        # flood = e.data.feature
-        # assert flood.size == 5
-        # assert flood.type == 1
-        # p0 = flood.points[0]
-        # assert p0.x == 2 and p0.y == 0
+        # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, 1)
+        check_points(
+            e.data,
+            {(2, 0), (2, 1), (2, 2), (2, 3), (2, 4)},
+        )
 
-        # # event 3
-        # e = s.output.call_args_list[2].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, FloodFeature)
-        # flood = e.data.feature
-        # assert flood.size == 10
-        # assert flood.type == 0
-        # p0 = flood.points[0]
-        # assert p0.x == 3 and p0.y == 0
+        # event 3
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 12)
+        check_size(e.data, 10)
+        check_type(e.data, 0)
+        print_points(e.data)
+        check_points(
+            e.data,
+            {(3, 0), (4, 0), (3, 1), (4, 1), (3, 2), (4, 2), (3, 3), (4, 3), (3, 4), (4, 4)},
+        )
 
-        # # event 4
-        # e = s.output.call_args_list[3].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, Settled)
+        # event 4
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
-    # def test_flood_horizontal(self, empty_components) -> None:
-    #     c = Component.get("flood", "perception")
-    #     assert isinstance(c, Flood)
-    #     s = StubComponent(
-    #         input_bus=c.pb_conn.attached_bus,
-    #         output_bus=c.pb_conn.attached_bus,
-    #     )
+    def test_flood_horizontal(self, empty_components) -> None:
+        c = Component.get("flood", "perception")
+        assert isinstance(c, Flood)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
 
-    #     s.input_conn.send(
-    #         VisionData(
-    #             [
-    #                 [0, 0, 0, 0, 0],
-    #                 [0, 0, 0, 0, 0],
-    #                 [1, 1, 1, 1, 1],
-    #                 [0, 0, 0, 0, 0],
-    #                 [0, 0, 0, 0, 0],
-    #             ]
-    #         )
-    #     )
+        s.input_conn.send(
+            VisionData(
+                [
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                    [1, 1, 1, 1, 1],
+                    [0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0],
+                ]
+            )
+        )
 
-    #     assert s.output.call_count == 4
+        assert s.output.call_count == 4
 
-    #     # event 1
-    #     e = s.output.call_args_list[0].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 10
-    #     assert flood.type == 0
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 0
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 12)
+        check_size(e.data, 10)
+        check_type(e.data, 0)
+        check_points(
+            e.data,
+            {(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (3, 1), (4, 1), (2, 1), (1, 1), (0, 1)},
+        )
 
-    #     # event 2
-    #     e = s.output.call_args_list[1].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 5
-    #     assert flood.type == 1
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 2
+        # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, 1)
 
-    #     # event 3
-    #     e = s.output.call_args_list[2].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 10
-    #     assert flood.type == 0
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 3
+        check_points(
+            e.data,
+            {(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)},
+        )
 
-    #     # event 4
-    #     e = s.output.call_args_list[3].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, Settled)
+        # event 3
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 12)
+        check_size(e.data, 10)
+        check_type(e.data, 0)
+        print_points(e.data)
+        check_points(
+            e.data,
+            {(0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (3, 4), (4, 4), (2, 4), (1, 4), (0, 4)},
+        )
 
-    # def test_flood_diagonal1(self, empty_components) -> None:
-    #     c = Component.get("flood", "perception")
-    #     assert isinstance(c, Flood)
-    #     s = StubComponent(
-    #         input_bus=c.pb_conn.attached_bus,
-    #         output_bus=c.pb_conn.attached_bus,
-    #     )
+        # event 4
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
-    #     s.input_conn.send(
-    #         VisionData(
-    #             [
-    #                 [1, 0, 0, 0, 0],
-    #                 [0, 1, 0, 0, 0],
-    #                 [0, 0, 1, 0, 0],
-    #                 [0, 0, 0, 1, 0],
-    #                 [0, 0, 0, 0, 1],
-    #             ]
-    #         )
-    #     )
+    def test_flood_diagonal1(self, empty_components) -> None:
+        c = Component.get("flood", "perception")
+        assert isinstance(c, Flood)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
 
-    #     assert s.output.call_count == 3
+        s.input_conn.send(
+            VisionData(
+                [
+                    [1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 0, 0, 1, 0],
+                    [0, 0, 0, 0, 1],
+                ]
+            )
+        )
 
-    #     # event 1
-    #     e = s.output.call_args_list[0].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 5
-    #     assert flood.type == 1
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 0
+        assert s.output.call_count == 3
 
-    #     # event 2
-    #     e = s.output.call_args_list[1].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 20
-    #     assert flood.type == 0
-    #     p0 = flood.points[0]
-    #     assert p0.x == 1 and p0.y == 0
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, 1)
+        print_points(e.data)
+        check_points(
+            e.data,
+            {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)},
+        )
 
-    #     # event 3
-    #     e = s.output.call_args_list[2].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, Settled)
+        # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 22)
+        check_size(e.data, 20)
+        check_type(e.data, 0)
+        print_points(e.data)
+        check_points(
+            e.data,
+            {
+                (1, 0),
+                (2, 0),
+                (3, 0),
+                (4, 0),
+                (3, 1),
+                (4, 1),
+                (3, 2),
+                (4, 2),
+                (4, 3),
+                (3, 4),
+                (2, 3),
+                (1, 4),
+                (2, 4),
+                (2, 1),
+                (1, 2),
+                (0, 3),
+                (1, 3),
+                (0, 4),
+                (0, 1),
+                (0, 2),
+            },
+        )
 
-    # def test_flood_diagonal2(self, empty_components) -> None:
-    #     c = Component.get("flood", "perception")
-    #     assert isinstance(c, Flood)
-    #     s = StubComponent(
-    #         input_bus=c.pb_conn.attached_bus,
-    #         output_bus=c.pb_conn.attached_bus,
-    #     )
+        # event 3
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
-    #     s.input_conn.send(
-    #         VisionData(
-    #             [
-    #                 [0, 0, 0, 0, 1],
-    #                 [0, 0, 0, 1, 0],
-    #                 [0, 0, 1, 0, 0],
-    #                 [0, 1, 0, 0, 0],
-    #                 [1, 0, 0, 0, 0],
-    #             ]
-    #         )
-    #     )
+    def test_flood_diagonal2(self, empty_components) -> None:
+        c = Component.get("flood", "perception")
+        assert isinstance(c, Flood)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
 
-    #     assert s.output.call_count == 3
+        s.input_conn.send(
+            VisionData(
+                [
+                    [0, 0, 0, 0, 1],
+                    [0, 0, 0, 1, 0],
+                    [0, 0, 1, 0, 0],
+                    [0, 1, 0, 0, 0],
+                    [1, 0, 0, 0, 0],
+                ]
+            )
+        )
 
-    #     # event 1
-    #     e = s.output.call_args_list[0].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 20
-    #     assert flood.type == 0
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 0
+        assert s.output.call_count == 3
 
-    #     # event 2
-    #     e = s.output.call_args_list[1].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 5
-    #     assert flood.type == 1
-    #     p0 = flood.points[0]
-    #     assert p0.x == 4 and p0.y == 0
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 22)
+        check_size(e.data, 20)
+        check_type(e.data, 0)
+        check_points(
+            e.data,
+            {
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (3, 0),
+                (2, 1),
+                (1, 2),
+                (0, 3),
+                (1, 4),
+                (2, 4),
+                (3, 4),
+                (4, 4),
+                (2, 3),
+                (3, 3),
+                (4, 3),
+                (3, 2),
+                (4, 2),
+                (4, 1),
+                (1, 1),
+                (0, 2),
+                (0, 1),
+            },
+        )
 
-    #     # event 3
-    #     e = s.output.call_args_list[2].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, Settled)
+        # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, 1)
+        check_points(
+            e.data,
+            {(4, 0), (3, 1), (2, 2), (1, 3), (0, 4)},
+        )
 
-    # def test_flood_screen0(self, empty_components) -> None:
-    #     c = Component.get("flood", "perception")
-    #     assert isinstance(c, Flood)
-    #     s = StubComponent(
-    #         input_bus=c.pb_conn.attached_bus,
-    #         output_bus=c.pb_conn.attached_bus,
-    #     )
+        # event 3
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
-    #     s.input_conn.send(VisionData(screens[0]["chars"]))
+    def test_flood_screen0(self, empty_components) -> None:
+        c = Component.get("flood", "perception")
+        assert isinstance(c, Flood)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
 
-    #     assert s.output.call_count == 4
+        s.input_conn.send(VisionData(screens[0]["chars"]))
 
-    #     # event 1
-    #     e = s.output.call_args_list[0].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 1629
-    #     assert flood.type == 32
-    #     p0 = flood.points[0]
-    #     assert p0.x == 0 and p0.y == 0
+        assert s.output.call_count == 4
 
-    #     # event 2
-    #     e = s.output.call_args_list[1].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 5
-    #     assert flood.type == ord("-")
-    #     p0 = flood.points[0]
-    #     assert p0.x == 15 and p0.y == 3
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 1631)
+        check_size(e.data, 1629)
+        check_type(e.data, 32)
 
-    #     # event 2
-    #     e = s.output.call_args_list[2].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, FloodFeature)
-    #     flood = e.data.feature
-    #     assert flood.size == 5
-    #     assert flood.type == ord(".")
-    #     p0 = flood.points[0]
-    #     assert p0.x == 17 and p0.y == 6
+        # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, ord("-"))
+        check_points(
+            e.data,
+            {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)},
+        )
 
-    #     # event 4
-    #     e = s.output.call_args_list[3].args[0]
-    #     assert isinstance(e, Event)
-    #     assert isinstance(e.data, Settled)
+        # event 2
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, ord("."))
+        print_points(e.data)
+        check_points(
+            e.data,
+            {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
+        )
+
+        # event 4
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
