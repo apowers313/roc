@@ -62,14 +62,18 @@ class ElementOrientation(Node, extra="forbid"):
 
 
 class NewFeature(Node, ABC):
-    _origin: Component
+    _origin: str
 
     @property
-    def origin(self) -> Component:
+    def origin(self) -> str:
         return self._origin
 
-    def __init__(self, origin: Component, label: str) -> None:
+    def __init__(self, origin: Component | str, label: str) -> None:
         super().__init__(labels={"Feature", label})
+        if isinstance(origin, Component):
+            origin = f"{origin.name}:{origin.type}"
+        # XXX: don't store a reference to the actual component or you may end up
+        # with circular references and memory leaks
         self._origin = origin
 
     def add_type(self, type: int) -> ElementType:
@@ -165,7 +169,7 @@ class ComplexFeature(NewFeature, Generic[FeatureTransmogrifier]):
 class OldLocation(NewFeature):
     """A feature for describing an old location and value"""
 
-    def __init__(self, origin: Component, x: int, y: int, val: int) -> None:
+    def __init__(self, origin: str, x: int, y: int, val: int) -> None:
         super().__init__(origin, "Old")
         self.add_type(val)
         self.add_point(x, y)
