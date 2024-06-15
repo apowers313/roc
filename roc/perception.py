@@ -4,10 +4,9 @@ re-assembled as concepts."""
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Hashable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generic, Self, TypeVar
+from typing import Generic, Self, TypeVar
 
 from .component import Component
 from .event import Event, EventBus
@@ -175,18 +174,7 @@ class OldLocation(NewFeature):
         self.add_point(x, y)
 
 
-class Feature(Hashable, Generic[FeatureType]):
-    """An abstract feature for communicating features that have been detected."""
-
-    origin: Component
-    feature: FeatureType
-
-    def __init__(self, origin: Component, feature: FeatureType) -> None:
-        self.origin = origin
-        self.feature = feature
-
-
-PerceptionData = VisionData | Feature[Any] | Settled | NewFeature
+PerceptionData = VisionData | Settled | NewFeature
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -225,7 +213,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature[FeatureType] | None: ...
+    def get_feature(self, e: PerceptionEvent) -> NewFeature | None: ...
 
 
 class HashingNoneFeature(Exception):

@@ -1,7 +1,5 @@
-from typing import Any
-
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, NewFeature, PerceptionEvent, VisionData
+from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, VisionData
 from ..point import Point
 
 
@@ -24,7 +22,7 @@ class Single(FeatureExtractor[Point]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature[Any] | None:
+    def get_feature(self, e: PerceptionEvent) -> NewFeature | None:
         data = e.data
         assert isinstance(data, VisionData)
 
