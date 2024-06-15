@@ -5,6 +5,7 @@ from typing import Any, Generator
 import pytest
 from helpers.util import FakeData
 
+import roc.logger as logger
 from roc.action import ActionData, action_bus
 from roc.component import Component, register_component
 from roc.config import Config
@@ -45,6 +46,7 @@ def eb_reset() -> None:
 def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
+    logger.init()
 
     yield
 
