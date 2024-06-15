@@ -141,11 +141,3 @@ class EventBus(Generic[EventData]):
     def clear_names() -> None:
         """Clears all EventBusses that have been registered, mostly used for testing."""
         eventbus_names.clear()
-
-
-# bus_registry: dict[str, EventBus[Any]] = {}
-# T = TypeVar("T")
-# def create_bus(name: str, data_type: T) -> EventBus[T]:
-#     bus = EventBus[T](name)
-#     bus_registry[name] = bus
-#     return bus
