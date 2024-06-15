@@ -7,7 +7,6 @@ from helpers.util import (
     check_points,
     check_size,
     check_type,
-    print_points,
 )
 
 from roc.component import Component
@@ -73,7 +72,6 @@ class TestFlood:
         check_num_src_edges(e.data, 12)
         check_size(e.data, 10)
         check_type(e.data, 0)
-        print_points(e.data)
         check_points(
             e.data,
             {(3, 0), (4, 0), (3, 1), (4, 1), (3, 2), (4, 2), (3, 3), (4, 3), (3, 4), (4, 4)},
@@ -138,7 +136,6 @@ class TestFlood:
         check_num_src_edges(e.data, 12)
         check_size(e.data, 10)
         check_type(e.data, 0)
-        print_points(e.data)
         check_points(
             e.data,
             {(0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (3, 4), (4, 4), (2, 4), (1, 4), (0, 4)},
@@ -178,7 +175,6 @@ class TestFlood:
         check_num_src_edges(e.data, 7)
         check_size(e.data, 5)
         check_type(e.data, 1)
-        print_points(e.data)
         check_points(
             e.data,
             {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)},
@@ -191,7 +187,6 @@ class TestFlood:
         check_num_src_edges(e.data, 22)
         check_size(e.data, 20)
         check_type(e.data, 0)
-        print_points(e.data)
         check_points(
             e.data,
             {
@@ -334,7 +329,6 @@ class TestFlood:
         check_num_src_edges(e.data, 7)
         check_size(e.data, 5)
         check_type(e.data, ord("."))
-        print_points(e.data)
         check_points(
             e.data,
             {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
