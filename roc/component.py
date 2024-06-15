@@ -33,13 +33,13 @@ class Component(ABC):
         global component_set
         component_set.add(self)
         self.bus_conns: dict[str, BusConnection[Any]] = {}
-        # print("\n\n++ incrementing component count:", self.name, self.type, self)
+        logger.trace(f"++ incrementing component count: {self.name}:{self.type} {self}")
         # traceback.print_stack()
 
     def __del__(self) -> None:
         global component_set
         component_set.add(self)
-        # print("\n\n-- decrementing component count", self.name, self.type, self)
+        logger.trace(f"-- decrementing component count: {self.name}:{self.type} {self}")
 
     def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:
         """Create a new bus connection for the component, storing the result for
@@ -80,6 +80,8 @@ class Component(ABC):
         """De-initializes the component, removing any bus connections and any
         other clean-up that needs to be performed"""
 
+        logger.debug(f"Component {self.name}:{self.type} shutting down.")
+
         for conn in self.bus_conns:
             for obs in self.bus_conns[conn].attached_bus.subject.observers:
                 obs.on_completed()
@@ -92,6 +94,7 @@ class Component(ABC):
         settings = Config.get()
         component_list = default_components
         component_list = component_list.union(settings.perception_components)
+        logger.debug(f"Component.init: default components: {component_list}")
 
         # TODO: shutdown previously loaded components
 
@@ -184,6 +187,8 @@ class register_component:
     def __call__(self, cls: type[Component]) -> type[Component]:
         global register_component
         global component_registry
+
+        logger.trace(f"Registering component: {self.name}:{self.type} (auto={self.auto})")
 
         reg_str = _component_registry_key(self.name, self.type)
         if reg_str in component_registry:
