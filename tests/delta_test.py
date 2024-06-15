@@ -7,7 +7,7 @@ from helpers.util import StubComponent, check_num_src_edges, check_points, check
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.delta import Delta
-from roc.perception import NewFeature, Settled, VisionData
+from roc.perception import Feature, Settled, VisionData
 
 screen0 = VisionData(screens[0]["chars"])
 screen1 = VisionData(screens[1]["chars"])
@@ -38,7 +38,7 @@ class TestDelta:
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("."))
         check_points(e.data, {(16, 6)})
@@ -48,7 +48,7 @@ class TestDelta:
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("f"))
         check_points(e.data, {(17, 6)})
@@ -111,7 +111,7 @@ class TestDelta:
         # second screen
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("."))
         check_points(e.data, {(16, 6)})
@@ -120,7 +120,7 @@ class TestDelta:
 
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("f"))
         check_points(e.data, {(17, 6)})
@@ -140,7 +140,7 @@ class TestDelta:
         # fourth screen
         e = s.output.call_args_list[5].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("$"))
         check_points(e.data, {(18, 5)})
@@ -155,7 +155,7 @@ class TestDelta:
         # fifth screen
         e = s.output.call_args_list[7].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("f"))
         check_points(e.data, {(18, 5)})
@@ -164,7 +164,7 @@ class TestDelta:
 
         e = s.output.call_args_list[8].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
         check_type(e.data, ord("."))
         check_points(e.data, {(17, 6)})
@@ -197,11 +197,11 @@ class TestDelta:
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         assert str(e.data) == "(16, 6): 102 'f' -> 46 '.'\n"
 
         # # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, NewFeature)
+        assert isinstance(e.data, Feature)
         assert str(e.data) == "(17, 6): 46 '.' -> 102 'f'\n"

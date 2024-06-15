@@ -60,7 +60,7 @@ class ElementOrientation(Node, extra="forbid"):
     orientation: Direction
 
 
-class NewFeature(Node, ABC):
+class Feature(Node, ABC):
     _origin: str
 
     @property
@@ -95,7 +95,7 @@ class NewFeature(Node, ABC):
         Node.connect(self, o, "Direction")
         return o
 
-    def add_feature(self, type: str, feature: NewFeature) -> NewFeature:
+    def add_feature(self, type: str, feature: Feature) -> Feature:
         Node.connect(self, feature, type)
         return feature
 
@@ -142,19 +142,19 @@ class Transmogrifier(ABC):
         pass
 
     @abstractmethod
-    def add_to_feature(self, n: NewFeature) -> None:
+    def add_to_feature(self, n: Feature) -> None:
         pass
 
     @classmethod
     @abstractmethod
-    def from_feature(self, n: NewFeature) -> Self:
+    def from_feature(self, n: Feature) -> Self:
         pass
 
 
 FeatureTransmogrifier = TypeVar("FeatureTransmogrifier", bound=Transmogrifier)
 
 
-class ComplexFeature(NewFeature, Generic[FeatureTransmogrifier]):
+class ComplexFeature(Feature, Generic[FeatureTransmogrifier]):
     def __init__(self, name: str, origin: Component, trans: FeatureTransmogrifier) -> None:
         super().__init__(origin, name)
         self._transmogrifier = trans
@@ -165,7 +165,7 @@ class ComplexFeature(NewFeature, Generic[FeatureTransmogrifier]):
         return str(f)
 
 
-class OldLocation(NewFeature):
+class OldLocation(Feature):
     """A feature for describing an old location and value"""
 
     def __init__(self, origin: str, x: int, y: int, val: int) -> None:
@@ -174,7 +174,7 @@ class OldLocation(NewFeature):
         self.add_point(x, y)
 
 
-PerceptionData = VisionData | Settled | NewFeature
+PerceptionData = VisionData | Settled | Feature
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -213,7 +213,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> NewFeature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
 
 
 class HashingNoneFeature(Exception):

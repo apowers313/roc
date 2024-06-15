@@ -5,8 +5,8 @@ from dataclasses import dataclass
 from ..component import Component, register_component
 from ..perception import (
     ComplexFeature,
+    Feature,
     FeatureExtractor,
-    NewFeature,
     OldLocation,
     PerceptionEvent,
     Transmogrifier,
@@ -26,18 +26,18 @@ class Diff(Transmogrifier):
     def __str__(self) -> str:
         return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
 
-    def add_to_feature(self, n: NewFeature) -> None:
+    def add_to_feature(self, n: Feature) -> None:
         n.add_type(self.new_val)
         n.add_point(self.x, self.y)
         ol = OldLocation(n.origin, self.x, self.y, self.old_val)
         n.add_feature("Past", ol)
 
     @classmethod
-    def from_feature(self, n: NewFeature) -> Diff:
+    def from_feature(self, n: Feature) -> Diff:
         x, y = n.get_point()
         new_val = n.get_type()
         old = n.get_feature("Past")
-        assert isinstance(old, NewFeature)
+        assert isinstance(old, Feature)
         old_val = old.get_type()
         return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
