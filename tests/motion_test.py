@@ -11,7 +11,7 @@ from roc.feature_extractors.motion import (
     MotionFeature,
     adjacent_direction,
 )
-from roc.perception import NewFeature, Settled, VisionData
+from roc.perception import Feature, Settled, VisionData
 
 screen0 = VisionData(screens[0]["chars"])
 screen1 = VisionData(screens[1]["chars"])
@@ -81,7 +81,7 @@ class TestMotion:
         assert e.data.get_orientation() == "RIGHT"
         assert e.data.get_point() == (17, 6)
         origin = e.data.get_feature("Origin")
-        assert isinstance(origin, NewFeature)
+        assert isinstance(origin, Feature)
         assert origin.get_point() == (16, 6)
 
         # # ([EVENT: motion >>> perception]: 46 LEFT: (17, 6) -> (16, 6),)
@@ -92,7 +92,7 @@ class TestMotion:
         assert e.data.get_orientation() == "LEFT"
         assert e.data.get_point() == (16, 6)
         origin = e.data.get_feature("Origin")
-        assert isinstance(origin, NewFeature)
+        assert isinstance(origin, Feature)
         assert origin.get_point() == (17, 6)
 
         # Settled
@@ -110,7 +110,7 @@ class TestMotion:
         assert e.data.get_orientation() == "UP_RIGHT"
         assert e.data.get_point() == (18, 5)
         origin = e.data.get_feature("Origin")
-        assert isinstance(origin, NewFeature)
+        assert isinstance(origin, Feature)
         assert origin.get_point() == (17, 6)
 
         # Settled
@@ -128,7 +128,7 @@ class TestMotion:
         assert e.data.get_orientation() == "DOWN"
         assert e.data.get_point() == (18, 6)
         origin = e.data.get_feature("Origin")
-        assert isinstance(origin, NewFeature)
+        assert isinstance(origin, Feature)
         assert origin.get_point() == (18, 5)
 
         # Settled

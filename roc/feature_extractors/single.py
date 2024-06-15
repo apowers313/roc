@@ -1,9 +1,9 @@
 from ..component import Component, register_component
-from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, VisionData
+from ..perception import FeatureExtractor, Feature, PerceptionEvent, VisionData
 from ..point import Point
 
 
-class SingleFeature(NewFeature):
+class SingleFeature(Feature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     def __init__(self, origin: Component, point: Point) -> None:
@@ -22,7 +22,7 @@ class Single(FeatureExtractor[Point]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> NewFeature | None:
+    def get_feature(self, e: PerceptionEvent) -> Feature | None:
         data = e.data
         assert isinstance(data, VisionData)
 

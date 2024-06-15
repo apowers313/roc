@@ -1,11 +1,11 @@
 from ..component import Component, register_component
-from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, VisionData
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 from ..point import Grid, Point, PointList, TypedPointCollection
 
 MIN_FLOOD_SIZE = 5
 
 
-class FloodFeature(NewFeature):
+class FloodFeature(Feature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
@@ -49,7 +49,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> NewFeature | None:
+    def get_feature(self, e: PerceptionEvent) -> Feature | None:
         data = e.data
         assert isinstance(data, VisionData)
 

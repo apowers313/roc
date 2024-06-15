@@ -9,8 +9,8 @@ from ..perception import (
     ElementOrientation,
     ElementPoint,
     ElementType,
+    Feature,
     FeatureExtractor,
-    NewFeature,
     OldLocation,
     PerceptionEvent,
     Settled,
@@ -35,7 +35,7 @@ class MotionVector(Transmogrifier):
     def __str__(self) -> str:
         return f"{self.val} '{chr(self.val)}' {self.direction}: ({self.start_x}, {self.start_y}) -> ({self.end_x}, {self.end_y})"
 
-    def add_to_feature(self, n: NewFeature) -> None:
+    def add_to_feature(self, n: Feature) -> None:
         n.add_type(self.val)
         n.add_point(self.end_x, self.end_y)
         n.add_orientation(self.direction)
@@ -43,9 +43,9 @@ class MotionVector(Transmogrifier):
         n.add_feature("Origin", ol)
 
     @classmethod
-    def from_feature(self, n: NewFeature) -> MotionVector:
+    def from_feature(self, n: Feature) -> MotionVector:
         orig = n.get_feature("Origin")
-        assert isinstance(orig, NewFeature)
+        assert isinstance(orig, Feature)
         start_loc = orig.get_feature("Location")
         assert isinstance(start_loc, ElementPoint)
         val = n.get_feature("Type")
