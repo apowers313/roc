@@ -1,3 +1,5 @@
+"""A component for generating Features that represent differences in vision"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,6 +29,7 @@ class Diff(Transmogrifier):
         return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
 
     def add_to_feature(self, n: Feature) -> None:
+        """Adds a set of Diff nodes to a Feature"""
         n.add_type(self.new_val)
         n.add_point(self.x, self.y)
         ol = OldLocation(n.origin, self.x, self.y, self.old_val)
@@ -34,6 +37,7 @@ class Diff(Transmogrifier):
 
     @classmethod
     def from_feature(self, n: Feature) -> Diff:
+        """Creates a Diff from a Feature that has all the right Nodes"""
         x, y = n.get_point()
         new_val = n.get_type()
         old = n.get_feature("Past")
@@ -43,6 +47,8 @@ class Diff(Transmogrifier):
 
 
 class DeltaFeature(ComplexFeature[Diff]):
+    """A Feature that describes changes in vision"""
+
     def __init__(self, origin: Component, d: Diff) -> None:
         super().__init__("Delta", origin, d)
 
