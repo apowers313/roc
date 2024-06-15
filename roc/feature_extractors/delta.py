@@ -1,44 +1,45 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
-
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import (
+    ElementPoint,
+    ElementType,
+    FeatureExtractor,
+    NewFeature,
+    OldLocation,
+    PerceptionEvent,
+    VisionData,
+)
 
 
-class Diff(BaseModel):
-    """A Pydantic model for representing a changes in vision."""
-
-    x: int
-    y: int
-    old_val: str | int
-    new_val: str | int
-
-
-class DeltaFeature(Feature[Diff]):
+class DeltaFeature(NewFeature):
     """A feature for representing vision changes (deltas)"""
 
-    def __init__(self, origin: Component, diff: Diff) -> None:
-        super().__init__(origin, diff)
-        # self.diff_list = diff_list
-        self.diff = diff
+    def __init__(self, origin: Component, x: int, y: int, old_val: int, new_val: int) -> None:
+        super().__init__(origin, "Delta")
+        self.add_type(new_val)
+        self.add_point(x, y)
+        ol = OldLocation(origin, x, y, old_val)
+        self.add_feature("Past", ol)
 
     def __hash__(self) -> int:
         raise NotImplementedError("DeltaFeature hash not implemented")
 
-    def __repr__(self) -> str:
-        # diff_str = "\n"
-        # for d in self.diff_list:
-        #     diff_str += f"({d.x}, {d.y}): {d.old_val} -> {d.new_val}\n"
+    def __str__(self) -> str:
+        old = self.get_feature("Past")
+        assert isinstance(old, NewFeature)
+        old_val = old.get_feature("Type")
+        assert isinstance(old_val, ElementType)
+        new_val = self.get_feature("Type")
+        assert isinstance(new_val, ElementType)
+        loc = self.get_feature("Location")
+        assert isinstance(loc, ElementPoint)
 
-        # return diff_str
-
-        d = self.diff
-        return f"({d.x}, {d.y}): {d.old_val} -> {d.new_val}\n"
+        return f"({loc.x}, {loc.y}): {old_val.type} '{chr(old_val.type)}' -> {new_val.type} '{chr(new_val.type)}'\n"
 
 
 @register_component("delta", "perception")
-class Delta(FeatureExtractor[Diff]):
+class Delta(FeatureExtractor[DeltaFeature]):
     """A component for detecting changes in vision."""
 
     def __init__(self) -> None:
@@ -48,10 +49,7 @@ class Delta(FeatureExtractor[Diff]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature[Diff] | None:
-        # assert isinstance(e, VisionData)
-        # reveal_type(e)
-        # reveal_type(e.data)
+    def get_feature(self, e: PerceptionEvent) -> None:
         data = e.data
         assert isinstance(data, VisionData)
 
@@ -67,38 +65,12 @@ class Delta(FeatureExtractor[Diff]):
         assert prev.height == curr.height
         assert prev.width == curr.width
 
-        # height = len(curr)
-        # width = len(curr[0])
-        # for y in range(height):
-        #     for x in range(width):
-        #         if prev[y][x] != curr[y][x]:
-        #             d = Diff(
-        #                 x=x,
-        #                 y=y,
-        #                 old_val=prev[y][x],
-        #                 new_val=curr[y][x],
-        #             )
-        #             f = DeltaFeature(self, d)
-        #             # diff_list.append(d)
-        #             self.pb_conn.send(f)
         for new_point in curr:
             old_point = prev.get_point(new_point.x, new_point.y)
             if old_point.val != new_point.val:
-                d = Diff(
-                    x=new_point.x,
-                    y=new_point.y,
-                    old_val=old_point.val,
-                    new_val=new_point.val,
+                self.pb_conn.send(
+                    DeltaFeature(self, new_point.x, new_point.y, old_point.val, new_point.val)
                 )
-                f = DeltaFeature(self, d)
-                # diff_list.append(d)
-                self.pb_conn.send(f)
-        # if len(diff_list) == 0:
-        #     return None
 
-        # return DeltaFeature(self, diff_list)
         self.settled()
         return None
-
-
-# DiffList = list[Diff]

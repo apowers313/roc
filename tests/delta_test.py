@@ -2,12 +2,12 @@
 
 
 from helpers.nethack_screens import screens
-from helpers.util import StubComponent
+from helpers.util import StubComponent, check_num_src_edges, check_points, check_type
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.delta import Delta, DeltaFeature
-from roc.perception import Settled, VisionData
+from roc.feature_extractors.delta import Delta
+from roc.perception import NewFeature, Settled, VisionData
 
 screen0 = VisionData(screens[0]["chars"])
 screen1 = VisionData(screens[1]["chars"])
@@ -38,24 +38,22 @@ class TestDelta:
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-        # Diff(x=6, y=16, val1=102, val2=46), Diff(x=6, y=17, val1=46, val2=102)])
-        assert d.x == 16
-        assert d.y == 6
-        assert d.old_val == 102  # f
-        assert d.new_val == 46  # .
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("."))
+        check_points(e.data, {(16, 6)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("f"))
 
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-        assert d.x == 17
-        assert d.y == 6
-        assert d.old_val == 46  # .
-        assert d.new_val == 102  # f
-        # kitten moved right!
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("f"))
+        check_points(e.data, {(17, 6)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("."))
 
         # fourth event
         e = s.output.call_args_list[3].args[0]
@@ -113,23 +111,21 @@ class TestDelta:
         # second screen
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-
-        # Diff(x=6, y=16, val1=102, val2=46), Diff(x=6, y=17, val1=46, val2=102)])
-        assert d.x == 16
-        assert d.y == 6
-        assert d.old_val == 102  # f
-        assert d.new_val == 46  # .
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("."))
+        check_points(e.data, {(16, 6)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("f"))
 
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-        assert d.x == 17
-        assert d.y == 6
-        assert d.old_val == 46  # .
-        assert d.new_val == 102  # f
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("f"))
+        check_points(e.data, {(17, 6)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("."))
 
         # second screen settled
         e = s.output.call_args_list[3].args[0]
@@ -144,14 +140,12 @@ class TestDelta:
         # fourth screen
         e = s.output.call_args_list[5].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-        # (5, 18): 120 -> 36
-        assert d.x == 18
-        assert d.y == 5
-        assert d.old_val == 120  # x
-        assert d.new_val == 36  # $
-        # grid bug dies and drops money
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("$"))
+        check_points(e.data, {(18, 5)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("x"))
 
         # fourth screen settled
         e = s.output.call_args_list[6].args[0]
@@ -161,26 +155,53 @@ class TestDelta:
         # fifth screen
         e = s.output.call_args_list[7].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-
-        # (5, 18): 36 -> 102
-        assert d.x == 18
-        assert d.y == 5
-        assert d.old_val == 36  # $
-        assert d.new_val == 102  # f
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("f"))
+        check_points(e.data, {(18, 5)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("$"))
 
         e = s.output.call_args_list[8].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, DeltaFeature)
-        d = e.data.diff
-        # (6, 17): 102 -> 46
-        assert d.x == 17
-        assert d.y == 6
-        assert d.old_val == 102  # f
-        assert d.new_val == 46  # .
+        assert isinstance(e.data, NewFeature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, ord("."))
+        check_points(e.data, {(17, 6)})
+        old = e.data.get_feature("Past")
+        check_type(old, ord("f"))
 
         # fifth screen settled
         e = s.output.call_args_list[9].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)
+
+    def test_repr(self) -> None:
+        c = Component.get("delta", "perception")
+        assert isinstance(c, Delta)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
+
+        s.input_conn.send(screen0)
+        s.input_conn.send(screen1)
+
+        assert s.output.call_count == 4
+
+        # first event
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
+
+        # second event
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, NewFeature)
+        assert str(e.data) == "(16, 6): 102 'f' -> 46 '.'\n"
+
+        # # third event
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, NewFeature)
+        assert str(e.data) == "(17, 6): 46 '.' -> 102 'f'\n"

@@ -11,7 +11,7 @@ class FloodFeature(NewFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
-        super().__init__("Flood")
+        super().__init__(origin, "Flood")
         self.add_type(type)
         self.add_size(len(point_list))
         for point in point_list:
