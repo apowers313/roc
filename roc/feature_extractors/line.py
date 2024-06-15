@@ -11,7 +11,7 @@ class LineFeature(NewFeature):
     """A collection of points representing a line"""
 
     def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
-        super().__init__("Line")
+        super().__init__(origin, "Line")
         self.add_type(type)
         self.add_size(len(point_list))
         for point in point_list:

@@ -1,37 +1,107 @@
 from __future__ import annotations
 
-from enum import Enum
-
-from pydantic import BaseModel
+from dataclasses import dataclass
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
+from ..perception import (
+    Direction,
+    ElementOrientation,
+    ElementPoint,
+    ElementType,
+    FeatureExtractor,
+    NewFeature,
+    OldLocation,
+    PerceptionEvent,
+    Settled,
+    Transmogrifier,
+)
 from ..point import Point
-from .delta import DeltaFeature, Diff
+from .delta import DeltaFeature
 
 
-class MotionVector(BaseModel):
+@dataclass
+class MotionVector(Transmogrifier):
     direction: Direction
     start_x: int
     start_y: int
     end_x: int
     end_y: int
-    val: str | int
+    val: int
 
     class Config:
         use_enum_values = True
 
+    def __str__(self) -> str:
+        return f"{self.val} '{chr(self.val)}' {self.direction}: ({self.start_x}, {self.start_y}) -> ({self.end_x}, {self.end_y})"
 
-class MotionFeature(Feature[MotionVector]):
+    def add_to_feature(self, n: NewFeature) -> None:
+        n.add_type(self.val)
+        n.add_point(self.end_x, self.end_y)
+        n.add_orientation(self.direction)
+        ol = OldLocation(n.origin, self.start_x, self.start_y, self.val)
+        n.add_feature("Origin", ol)
+
+    @classmethod
+    def from_feature(self, n: NewFeature) -> MotionVector:
+        orig = n.get_feature("Origin")
+        assert isinstance(orig, NewFeature)
+        start_loc = orig.get_feature("Location")
+        assert isinstance(start_loc, ElementPoint)
+        val = n.get_feature("Type")
+        assert isinstance(val, ElementType)
+        end_loc = n.get_feature("Location")
+        assert isinstance(end_loc, ElementPoint)
+        dir = n.get_feature("Direction")
+        assert isinstance(dir, ElementOrientation)
+        return MotionVector(
+            direction=dir.orientation,
+            start_x=start_loc.x,
+            start_y=start_loc.y,
+            end_x=end_loc.x,
+            end_y=end_loc.y,
+            val=val.type,
+        )
+
+
+class MotionFeature(NewFeature):
     def __init__(self, origin: Component, v: MotionVector) -> None:
-        super().__init__(origin, v)
+        super().__init__(origin, "Motion")
+        v.add_to_feature(self)
 
     def __hash__(self) -> int:
         raise NotImplementedError("DeltaFeature hash not implemented")
 
-    def __repr__(self) -> str:
-        v = self.feature
-        return f"{v.val} {v.direction}: ({v.start_x}, {v.start_y}) -> ({v.end_x}, {v.end_y})"
+    def __str__(self) -> str:
+        mv = MotionVector.from_feature(self)
+        return str(mv)
+
+
+@dataclass
+class Diff(Transmogrifier):
+    """A dataclass for representing a changes in vision."""
+
+    x: int
+    y: int
+    old_val: int
+    new_val: int
+
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
+
+    def add_to_feature(self, n: NewFeature) -> None:
+        n.add_type(self.new_val)
+        n.add_point(self.x, self.y)
+        ol = OldLocation(n.origin, self.x, self.y, self.old_val)
+        n.add_feature("Past", ol)
+
+    @classmethod
+    def from_feature(self, n: NewFeature) -> Diff:
+        x, y = n.get_point()
+        new_val = n.get_type()
+        old = n.get_feature("Past")
+        assert isinstance(old, NewFeature)
+        old_val = old.get_type()
+        return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
 
 DiffList = list[Diff]
@@ -56,7 +126,13 @@ class Motion(FeatureExtractor[MotionFeature]):
             return None
 
         assert isinstance(e.data, DeltaFeature)
-        d1 = e.data.diff
+        d1 = Diff.from_feature(e.data)
+        # x, y = e.data.get_point()
+        # new_val = e.data.get_type()
+        # old = e.data.get_feature("Past")
+        # assert isinstance(old, NewFeature)
+        # old_val = old.get_type()
+        # d1 = Diff(x, y, old_val, new_val)
 
         for d2 in self.diff_list:
             if Point.isadjacent(x1=d1.x, y1=d1.y, x2=d2.x, y2=d2.y):
@@ -70,18 +146,7 @@ class Motion(FeatureExtractor[MotionFeature]):
         return None
 
 
-class Direction(str, Enum):
-    up = "UP"
-    down = "DOWN"
-    left = "LEFT"
-    right = "RIGHT"
-    up_right = "UP_RIGHT"
-    up_left = "UP_LEFT"
-    down_right = "DOWN_RIGHT"
-    down_left = "DOWN_LEFT"
-
-
-def adjacent_direction(d1: Diff, d2: Diff) -> str:
+def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
     lr_str = ""
     if d1.x < d2.x:
         lr_str = "RIGHT"
@@ -99,9 +164,9 @@ def adjacent_direction(d1: Diff, d2: Diff) -> str:
     if len(lr_str) and len(ud_str):
         join_str = "_"
 
-    # return Direction(f"{ud_str}{join_str}{lr_str}")
-    dir = f"{ud_str}{join_str}{lr_str}"
-    return dir
+    return Direction(f"{ud_str}{join_str}{lr_str}")
+    # dir = f"{ud_str}{join_str}{lr_str}"
+    # return Direction(dir)
 
 
 def emit_motion(mc: Motion, old_diff: Diff, new_diff: Diff) -> None:

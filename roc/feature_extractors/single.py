@@ -9,7 +9,7 @@ class SingleFeature(NewFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     def __init__(self, origin: Component, point: Point) -> None:
-        super().__init__("Single")
+        super().__init__(origin, "Single")
         self.add_point(point.x, point.y)
         self.add_type(point.val)
 

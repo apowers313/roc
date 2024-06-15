@@ -6,53 +6,17 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from collections.abc import Hashable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from enum import Enum
+from typing import Any, Generic, Self, TypeVar
 
 from .component import Component
 from .event import Event, EventBus
 from .graphdb import Node
 from .point import Grid
 
-# Grid = tuple[tuple[int | str, ...], ...]
-# Screen = tuple[tuple[int | str, ...], ...]
-# Screen = list[list[int]]
-
-# val, x, y
-# GridTriple = tuple[str | int, int, int]
-
-
-# class VisionData:
-#     def __init__(self, screen: Screen) -> None:
-#         self.screen = screen
-
-#     def __iter__(self) -> Iterator[GridTriple]:
-#         for y in range(self.height):
-#             for x in range(self.width):
-#                 val = self.screen[y][x]
-#                 yield (val, x, y)
-
-#     def get(self, x: int, y: int) -> int | str:
-#         return self.screen[y][x]
-
-#     @property
-#     def width(self) -> int:
-#         return len(self.screen[0])
-
-#     @property
-#     def height(self) -> int:
-#         return len(self.screen)
-
 VisionData = Grid
-
-# TODO: vision input
 # TODO: sound input
 # TODO: other input
-# class VisionData(BaseModel):
-#     """A Pydantic model for the vision perception data."""
-
-#     # spectrum: tuple[tuple[tuple[int | str, ...], ...], ...]
-#     screen: Grid
-#     # spectrum: tuple[int | str, ...]
 
 
 @dataclass
@@ -82,13 +46,31 @@ class ElementTypedPoint(Node, extra="forbid"):
     y: int
 
 
+class Direction(str, Enum):
+    up = "UP"
+    down = "DOWN"
+    left = "LEFT"
+    right = "RIGHT"
+    up_right = "UP_RIGHT"
+    up_left = "UP_LEFT"
+    down_right = "DOWN_RIGHT"
+    down_left = "DOWN_LEFT"
+
+
 class ElementOrientation(Node, extra="forbid"):
-    pass
+    orientation: Direction
 
 
 class NewFeature(Node, ABC):
-    def __init__(self, label: str) -> None:
+    _origin: Component
+
+    @property
+    def origin(self) -> Component:
+        return self._origin
+
+    def __init__(self, origin: Component, label: str) -> None:
         super().__init__(labels={"Feature", label})
+        self._origin = origin
 
     def add_type(self, type: int) -> ElementType:
         f = ElementType(type=type)
@@ -104,6 +86,81 @@ class NewFeature(Node, ABC):
         s = ElementSize(size=size)
         Node.connect(self, s, "Size")
         return s
+
+    def add_orientation(self, orientation: Direction) -> ElementOrientation:
+        o = ElementOrientation(orientation=orientation)
+        Node.connect(self, o, "Direction")
+        return o
+
+    def add_feature(self, type: str, feature: NewFeature) -> NewFeature:
+        Node.connect(self, feature, type)
+        return feature
+
+    def get_feature(self, type: str) -> Node | None:
+        nodes = self.get_features(type)
+        if len(nodes) < 1:
+            return None
+
+        return nodes[0]
+
+    def get_features(self, type: str) -> list[Node]:
+        edge_iter = self.src_edges.get_edges(type)
+        return list(map(lambda e: e.dst, edge_iter))
+
+    def get_point(self) -> tuple[int, int]:
+        pt = self.get_feature("Location")
+        if not pt:
+            raise Exception("no Location in get_point()")
+
+        assert isinstance(pt, ElementPoint)
+        return (pt.x, pt.y)
+
+    def get_type(self) -> int:
+        t = self.get_feature("Type")
+        if not t:
+            raise Exception("no Type in get_type()")
+
+        assert isinstance(t, ElementType)
+        return t.type
+
+
+@dataclass
+class Transmogrifier(ABC):
+    @abstractmethod
+    def __str__(self) -> str:
+        pass
+
+    @abstractmethod
+    def add_to_feature(self, n: NewFeature) -> None:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def from_feature(self, n: NewFeature) -> Self:
+        pass
+
+
+FeatureTransmogrifier = TypeVar("FeatureTransmogrifier", bound=Transmogrifier)
+
+
+class ComplexFeature(NewFeature, Generic[FeatureTransmogrifier]):
+    def __init__(self, origin: Component, trans: FeatureTransmogrifier) -> None:
+        super().__init__(origin, "Motion")
+        self._transmogrifier = trans
+        self._transmogrifier.add_to_feature(self)
+
+    def __str__(self) -> str:
+        f = self._transmogrifier.__class__.from_feature(self)
+        return str(f)
+
+
+class OldLocation(NewFeature):
+    """A feature for describing an old location and value"""
+
+    def __init__(self, origin: Component, x: int, y: int, val: int) -> None:
+        super().__init__(origin, "Old")
+        self.add_type(val)
+        self.add_point(x, y)
 
 
 class Feature(Hashable, Generic[FeatureType]):
@@ -161,16 +218,3 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
 
 class HashingNoneFeature(Exception):
     pass
-
-
-# @dataclass
-# class FeatureData:
-#     feature: Feature
-
-
-# class SettledData:
-#     def __hash__(self) -> int:
-#         raise HashingNoneFeature("Attempting to hash None feature")
-
-#     def __repr__(self) -> str:
-#         return "<<SETTLED>>"
