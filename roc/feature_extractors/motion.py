@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from ..component import Component, register_component
 from ..perception import (
+    ComplexFeature,
     Direction,
     ElementOrientation,
     ElementPoint,
@@ -16,7 +17,7 @@ from ..perception import (
     Transmogrifier,
 )
 from ..point import Point
-from .delta import DeltaFeature
+from .delta import DeltaFeature, Diff
 
 
 @dataclass
@@ -63,45 +64,9 @@ class MotionVector(Transmogrifier):
         )
 
 
-class MotionFeature(NewFeature):
-    def __init__(self, origin: Component, v: MotionVector) -> None:
-        super().__init__(origin, "Motion")
-        v.add_to_feature(self)
-
-    def __hash__(self) -> int:
-        raise NotImplementedError("DeltaFeature hash not implemented")
-
-    def __str__(self) -> str:
-        mv = MotionVector.from_feature(self)
-        return str(mv)
-
-
-@dataclass
-class Diff(Transmogrifier):
-    """A dataclass for representing a changes in vision."""
-
-    x: int
-    y: int
-    old_val: int
-    new_val: int
-
-    def __str__(self) -> str:
-        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
-
-    def add_to_feature(self, n: NewFeature) -> None:
-        n.add_type(self.new_val)
-        n.add_point(self.x, self.y)
-        ol = OldLocation(n.origin, self.x, self.y, self.old_val)
-        n.add_feature("Past", ol)
-
-    @classmethod
-    def from_feature(self, n: NewFeature) -> Diff:
-        x, y = n.get_point()
-        new_val = n.get_type()
-        old = n.get_feature("Past")
-        assert isinstance(old, NewFeature)
-        old_val = old.get_type()
-        return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
+class MotionFeature(ComplexFeature[MotionVector]):
+    def __init__(self, origin: Component, mv: MotionVector):
+        super().__init__("Motion", origin, mv)
 
 
 DiffList = list[Diff]
@@ -127,12 +92,6 @@ class Motion(FeatureExtractor[MotionFeature]):
 
         assert isinstance(e.data, DeltaFeature)
         d1 = Diff.from_feature(e.data)
-        # x, y = e.data.get_point()
-        # new_val = e.data.get_type()
-        # old = e.data.get_feature("Past")
-        # assert isinstance(old, NewFeature)
-        # old_val = old.get_type()
-        # d1 = Diff(x, y, old_val, new_val)
 
         for d2 in self.diff_list:
             if Point.isadjacent(x1=d1.x, y1=d1.y, x2=d2.x, y2=d2.y):
@@ -165,8 +124,6 @@ def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
         join_str = "_"
 
     return Direction(f"{ud_str}{join_str}{lr_str}")
-    # dir = f"{ud_str}{join_str}{lr_str}"
-    # return Direction(dir)
 
 
 def emit_motion(mc: Motion, old_diff: Diff, new_diff: Diff) -> None:

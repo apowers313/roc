@@ -123,6 +123,14 @@ class NewFeature(Node, ABC):
         assert isinstance(t, ElementType)
         return t.type
 
+    def get_orientation(self) -> Direction:
+        o = self.get_feature("Direction")
+        if not o:
+            raise Exception("no Orientation in get_orientation()")
+
+        assert isinstance(o, ElementOrientation)
+        return o.orientation
+
 
 @dataclass
 class Transmogrifier(ABC):
@@ -144,8 +152,8 @@ FeatureTransmogrifier = TypeVar("FeatureTransmogrifier", bound=Transmogrifier)
 
 
 class ComplexFeature(NewFeature, Generic[FeatureTransmogrifier]):
-    def __init__(self, origin: Component, trans: FeatureTransmogrifier) -> None:
-        super().__init__(origin, "Motion")
+    def __init__(self, name: str, origin: Component, trans: FeatureTransmogrifier) -> None:
+        super().__init__(origin, name)
         self._transmogrifier = trans
         self._transmogrifier.add_to_feature(self)
 
