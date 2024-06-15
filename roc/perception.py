@@ -61,10 +61,13 @@ class ElementOrientation(Node, extra="forbid"):
 
 
 class Feature(Node, ABC):
+    """A detail of the environment that has been created by a feature extractor"""
+
     _origin: str
 
     @property
     def origin(self) -> str:
+        """The name of the Component that created this feature"""
         return self._origin
 
     def __init__(self, origin: Component | str, label: str) -> None:
@@ -76,30 +79,39 @@ class Feature(Node, ABC):
         self._origin = origin
 
     def add_type(self, type: int) -> ElementType:
+        """Add a type Node to the feature that describes the type of feature"""
         f = ElementType(type=type)
         Node.connect(self, f, "Type")
         return f
 
     def add_point(self, x: int, y: int) -> ElementPoint:
+        """Add a location Node to the feature that describes one or more places
+        where this feature exists."""
         p = ElementPoint(x=x, y=y)
         Node.connect(self, p, "Location")
         return p
 
     def add_size(self, size: int) -> ElementSize:
+        """Add a size Node to the feature that describes the magnitude of the feature"""
         s = ElementSize(size=size)
         Node.connect(self, s, "Size")
         return s
 
     def add_orientation(self, orientation: Direction) -> ElementOrientation:
+        """Add a direction Node to the feature that describes a direction or
+        orientation of the feature"""
         o = ElementOrientation(orientation=orientation)
         Node.connect(self, o, "Direction")
         return o
 
     def add_feature(self, type: str, feature: Feature) -> Feature:
+        """Add an arbitrary Feature Node"""
         Node.connect(self, feature, type)
         return feature
 
     def get_feature(self, type: str) -> Node | None:
+        """Get an Feature Node of the type described, or None if it doesn't
+        exist. If multiple matching features are found, the first one is returned."""
         nodes = self.get_features(type)
         if len(nodes) < 1:
             return None
@@ -107,6 +119,7 @@ class Feature(Node, ABC):
         return nodes[0]
 
     def get_features(self, type: str) -> list[Node]:
+        """Return all matching Feature Nodes of the type described."""
         edge_iter = self.src_edges.get_edges(type)
         return list(map(lambda e: e.dst, edge_iter))
 
@@ -137,17 +150,26 @@ class Feature(Node, ABC):
 
 @dataclass
 class Transmogrifier(ABC):
+    """Features are represented as collections of Nodes; however, that's
+    frequently difficult to work with. Implementations of this abstract class
+    convert Nodes to a dataclass that's easier to work with (and vice versa)."""
+
     @abstractmethod
     def __str__(self) -> str:
         pass
 
     @abstractmethod
     def add_to_feature(self, n: Feature) -> None:
+        """Converts the dataclass to Nodes and adds those Nodes as children of
+        the specified Feature."""
         pass
 
     @classmethod
     @abstractmethod
     def from_feature(self, n: Feature) -> Self:
+        """Creates an instance of this dataclass from the specified Feature.
+        Raises an exception if the required Nodes aren't present on the
+        specified Feature."""
         pass
 
 
@@ -155,6 +177,10 @@ FeatureTransmogrifier = TypeVar("FeatureTransmogrifier", bound=Transmogrifier)
 
 
 class ComplexFeature(Feature, Generic[FeatureTransmogrifier]):
+    """Creates a new Feature based off of a Transmogrifier. Constructing the
+    feature requires the Transmogrifier specified by the template. Also adds a
+    convenient __str__ method for debugging the Feature."""
+
     def __init__(self, name: str, origin: Component, trans: FeatureTransmogrifier) -> None:
         super().__init__(origin, name)
         self._transmogrifier = trans
