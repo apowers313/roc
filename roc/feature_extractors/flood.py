@@ -1,7 +1,5 @@
-from typing import Any
-
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, NewFeature, PerceptionEvent, VisionData
+from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, VisionData
 from ..point import Grid, Point, PointList, TypedPointCollection
 
 MIN_FLOOD_SIZE = 5
@@ -51,7 +49,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature[Any] | None:
+    def get_feature(self, e: PerceptionEvent) -> NewFeature | None:
         data = e.data
         assert isinstance(data, VisionData)
 
