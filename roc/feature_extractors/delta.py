@@ -1,41 +1,50 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from ..component import Component, register_component
 from ..perception import (
-    ElementPoint,
-    ElementType,
+    ComplexFeature,
     FeatureExtractor,
     NewFeature,
     OldLocation,
     PerceptionEvent,
+    Transmogrifier,
     VisionData,
 )
 
 
-class DeltaFeature(NewFeature):
-    """A feature for representing vision changes (deltas)"""
+@dataclass
+class Diff(Transmogrifier):
+    """A dataclass for representing a changes in vision."""
 
-    def __init__(self, origin: Component, x: int, y: int, old_val: int, new_val: int) -> None:
-        super().__init__(origin, "Delta")
-        self.add_type(new_val)
-        self.add_point(x, y)
-        ol = OldLocation(origin, x, y, old_val)
-        self.add_feature("Past", ol)
-
-    def __hash__(self) -> int:
-        raise NotImplementedError("DeltaFeature hash not implemented")
+    x: int
+    y: int
+    old_val: int
+    new_val: int
 
     def __str__(self) -> str:
-        old = self.get_feature("Past")
-        assert isinstance(old, NewFeature)
-        old_val = old.get_feature("Type")
-        assert isinstance(old_val, ElementType)
-        new_val = self.get_feature("Type")
-        assert isinstance(new_val, ElementType)
-        loc = self.get_feature("Location")
-        assert isinstance(loc, ElementPoint)
+        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
 
-        return f"({loc.x}, {loc.y}): {old_val.type} '{chr(old_val.type)}' -> {new_val.type} '{chr(new_val.type)}'\n"
+    def add_to_feature(self, n: NewFeature) -> None:
+        n.add_type(self.new_val)
+        n.add_point(self.x, self.y)
+        ol = OldLocation(n.origin, self.x, self.y, self.old_val)
+        n.add_feature("Past", ol)
+
+    @classmethod
+    def from_feature(self, n: NewFeature) -> Diff:
+        x, y = n.get_point()
+        new_val = n.get_type()
+        old = n.get_feature("Past")
+        assert isinstance(old, NewFeature)
+        old_val = old.get_type()
+        return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
+
+
+class DeltaFeature(ComplexFeature[Diff]):
+    def __init__(self, origin: Component, d: Diff) -> None:
+        super().__init__("Delta", origin, d)
 
 
 @register_component("delta", "perception")
@@ -69,7 +78,15 @@ class Delta(FeatureExtractor[DeltaFeature]):
             old_point = prev.get_point(new_point.x, new_point.y)
             if old_point.val != new_point.val:
                 self.pb_conn.send(
-                    DeltaFeature(self, new_point.x, new_point.y, old_point.val, new_point.val)
+                    DeltaFeature(
+                        self,
+                        Diff(
+                            x=new_point.x,
+                            y=new_point.y,
+                            old_val=old_point.val,
+                            new_val=new_point.val,
+                        ),
+                    )
                 )
 
         self.settled()

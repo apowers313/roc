@@ -5,14 +5,13 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.delta import Delta
+from roc.feature_extractors.delta import Delta, Diff
 from roc.feature_extractors.motion import (
-    Diff,
     Motion,
     MotionFeature,
     adjacent_direction,
 )
-from roc.perception import ElementOrientation, NewFeature, Settled, VisionData
+from roc.perception import NewFeature, Settled, VisionData
 
 screen0 = VisionData(screens[0]["chars"])
 screen1 = VisionData(screens[1]["chars"])
@@ -79,69 +78,60 @@ class TestMotion:
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
         assert e.data.get_type() == ord("f")
-        dir = e.data.get_feature("Direction")
-        assert isinstance(dir, ElementOrientation)
-        assert dir.orientation == "RIGHT"
-        v = e.data.get_type()
-        assert v == 102
-        end_pt = e.data.get_point()
-        assert end_pt == (17, 6)
+        assert e.data.get_orientation() == "RIGHT"
+        assert e.data.get_point() == (17, 6)
         origin = e.data.get_feature("Origin")
         assert isinstance(origin, NewFeature)
-        start_pt = origin.get_point()
-        assert start_pt == (16, 6)
+        assert origin.get_point() == (16, 6)
 
         # # ([EVENT: motion >>> perception]: 46 LEFT: (17, 6) -> (16, 6),)
-        # e = s.output.call_args_list[2].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, MotionFeature)
-        # assert isinstance(e.data.feature, MotionVector)
-        # v = e.data.feature
-        # assert v.start_x == 17
-        # assert v.start_y == 6
-        # assert v.end_x == 16
-        # assert v.end_y == 6
-        # assert v.direction == "LEFT"
-        # assert v.val == 46
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, MotionFeature)
+        assert e.data.get_type() == ord(".")
+        assert e.data.get_orientation() == "LEFT"
+        assert e.data.get_point() == (16, 6)
+        origin = e.data.get_feature("Origin")
+        assert isinstance(origin, NewFeature)
+        assert origin.get_point() == (17, 6)
 
-        # e = s.output.call_args_list[3].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, Settled)
+        # Settled
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
         # # screen 4
 
         # # ([EVENT: motion >>> perception]: 102 UP_RIGHT: (17, 6) -> (18, 5),)
-        # e = s.output.call_args_list[4].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, MotionFeature)
-        # assert isinstance(e.data.feature, MotionVector)
-        # v = e.data.feature
-        # assert v.start_x == 17
-        # assert v.start_y == 6
-        # assert v.end_x == 18
-        # assert v.end_y == 5
-        # assert v.direction == "UP_RIGHT"
-        # assert v.val == 102
+        e = s.output.call_args_list[4].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, MotionFeature)
+        assert e.data.get_type() == ord("f")
+        assert e.data.get_orientation() == "UP_RIGHT"
+        assert e.data.get_point() == (18, 5)
+        origin = e.data.get_feature("Origin")
+        assert isinstance(origin, NewFeature)
+        assert origin.get_point() == (17, 6)
 
-        # e = s.output.call_args_list[5].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, Settled)
+        # Settled
+        e = s.output.call_args_list[5].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
 
         # # screen 6
 
         # # ([EVENT: motion >>> perception]: 102 DOWN: (18, 5) -> (18, 6),)
-        # e = s.output.call_args_list[6].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, MotionFeature)
-        # assert isinstance(e.data.feature, MotionVector)
-        # v = e.data.feature
-        # assert v.start_x == 18
-        # assert v.start_y == 5
-        # assert v.end_x == 18
-        # assert v.end_y == 6
-        # assert v.direction == "DOWN"
-        # assert v.val == 102
+        e = s.output.call_args_list[6].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, MotionFeature)
+        assert e.data.get_type() == ord("f")
+        assert e.data.get_orientation() == "DOWN"
+        assert e.data.get_point() == (18, 6)
+        origin = e.data.get_feature("Origin")
+        assert isinstance(origin, NewFeature)
+        assert origin.get_point() == (18, 5)
 
-        # e = s.output.call_args_list[7].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, Settled)
+        # Settled
+        e = s.output.call_args_list[7].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
