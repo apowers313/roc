@@ -1,5 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 import gc
+from importlib import import_module
 from typing import Any, Generator
 
 import pytest
@@ -57,6 +58,9 @@ def do_init() -> Generator[None, None, None]:
 
 @pytest.fixture(scope="session", autouse=True)
 def close_db() -> Generator[None, None, None]:
+    """Closes the graph database and deletes all data that was created by
+    tests"""
+
     yield
 
     db = GraphDB.singleton()
@@ -126,6 +130,18 @@ def action_bus_conn(fake_component) -> BusConnection[ActionData]:
 @pytest.fixture
 def testing_args(request) -> str:
     return f"ret {request.param}"
+
+
+@pytest.fixture
+def requires_module(request) -> None:
+    """loads Python modules for their side-effects"""
+
+    mods: list[str] | str = request.param
+    if isinstance(mods, str):
+        mods = [mods]
+
+    for mod in mods:
+        import_module(mod)
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:
