@@ -63,10 +63,7 @@ class GraphDB:
             row = cursor.fetchone()
             if row is None:
                 break
-            yield {
-                dsc.name: _convert_memgraph_value(row[index])
-                for index, dsc in enumerate(cursor.description)
-            }
+            yield {dsc.name: row[index] for index, dsc in enumerate(cursor.description)}
 
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
         params = params or {}
@@ -104,42 +101,6 @@ class GraphDB:
 
         assert graph_db_singleton.closed is False
         return graph_db_singleton
-
-
-# XXX: copied from GQLAlchemy
-def _convert_memgraph_value(value: Any) -> Any:
-    """Converts Memgraph objects to custom Node/Relationship objects."""
-    # if isinstance(value, mgclient.Relationship):
-    #     return Relationship.parse_obj(
-    #         {
-    #             "_type": value.type,
-    #             "_id": value.id,
-    #             "_start_node_id": value.start_id,
-    #             "_end_node_id": value.end_id,
-    #             **value.properties,
-    #         }
-    #     )
-
-    # if isinstance(value, mgclient.Node):
-    #     return Node.parse_obj(
-    #         {
-    #             "_id": value.id,
-    #             "_labels": set(value.labels),
-    #             **value.properties,
-    #         }
-    #     )
-
-    # if isinstance(value, mgclient.Path):
-    #     return Path.parse_obj(
-    #         {
-    #             "_nodes": list([_convert_memgraph_value(node) for node in value.nodes]),
-    #             "_relationships": list(
-    #                 [_convert_memgraph_value(rel) for rel in value.relationships]
-    #             ),
-    #         }
-    #     )
-
-    return value
 
 
 #######
@@ -575,9 +536,6 @@ def get_next_new_node_id() -> NodeId:
     return id
 
 
-# class Node(BaseModel, extra="allow", arbitrary_types_allowed=True):
-
-
 class Node(BaseModel, extra="allow"):
     """
     An graph database node that automatically handles CRUD for the underlying graph database objects
@@ -596,10 +554,6 @@ class Node(BaseModel, extra="allow"):
     @property
     def id(self) -> NodeId:
         return self._id
-
-    # @property
-    # def labels(self) -> set[str]:
-    #     return self._labels
 
     @property
     def src_edges(self) -> EdgeList:
