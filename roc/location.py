@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Iterator, overload
-
-ValList = list[list[int]]
+from typing import Any, Generic, Iterator, TypeVar, overload
 
 
 class Point:
@@ -77,30 +75,29 @@ class ChangedPoint(Point):
         return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"  # noqa: E501
 
 
-class Grid:
+GridVal = TypeVar("GridVal")
+ValList = list[list[GridVal]]
+
+
+class GenericGrid(Generic[GridVal]):
     """A rectangular array of points"""
 
-    def __init__(self, val_list: ValList) -> None:
+    def __init__(self, val_list: ValList[GridVal]) -> None:
         self.val_list = val_list
 
-    def __iter__(self) -> Iterator[Point]:
+    def __iter__(self) -> Iterator[GridVal]:
         """Iterate over all the points in the grid"""
 
         for y in range(self.height):
             for x in range(self.width):
-                yield self.get_point(x, y)
+                yield self.get_val(x, y)
 
-    def get_point(self, x: int, y: int) -> Point:
-        """Returns the Point located at (x, y)"""
-
-        return Point(x, y, self.get_val(x, y))
-
-    def get_val(self, x: int, y: int) -> int:
+    def get_val(self, x: int, y: int) -> GridVal:
         """Returns the value located at (x, y)"""
 
         return self.val_list[y][x]
 
-    def set_val(self, x: int, y: int, val: int) -> None:
+    def set_val(self, x: int, y: int, val: GridVal) -> None:
         self.val_list[y][x] = val
 
     @property
@@ -111,6 +108,19 @@ class Grid:
     def height(self) -> int:
         return len(self.val_list)
 
+    @staticmethod
+    def filled(val: int, width: int, height: int) -> Grid:
+        cols = [val for x in range(width)]
+        rows = [cols.copy() for x in range(height)]
+        return Grid(rows)
+
+
+class Grid(GenericGrid[int]):
+    def get_point(self, x: int, y: int) -> Point:
+        """Returns the Point located at (x, y)"""
+
+        return Point(x, y, self.get_val(x, y))
+
     def __repr__(self) -> str:
         ret = ""
         for line in self.val_list:
@@ -119,11 +129,12 @@ class Grid:
             ret += "\n"
         return ret
 
-    @staticmethod
-    def filled(val: int, width: int, height: int) -> Grid:
-        cols = [val for x in range(width)]
-        rows = [cols.copy() for x in range(height)]
-        return Grid(rows)
+    def points(self) -> Iterator[Point]:
+        """Iterate over all the points in the grid"""
+
+        for y in range(self.height):
+            for x in range(self.width):
+                yield self.get_point(x, y)
 
 
 class PointCollection:

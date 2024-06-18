@@ -27,7 +27,7 @@ class CheckMap:
 
     def find_first_unused_point(self) -> Point | None:
         ret: Point | None = None
-        for p in self.grid:
+        for p in self.grid.points():
             if p.val == 0:
                 ret = p
                 break

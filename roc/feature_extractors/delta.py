@@ -80,7 +80,7 @@ class Delta(FeatureExtractor[DeltaFeature]):
         assert prev.height == curr.height
         assert prev.width == curr.width
 
-        for new_point in curr:
+        for new_point in curr.points():
             old_point = prev.get_point(new_point.x, new_point.y)
             if old_point.val != new_point.val:
                 self.pb_conn.send(

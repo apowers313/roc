@@ -27,7 +27,7 @@ class Single(FeatureExtractor[Point]):
         assert isinstance(data, VisionData)
 
         ## iterate points
-        for point in data:
+        for point in data.points():
             if (
                 # up left
                 data.get_val(point.x - 1, point.y - 1) != point.val
