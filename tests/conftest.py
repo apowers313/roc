@@ -144,6 +144,37 @@ def requires_module(request) -> None:
         import_module(mod)
 
 
+@pytest.fixture
+def test_tree() -> dict[str, Any]:
+    root = Node(labels=["TestNode"])
+    n1 = Node(labels=["TestNode"])
+    n2 = Node(labels=["TestNode"])
+    n3 = Node(labels=["TestNode"])
+    n4 = Node(labels=["TestNode"])
+    n5 = Node(labels=["TestNode"])
+    n6 = Node(labels=["TestNode"])
+    n7 = Node(labels=["TestNode"])
+    n8 = Node(labels=["TestNode"])
+    n9 = Node(labels=["TestNode"])
+    n10 = Node(labels=["TestNode"])
+    e1 = Node.connect(root, n1, "Foo")
+    e2 = Node.connect(root, n2, "Test")
+    e3 = Node.connect(n2, n3, "Test")
+    e4 = Node.connect(n2, n4, "Test")
+    e5 = Node.connect(n5, n2, "Foo")
+    e6 = Node.connect(n6, root, "Foo")
+    e7 = Node.connect(n6, n7, "Test")
+    e8 = Node.connect(n8, n6, "Test")
+    e9 = Node.connect(n9, n6, "Test")
+    e10 = Node.connect(n10, root, "Test")
+
+    return {
+        "root": root,
+        "nodes": [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10],
+        "edges": [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10],
+    }
+
+
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:
     return "✅ ", "PASSED ✅ "
 

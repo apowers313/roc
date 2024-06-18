@@ -392,7 +392,105 @@ class TestNode:
             [("2746", "\d+")],
         )
 
-    # deletes edges
+    def test_node_walk_src(self, test_tree) -> None:
+        node_list: list[Node] = list()
+        root = test_tree["root"]
+        Node.walk(root, mode="src", node_callback=lambda n: node_list.append(n))
+        assert len(node_list) == 5
+        nodes = test_tree["nodes"]
+        assert root in node_list
+        assert nodes[0] in node_list
+        assert nodes[1] in node_list
+        assert nodes[2] in node_list
+        assert nodes[3] in node_list
+
+    def test_node_walk_dst(self, test_tree) -> None:
+        node_list: list[Node] = list()
+        root = test_tree["root"]
+        Node.walk(root, mode="dst", node_callback=lambda n: node_list.append(n))
+        assert len(node_list) == 5
+        nodes = test_tree["nodes"]
+        assert root in node_list
+        assert nodes[5] in node_list
+        assert nodes[7] in node_list
+        assert nodes[8] in node_list
+        assert nodes[9] in node_list
+
+    def test_node_walk_both(self, test_tree) -> None:
+        node_list: list[Node] = list()
+        root = test_tree["root"]
+        Node.walk(root, mode="both", node_callback=lambda n: node_list.append(n))
+        assert len(node_list) == 11
+        nodes = test_tree["nodes"]
+        assert root in node_list
+        assert nodes[0] in node_list
+        assert nodes[1] in node_list
+        assert nodes[2] in node_list
+        assert nodes[3] in node_list
+        assert nodes[4] in node_list
+        assert nodes[5] in node_list
+        assert nodes[6] in node_list
+        assert nodes[7] in node_list
+        assert nodes[8] in node_list
+        assert nodes[9] in node_list
+
+    def test_node_walk_filtered_edges(self, test_tree) -> None:
+        node_list: list[Node] = list()
+        root = test_tree["root"]
+        nodes = test_tree["nodes"]
+        Node.walk(
+            root,
+            mode="both",
+            node_callback=lambda n: node_list.append(n),
+            edge_filter=lambda e: e.type == "Test",
+        )
+        assert len(node_list) == 5
+
+        # walked
+        assert root in node_list
+        assert nodes[1] in node_list
+        assert nodes[2] in node_list
+        assert nodes[3] in node_list
+        assert nodes[9] in node_list
+
+        # not walked
+        assert nodes[0] not in node_list  # is Foo edge
+        assert nodes[4] not in node_list  # is Foo edge
+        assert nodes[5] not in node_list  # is Foo edge
+        assert nodes[6] not in node_list  # is related through nodes[5]
+        assert nodes[7] not in node_list  # is related through nodes[5]
+        assert nodes[8] not in node_list  # is related through nodes[5]
+
+    def test_node_walk_filtered_nodes(self, test_tree) -> None:
+        node_list: list[Node] = list()
+        root = test_tree["root"]
+        nodes = test_tree["nodes"]
+        Node.walk(
+            root,
+            mode="both",
+            node_callback=lambda n: node_list.append(n),
+            node_filter=lambda n: n not in [nodes[1], nodes[8]],
+        )
+
+        assert len(node_list) == 6
+
+        # walked
+        assert root in node_list
+        assert nodes[0] in node_list
+        assert nodes[5] in node_list
+        assert nodes[6] in node_list
+        assert nodes[7] in node_list
+        assert nodes[9] in node_list
+
+        # not walked
+        assert nodes[1] not in node_list  # is in filter
+        assert nodes[2] not in node_list  # is related through nodes[1]
+        assert nodes[3] not in node_list  # is related through nodes[1]
+        assert nodes[4] not in node_list  # is related through nodes[1]
+        assert nodes[8] not in node_list  # is in filter
+
+
+# deletes edges
 
 
 class TestEdgeList:
