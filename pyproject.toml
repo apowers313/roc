@@ -139,6 +139,8 @@ omit-covered-files = false
 # https://beta.ruff.rs/docs/configuration/
 line-length = 100
 exclude = ["tests/helpers/nethack_screens.py"]
+
+[tool.ruff.lint]
 extend-select = ["T201"]
 unfixable = ["T201"]
 
