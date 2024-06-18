@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..component import Component, register_component
+from ..location import Point
 from ..perception import (
     ComplexFeature,
     Direction,
@@ -16,7 +17,6 @@ from ..perception import (
     Settled,
     Transmogrifier,
 )
-from ..point import Point
 from .delta import DeltaFeature, Diff
 
 

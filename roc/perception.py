@@ -11,7 +11,7 @@ from typing import Generic, Self, TypeVar
 from .component import Component
 from .event import Event, EventBus
 from .graphdb import Node
-from .point import Grid
+from .location import Grid
 
 VisionData = Grid
 # TODO: sound input

@@ -1,6 +1,6 @@
 from ..component import Component, register_component
+from ..location import Grid, Point, PointList, TypedPointCollection
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
-from ..point import Grid, Point, PointList, TypedPointCollection
 
 MIN_FLOOD_SIZE = 5
 

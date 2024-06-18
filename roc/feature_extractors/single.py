@@ -1,6 +1,6 @@
 from ..component import Component, register_component
-from ..perception import FeatureExtractor, Feature, PerceptionEvent, VisionData
-from ..point import Point
+from ..location import Point
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
 class SingleFeature(Feature):
