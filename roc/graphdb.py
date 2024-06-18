@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator, Mapping, MutableSet
-from typing import Any, Callable, Generic, NewType, TypeVar, cast
+from typing import Any, Callable, Generic, Literal, NewType, TypeVar, cast
 
 import mgclient
 from cachetools import LRUCache
@@ -218,6 +218,9 @@ class Edge(BaseModel, extra="allow"):
 
     def __del__(self) -> None:
         Edge.save(self)
+
+    def __repr__(self) -> str:
+        return f"Edge({self.id} [{self.src_id}>>{self.dst_id}])"
 
     @classmethod
     def get_cache(self) -> EdgeCache:
@@ -598,6 +601,9 @@ class Node(BaseModel, extra="allow"):
             # logger.warning(err_msg)
             warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
+    def __repr__(self) -> str:
+        return f"Node({self.id})"
+
     @classmethod
     def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
         """Loads a node from the database. Use `Node.get` or other methods instead.
@@ -857,6 +863,72 @@ class Node(BaseModel, extra="allow"):
             label_str = ":" + label_str
         return label_str
 
+    @staticmethod
+    def walk(
+        n: Node,
+        *,
+        mode: WalkMode = "both",
+        edge_filter: EdgeFilterFn | None = None,
+        # edge_callback: EdgeCallbackFn | None = None,
+        node_filter: NodeFilterFn | None = None,
+        node_callback: NodeCallbackFn | None = None,
+        _walk_history: set[int] | None = None,
+    ) -> None:
+        # if we have walked this node before, just return
+        _walk_history = _walk_history or set()
+        if n.id in _walk_history:
+            return
+        _walk_history.add(n.id)
+
+        def true_filter(_: Any) -> bool:
+            return True
+
+        def no_callback(_: Any) -> None:
+            pass
+
+        edge_filter = edge_filter or true_filter
+        node_filter = node_filter or true_filter
+        # edge_callback = edge_callback or no_callback
+        node_callback = node_callback or no_callback
+
+        # callback for this node, if not filtered
+        if node_filter(n):
+            node_callback(n)
+        else:
+            return
+
+        if mode == "src" or mode == "both":
+            for e in n.src_edges:
+                if edge_filter(e):
+                    Node.walk(
+                        e.dst,
+                        mode=mode,
+                        edge_filter=edge_filter,
+                        # edge_callback=edge_callback,
+                        node_filter=node_filter,
+                        node_callback=node_callback,
+                        _walk_history=_walk_history,
+                    )
+
+        if mode == "dst" or mode == "both":
+            for e in n.dst_edges:
+                if edge_filter(e):
+                    Node.walk(
+                        e.src,
+                        mode=mode,
+                        edge_filter=edge_filter,
+                        # edge_callback=edge_callback,
+                        node_filter=node_filter,
+                        node_callback=node_callback,
+                        _walk_history=_walk_history,
+                    )
+
+
+WalkMode = Literal["src", "dst", "both"]
+NodeFilterFn = Callable[[Node], bool]
+EdgeFilterFn = Callable[[Edge], bool]
+NodeCallbackFn = Callable[[Node], None]
+EdgeCallbackFn = Callable[[Edge], None]
 
 NodeCache = GraphCache[NodeId, Node]
 node_cache: NodeCache | None = None
