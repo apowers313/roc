@@ -1,6 +1,6 @@
 from ..component import Component, register_component
-from ..perception import FeatureExtractor, Feature, PerceptionEvent, VisionData
-from ..point import Point, PointList, TypedPointCollection
+from ..location import Point, PointList, TypedPointCollection
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 MIN_LINE_COUNT = 4
 
