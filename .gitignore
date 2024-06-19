@@ -629,3 +629,6 @@ MigrationBackup/
 # Ignore NetHack play data
 nle_data/
 env_dump.py
+
+# profiling data
+prof/
