@@ -61,6 +61,12 @@ load-data:
 test:
 	poetry run pytest -c pyproject.toml
 
+.PHONY: profile
+profile:
+	# for example:
+	# make TEST=tests/flood_test.py profile
+	poetry run pytest -c pyproject.toml --profile-svg $(TEST)
+
 .PHONY: check-codestyle
 check-codestyle:
 	poetry run ruff check --config=./pyproject.toml .
