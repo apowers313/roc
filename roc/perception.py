@@ -3,10 +3,11 @@ re-assembled as concepts."""
 
 from __future__ import annotations
 
+import weakref
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Generic, Self, TypeVar
+from typing import Any, Generic, Self, TypeVar
 
 from .component import Component
 from .event import Event, EventBus
@@ -27,19 +28,23 @@ FeatureType = TypeVar("FeatureType")
 
 
 class ElementSize(Node, extra="forbid"):
+    # _no_save = True
     size: int
 
 
 class ElementType(Node, extra="forbid"):
+    # _no_save = True
     type: int
 
 
 class ElementPoint(Node, extra="forbid"):
+    # _no_save = True
     x: int
     y: int
 
 
 class ElementTypedPoint(Node, extra="forbid"):
+    # _no_save = True
     type: int
     x: int
     y: int
@@ -57,12 +62,14 @@ class Direction(str, Enum):
 
 
 class ElementOrientation(Node, extra="forbid"):
+    # _no_save = True
     orientation: Direction
 
 
 class Feature(Node, ABC):
     """A detail of the environment that has been created by a feature extractor"""
 
+    # _no_save = True
     _origin: str
 
     @property
@@ -224,9 +231,13 @@ class Perception(Component, ABC):
         cls.bus = EventBus[PerceptionData]("perception")
 
 
+fe_list: list[FeatureExtractor[Any]] = []
+
+
 class FeatureExtractor(Perception, Generic[FeatureType], ABC):
     def __init__(self) -> None:
         super().__init__()
+        fe_list.append(weakref.proxy(self))
 
     def do_perception(self, e: PerceptionEvent) -> None:
         f = self.get_feature(e)
@@ -240,6 +251,14 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
 
     @abstractmethod
     def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
+
+    @classmethod
+    def list(cls) -> list[str]:
+        ret: list[str] = []
+        for fe in fe_list:
+            ret.append(f"{fe.name}:{fe.type}")
+
+        return ret
 
 
 class HashingNoneFeature(Exception):
