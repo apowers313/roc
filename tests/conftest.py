@@ -1,8 +1,10 @@
 # mypy: disable-error-code="no-untyped-def"
 import gc
+import os
 from importlib import import_module
 from typing import Any, Generator
 
+import psutil
 import pytest
 from helpers.util import FakeData
 
@@ -173,6 +175,26 @@ def test_tree() -> dict[str, Any]:
         "nodes": [n1, n2, n3, n4, n5, n6, n7, n8, n9, n10],
         "edges": [e1, e2, e3, e4, e5, e6, e7, e8, e9, e10],
     }
+
+
+@pytest.fixture
+def memory_profile() -> Generator[None, None, None]:
+    def process_memory():
+        process = psutil.Process(os.getpid())
+        mem_info = process.memory_info()
+        return mem_info.rss
+
+    start_mem = process_memory()
+    print(f"Starting memory: {start_mem/1000000:1.3f} MB")
+    print("Node Cache:", Node.get_cache())
+    print("Edge Cache:", Edge.get_cache())
+
+    yield
+
+    end_mem = process_memory()
+    print(f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]")
+    print("Node Cache:", Node.get_cache())
+    print("Edge Cache:", Edge.get_cache())
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:
