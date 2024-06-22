@@ -192,7 +192,9 @@ def memory_profile() -> Generator[None, None, None]:
     yield
 
     end_mem = process_memory()
-    print(f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]")  # noqa: T201
+    print(
+        f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]"
+    )  # noqa: T201
     print("Node Cache:", Node.get_cache())  # noqa: T201
     print("Edge Cache:", Edge.get_cache())  # noqa: T201
 
