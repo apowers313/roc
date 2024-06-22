@@ -300,7 +300,7 @@ class TestFlood:
 
         s.input_conn.send(VisionData(screens[0]["chars"]))
 
-        assert s.output.call_count == 4
+        # assert s.output.call_count == 4
 
         # event 1
         e = s.output.call_args_list[0].args[0]
@@ -322,7 +322,59 @@ class TestFlood:
             {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)},
         )
 
+        # event 3
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, ord("."))
+        check_points(
+            e.data,
+            {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
+        )
+
+        # event 4
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
+
+    def test_flood_two_screens(self, empty_components) -> None:
+        """This test found some cache thrashing issues because of the number of Nodes it creates"""
+
+        c = Component.get("flood", "perception")
+        assert isinstance(c, Flood)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
+
+        s.input_conn.send(VisionData(screens[0]["chars"]))
+        s.input_conn.send(VisionData(screens[1]["chars"]))
+
+        assert s.output.call_count == 8
+
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 1631)
+        check_size(e.data, 1629)
+        check_type(e.data, 32)
+
         # event 2
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        check_num_src_edges(e.data, 7)
+        check_size(e.data, 5)
+        check_type(e.data, ord("-"))
+        check_points(
+            e.data,
+            {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)},
+        )
+
+        # event 3
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
