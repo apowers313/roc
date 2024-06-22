@@ -39,6 +39,7 @@ pydantic = "^2.1.1"
 nle = { git = "https://github.com/apowers313/nle", rev = "update-pybind11" }
 rich = "^13.5.2"
 pydantic-settings = "^2.0.3"
+colored = "^2.2.4"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.1"
