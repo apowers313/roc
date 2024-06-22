@@ -185,16 +185,16 @@ def memory_profile() -> Generator[None, None, None]:
         return mem_info.rss
 
     start_mem = process_memory()
-    print(f"Starting memory: {start_mem/1000000:1.3f} MB")
-    print("Node Cache:", Node.get_cache())
-    print("Edge Cache:", Edge.get_cache())
+    print(f"Starting memory: {start_mem/1000000:1.3f} MB")  # noqa: T201
+    print("Node Cache:", Node.get_cache())  # noqa: T201
+    print("Edge Cache:", Edge.get_cache())  # noqa: T201
 
     yield
 
     end_mem = process_memory()
-    print(f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]")
-    print("Node Cache:", Node.get_cache())
-    print("Edge Cache:", Edge.get_cache())
+    print(f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]")  # noqa: T201
+    print("Node Cache:", Node.get_cache())  # noqa: T201
+    print("Edge Cache:", Edge.get_cache())  # noqa: T201
 
 
 def pytest_emoji_passed(config: Any) -> tuple[str, str]:
