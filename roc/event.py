@@ -63,6 +63,7 @@ class BusConnection(Generic[EventData]):
     """
 
     def __init__(self, bus: EventBus[EventData], component: Component):
+        logger.debug(f"{component.name}:{component.type} attaching to bus {bus.name}")
         self.attached_bus = bus
         self.attached_component = component
         self.subject: rx.Subject[Event[EventData]] = self.attached_bus.subject
@@ -87,6 +88,7 @@ class BusConnection(Generic[EventData]):
     ) -> None:
         pipe_args: list[Callable[[Any], Observable[Event[EventData]]]] = [
             # op.filter(lambda e: e.src is not self.attached_component),
+            # op.do_action(lambda e: print("before filter", e)),
             op.filter(self.attached_component.event_filter),
         ]
         if filter is not None:
