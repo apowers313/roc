@@ -6,7 +6,7 @@ import psutil
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
-from roc.attention import SaliencyMap, VisionAttention, float_to_density
+from roc.attention import SaliencyMap, VisionAttention
 from roc.component import Component
 from roc.feature_extractors.delta import Delta
 from roc.feature_extractors.flood import Flood
@@ -14,6 +14,7 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.single import Single
 from roc.graphdb import Node
+from roc.location import Grid
 from roc.perception import VisionData
 
 screen0 = VisionData(screens[0]["chars"])
@@ -22,10 +23,25 @@ screen1 = VisionData(screens[1]["chars"])
 
 class TestSaliencyMap:
     def test_exists(self) -> None:
-        SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        SaliencyMap(g)
 
     def test_get(self) -> None:
-        sm = SaliencyMap(3, 4)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         val = sm.get_val(0, 0)
         assert isinstance(val, list)
         assert len(val) == 0
@@ -35,7 +51,14 @@ class TestSaliencyMap:
         assert len(val) == 0
 
     def test_add(self) -> None:
-        sm = SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         n = Node(labels=["TestNode"])
         sm.add_val(1, 2, n)
 
@@ -49,7 +72,14 @@ class TestSaliencyMap:
         assert val[0] is n
 
     def test_add_multiple(self) -> None:
-        sm = SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         n1 = Node(labels=["TestNode"])
         n2 = Node(labels=["TestNode"])
         sm.add_val(2, 2, n1)
@@ -66,7 +96,14 @@ class TestSaliencyMap:
         assert n2 in val
 
     def test_clear(self) -> None:
-        sm = SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         n = Node(labels=["TestNode"])
         sm.add_val(1, 2, n)
 
@@ -82,7 +119,14 @@ class TestSaliencyMap:
         assert len(val) == 0
 
     def test_strength(self) -> None:
-        sm = SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         n = Node(labels=["TestNode"])
 
         assert sm.get_strength(0, 1) == 0
@@ -103,7 +147,14 @@ class TestSaliencyMap:
         assert sm.get_max_strength() == 3
 
     def test_str(self) -> None:
-        sm = SaliencyMap(3, 3)
+        g = Grid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm = SaliencyMap(g)
         n = Node(labels=["TestNode"])
         sm.add_val(0, 0, n)
         sm.add_val(1, 1, n)
@@ -113,28 +164,6 @@ class TestSaliencyMap:
         sm.add_val(2, 2, n)
 
         assert str(sm) == "\u2591  \n \u2593 \n  \u2588\n"
-
-
-class TestDensity:
-    def test_density(self) -> None:
-        EMPTY_CHR = 32  # ASCII space
-        LIGHT_CHR = 9617  # Unicode 2591
-        MED_CHR = 9618  # Unicode 2592
-        DARK_CHR = 9619  # Unicode 2593
-        FULL_CHR = 9608  # Unicode 2588
-        shade_map: list[int] = [EMPTY_CHR, LIGHT_CHR, MED_CHR, DARK_CHR, FULL_CHR]
-
-        assert float_to_density(0.00, shade_map) == EMPTY_CHR
-        assert float_to_density(0.19, shade_map) == EMPTY_CHR
-        assert float_to_density(0.21, shade_map) == LIGHT_CHR
-        assert float_to_density(0.39, shade_map) == LIGHT_CHR
-        assert float_to_density(0.41, shade_map) == MED_CHR
-        assert float_to_density(0.59, shade_map) == MED_CHR
-        assert float_to_density(0.61, shade_map) == DARK_CHR
-        assert float_to_density(0.79, shade_map) == DARK_CHR
-        assert float_to_density(0.81, shade_map) == FULL_CHR
-        assert float_to_density(0.99, shade_map) == FULL_CHR
-        assert float_to_density(1, shade_map) == FULL_CHR
 
 
 class TestVisionAttention:
@@ -171,7 +200,11 @@ class TestVisionAttention:
         assert attention.saliency_map
         print("saliency features", attention.saliency_map.size)  # noqa: T201
         print("vision:\n", VisionData(screens[0]["chars"]))  # noqa: T201
-        print("saliency map:\n", attention.saliency_map)  # noqa: T201
+        print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
+        print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
+        print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201
+        print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))  # noqa: T201
+
         # assert s.output.call_count == 2
 
         # # first event
