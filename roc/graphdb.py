@@ -68,6 +68,7 @@ class GraphDB:
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
         params = params or {}
         logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
+
         cursor = self.db_conn.cursor()
         cursor.execute(query, params)
         cursor.fetchall()
@@ -117,6 +118,9 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         self.hits = 0
         self.misses = 0
 
+    def __str__(self) -> str:
+        return f"Size: {self.currsize}/{self.maxsize} ({self.currsize/self.maxsize*100:1.2f}%), Hits: {self.hits}, Misses: {self.misses}"
+
     def get(  # type: ignore [override]
         self,
         key: CacheKey,
@@ -126,6 +130,10 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         v = super().get(key)
         if not v:
             self.misses = self.misses + 1
+            if self.currsize == self.maxsize:
+                logger.warning(
+                    f"Cache miss and cache is full ({self.currsize}/{self.maxsize}). Cache may start thrashing and performance may be impaired."
+                )
         else:
             self.hits = self.hits + 1
         return v
@@ -170,6 +178,9 @@ class Edge(BaseModel, extra="allow"):
     type: str = Field(exclude=True)
     src_id: NodeId = Field(exclude=True)
     dst_id: NodeId = Field(exclude=True)
+    _no_save = False
+    _new = False
+    _deleted = False
 
     @field_validator("id", mode="before")
     def default_id(cls, id: EdgeId | None) -> EdgeId:
@@ -208,15 +219,12 @@ class Edge(BaseModel, extra="allow"):
             **data,
         )
 
-        self._new = False
-        self._no_save = False
-        self._deleted = False
-
         if self.id < 0:
             self._new = True
             Edge.get_cache()[self.id] = self
 
     def __del__(self) -> None:
+        # print("Edge.__del__:", self)
         Edge.save(self)
 
     def __repr__(self) -> str:
@@ -317,7 +325,7 @@ class Edge(BaseModel, extra="allow"):
         Returns:
             Self: the edge that was created, with an updated identifier and other chagned attributes
         """
-        if e._no_save:
+        if e._no_save or e.src._no_save or e.dst._no_save:
             return e
 
         db = db or GraphDB.singleton()
@@ -550,9 +558,9 @@ class Node(BaseModel, extra="allow"):
     _src_edges: EdgeList
     _dst_edges: EdgeList
     _db: GraphDB
-    _new: bool
-    _no_save: bool
-    _deleted: bool
+    _new = False
+    _no_save = False
+    _deleted = False
 
     @property
     def id(self) -> NodeId:
@@ -582,11 +590,6 @@ class Node(BaseModel, extra="allow"):
         self._src_edges = kwargs["_src_edges"] if "_src_edges" in kwargs else EdgeList([])
         self._dst_edges = kwargs["_dst_edges"] if "_dst_edges" in kwargs else EdgeList([])
 
-        # set private values
-        self._new = False
-        self._no_save = False
-        self._deleted = False
-
         if self.id < 0:
             self._new = True  # TODO: derived?
             Node.get_cache()[self.id] = self
@@ -594,6 +597,7 @@ class Node(BaseModel, extra="allow"):
         self._orig_labels = self.labels.copy()
 
     def __del__(self) -> None:
+        # print("Node.__del__:", self)
         try:
             self.__class__.save(self, db=self._db)
         except Exception as e:
