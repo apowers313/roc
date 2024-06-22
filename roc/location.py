@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from colorsys import hsv_to_rgb
+from dataclasses import dataclass
 from typing import Any, Generic, Iterator, TypeVar, overload
+
+from colored import Back, Fore, Style
 
 
 class Point:
@@ -135,6 +139,99 @@ class Grid(GenericGrid[int]):
         for y in range(self.height):
             for x in range(self.width):
                 yield self.get_point(x, y)
+
+
+@dataclass
+class GridStyle:
+    front_hue: float
+    front_saturation: float
+    front_brightness: float
+    back_hue: float
+    back_saturation: float
+    back_brightness: float
+    style: str
+    val: str
+
+
+class DebugGrid(GenericGrid[GridStyle]):
+    def __init__(self, grid: Grid) -> None:
+        width = grid.width
+        height = grid.height
+        map: list[list[GridStyle]] = [
+            [
+                GridStyle(
+                    front_hue=0,
+                    front_saturation=0,
+                    front_brightness=1,
+                    back_hue=0,
+                    back_saturation=1,
+                    back_brightness=0,
+                    val=" ",
+                    style="none",
+                )
+                for col in range(width)
+            ]
+            for row in range(height)
+        ]
+        super().__init__(map)
+
+        # copy over all the values from the grid
+        for p in grid.points():
+            s = self.get_val(p.x, p.y)
+            s.val = chr(p.val)
+
+    def set_style(self, x: int, y: int, *, style: str | None = None, **kwargs: float) -> None:
+        s = self.get_val(x, y)
+
+        if style:
+            s.style = style
+
+        for key, value in kwargs.items():
+            if value < 0 or value > 1:
+                raise Exception(
+                    f"set_style expects values to be floats between 0 and 1, '{key}' was '{value}'"
+                )
+
+            match key:
+                case "front_hue":
+                    s.front_hue = value
+                case "front_brightness":
+                    s.front_brightness = value
+                case "front_saturation":
+                    s.front_saturation = value
+                case "back_hue":
+                    s.back_hue = value
+                case "back_brightness":
+                    s.back_brightness = value
+                case "back_saturation":
+                    s.back_saturation = value
+                case _:
+                    raise Exception(f"unknown key '{key}' in set_style")
+
+    def get_front_rgb(self, x: int, y: int) -> tuple[int, int, int]:
+        s = self.get_val(x, y)
+        rgb = hsv_to_rgb(s.front_hue, s.front_saturation, s.front_brightness)
+        ret = tuple(map(lambda c: round(c * 255), rgb))
+        assert len(ret) == 3
+        return ret
+
+    def get_back_rgb(self, x: int, y: int) -> tuple[int, int, int]:
+        s = self.get_val(x, y)
+        rgb = hsv_to_rgb(s.back_hue, s.back_saturation, s.back_brightness)
+        ret = tuple(map(lambda c: round(c * 255), rgb))
+        assert len(ret) == 3
+        return ret
+
+    def __str__(self) -> str:
+        ret = ""
+        for y in range(self.height):
+            for x in range(self.width):
+                s = self.get_val(x, y)
+                fr, fg, fb = self.get_front_rgb(x, y)
+                br, bg, bb = self.get_back_rgb(x, y)
+                ret += f"{Fore.rgb(fr,fg,fb)}{Back.rgb(br,bg,bb)}{s.val}{Style.reset}"
+            ret += "\n"
+        return ret
 
 
 class PointCollection:

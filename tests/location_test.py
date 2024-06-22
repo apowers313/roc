@@ -1,9 +1,10 @@
 # mypy: disable-error-code="no-untyped-def"
 
 import pytest
+from colored import Back, Fore, Style
 from helpers.nethack_screens import screens
 
-from roc.location import Grid, Point, PointCollection, TypedPointCollection
+from roc.location import DebugGrid, Grid, Point, PointCollection, TypedPointCollection
 
 
 class TestPoint:
@@ -85,6 +86,60 @@ class TestGrid:
         ]
         g = Grid(val)
         assert repr(g) == "   \n123\nabc\n"
+
+
+class TestDebugGrid:
+    def test_basic(self) -> None:
+        val = [
+            [32, 32, 32],
+            [49, 50, 51],
+            [97, 98, 99],
+        ]
+        g = Grid(val)
+        dg = DebugGrid(g)
+        # print(str(dg))
+        # white on black
+        assert str(dg) == (
+            f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + "\n"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}1{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}2{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}3{Style.reset}"
+            + "\n"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}a{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}b{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}c{Style.reset}"
+            + "\n"
+        )
+
+    def test_set_style(self) -> None:
+        val = [
+            [32, 32, 32],
+            [49, 50, 51],
+            [97, 98, 99],
+        ]
+        g = Grid(val)
+        dg = DebugGrid(g)
+        dg.set_style(1, 1, front_brightness=1, front_saturation=1)  # fore red
+        dg.set_style(2, 2, back_hue=(2 / 3), back_brightness=1, back_saturation=1)  # back blue
+        # print(str(dg))
+        # middle red, bottom right blue
+        assert str(dg) == (
+            f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
+            + "\n"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}1{Style.reset}"
+            + f"{Fore.rgb(255, 0, 0)}{Back.rgb(0, 0, 0)}2{Style.reset}"  # fore red
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}3{Style.reset}"
+            + "\n"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}a{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}b{Style.reset}"
+            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 255)}c{Style.reset}"  # back blue
+            + "\n"
+        )
 
 
 class TestPointCollection:
