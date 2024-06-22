@@ -3,7 +3,7 @@
 import pytest
 from helpers.nethack_screens import screens
 
-from roc.point import Grid, Point, PointCollection, TypedPointCollection
+from roc.location import Grid, Point, PointCollection, TypedPointCollection
 
 
 class TestPoint:
