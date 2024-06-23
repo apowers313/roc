@@ -233,6 +233,22 @@ class DebugGrid(GenericGrid[GridStyle]):
             ret += "\n"
         return ret
 
+    @classmethod
+    def blue_to_red_hue(cls, val: float) -> float:
+        # blue = 2/3
+        # blue to red spectrum = 2/3 through 3/3
+        # return value is a portion of the blue-to-red spectrum
+        return (2 / 3) + ((1 / 3) * val)
+
+    @classmethod
+    def five_color_hue(cls, val: float) -> float:
+        # red = 0
+        # blue = 2/3
+        # red to blue spectrum = 0 through 2/3
+        # five colors = red, orange, yellow, green, blue
+        # return value is a portion of the red-to-blue spectrum
+        return (2 / 3) * (1 - val)
+
 
 class PointCollection:
     """A collection of abitrary points"""
