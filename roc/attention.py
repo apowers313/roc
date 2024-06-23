@@ -72,8 +72,8 @@ class SaliencyMap(GenericGrid[list[Node]]):
         max_str = self.get_max_strength()
         for p in self.grid.points():
             rel_strength = self.get_strength(p.x, p.y) / max_str
-            # dg.set_style(p.x, p.y, back_hue=(2 / 3), back_brightness=rel_strength)
-            dg.set_style(p.x, p.y, back_brightness=1, back_hue=rel_strength)
+            color = DebugGrid.blue_to_red_hue(rel_strength)
+            dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
         return str(dg)
 
 
