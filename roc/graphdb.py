@@ -608,6 +608,9 @@ class Node(BaseModel, extra="allow"):
     def __repr__(self) -> str:
         return f"Node({self.id})"
 
+    def __str__(self) -> str:
+        return f"Node({self.id}, labels={self.labels})"
+
     @classmethod
     def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
         """Loads a node from the database. Use `Node.get` or other methods instead.
