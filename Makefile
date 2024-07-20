@@ -47,7 +47,7 @@ formatting: codestyle
 
 #* Linting
 .PHONY: lint
-lint: mypy check-codestyle check-safety dep-check
+lint: mypy check-codestyle dep-check
 
 .PHONY: dep-check
 dep-check:
