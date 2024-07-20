@@ -1,0 +1,16 @@
+{
+    "argv": [
+        "/home/apowers/.local/bin/poetry",
+        "run",
+        "python",
+        "-m",
+        "ipykernel_launcher",
+        "-f",
+        "{connection_file}"
+    ],
+    "display_name": "ROC (Python 3 + Poetry)",
+    "language": "python",
+    "metadata": {
+        "debugger": true
+    }
+}
