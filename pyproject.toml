@@ -42,7 +42,7 @@ pydantic-settings = "^2.0.3"
 colored = "^2.2.4"
 
 [tool.poetry.group.dev.dependencies]
-bandit = "^1.7.1"
+bandit = "^1.7.9"
 black = "^24.4.2"
 darglint = "^1.8.1"
 isort = { extras = ["colors"], version = "^5.10.1" }
