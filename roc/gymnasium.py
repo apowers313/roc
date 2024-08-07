@@ -262,7 +262,8 @@ def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
 
 
 def dump_env_start() -> None:
-    if not Config.enable_gym_dump_env:
+    settings = Config.get()
+    if not settings.enable_gym_dump_env:
         return
 
     global dump_env_file
@@ -274,7 +275,8 @@ count = 0
 
 
 def dump_env_record(obs: Any) -> None:
-    if not Config.enable_gym_dump_env:
+    settings = Config.get()
+    if not settings.enable_gym_dump_env:
         return
 
     global dump_env_file
@@ -282,7 +284,8 @@ def dump_env_record(obs: Any) -> None:
 
     global count
     count = count + 1
-    if count >= Config.max_dump_frames:
+    settings = Config.get()
+    if count >= settings.max_dump_frames:
         return
 
     print_screen(obs["tty_chars"])
@@ -294,7 +297,8 @@ def dump_env_record(obs: Any) -> None:
 
 
 def dump_env_end() -> None:
-    if not Config.enable_gym_dump_env:
+    settings = Config.get()
+    if not settings.enable_gym_dump_env:
         return
 
     global dump_env_file
