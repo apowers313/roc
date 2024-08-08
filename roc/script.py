@@ -5,7 +5,6 @@ import pprint
 from typing import Any
 
 import click
-import nle  # noqa
 
 import roc
 
