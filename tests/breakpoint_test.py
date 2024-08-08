@@ -37,13 +37,21 @@ class TestBreakpoint:
     def test_add(self, mock_break_true) -> None:
         num = breakpoints.count
 
-        breakpoints.add("foo", mock_break_true)
+        breakpoints.add(mock_break_true)
+
+        assert breakpoints.count == num + 1
+        assert "mock_break_true" in breakpoints
+
+    def test_add_with_name(self, mock_break_true) -> None:
+        num = breakpoints.count
+
+        breakpoints.add(mock_break_true, name="foo")
 
         assert breakpoints.count == num + 1
         assert "foo" in breakpoints
 
     def test_remove(self, mock_break_true) -> None:
-        breakpoints.add("foo", mock_break_true)
+        breakpoints.add(mock_break_true, name="foo")
         num = breakpoints.count
         breakpoints.remove("foo")
         assert breakpoints.count == num - 1
@@ -51,7 +59,7 @@ class TestBreakpoint:
 
     def test_check_trigger(self, mock_break_true) -> None:
         assert mock_break_true.call_count == 0
-        breakpoints.add("foo", mock_break_true)
+        breakpoints.add(mock_break_true, name="foo")
         assert breakpoints.state == "running"
         breakpoints.check()
         assert breakpoints.state == "stopped"
@@ -60,7 +68,7 @@ class TestBreakpoint:
 
     def test_check_no_trigger(self, mock_break_false) -> None:
         assert mock_break_false.call_count == 0
-        breakpoints.add("foo", mock_break_false)
+        breakpoints.add(mock_break_false, name="foo")
         assert breakpoints.state == "running"
         breakpoints.check()
         assert breakpoints.state == "running"
@@ -71,7 +79,7 @@ class TestBreakpoint:
         assert lst == "0 breakpoint(s). State: running."
 
     def test_list_one(self, mock_break_true) -> None:
-        breakpoints.add("foo", true_fn)
+        breakpoints.add(true_fn, name="foo")
         lst = str(breakpoints)
         assert lst == (
             "1 breakpoint(s). State: running.\n\n"
@@ -81,7 +89,7 @@ class TestBreakpoint:
         )
 
     def test_list_stopped(self, mock_break_true) -> None:
-        breakpoints.add("foo", true_fn)
+        breakpoints.add(true_fn, name="foo")
         breakpoints.check()
         lst = str(breakpoints)
         assert lst == (
@@ -92,7 +100,7 @@ class TestBreakpoint:
         )
 
     def test_resume(self, mock_break_true) -> None:
-        breakpoints.add("foo", mock_break_true)
+        breakpoints.add(mock_break_true, name="foo")
         breakpoints.check()
         assert breakpoints.state == "stopped"
 
