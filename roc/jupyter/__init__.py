@@ -2,36 +2,77 @@
 
 from __future__ import print_function
 
+import functools
 from typing import Any
 
-from IPython.core.magic import Magics, cell_magic, line_cell_magic, line_magic, magics_class
+from IPython.core.magic import Magics, line_magic, magics_class
 
+from roc.logger import logger
+
+from .brk import brk_cli
+from .cont import cont_cli
+from .roc import roc_cli
+from .step import step_cli
+
+
+def is_jupyter() -> bool:
+    try:
+        global get_ipython
+
+        # jupyter environment defines a global function 'get_ipython'
+        get_ipython() # type: ignore # noqa: F821
+        return True
+    except Exception:
+        return False
+
+
+def magic_cli_decorator(cli): # type: ignore
+    def magic_cli_decorator(func): # type: ignore
+        @functools.wraps(func)
+        def wrapper_decorator(*args, **kwargs): # type: ignore
+            # Do something before
+            # print("args", " ".join(args[1:]))
+            # print("kwargs", kwargs)
+
+            value = func(*args, **kwargs)
+
+            # Do something after
+            try:
+                cli(args=args[1].split(), prog_name=func.__name__, standalone_mode=False)
+            except Exception as e:
+                print("ERROR:", e) # noqa: T201
+
+            return value
+        return wrapper_decorator
+    return magic_cli_decorator
 
 # The class MUST call this class decorator at creation time
 @magics_class
 class RocJupyterMagics(Magics):
 
     @line_magic
-    def lmagic(self: Any, line: str) -> str:
-        "my line magic"
-        print("Full access to the main IPython object:", self.shell)
-        print("Variables in the user namespace:", list(self.shell.user_ns.keys()))
-        return line
+    @magic_cli_decorator(roc_cli)
+    def roc(self, line: str) -> None:
+        """start executing roc, use '%roc --help' for more information"""
+        pass
 
-    @cell_magic
-    def cmagic(self, line: str, cell: str) -> tuple[str, str]:
-        "my cell magic"
-        return line, cell
+    @line_magic
+    @magic_cli_decorator(brk_cli)
+    def brk(self, line: str) -> None:
+        """halt execution of roc, use '%brk --help' for more information"""
+        pass
 
-    @line_cell_magic
-    def lcmagic(self, line: str, cell: str|None=None) -> str | tuple[str, str]:
-        "Magic that works both as %lcmagic and as %%lcmagic"
-        if cell is None:
-            print("Called as line magic")
-            return line
-        else:
-            print("Called as cell magic")
-            return line, cell
+    @line_magic
+    @magic_cli_decorator(cont_cli)
+    def cont(self, line: str) -> None:
+        """resume execution after calling break, use '%cont --help' for more information"""
+        pass
+
+    @line_magic
+    @magic_cli_decorator(step_cli)
+    def step(self, line: str) -> None:
+        """runs the ROC loop for <n> more steps and then breaks, use '%step --help' for more information"""
+        pass
 
     @staticmethod
     def init() -> None:
@@ -40,11 +81,11 @@ class RocJupyterMagics(Magics):
 
             # jupyter environment defines a global function 'get_ipython'
             ip = get_ipython() # type: ignore # noqa: F821
-            print("jupyter environment found")
+            logger.debug("jupyter environment found")
             load_ipython_extension(ip)
-            print("jupyter magics loaded")
+            logger.debug("jupyter magics loaded")
         except Exception:
-            print("not running in ipython")
+            logger.debug("not running in ipython")
 
 
 # In order to actually use these magics, you must register them with a
