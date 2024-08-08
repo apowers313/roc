@@ -6,10 +6,13 @@ from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any
 
+# nle isn't used below, but needs to be loaded so that the environment is registered
+import nle  # noqa
 from pydantic import BaseModel
 
 # from roc import init as roc_init
 from .action import ActionCount, action_bus
+from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
 from .logger import logger
@@ -23,6 +26,7 @@ try:
 except ModuleNotFoundError:
     import gymnasium as gym
 
+loop_number = 0
 
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
@@ -62,9 +66,12 @@ class Gym(Component, ABC):
         done = False
         dump_env_start()
 
+        logger.info("Starting NLE loop...")
+
         # main environment loop
         while not done:
             # logger.trace(f"Sending observation: {obs}")
+            breakpoints.check()
             self.send_obs(obs)
             action = self.await_action()
             logger.trace(f"Doing action: {action}")
@@ -79,7 +86,10 @@ class Gym(Component, ABC):
 
             # self.env.render()
             logger.trace(f"Main loop done: {done}")
+            global loop_number
+            loop_number += 1
 
+        logger.info("NLE loop done.")
         dump_env_end()
 
     def decode_action(self, action: int) -> Any:
@@ -87,7 +97,9 @@ class Gym(Component, ABC):
 
     def await_action(self) -> Any:
         # TODO: self.action_bus_conn.subject.first()
-        logger.warning("AWAIT ACTION NOT IMPLEMENTED")
+
+        # warnings.warn("await action not implemented, defaulting to '.' for every action")
+        
         default_action = 19  # 19 = 46 = "." = do nothing
         action = self.decode_action(default_action)
         return action
