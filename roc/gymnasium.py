@@ -15,6 +15,7 @@ from .action import ActionCount, action_bus
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
+from .jupyter.state import states
 from .logger import logger
 from .perception import Perception, VisionData
 
@@ -25,8 +26,6 @@ try:
     import gym
 except ModuleNotFoundError:
     import gymnasium as gym
-
-loop_number = 0
 
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
@@ -86,8 +85,7 @@ class Gym(Component, ABC):
 
             # self.env.render()
             logger.trace(f"Main loop done: {done}")
-            global loop_number
-            loop_number += 1
+            states.loop.incr()
 
         logger.info("NLE loop done.")
         dump_env_end()

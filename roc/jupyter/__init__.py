@@ -12,6 +12,7 @@ from roc.logger import logger
 from .brk import brk_cli
 from .cont import cont_cli
 from .roc import roc_cli
+from .state import state_cli
 from .step import step_cli
 
 
@@ -72,6 +73,12 @@ class RocJupyterMagics(Magics):
     @magic_cli_decorator(step_cli)
     def step(self, line: str) -> None:
         """runs the ROC loop for <n> more steps and then breaks, use '%step --help' for more information"""
+        pass
+
+    @line_magic
+    @magic_cli_decorator(state_cli)
+    def state(self, line: str) -> None:
+        """displays information about the internal state of ROC, use '%state --help' for more information"""
         pass
 
     @staticmethod
