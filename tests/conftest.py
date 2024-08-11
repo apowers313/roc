@@ -8,12 +8,12 @@ import psutil
 import pytest
 from helpers.util import FakeData
 
-import roc.logger as logger
 from roc.action import ActionData, action_bus
 from roc.component import Component, register_component
 from roc.config import Config
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
+from roc.logger import init as logger_init
 from roc.perception import Perception, PerceptionData
 
 
@@ -49,7 +49,7 @@ def eb_reset() -> None:
 def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
-    logger.init()
+    logger_init()
 
     yield
 
