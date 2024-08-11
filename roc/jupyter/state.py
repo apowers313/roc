@@ -132,8 +132,8 @@ class StateList:
     loop: LoopState = LoopState()
     cpuload: CpuLoadState = CpuLoadState()
     diskio: DiskIoState = DiskIoState()
-    # node cache
-    # edge cache
+    # node cache size / hits / misses
+    # edge cache size / hits / misses
     # current screen
     # current saliency map
 
@@ -142,11 +142,8 @@ states = StateList()
 @click.command()
 @click.argument(
     "var",
-    nargs=-1,
     type=click.Choice([field.name for field in dataclasses.fields(StateList)], case_sensitive=False)
     )
 def state_cli(var: list[str]) -> None:
     for v in var:
-        s = getattr(states, v)
-        print(str(s))
         pass
