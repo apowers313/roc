@@ -5,9 +5,11 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator, Mapping, MutableSet
+from itertools import islice
 from typing import Any, Callable, Generic, Literal, NewType, TypeVar, cast
 
 import mgclient
+import networkx as nx
 from cachetools import LRUCache
 from pydantic import BaseModel, Field, field_validator
 from typing_extensions import Self
@@ -23,8 +25,18 @@ NodeId = NewType("NodeId", int)
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
 
+def true_filter(_: Any) -> bool:
+            return True
+
+def no_callback(_: Any) -> None:
+    pass
 
 class ErrorSavingDuringDelWarning(Warning):
+    pass
+
+class GraphDBInternalError(Exception):
+    """An generic exception for unexpected errors"""
+
     pass
 
 
@@ -103,6 +115,41 @@ class GraphDB:
         assert graph_db_singleton.closed is False
         return graph_db_singleton
 
+
+    @staticmethod
+    def to_networkx(
+            db: GraphDB | None = None,
+            node_ids: set[NodeId] | None = None,
+            filter: NodeFilterFn | None = None
+        ) -> nx.DiGraph:
+        db = db or GraphDB.singleton()
+        node_ids = node_ids or Node.all_ids(db=db)
+        filter = filter or true_filter
+        G = nx.DiGraph()
+    
+        def nx_add(n: Node) -> None:
+            n_data = Node.to_dict(n, include_labels=True)
+
+            # TODO: this converts labels to a string, but maybe there's a better
+            # way to preserve the list so that it can be used for filtering in
+            # external programs
+            if "labels" in n_data and isinstance(n_data["labels"], set):
+                n_data["labels"] = ", ".join(n_data["labels"])
+
+            G.add_node(n.id, **n_data)
+
+            for e in n.src_edges:
+                e_data = Edge.to_dict(e, include_type=True)
+                G.add_edge(e.src_id, e.dst_id, **e_data)
+
+        # iterate all specified node_ids, adding all of them to the nx graph
+        def nx_add_many(nodes: list[Node]) -> None:
+            for n in nodes:
+                if filter(n):
+                    nx_add(n)
+        Node.get_many(node_ids, load_edges=True, progress_callback=nx_add_many)
+
+        return G
 
 #######
 # CACHE
@@ -337,7 +384,7 @@ class Edge(BaseModel, extra="allow"):
         if e.dst._new:
             Node.save(e.dst)
 
-        params = {"props": e.model_dump()}
+        params = {"props": Edge.to_dict(e)}
 
         ret = list(
             db.raw_fetch(
@@ -385,7 +432,7 @@ class Edge(BaseModel, extra="allow"):
 
         db = db or GraphDB.singleton()
 
-        params = {"props": e.model_dump()}
+        params = {"props": Edge.to_dict(e)}
 
         db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} SET e = $props", params=params)
 
@@ -416,6 +463,14 @@ class Edge(BaseModel, extra="allow"):
         # delete from db
         if not e._new:
             db.raw_execute(f"MATCH ()-[e]->() WHERE id(e) = {e.id} DELETE e")
+
+    @staticmethod
+    def to_dict(e: Edge, include_type: bool = False) -> dict[str, Any]:
+        """Convert a Edge to a Python dictionary"""
+        ret = e.model_dump()
+        if include_type and hasattr(e, "type"):
+            ret["type"] = e.type
+        return ret
 
     @staticmethod
     def to_id(e: Edge | EdgeId) -> EdgeId:
@@ -533,7 +588,6 @@ class NodeNotFound(Exception):
 
     pass
 
-
 class NodeCreationFailed(Exception):
     """An exception raised when trying to create a Node in the graph database fails"""
 
@@ -621,39 +675,142 @@ class Node(BaseModel, extra="allow"):
 
         Raises:
             NodeNotFound: The node specified by the identifier does not exist in the database
+            GraphDBInternalError: If the requested ID returns multiple nodes
 
         Returns:
             Self: The node from the database
         """
 
-        db = db or GraphDB.singleton()
-        res = list(
-            db.raw_fetch(
-                f"""
-                MATCH (n)-[e]-(m) WHERE id(n) = {id}
-                RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
-                """,
-            )
-        )
+        res = cls.load_many({id,}, db=db)
 
         # print("RES", res)
 
-        if not len(res) >= 1:
+        if len(res) < 1:
             raise NodeNotFound(f"Couldn't find node ID: {id}")
 
-        n = res[0]["n"]
-        edges = list(
-            map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res)
-        )
-        src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
-        dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
-        return cls(
-            _id=id,
-            _src_edges=EdgeList(src_edges),
-            _dst_edges=EdgeList(dst_edges),
-            labels=n.labels,
-            **n.properties,
-        )
+        if len(res) > 1:
+            raise GraphDBInternalError(f"Too many nodes returned while trying to load single node: {id}")
+
+        return res[0]
+
+        
+    @classmethod
+    def load_many(cls, node_set: set[NodeId], db: GraphDB | None = NotImplemented, load_edges: bool = False) -> list[Self]:
+        db = db or GraphDB.singleton()
+        node_ids = ",".join(map(str, node_set))
+
+        if load_edges:
+            edge_fmt = "e"
+        else:
+            edge_fmt = "{id: id(e), start: id(startNode(e)), end: id(endNode(e))}"
+        res_iter = db.raw_fetch(
+                f"""
+                MATCH (n)-[e]-(m) WHERE id(n) IN [{node_ids}]
+                RETURN n, collect({edge_fmt}) AS edges
+                """,
+            )
+
+        # edges = list(
+        #     map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res)
+        # )
+        # src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
+        # dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
+        
+        ret_list = list()
+        for r in res_iter:
+            n = r["n"]
+            if n is None:
+                raise NodeNotFound(f"Couldn't find node ID: {id}")
+
+            if load_edges:
+                # XXX: memgraph converts edges to Relationship objects if you
+                # return the whole edge
+                src_edges = list()
+                dst_edges = list()
+                edge_cache = Edge.get_cache()
+                for e in r["edges"]:
+                    # add edge_id to to the right list for the node creation below
+                    if n.id == e.start_id:
+                        src_edges.append(e.id)
+                    else:
+                        dst_edges.append(e.id)
+
+                    # edge already loaded, continue to next one
+                    if e.id in edge_cache:
+                        continue
+                    
+                    # create a new edge
+                    props = None
+                    if hasattr(e, "properties"):
+                        props = e.properties
+                    new_edge = Edge(
+                        e.start_id,
+                        e.end_id,
+                        id=e.id,
+                        data=props,
+                        type=e.type,
+                    )
+                    edge_cache[e.id] = new_edge
+            else:
+                src_edges = [e["id"] for e in r["edges"] if e["start"] == n.id]
+                dst_edges = [e["id"] for e in r["edges"] if e["end"] == n.id]
+            new_node = cls(
+                _id=n.id,
+                _src_edges=EdgeList(src_edges),
+                _dst_edges=EdgeList(dst_edges),
+                labels=n.labels,
+                **n.properties,
+            )
+            ret_list.append(new_node)
+
+        return ret_list
+
+    @classmethod
+    def get_many(
+        cls,
+        node_ids: set[NodeId],
+        *,
+        batch_size: int = 128,
+        db: GraphDB | None = None,
+        load_edges: bool = False,
+        return_nodes: bool = False,
+        progress_callback: ProgressFn | None = None
+        ) -> list[Node]:
+        db = db or GraphDB.singleton()
+        
+        c = Node.get_cache()
+        if len(node_ids) > c.maxsize:
+            raise GraphDBInternalError(f"get_many attempting to load more nodes than cache size ({len(node_ids)} > {c.maxsize})")
+        
+        cache_ids = set(c.keys())
+        fetch_ids = node_ids - cache_ids
+
+        start = 0
+        curr = batch_size
+        ret_list = [c[nid] for nid in c]
+        if progress_callback:
+            progress_callback(ret_list)
+        while start < len(fetch_ids):
+            id_set = set(islice(fetch_ids, start, curr))
+
+            res = cls.load_many(id_set, db=db, load_edges=load_edges)
+            for n in res:
+                c[n.id] = n
+            
+            if progress_callback:
+                progress_callback(res)
+
+            ret_list.extend(res)
+            # import pprint
+            # pprint.pp(list(res))
+            # print(f"got {len(list(res))} nodes")
+
+            start = curr
+            curr += batch_size
+        
+        assert len(ret_list) == len(node_ids)
+        return ret_list
+
 
     @classmethod
     def get_cache(cls) -> NodeCache:
@@ -742,7 +899,7 @@ class Node(BaseModel, extra="allow"):
         else:
             rm_query = ""
 
-        params = {"props": n.model_dump()}
+        params = {"props": Node.to_dict(n)}
 
         db.raw_execute(f"MATCH (n) WHERE id(n) = {n.id} {set_query} {rm_query}", params=params)
 
@@ -773,7 +930,7 @@ class Node(BaseModel, extra="allow"):
         old_id = n.id
 
         label_str = Node.mklabels(n.labels)
-        params = {"props": n.model_dump()}
+        params = {"props": Node.to_dict(n)}
 
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
@@ -861,6 +1018,19 @@ class Node(BaseModel, extra="allow"):
         n._no_save = True
 
     @staticmethod
+    def to_dict(n: Node, include_labels: bool = False) -> dict[str, Any]:
+        """Convert a Node to a Python dictionary"""
+
+        # XXX: the excluded fields below shouldn't have been included in the
+        # first place because Pythonic should exclude fields with underscores
+        ret = n.model_dump(exclude={"_id", "_src_edges", "_dst_edges"})
+
+        if include_labels and hasattr(n, "labels"):
+            ret["labels"] = n.labels
+
+        return ret
+
+    @staticmethod
     def mklabels(labels: set[str]) -> str:
         "Converts a list of strings into proper Cypher syntax for a graph database query"
         labels_list = [i for i in labels]
@@ -869,6 +1039,23 @@ class Node(BaseModel, extra="allow"):
         if len(label_str) > 0:
             label_str = ":" + label_str
         return label_str
+
+    @staticmethod
+    def all_ids(db: GraphDB | None = None) -> set[NodeId]:
+        """Returns an exhaustive Set of all NodeIds that exist in both the graph
+        database and the NodeCache"""
+        db = db or GraphDB.singleton()
+
+        # get all NodeIds in the cache 
+        c = Node.get_cache()
+        cached_ids = set(c.keys())
+
+        # get all NodeIds in the database
+        db_ids = {n["id"] for n in db.raw_fetch("MATCH (n) RETURN id(n) as id")}
+
+        # return the combination of both
+        return db_ids.union(cached_ids)
+
 
     @staticmethod
     def walk(
@@ -886,12 +1073,6 @@ class Node(BaseModel, extra="allow"):
         if n.id in _walk_history:
             return
         _walk_history.add(n.id)
-
-        def true_filter(_: Any) -> bool:
-            return True
-
-        def no_callback(_: Any) -> None:
-            pass
 
         edge_filter = edge_filter or true_filter
         node_filter = node_filter or true_filter
@@ -934,6 +1115,7 @@ class Node(BaseModel, extra="allow"):
 WalkMode = Literal["src", "dst", "both"]
 NodeFilterFn = Callable[[Node], bool]
 EdgeFilterFn = Callable[[Edge], bool]
+ProgressFn = Callable[[list[Node]], None]
 NodeCallbackFn = Callable[[Node], None]
 EdgeCallbackFn = Callable[[Edge], None]
 

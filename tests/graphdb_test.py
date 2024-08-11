@@ -98,17 +98,45 @@ class TestGraphDB:
         assert cnt == c.misses
         assert c.currsize == c.maxsize
 
+    @pytest.mark.slow
+    def test_to_networkx(self) -> None:
+        node_ids = Node.all_ids()
+        G = GraphDB.to_networkx(node_ids=node_ids)
+        assert G
+        assert len(node_ids) == G.number_of_nodes()
+
 
 class TestNode:
     def test_node_get(self) -> None:
-        n = GotCharacter.get(cast(NodeId, 0))
+        n = Node.get(cast(NodeId, 0))
         assert n.id == 0
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
-        assert n.model_dump() == {"name": "Waymar Royce"}
+        assert Node.to_dict(n) == {"name": "Waymar Royce"}
         assert n.labels == {"Character"}
         assert not n.new
         assert n.id in Node.get_cache()
+
+    def test_node_get_many(self) -> None:
+        node_ids = {cast(NodeId, 0), cast(NodeId, 1), cast(NodeId, 2), cast(NodeId, 3), cast(NodeId, 4)}
+        nodes = Node.get_many(node_ids)
+        assert len(nodes) == len(node_ids)
+        c = Node.get_cache()
+        for n in nodes:
+            assert n.id in c
+
+    def test_node_get_many_with_edges(self) -> None:
+        node_ids = {cast(NodeId, 0), cast(NodeId, 1), cast(NodeId, 2), cast(NodeId, 3), cast(NodeId, 4)}
+        nodes = Node.get_many(node_ids, load_edges=True)
+        assert len(nodes) == len(node_ids)
+        nc = Node.get_cache()
+        ec = Edge.get_cache()
+        for n in nodes:
+            assert n.id in nc
+            for e in n.src_edges:
+                assert e.id in ec
+            for e in n.dst_edges:
+                assert e.id in ec
 
     def test_node_cache(self) -> None:
         c = Node.get_cache()
@@ -177,7 +205,7 @@ class TestNode:
         assert n.id < 0
         assert len(n.src_edges) == 0
         assert len(n.dst_edges) == 0
-        assert n.model_dump() == dict()
+        assert Node.to_dict(n) == dict()
         assert n.labels == set()
         assert n.new
 
@@ -489,6 +517,37 @@ class TestNode:
         assert nodes[4] not in node_list  # is related through nodes[1]
         assert nodes[8] not in node_list  # is in filter
 
+    def test_to_dict(self) -> None:
+        n = Node(labels={"TestNode"}, foo="bar")
+        d = Node.to_dict(n)
+        assert len(d.keys()) == 1
+        assert "foo" in d.keys()
+        assert d["foo"] == "bar"
+
+    def test_to_dict_include_labels(self) -> None:
+        n = Node(labels={"TestNode"}, foo="bar")
+        d = Node.to_dict(n, include_labels=True)
+        assert len(d.keys()) == 2
+        assert "foo" in d.keys()
+        assert d["foo"] == "bar"
+        assert "labels" in d.keys()
+        assert isinstance(d["labels"], set)
+        assert len(d["labels"]) == 1
+        assert "TestNode" in d["labels"]
+
+    def test_to_dict_include_labels_no_labels(self) -> None:
+        n = Node(labels={"TestNode"}, foo="bar")
+        del n.labels
+        d = Node.to_dict(n, include_labels=True)
+        assert len(d.keys()) == 1
+        assert "foo" in d.keys()
+        assert d["foo"] == "bar"
+        assert "labels" not in d.keys()
+
+    def test_all_ids(self) -> None:
+        node_set = Node.all_ids()
+        assert isinstance(node_set, set)
+        assert len(node_set) > 0
 
 # deletes edges
 
@@ -504,19 +563,19 @@ class TestEdgeList:
         assert isinstance(e11, Edge)
         # Edge 0
         assert e0.id == 0
-        assert e0.model_dump() == {}
+        assert Edge.to_dict(e0) == {}
         assert e0.type == "LOYAL_TO"
         assert e0.src_id == 0
         assert e0.dst_id == 6
         # Edge 1
         assert e1.id == 1
-        assert e1.model_dump() == {}
+        assert Edge.to_dict(e1) == {}
         assert e1.type == "VICTIM_IN"
         assert e1.src_id == 0
         assert e1.dst_id == 453
         # Edge 11
         assert e11.id == 11
-        assert e11.model_dump() == {"count": 1, "method": "Ice sword"}
+        assert Edge.to_dict(e11) == {"count": 1, "method": "Ice sword"}
         assert e11.type == "KILLED"
         assert e11.src_id == 2
         assert e11.dst_id == 0
@@ -814,6 +873,37 @@ class TestEdge:
             spy.call_args[0][1],
             [("2746", "\d+")],
         )
+
+    def test_to_dict(self, new_edge) -> None:
+        e, _, _ = new_edge
+        e.foo = "blah"
+        d = Edge.to_dict(e)
+        assert len(d.keys()) == 1
+        assert "foo" in d.keys()
+        assert d["foo"] == "blah"
+
+    def test_to_dict_include_type(self, new_edge) -> None:
+        e, _, _ = new_edge
+        e.foo = "blah"
+        assert e.type == "Test"
+
+        d = Edge.to_dict(e, include_type=True)
+        assert len(d.keys()) == 2
+        assert "foo" in d.keys()
+        assert d["foo"] == "blah"
+        assert "type" in d.keys()
+        assert d["type"] == "Test"
+
+    def test_to_dict_include_type_no_type(self, new_edge) -> None:
+        e, _, _ = new_edge
+        e.foo = "blah"
+        del e.type
+
+        d = Edge.to_dict(e, include_type=True)
+        assert len(d.keys()) == 1
+        assert "foo" in d.keys()
+        assert d["foo"] == "blah"
+        assert "type" not in d.keys()
 
     @pytest.mark.skip("pending")
     def test_edge_cache(self) -> None:
