@@ -3,6 +3,7 @@
 from __future__ import print_function
 
 import functools
+import traceback
 from typing import Any
 
 from IPython.core.magic import Magics, line_magic, magics_class
@@ -12,6 +13,7 @@ from roc.logger import logger
 from .brk import brk_cli
 from .cont import cont_cli
 from .roc import roc_cli
+from .save import save_cli
 from .state import state_cli
 from .step import step_cli
 
@@ -42,6 +44,7 @@ def magic_cli_decorator(cli): # type: ignore
                 cli(args=args[1].split(), prog_name=func.__name__, standalone_mode=False)
             except Exception as e:
                 print("ERROR:", e) # noqa: T201
+                print(traceback.format_exc()) # noqa: T201
 
             return value
         return wrapper_decorator
@@ -79,6 +82,12 @@ class RocJupyterMagics(Magics):
     @magic_cli_decorator(state_cli)
     def state(self, line: str) -> None:
         """displays information about the internal state of ROC, use '%state --help' for more information"""
+        pass
+
+    @line_magic
+    @magic_cli_decorator(save_cli)
+    def save(self, line: str) -> None:
+        """exports the graph to a file, use '%state --help' for more information"""
         pass
 
     @staticmethod
