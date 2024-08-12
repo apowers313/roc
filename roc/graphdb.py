@@ -25,14 +25,18 @@ NodeId = NewType("NodeId", int)
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
 
+
 def true_filter(_: Any) -> bool:
-            return True
+    return True
+
 
 def no_callback(_: Any) -> None:
     pass
 
+
 class ErrorSavingDuringDelWarning(Warning):
     pass
+
 
 class GraphDBInternalError(Exception):
     """An generic exception for unexpected errors"""
@@ -115,18 +119,17 @@ class GraphDB:
         assert graph_db_singleton.closed is False
         return graph_db_singleton
 
-
     @staticmethod
     def to_networkx(
-            db: GraphDB | None = None,
-            node_ids: set[NodeId] | None = None,
-            filter: NodeFilterFn | None = None
-        ) -> nx.DiGraph:
+        db: GraphDB | None = None,
+        node_ids: set[NodeId] | None = None,
+        filter: NodeFilterFn | None = None,
+    ) -> nx.DiGraph:
         db = db or GraphDB.singleton()
         node_ids = node_ids or Node.all_ids(db=db)
         filter = filter or true_filter
         G = nx.DiGraph()
-    
+
         def nx_add(n: Node) -> None:
             n_data = Node.to_dict(n, include_labels=True)
 
@@ -147,9 +150,11 @@ class GraphDB:
             for n in nodes:
                 if filter(n):
                     nx_add(n)
+
         Node.get_many(node_ids, load_edges=True, progress_callback=nx_add_many)
 
         return G
+
 
 #######
 # CACHE
@@ -588,6 +593,7 @@ class NodeNotFound(Exception):
 
     pass
 
+
 class NodeCreationFailed(Exception):
     """An exception raised when trying to create a Node in the graph database fails"""
 
@@ -681,7 +687,12 @@ class Node(BaseModel, extra="allow"):
             Self: The node from the database
         """
 
-        res = cls.load_many({id,}, db=db)
+        res = cls.load_many(
+            {
+                id,
+            },
+            db=db,
+        )
 
         # print("RES", res)
 
@@ -689,13 +700,16 @@ class Node(BaseModel, extra="allow"):
             raise NodeNotFound(f"Couldn't find node ID: {id}")
 
         if len(res) > 1:
-            raise GraphDBInternalError(f"Too many nodes returned while trying to load single node: {id}")
+            raise GraphDBInternalError(
+                f"Too many nodes returned while trying to load single node: {id}"
+            )
 
         return res[0]
 
-        
     @classmethod
-    def load_many(cls, node_set: set[NodeId], db: GraphDB | None = NotImplemented, load_edges: bool = False) -> list[Self]:
+    def load_many(
+        cls, node_set: set[NodeId], db: GraphDB | None = NotImplemented, load_edges: bool = False
+    ) -> list[Self]:
         db = db or GraphDB.singleton()
         node_ids = ",".join(map(str, node_set))
 
@@ -704,18 +718,18 @@ class Node(BaseModel, extra="allow"):
         else:
             edge_fmt = "{id: id(e), start: id(startNode(e)), end: id(endNode(e))}"
         res_iter = db.raw_fetch(
-                f"""
+            f"""
                 MATCH (n)-[e]-(m) WHERE id(n) IN [{node_ids}]
                 RETURN n, collect({edge_fmt}) AS edges
                 """,
-            )
+        )
 
         # edges = list(
         #     map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res)
         # )
         # src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
         # dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
-        
+
         ret_list = list()
         for r in res_iter:
             n = r["n"]
@@ -738,7 +752,7 @@ class Node(BaseModel, extra="allow"):
                     # edge already loaded, continue to next one
                     if e.id in edge_cache:
                         continue
-                    
+
                     # create a new edge
                     props = None
                     if hasattr(e, "properties"):
@@ -774,14 +788,16 @@ class Node(BaseModel, extra="allow"):
         db: GraphDB | None = None,
         load_edges: bool = False,
         return_nodes: bool = False,
-        progress_callback: ProgressFn | None = None
-        ) -> list[Node]:
+        progress_callback: ProgressFn | None = None,
+    ) -> list[Node]:
         db = db or GraphDB.singleton()
-        
+
         c = Node.get_cache()
         if len(node_ids) > c.maxsize:
-            raise GraphDBInternalError(f"get_many attempting to load more nodes than cache size ({len(node_ids)} > {c.maxsize})")
-        
+            raise GraphDBInternalError(
+                f"get_many attempting to load more nodes than cache size ({len(node_ids)} > {c.maxsize})"
+            )
+
         cache_ids = set(c.keys())
         fetch_ids = node_ids - cache_ids
 
@@ -796,7 +812,7 @@ class Node(BaseModel, extra="allow"):
             res = cls.load_many(id_set, db=db, load_edges=load_edges)
             for n in res:
                 c[n.id] = n
-            
+
             if progress_callback:
                 progress_callback(res)
 
@@ -807,10 +823,9 @@ class Node(BaseModel, extra="allow"):
 
             start = curr
             curr += batch_size
-        
+
         assert len(ret_list) == len(node_ids)
         return ret_list
-
 
     @classmethod
     def get_cache(cls) -> NodeCache:
@@ -1046,7 +1061,7 @@ class Node(BaseModel, extra="allow"):
         database and the NodeCache"""
         db = db or GraphDB.singleton()
 
-        # get all NodeIds in the cache 
+        # get all NodeIds in the cache
         c = Node.get_cache()
         cached_ids = set(c.keys())
 
@@ -1055,7 +1070,6 @@ class Node(BaseModel, extra="allow"):
 
         # return the combination of both
         return db_ids.union(cached_ids)
-
 
     @staticmethod
     def walk(

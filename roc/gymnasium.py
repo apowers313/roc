@@ -27,6 +27,7 @@ try:
 except ModuleNotFoundError:
     import gymnasium as gym
 
+
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
     loop and interfaces to the ROC agent.
@@ -97,7 +98,7 @@ class Gym(Component, ABC):
         # TODO: self.action_bus_conn.subject.first()
 
         # warnings.warn("await action not implemented, defaulting to '.' for every action")
-        
+
         default_action = 19  # 19 = 46 = "." = do nothing
         action = self.decode_action(default_action)
         return action

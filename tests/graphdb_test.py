@@ -118,7 +118,13 @@ class TestNode:
         assert n.id in Node.get_cache()
 
     def test_node_get_many(self) -> None:
-        node_ids = {cast(NodeId, 0), cast(NodeId, 1), cast(NodeId, 2), cast(NodeId, 3), cast(NodeId, 4)}
+        node_ids = {
+            cast(NodeId, 0),
+            cast(NodeId, 1),
+            cast(NodeId, 2),
+            cast(NodeId, 3),
+            cast(NodeId, 4),
+        }
         nodes = Node.get_many(node_ids)
         assert len(nodes) == len(node_ids)
         c = Node.get_cache()
@@ -126,7 +132,13 @@ class TestNode:
             assert n.id in c
 
     def test_node_get_many_with_edges(self) -> None:
-        node_ids = {cast(NodeId, 0), cast(NodeId, 1), cast(NodeId, 2), cast(NodeId, 3), cast(NodeId, 4)}
+        node_ids = {
+            cast(NodeId, 0),
+            cast(NodeId, 1),
+            cast(NodeId, 2),
+            cast(NodeId, 3),
+            cast(NodeId, 4),
+        }
         nodes = Node.get_many(node_ids, load_edges=True)
         assert len(nodes) == len(node_ids)
         nc = Node.get_cache()
@@ -548,6 +560,7 @@ class TestNode:
         node_set = Node.all_ids()
         assert isinstance(node_set, set)
         assert len(node_set) > 0
+
 
 # deletes edges
 

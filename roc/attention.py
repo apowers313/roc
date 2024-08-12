@@ -1,6 +1,8 @@
 from abc import ABC
 
+import numpy as np
 from pydantic import BaseModel
+from skimage.feature import peak_local_max
 
 from .component import Component, register_component
 from .event import EventBus
@@ -55,17 +57,60 @@ class SaliencyMap(GenericGrid[list[Node]]):
 
     def get_max_strength(self) -> int:
         max = 0
-        for loc in self:
-            sz = len(loc)
-            if max < sz:
-                max = sz
+        for y in range(self.height):
+            for x in range(self.width):
+                curr = self.get_strength(x, y)
+                if max < curr:
+                    max = curr
 
         return max
 
     def get_strength(self, x: int, y: int) -> int:
-        # TODO: strength is current based on the number of nodes at a location
-        # should be weighted for things like motion that have higher saliency
-        return len(self.get_val(x, y))
+        node_list = self.get_val(x, y)
+        # TODO: not really sure that the strength should depend on the number of features
+        ret = len(node_list)
+
+        def add_strength(n: Node) -> None:
+            nonlocal ret
+
+            # TODO: this is pretty arbitrary and might be biased based on my
+            # domain knowledge... I suspect I will come back and modify this
+            # based on object recognition and other factors at some point in
+            # the future
+            if "Single" in n.labels:
+                ret += 10
+            if "Delta" in n.labels:
+                ret += 15
+            if "Motion" in n.labels:
+                ret += 20
+
+        for n in node_list:
+            Node.walk(n, node_callback=add_strength, mode="dst")
+
+        return ret
+
+    def get_focus(self) -> None:
+        max_str = self.get_max_strength()
+        fkimg = np.array(
+            [
+                [self.get_strength(x, y) / max_str for y in range(self.height)]
+                for x in range(self.width)
+            ]
+        )
+
+        m = np.median(fkimg)
+        # print("fkimg", fkimg[15:18, 4:7])
+        coordinates = peak_local_max(fkimg, min_distance=5, threshold_rel=m)
+        # print("coordinates", coordinates)
+
+        for loc in coordinates:
+            # print("loc", loc)
+            x = loc[0]
+            y = loc[1]
+            p = self.grid.get_point(x, y)
+            print("p", p)  # noqa: T201
+
+        # return []
 
     def __str__(self) -> str:
         dg = DebugGrid(self.grid)
@@ -120,6 +165,8 @@ class VisionAttention(Attention):
                 # self.att_conn.send(Settled())
                 self.settled.clear()
                 assert self.saliency_map
+                self.saliency_map.get_focus()
+                # print("done!")
                 # self.saliency_map.clear()
 
             return
@@ -133,6 +180,7 @@ class VisionAttention(Attention):
                 assert self.saliency_map
                 self.saliency_map.add_val(n.x, n.y, n)
 
+        # create saliency map
         Node.walk(f, node_callback=try_add_loc)
 
     # TODO: listen for vision events

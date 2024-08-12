@@ -1,8 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 
-import os
 
-import psutil
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
@@ -16,9 +14,6 @@ from roc.feature_extractors.single import Single
 from roc.graphdb import Node
 from roc.location import Grid
 from roc.perception import VisionData
-
-screen0 = VisionData(screens[0]["chars"])
-screen1 = VisionData(screens[1]["chars"])
 
 
 class TestSaliencyMap:
@@ -171,12 +166,6 @@ class TestVisionAttention:
         VisionAttention()
 
     def test_basic(self, empty_components, memory_profile) -> None:
-        # inner psutil function
-        def process_memory():
-            process = psutil.Process(os.getpid())
-            mem_info = process.memory_info()
-            return mem_info.rss
-
         delta = Component.get("delta", "perception")
         assert isinstance(delta, Delta)
         attention = Component.get("vision", "attention")
@@ -194,6 +183,8 @@ class TestVisionAttention:
             output_bus=attention.att_conn.attached_bus,
         )
 
+        # print("grid1", VisionData(screens[0]["chars"]))
+        # print("grid2", VisionData(screens[1]["chars"]))
         s.input_conn.send(VisionData(screens[0]["chars"]))
         s.input_conn.send(VisionData(screens[1]["chars"]))
 
@@ -204,6 +195,9 @@ class TestVisionAttention:
         print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
         print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201
         print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))  # noqa: T201
+        print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))  # noqa: T201
+        print(attention.saliency_map.grid.get_point(16, 6))  # noqa: T201
+        print(attention.saliency_map.grid.get_point(17, 6))  # noqa: T201
 
         # assert s.output.call_count == 2
 

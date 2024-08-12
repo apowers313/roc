@@ -23,16 +23,16 @@ def is_jupyter() -> bool:
         global get_ipython
 
         # jupyter environment defines a global function 'get_ipython'
-        get_ipython() # type: ignore # noqa: F821
+        get_ipython()  # type: ignore # noqa: F821
         return True
     except Exception:
         return False
 
 
-def magic_cli_decorator(cli): # type: ignore
-    def magic_cli_decorator(func): # type: ignore
+def magic_cli_decorator(cli):  # type: ignore
+    def magic_cli_decorator(func):  # type: ignore
         @functools.wraps(func)
-        def wrapper_decorator(*args, **kwargs): # type: ignore
+        def wrapper_decorator(*args, **kwargs):  # type: ignore
             # Do something before
             # print("args", " ".join(args[1:]))
             # print("kwargs", kwargs)
@@ -43,12 +43,15 @@ def magic_cli_decorator(cli): # type: ignore
             try:
                 cli(args=args[1].split(), prog_name=func.__name__, standalone_mode=False)
             except Exception as e:
-                print("ERROR:", e) # noqa: T201
-                print(traceback.format_exc()) # noqa: T201
+                print("ERROR:", e)  # noqa: T201
+                print(traceback.format_exc())  # noqa: T201
 
             return value
+
         return wrapper_decorator
+
     return magic_cli_decorator
+
 
 # The class MUST call this class decorator at creation time
 @magics_class
@@ -96,7 +99,7 @@ class RocJupyterMagics(Magics):
             global get_ipython
 
             # jupyter environment defines a global function 'get_ipython'
-            ip = get_ipython() # type: ignore # noqa: F821
+            ip = get_ipython()  # type: ignore # noqa: F821
             logger.debug("jupyter environment found")
             load_ipython_extension(ip)
             logger.debug("jupyter magics loaded")
@@ -106,6 +109,7 @@ class RocJupyterMagics(Magics):
 
 # In order to actually use these magics, you must register them with a
 # running IPython.
+
 
 def load_ipython_extension(ipython: Any) -> None:
     """

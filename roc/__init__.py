@@ -51,7 +51,7 @@ def start() -> None:
         # if running in Jupyter, start in a thread so that we can still inspect
         # or debug from the iPython shell
         logger.debug("Starting ROC: running in thread")
-        t = Thread(target = g.start)
+        t = Thread(target=g.start)
         t.start()
     else:
         logger.debug("Starting ROC: NOT running in thread")

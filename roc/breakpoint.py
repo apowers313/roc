@@ -10,10 +10,12 @@ from .logger import logger
 
 ConditionFn: TypeAlias = Callable[[], bool]
 
+
 @dataclass
 class BreakpointInfo:
     fn: ConditionFn
     src: str | None
+
 
 _breakpoints_dict: Dict[str, BreakpointInfo] = dict()
 
@@ -61,7 +63,14 @@ class Breakpoint:
 
         return f"{hdr}{tbl}"
 
-    def add(self, fn: ConditionFn, *, name: str | None = None, overwrite: bool = False, src: str | None = None) -> None:
+    def add(
+        self,
+        fn: ConditionFn,
+        *,
+        name: str | None = None,
+        overwrite: bool = False,
+        src: str | None = None,
+    ) -> None:
         global _breakpoints_dict
 
         if not name:
@@ -124,19 +133,19 @@ class Breakpoint:
     def check(self) -> None:
         global _breakpoints_dict
 
-        waslocked=False
+        waslocked = False
         if self.lock.locked():
-            waslocked=True
+            waslocked = True
 
         # stop here if we are in a break
         with self.lock:
             # if we were stopped and are continuing now, don't immediately stop
-            # again due to another breakpoint 
-            if not waslocked: 
+            # again due to another breakpoint
+            if not waslocked:
                 for b in _breakpoints_dict:
                     if _breakpoints_dict[b].fn():
                         self.do_break(trigger=b)
-                        waslocked=True
+                        waslocked = True
                         break
 
         if waslocked:

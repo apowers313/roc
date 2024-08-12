@@ -12,16 +12,19 @@ def brk_cli(ctx: click.Context) -> None:
     if ctx.invoked_subcommand is None:
         breakpoints.do_break()
 
+
 @brk_cli.command()
 def list() -> None:
     """List all breakpoints"""
     breakpoints.list()
+
 
 @brk_cli.command()
 @click.argument("name")
 def remove(name: str) -> None:
     """Remove a breakpoint"""
     breakpoints.remove(name)
+
 
 @brk_cli.command()
 @click.argument("function")
@@ -31,7 +34,8 @@ def add(function: str) -> None:
     sym = get_symbol(function)
 
     breakpoints.add(sym, name=function, src="<iPython>")
-    print(f"Added breakpoint: '{function}'") # noqa: T201
+    print(f"Added breakpoint: '{function}'")  # noqa: T201
+
 
 @brk_cli.command()
 def clear() -> None:
