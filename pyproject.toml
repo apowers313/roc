@@ -263,7 +263,7 @@ addopts = [
 
 [tool.coverage.run]
 source = ["roc"]
-omit = ["roc/script.py", "roc/gymnasium.py", "roc/__init__.py"]
+omit = ["roc/script.py", "roc/gymnasium.py", "roc/__init__.py", "roc/jupyter/*"]
 
 [coverage.paths]
 source = "roc"
