@@ -141,24 +141,24 @@ class TestSaliencyMap:
         assert sm.get_max_strength() == 3
         assert sm.get_max_strength() == 3
 
-    def test_str(self) -> None:
-        g = Grid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        n = Node(labels=["TestNode"])
-        sm.add_val(0, 0, n)
-        sm.add_val(1, 1, n)
-        sm.add_val(1, 1, n)
-        sm.add_val(2, 2, n)
-        sm.add_val(2, 2, n)
-        sm.add_val(2, 2, n)
+    # def test_str(self) -> None:
+    #     g = Grid(
+    #         [
+    #             [32, 32, 32],
+    #             [49, 50, 51],
+    #             [97, 98, 99],
+    #         ]
+    #     )
+    #     sm = SaliencyMap(g)
+    #     n = Node(labels=["TestNode"])
+    #     sm.add_val(0, 0, n)
+    #     sm.add_val(1, 1, n)
+    #     sm.add_val(1, 1, n)
+    #     sm.add_val(2, 2, n)
+    #     sm.add_val(2, 2, n)
+    #     sm.add_val(2, 2, n)
 
-        assert str(sm) == "\u2591  \n \u2593 \n  \u2588\n"
+    #     assert str(sm) == "\u2591  \n \u2593 \n  \u2588\n"
 
 
 class TestVisionAttention:

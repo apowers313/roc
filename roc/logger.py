@@ -9,9 +9,7 @@ from pydantic import BaseModel, Field, TypeAdapter, field_validator
 
 from .config import Config
 
-__all__ = [
-    "logger",
-]
+__all__ = ["logger", "init", "default_log_filter"]
 
 module_names = [name for _, name, _ in pkgutil.iter_modules(["roc"])]
 

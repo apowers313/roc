@@ -1,6 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
-
+from threading import Thread
+from time import sleep
 from unittest.mock import MagicMock
 
 import pytest
@@ -12,6 +13,10 @@ def true_fn() -> bool:
     return True
 
 
+def false_fn() -> bool:
+    return False
+
+
 class TestBreakpoint:
     @pytest.fixture(scope="function", autouse=True)
     def clear_breakpoints(self):
@@ -20,19 +25,48 @@ class TestBreakpoint:
         breakpoints.resume()
         assert not breakpoints.brk
 
-    @pytest.fixture(scope="class")
-    def mock_break_true(self):
-        return MagicMock(return_value=True)
+    @pytest.fixture(scope="class", autouse=True)
+    def breakpoint_thread(self):
+        stop_threads = False
 
-    @pytest.fixture(scope="class")
+        def breakpoint_loop():
+            while True:
+                breakpoints.check()
+                sleep(0.01)
+                if stop_threads:
+                    break
+
+        t = Thread(target=breakpoint_loop)
+        t.start()
+
+        yield
+
+        stop_threads = True
+        breakpoints.resume()
+        t.join(timeout=15)
+        if t.is_alive():
+            raise Exception(
+                "!!! THREAD IS STILL ALIVE AT END OF BREAKPOINT TESTS. TESTS WILL LIKELY HANG."
+            )
+
+    @pytest.fixture(scope="function")
+    def mock_break_true(self):
+        mm = MagicMock(return_value=True)
+        mm.__name__ = "mock_break_true"
+        return mm
+
+    @pytest.fixture(scope="function")
     def mock_break_false(self):
-        return MagicMock(return_value=False)
+        mm = MagicMock(return_value=False)
+        mm.__name__ = "mock_break_false"
+        return mm
 
     def test_state(self) -> None:
         assert not breakpoints.brk
         assert breakpoints.state == "running"
         breakpoints.brk = True
         assert breakpoints.state == "stopped"
+        breakpoints.brk = False
 
     def test_add(self, mock_break_true) -> None:
         num = breakpoints.count
@@ -61,7 +95,9 @@ class TestBreakpoint:
         assert mock_break_true.call_count == 0
         breakpoints.add(mock_break_true, name="foo")
         assert breakpoints.state == "running"
-        breakpoints.check()
+
+        sleep(0.2)
+
         assert breakpoints.state == "stopped"
         assert breakpoints.trigger == "foo"
         assert mock_break_true.call_count == 1
@@ -79,29 +115,34 @@ class TestBreakpoint:
         assert lst == "0 breakpoint(s). State: running."
 
     def test_list_one(self, mock_break_true) -> None:
-        breakpoints.add(true_fn, name="foo")
+        breakpoints.add(false_fn, name="foo")
+        sleep(0.2)
         lst = str(breakpoints)
         assert lst == (
             "1 breakpoint(s). State: running.\n\n"
-            "         Breakpoints    File\n"
+            "         Breakpoints    Source\n"
             "--  ---  -------------  ---------------------\n"
-            " 0       foo            breakpoint_test.py:11"
+            " 0       foo            breakpoint_test.py:18"
         )
 
     def test_list_stopped(self, mock_break_true) -> None:
         breakpoints.add(true_fn, name="foo")
-        breakpoints.check()
+
+        sleep(0.2)
+
         lst = str(breakpoints)
         assert lst == (
             "1 breakpoint(s). State: stopped.\n\n"
-            "         Breakpoints    File\n"
+            "         Breakpoints    Source\n"
             "--  ---  -------------  ---------------------\n"
-            " 0  *    foo            breakpoint_test.py:11"
+            " 0  *    foo            breakpoint_test.py:14"
         )
 
     def test_resume(self, mock_break_true) -> None:
         breakpoints.add(mock_break_true, name="foo")
-        breakpoints.check()
+
+        sleep(0.2)
+
         assert breakpoints.state == "stopped"
 
         breakpoints.resume()

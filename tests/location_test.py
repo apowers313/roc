@@ -75,7 +75,7 @@ class TestGrid:
         assert screen0.height == 21
         assert screen0.get_point(0, 0) == Point(0, 0, 32)
         for p in screen0:
-            assert p == Point(0, 0, 32)
+            assert p == 32
             break
 
     def test_grid_repr(self) -> None:

@@ -73,8 +73,11 @@ class Breakpoint:
     ) -> None:
         global _breakpoints_dict
 
-        if not name:
+        if not name and hasattr(fn, "__name__"):
             name = fn.__name__
+
+        if not name:
+            name = "<unknown>"
 
         if name in _breakpoints_dict and not overwrite:
             raise Exception(
