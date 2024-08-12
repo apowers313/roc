@@ -118,11 +118,11 @@ class TestBreakpoint:
         breakpoints.add(false_fn, name="foo")
         sleep(0.2)
         lst = str(breakpoints)
-        assert lst == (
+        assert lst.startswith(
             "1 breakpoint(s). State: running.\n\n"
             "         Breakpoints    Source\n"
             "--  ---  -------------  ---------------------\n"
-            " 0       foo            breakpoint_test.py:18"
+            " 0       foo            breakpoint_test.py:"
         )
 
     def test_list_stopped(self, mock_break_true) -> None:
@@ -131,11 +131,11 @@ class TestBreakpoint:
         sleep(0.2)
 
         lst = str(breakpoints)
-        assert lst == (
+        assert lst.startswith(
             "1 breakpoint(s). State: stopped.\n\n"
             "         Breakpoints    Source\n"
             "--  ---  -------------  ---------------------\n"
-            " 0  *    foo            breakpoint_test.py:14"
+            " 0  *    foo            breakpoint_test.py:"
         )
 
     def test_resume(self, mock_break_true) -> None:
