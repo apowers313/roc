@@ -143,7 +143,15 @@ exclude = '''
 
 [tool.interrogate]
 # ignore-regex = ^get$,^mock_.*,.*BaseClass.*
-exclude = ["setup.py", "docs", "build", "tests"]
+exclude = [
+  "setup.py",
+  "docs",
+  "build",
+  "tests",
+  "roc/jupyter",
+  "roc/gymnasium.py",
+  "roc/script.py",
+]
 # whitelist-regex =
 # color = truegenerate-badge = .# possible values: 0 (minimal output), 1 (-v), 2 (-vv)
 # badge-format = svg
@@ -157,7 +165,7 @@ ignore-module = false
 ignore-nested-functions = true
 ignore-nested-classes = true
 ignore-setters = true
-fail-under = 40
+fail-under = 55
 verbose = 0
 quiet = false
 omit-covered-files = false
