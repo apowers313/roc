@@ -22,7 +22,8 @@ class LineFeature(Feature):
 @register_component("line", "perception")
 class Line(FeatureExtractor[TypedPointCollection]):
     """A component for identifying similar values located along a vertical or
-    horizontal line"""
+    horizontal line
+    """
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)

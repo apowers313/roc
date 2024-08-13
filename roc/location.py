@@ -91,14 +91,12 @@ class GenericGrid(Generic[GridVal]):
 
     def __iter__(self) -> Iterator[GridVal]:
         """Iterate over all the points in the grid"""
-
         for y in range(self.height):
             for x in range(self.width):
                 yield self.get_val(x, y)
 
     def get_val(self, x: int, y: int) -> GridVal:
         """Returns the value located at (x, y)"""
-
         return self.val_list[y][x]
 
     def set_val(self, x: int, y: int, val: GridVal) -> None:
@@ -122,7 +120,6 @@ class GenericGrid(Generic[GridVal]):
 class Grid(GenericGrid[int]):
     def get_point(self, x: int, y: int) -> Point:
         """Returns the Point located at (x, y)"""
-
         return Point(x, y, self.get_val(x, y))
 
     def __repr__(self) -> str:
@@ -135,7 +132,6 @@ class Grid(GenericGrid[int]):
 
     def points(self) -> Iterator[Point]:
         """Iterate over all the points in the grid"""
-
         for y in range(self.height):
             for x in range(self.width):
                 yield self.get_point(x, y)
@@ -260,19 +256,16 @@ class PointCollection:
 
     def add(self, p: Point) -> None:
         """Adds a new point to the collection"""
-
         hash_val = self.do_hash(p)
         self._point_hash[hash_val] = p
 
     def contains(self, p: Point) -> bool:
         """Verifies if a point is already in the collection or not"""
-
         hash_val = self.do_hash(p)
         return hash_val in self._point_hash
 
     def do_hash(self, p: Point) -> int:
         """Returns the hash value of a point. Mostly for internal use."""
-
         return hash((p.x, p.y))
 
     @property
@@ -299,7 +292,8 @@ class TypedPointCollection(PointCollection):
 
     def add(self, p: Point) -> None:
         """Add a new point to the collection and enforce that it is the same
-        type as the collection"""
+        type as the collection
+        """
         if p.val != self.type:
             raise TypeError(
                 f"Trying to add '{p.val}' to TypedPointCollection with type '{self.type}"

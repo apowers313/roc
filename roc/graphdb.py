@@ -1,5 +1,6 @@
 """This module is a wrapper around a graph database and abstracts away all the
-database-specific features as various classes (GraphDB, Node, Edge, etc)"""
+database-specific features as various classes (GraphDB, Node, Edge, etc)
+"""
 
 from __future__ import annotations
 
@@ -28,13 +29,15 @@ next_new_node: NodeId = cast(NodeId, -1)
 
 def true_filter(_: Any) -> bool:
     """Helper function that accepts any value and returns True. Great for
-    default filters."""
+    default filters.
+    """
     return True
 
 
 def no_callback(_: Any) -> None:
     """Helper function that accepts any value and returns None. Great for
-    default callback functions."""
+    default callback functions.
+    """
     pass
 
 
@@ -57,9 +60,7 @@ graph_db_singleton: GraphDB | None = None
 
 
 class GraphDB:
-    """
-    A graph database singleton. Settings for the graph database come from the config module.
-    """
+    """A graph database singleton. Settings for the graph database come from the config module."""
 
     def __init__(self) -> None:
         settings = Config.get()
@@ -116,12 +117,10 @@ class GraphDB:
 
     def connected(self) -> bool:
         """Returns True if the database is connected, False otherwise"""
-
         return self.db_conn is not None and self.db_conn.status == mgclient.CONN_STATUS_READY
 
     def connect(self) -> mgclient.Connection:
         """Connects to the database and returns a Connection object"""
-
         sslmode = mgclient.MG_SSLMODE_REQUIRE if self.encrypted else mgclient.MG_SSLMODE_DISABLE
         connection = mgclient.connect(
             host=self.host,
@@ -137,15 +136,14 @@ class GraphDB:
 
     def close(self) -> None:
         """Closes the connection to the database"""
-
         self.db_conn.close()
         self.closed = True
 
     @classmethod
     def singleton(cls) -> GraphDB:
         """This returns a singleton object for the graph database. If the
-        singleton isn't created yet, it creates it."""
-
+        singleton isn't created yet, it creates it.
+        """
         global graph_db_singleton
         if not graph_db_singleton:
             graph_db_singleton = GraphDB()
@@ -253,8 +251,8 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
 
     def clear(self) -> None:
         """Clears out all items from the cache and resets the cache
-        statistics"""
-
+        statistics
+        """
         super().clear()
         self.hits = 0
         self.misses = 0
@@ -280,8 +278,7 @@ def get_next_new_edge_id() -> EdgeId:
 
 
 class Edge(BaseModel, extra="allow"):
-    """
-    An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
+    """An edge (a.k.a. Relationship or Connection) between two Nodes. An edge obect automatically
     implements all phases of CRUD in the underlying graph database. This is a directional
     relationship with a "source" and "destination". The source and destination properties
     are dynamically loaded through property getters when they are called, and may trigger
@@ -557,8 +554,7 @@ edge_cache: EdgeCache | None = None
 # EDGE LIST
 #######
 class EdgeFetchIterator:
-    """
-    The implementation of an iterator for an EdgeList. Only intended to be used internally by
+    """The implementation of an iterator for an EdgeList. Only intended to be used internally by
     EdgeList.
     """
 
@@ -582,8 +578,7 @@ EdgeFilter = Callable[[Edge], bool] | str | EdgeId | None
 
 
 class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
-    """
-    A list of Edges that is used by Node for keeping track of the connections it has.
+    """A list of Edges that is used by Node for keeping track of the connections it has.
     Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())
     """
 
@@ -624,7 +619,8 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 
     def replace(self, old: Edge | EdgeId, new: Edge | EdgeId) -> None:
         """Replaces all instances of an old Edge with a new Edge. Useful for when an Edge is
-        persisted to the graph database and its permanent ID is assigned"""
+        persisted to the graph database and its permanent ID is assigned
+        """
         old_id = Edge.to_id(old)
         new_id = Edge.to_id(new)
         for i in range(len(self.__edges)):
@@ -672,9 +668,7 @@ def get_next_new_node_id() -> NodeId:
 
 
 class Node(BaseModel, extra="allow"):
-    """
-    An graph database node that automatically handles CRUD for the underlying graph database objects
-    """
+    """An graph database node that automatically handles CRUD for the underlying graph database objects"""
 
     _id: NodeId
     labels: set[str] = Field(exclude=True, default_factory=lambda: set())
@@ -750,7 +744,6 @@ class Node(BaseModel, extra="allow"):
         Returns:
             Self: The node from the database
         """
-
         res = cls.load_many(
             {
                 id,
@@ -1099,7 +1092,6 @@ class Node(BaseModel, extra="allow"):
     @staticmethod
     def to_dict(n: Node, include_labels: bool = False) -> dict[str, Any]:
         """Convert a Node to a Python dictionary"""
-
         # XXX: the excluded fields below shouldn't have been included in the
         # first place because Pythonic should exclude fields with underscores
         ret = n.model_dump(exclude={"_id", "_src_edges", "_dst_edges"})
@@ -1111,7 +1103,7 @@ class Node(BaseModel, extra="allow"):
 
     @staticmethod
     def mklabels(labels: set[str]) -> str:
-        "Converts a list of strings into proper Cypher syntax for a graph database query"
+        """Converts a list of strings into proper Cypher syntax for a graph database query"""
         labels_list = [i for i in labels]
         labels_list.sort()
         label_str = ":".join(labels_list)
@@ -1122,7 +1114,8 @@ class Node(BaseModel, extra="allow"):
     @staticmethod
     def all_ids(db: GraphDB | None = None) -> set[NodeId]:
         """Returns an exhaustive Set of all NodeIds that exist in both the graph
-        database and the NodeCache"""
+        database and the NodeCache
+        """
         db = db or GraphDB.singleton()
 
         # get all NodeIds in the cache

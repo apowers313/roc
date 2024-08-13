@@ -1,5 +1,6 @@
 """Calculates distance between Singles. Note: this is probably post-attention in
-humans, only calculated for a subset of features, and based on the saccades of the eyes."""
+humans, only calculated for a subset of features, and based on the saccades of the eyes.
+"""
 
 from __future__ import annotations
 

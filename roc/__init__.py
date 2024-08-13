@@ -33,7 +33,6 @@ __all__ = [
 
 def init(config: dict[str, Any] | None = None) -> None:
     """Initializes the agent before starting the agent."""
-
     Config.init(config)
     roc_logger.init()
     Component.init()
@@ -43,7 +42,6 @@ def init(config: dict[str, Any] | None = None) -> None:
 
 def start() -> None:
     """Starts the agent."""
-
     g = NethackGym()
 
     if is_jupyter():

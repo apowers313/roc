@@ -1,5 +1,6 @@
 """This is a Python script that runs the Gym and agent, typically from the
-command-line. See the Makefile for how to run this script."""
+command-line. See the Makefile for how to run this script.
+"""
 
 import pprint
 from typing import Any

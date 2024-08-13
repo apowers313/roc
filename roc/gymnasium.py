@@ -1,5 +1,6 @@
 """This module is a wrapper around the Gym / Gymnasium interfaces and drives all
-the interactions between the agent and the system, including the main event loop."""
+the interactions between the agent and the system, including the main event loop.
+"""
 
 # pragma: no cover
 from abc import ABC, abstractmethod
@@ -213,7 +214,8 @@ class BottomlineStats(BaseModel):
 
 class NethackGym(Gym):
     """Wrapper around the Gym class for driving the Nethack interface to the ROC
-    agent. Decodes Nethack specific data and sends it to the agent as Events."""
+    agent. Decodes Nethack specific data and sends it to the agent as Events.
+    """
 
     def __init__(self, *, gym_opts: dict[str, Any] | None = None) -> None:
         gym_opts = gym_opts or {}

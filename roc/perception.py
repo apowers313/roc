@@ -1,5 +1,6 @@
 """The Perception system breaks down the environment into features that can be
-re-assembled as concepts."""
+re-assembled as concepts.
+"""
 
 from __future__ import annotations
 
@@ -93,7 +94,8 @@ class Feature(Node, ABC):
 
     def add_point(self, x: int, y: int) -> ElementPoint:
         """Add a location Node to the feature that describes one or more places
-        where this feature exists."""
+        where this feature exists.
+        """
         p = ElementPoint(x=x, y=y)
         Node.connect(self, p, "Location")
         return p
@@ -106,7 +108,8 @@ class Feature(Node, ABC):
 
     def add_orientation(self, orientation: Direction) -> ElementOrientation:
         """Add a direction Node to the feature that describes a direction or
-        orientation of the feature"""
+        orientation of the feature
+        """
         o = ElementOrientation(orientation=orientation)
         Node.connect(self, o, "Direction")
         return o
@@ -118,7 +121,8 @@ class Feature(Node, ABC):
 
     def get_feature(self, type: str) -> Node | None:
         """Get an Feature Node of the type described, or None if it doesn't
-        exist. If multiple matching features are found, the first one is returned."""
+        exist. If multiple matching features are found, the first one is returned.
+        """
         nodes = self.get_features(type)
         if len(nodes) < 1:
             return None
@@ -159,7 +163,8 @@ class Feature(Node, ABC):
 class Transmogrifier(ABC):
     """Features are represented as collections of Nodes; however, that's
     frequently difficult to work with. Implementations of this abstract class
-    convert Nodes to a dataclass that's easier to work with (and vice versa)."""
+    convert Nodes to a dataclass that's easier to work with (and vice versa).
+    """
 
     @abstractmethod
     def __str__(self) -> str:
@@ -168,7 +173,8 @@ class Transmogrifier(ABC):
     @abstractmethod
     def add_to_feature(self, n: Feature) -> None:
         """Converts the dataclass to Nodes and adds those Nodes as children of
-        the specified Feature."""
+        the specified Feature.
+        """
         pass
 
     @classmethod
@@ -176,7 +182,8 @@ class Transmogrifier(ABC):
     def from_feature(self, n: Feature) -> Self:
         """Creates an instance of this dataclass from the specified Feature.
         Raises an exception if the required Nodes aren't present on the
-        specified Feature."""
+        specified Feature.
+        """
         pass
 
 
@@ -186,7 +193,8 @@ FeatureTransmogrifier = TypeVar("FeatureTransmogrifier", bound=Transmogrifier)
 class ComplexFeature(Feature, Generic[FeatureTransmogrifier]):
     """Creates a new Feature based off of a Transmogrifier. Constructing the
     feature requires the Transmogrifier specified by the template. Also adds a
-    convenient __str__ method for debugging the Feature."""
+    convenient __str__ method for debugging the Feature.
+    """
 
     def __init__(self, name: str, origin: Component, trans: FeatureTransmogrifier) -> None:
         super().__init__(origin, name)
@@ -213,7 +221,8 @@ PerceptionEvent = Event[PerceptionData]
 
 class Perception(Component, ABC):
     """The abstract class for Perception components. Handles perception bus
-    connections and corresponding clean-up."""
+    connections and corresponding clean-up.
+    """
 
     bus = EventBus[PerceptionData]("perception")
 

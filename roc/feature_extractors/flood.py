@@ -44,7 +44,8 @@ class CheckMap:
 @register_component("flood", "perception")
 class Flood(FeatureExtractor[TypedPointCollection]):
     """A component for creating Flood features -- collections of adjacent points
-    that all have the same value"""
+    that all have the same value
+    """
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)

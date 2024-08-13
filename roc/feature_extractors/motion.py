@@ -74,7 +74,8 @@ class MotionVector(Transmogrifier):
 
 class MotionFeature(ComplexFeature[MotionVector]):
     """A vector describing a motion, including the start point, end point,
-    direction and value of the thing moving"""
+    direction and value of the thing moving
+    """
 
     def __init__(self, origin: Component, mv: MotionVector):
         super().__init__("Motion", origin, mv)
@@ -120,8 +121,8 @@ class Motion(FeatureExtractor[MotionFeature]):
 
 def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
     """Helper function to convert two positions into a direction such as 'UP' or
-    'DOWN_LEFT'"""
-
+    'DOWN_LEFT'
+    """
     lr_str = ""
     if d1.x < d2.x:
         lr_str = "RIGHT"

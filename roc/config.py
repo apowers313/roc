@@ -65,7 +65,6 @@ class Config(BaseSettings):
         use_secrets: bool = True,
     ) -> None:
         """Initializes the settings by reading the configuration files and environment variables"""
-
         global _config_singleton
         initialized = _config_singleton is not None
         if initialized and not force:

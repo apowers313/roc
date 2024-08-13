@@ -30,7 +30,6 @@ def remove(name: str) -> None:
 @click.argument("function")
 def add(function: str) -> None:
     """Add a breakpoints by name or function"""
-
     sym = get_symbol(function)
 
     breakpoints.add(sym, name=function, src="<iPython>")

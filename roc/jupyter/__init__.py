@@ -60,37 +60,37 @@ class RocJupyterMagics(Magics):
     @line_magic
     @magic_cli_decorator(roc_cli)
     def roc(self, line: str) -> None:
-        """start executing roc, use '%roc --help' for more information"""
+        """Start executing roc, use '%roc --help' for more information"""
         pass
 
     @line_magic
     @magic_cli_decorator(brk_cli)
     def brk(self, line: str) -> None:
-        """halt execution of roc, use '%brk --help' for more information"""
+        """Halt execution of roc, use '%brk --help' for more information"""
         pass
 
     @line_magic
     @magic_cli_decorator(cont_cli)
     def cont(self, line: str) -> None:
-        """resume execution after calling break, use '%cont --help' for more information"""
+        """Resume execution after calling break, use '%cont --help' for more information"""
         pass
 
     @line_magic
     @magic_cli_decorator(step_cli)
     def step(self, line: str) -> None:
-        """runs the ROC loop for <n> more steps and then breaks, use '%step --help' for more information"""
+        """Runs the ROC loop for <n> more steps and then breaks, use '%step --help' for more information"""
         pass
 
     @line_magic
     @magic_cli_decorator(state_cli)
     def state(self, line: str) -> None:
-        """displays information about the internal state of ROC, use '%state --help' for more information"""
+        """Displays information about the internal state of ROC, use '%state --help' for more information"""
         pass
 
     @line_magic
     @magic_cli_decorator(save_cli)
     def save(self, line: str) -> None:
-        """exports the graph to a file, use '%state --help' for more information"""
+        """Exports the graph to a file, use '%state --help' for more information"""
         pass
 
     @staticmethod
@@ -112,8 +112,7 @@ class RocJupyterMagics(Magics):
 
 
 def load_ipython_extension(ipython: Any) -> None:
-    """
-    Any module file that define a function named `load_ipython_extension`
+    """Any module file that define a function named `load_ipython_extension`
     can be loaded via `%load_ext module.path` or be configured to be
     autoloaded by IPython at startup time.
     """

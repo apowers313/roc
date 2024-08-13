@@ -1,6 +1,7 @@
 """This module defines the Component base class, which is instantiated for
 nearly every part of the system. It implements interfaces for communications,
-initialization, shutdown, etc."""
+initialization, shutdown, etc.
+"""
 
 from __future__ import annotations
 
@@ -78,8 +79,8 @@ class Component(ABC):
 
     def shutdown(self) -> None:
         """De-initializes the component, removing any bus connections and any
-        other clean-up that needs to be performed"""
-
+        other clean-up that needs to be performed
+        """
         logger.debug(f"Component {self.name}:{self.type} shutting down.")
 
         for conn in self.bus_conns:
@@ -89,8 +90,8 @@ class Component(ABC):
     @staticmethod
     def init() -> None:
         """Loads all components registered as `auto` and perception components
-        in the `perception_components` config field."""
-
+        in the `perception_components` config field.
+        """
         settings = Config.get()
         component_list = default_components
         component_list = component_list.union(settings.perception_components)
@@ -123,7 +124,6 @@ class Component(ABC):
             (e.g. `Perception.get(...)` will return a Perception component and
             `Action.get(...)` will return an Action component)
         """
-
         reg_str = _component_registry_key(name, type)
         return cast(Self, component_registry[reg_str](*args, **kwargs))
 
