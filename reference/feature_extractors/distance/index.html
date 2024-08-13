@@ -9,10 +9,10 @@
       
       
       
-        <link rel="prev" href="../flood/">
+        <link rel="prev" href="../delta/">
       
       
-        <link rel="next" href="../motion/">
+        <link rel="next" href="../flood/">
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
@@ -20,7 +20,7 @@
     
     
       
-        <title>line - Reinforcement Learning of Concepts</title>
+        <title>distance - Reinforcement Learning of Concepts</title>
       
     
     
@@ -64,7 +64,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#feature_extractors.line" class="md-skip">
+        <a href="#feature_extractors.distance" class="md-skip">
           Skip to content
         </a>
       
@@ -100,7 +100,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              line
+              distance
             
           </span>
         </div>
@@ -431,10 +431,28 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../distance/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    distance
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   <span class="md-ellipsis">
@@ -443,6 +461,126 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extractors.distance" class="md-nav__link">
+    <span class="md-ellipsis">
+      distance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Distance
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Distance">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.prev_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      prev_features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __init__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.event_filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      event_filter
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.get_feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      get_feature
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extractors.distance.DistanceFeature" class="md-nav__link">
+    <span class="md-ellipsis">
+      DistanceFeature
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DistanceFeature">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.DistanceFeature.__hash__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __hash__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.DistanceFeature.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __init__
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extractors.distance.chebyshev_distance" class="md-nav__link">
+    <span class="md-ellipsis">
+      chebyshev_distance
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -473,28 +611,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  <span class="md-ellipsis">
-    line
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../line/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -503,108 +623,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.line" class="md-nav__link">
-    <span class="md-ellipsis">
-      line
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.line.MIN_LINE_COUNT" class="md-nav__link">
-    <span class="md-ellipsis">
-      MIN_LINE_COUNT
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line" class="md-nav__link">
-    <span class="md-ellipsis">
-      Line
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Line">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line.event_filter" class="md-nav__link">
-    <span class="md-ellipsis">
-      event_filter
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line.get_feature" class="md-nav__link">
-    <span class="md-ellipsis">
-      get_feature
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature" class="md-nav__link">
-    <span class="md-ellipsis">
-      LineFeature
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="LineFeature">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature.__hash__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __hash__
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature.__init__" class="md-nav__link">
-    <span class="md-ellipsis">
-      __init__
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1029,35 +1047,44 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#feature_extractors.line" class="md-nav__link">
+  <a href="#feature_extractors.distance" class="md-nav__link">
     <span class="md-ellipsis">
-      line
+      distance
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#feature_extractors.line.MIN_LINE_COUNT" class="md-nav__link">
+  <a href="#feature_extractors.distance.Distance" class="md-nav__link">
     <span class="md-ellipsis">
-      MIN_LINE_COUNT
+      Distance
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line" class="md-nav__link">
-    <span class="md-ellipsis">
-      Line
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Line">
+    <nav class="md-nav" aria-label="Distance">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line.event_filter" class="md-nav__link">
+  <a href="#feature_extractors.distance.Distance.prev_features" class="md-nav__link">
+    <span class="md-ellipsis">
+      prev_features
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.__init__" class="md-nav__link">
+    <span class="md-ellipsis">
+      __init__
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature_extractors.distance.Distance.event_filter" class="md-nav__link">
     <span class="md-ellipsis">
       event_filter
     </span>
@@ -1066,7 +1093,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.line.Line.get_feature" class="md-nav__link">
+  <a href="#feature_extractors.distance.Distance.get_feature" class="md-nav__link">
     <span class="md-ellipsis">
       get_feature
     </span>
@@ -1080,17 +1107,17 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature" class="md-nav__link">
+  <a href="#feature_extractors.distance.DistanceFeature" class="md-nav__link">
     <span class="md-ellipsis">
-      LineFeature
+      DistanceFeature
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="LineFeature">
+    <nav class="md-nav" aria-label="DistanceFeature">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature.__hash__" class="md-nav__link">
+  <a href="#feature_extractors.distance.DistanceFeature.__hash__" class="md-nav__link">
     <span class="md-ellipsis">
       __hash__
     </span>
@@ -1099,7 +1126,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#feature_extractors.line.LineFeature.__init__" class="md-nav__link">
+  <a href="#feature_extractors.distance.DistanceFeature.__init__" class="md-nav__link">
     <span class="md-ellipsis">
       __init__
     </span>
@@ -1109,6 +1136,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#feature_extractors.distance.chebyshev_distance" class="md-nav__link">
+    <span class="md-ellipsis">
+      chebyshev_distance
+    </span>
+  </a>
   
 </li>
       
@@ -1127,14 +1163,17 @@
                   
 
 
-  <h1>line</h1>
+  <h1>distance</h1>
 
 <div class="doc doc-object doc-module">
 
 
 
-<a id="feature_extractors.line"></a>
+<a id="feature_extractors.distance"></a>
   <div class="doc doc-contents first">
+  
+      <p>Calculates distance between Singles. Note: this is probably post-attention in
+humans, only calculated for a subset of features, and based on the saccades of the eyes.</p>
 
   
 
@@ -1146,32 +1185,13 @@
 
 
 
-<div class="doc doc-object doc-attribute">
-
-
-
-<h2 id="feature_extractors.line.MIN_LINE_COUNT" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">MIN_LINE_COUNT</span> <span class="o">=</span> <span class="mi">4</span></code>
-  
-  <span class="doc doc-labels">
-      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
-  </span>
-
-</h2>
-
-
-  <div class="doc doc-contents ">
-  </div>
-
-</div>
-
 
 <div class="doc doc-object doc-class">
 
 
 
-<h2 id="feature_extractors.line.Line" class="doc doc-heading">
-          <code>Line</code>
+<h2 id="feature_extractors.distance.Distance" class="doc doc-heading">
+          <code>Distance</code>
 
 
 </h2>
@@ -1179,20 +1199,12 @@
 
   <div class="doc doc-contents ">
           <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<span title="feature_extractors.location.TypedPointCollection">TypedPointCollection</span>]</code></p>
+            Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.distance.DistanceFeature" href="#feature_extractors.distance.DistanceFeature">DistanceFeature</a>]</code></p>
 
-  
-      <p>A component for identifying similar values located along a vertical or
-horizontal line</p>
 
             <details class="quote">
-              <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
-<span class="normal">26</span>
-<span class="normal">27</span>
+              <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
 <span class="normal">28</span>
 <span class="normal">29</span>
 <span class="normal">30</span>
@@ -1223,60 +1235,37 @@ horizontal line</p>
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;line&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">Line</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">TypedPointCollection</span><span class="p">]):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for identifying similar values located along a vertical or</span>
-<span class="sd">    horizontal line</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;distance&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">Distance</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">DistanceFeature</span><span class="p">]):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
+        <span class="c1"># only listen to single:perception events</span>
+        <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;single&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
-        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
-        <span class="n">points</span><span class="p">:</span> <span class="n">PointList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">None</span>
 
-        <span class="k">def</span> <span class="nf">try_emit</span><span class="p">(</span><span class="n">ln</span><span class="p">:</span> <span class="n">Line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">nonlocal</span> <span class="n">points</span>
+        <span class="c1"># calculate distance between all previous elements and emit event for each</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">SingleFeature</span><span class="p">)</span>
+        <span class="n">curr_pt</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span>
+            <span class="n">prev_pt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">chebyshev_distance</span><span class="p">(</span><span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DistanceFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">,</span> <span class="n">dist</span><span class="p">))</span>
 
-            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">MIN_LINE_COUNT</span><span class="p">:</span>
-                <span class="n">ln</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">LineFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">))</span>
-            <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># add to previous elements</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-        <span class="c1">## iterate points by &#39;x&#39; to identify horizontal lines</span>
-        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">):</span>
-                <span class="n">val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-                <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">:</span>
-                    <span class="n">p</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-                    <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-                    <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
-            <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="c1">## iterate points by &#39;y&#39; to identify vertical lines</span>
-        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">):</span>
-            <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">):</span>
-                <span class="n">val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-                <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">:</span>
-                    <span class="n">p</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-                    <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-                    <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
-            <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
         <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1291,6 +1280,25 @@ horizontal line</p>
 
 
 
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="feature_extractors.distance.Distance.prev_features" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></code>
+  
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+  </div>
+
+</div>
+
 
 
 
@@ -1298,8 +1306,8 @@ horizontal line</p>
 
 
 
-<h3 id="feature_extractors.line.Line.event_filter" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">event_filter</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+<h3 id="feature_extractors.distance.Distance.__init__" class="doc doc-heading">
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
@@ -1307,10 +1315,12 @@ horizontal line</p>
   <div class="doc doc-contents ">
 
           <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
-<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-    <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1322,7 +1332,37 @@ horizontal line</p>
 
 
 
-<h3 id="feature_extractors.line.Line.get_feature" class="doc doc-heading">
+<h3 id="feature_extractors.distance.Distance.event_filter" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">event_filter</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+
+</h3>
+
+
+  <div class="doc doc-contents ">
+
+          <details class="quote">
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="c1"># only listen to single:perception events</span>
+    <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;single&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h3 id="feature_extractors.distance.Distance.get_feature" class="doc doc-heading">
           <code class="highlight language-python"><span class="n">get_feature</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
 
 </h3>
@@ -1331,16 +1371,8 @@ horizontal line</p>
   <div class="doc doc-contents ">
 
           <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
-<span class="normal">32</span>
-<span class="normal">33</span>
-<span class="normal">34</span>
-<span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span>
-<span class="normal">38</span>
-<span class="normal">39</span>
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
@@ -1359,51 +1391,25 @@ horizontal line</p>
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span>
-<span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
-<span class="normal">64</span>
-<span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
-    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
-    <span class="n">points</span><span class="p">:</span> <span class="n">PointList</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
-    <span class="k">def</span> <span class="nf">try_emit</span><span class="p">(</span><span class="n">ln</span><span class="p">:</span> <span class="n">Line</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">nonlocal</span> <span class="n">points</span>
+    <span class="c1"># calculate distance between all previous elements and emit event for each</span>
+    <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">SingleFeature</span><span class="p">)</span>
+    <span class="n">curr_pt</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span>
+        <span class="n">prev_pt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+        <span class="n">dist</span> <span class="o">=</span> <span class="n">chebyshev_distance</span><span class="p">(</span><span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DistanceFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">,</span> <span class="n">dist</span><span class="p">))</span>
 
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">points</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">MIN_LINE_COUNT</span><span class="p">:</span>
-            <span class="n">ln</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">LineFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">points</span><span class="p">,</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">))</span>
-        <span class="n">points</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># add to previous elements</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
 
-    <span class="c1">## iterate points by &#39;x&#39; to identify horizontal lines</span>
-    <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">):</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-            <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">:</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-                <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-                <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
-        <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-    <span class="c1">## iterate points by &#39;y&#39; to identify vertical lines</span>
-    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">):</span>
-        <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">):</span>
-            <span class="n">val</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
-            <span class="n">points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">val</span><span class="p">))</span>
-            <span class="k">if</span> <span class="n">val</span> <span class="o">!=</span> <span class="n">points</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">val</span><span class="p">:</span>
-                <span class="n">p</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
-                <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-                <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">p</span><span class="p">]</span>
-        <span class="n">try_emit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
     <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -1424,8 +1430,8 @@ horizontal line</p>
 
 
 
-<h2 id="feature_extractors.line.LineFeature" class="doc doc-heading">
-          <code>LineFeature</code>
+<h2 id="feature_extractors.distance.DistanceFeature" class="doc doc-heading">
+          <code>DistanceFeature</code>
 
 
 </h2>
@@ -1436,33 +1442,35 @@ horizontal line</p>
             Bases: <code><span title="feature_extractors.perception.Feature">Feature</span></code></p>
 
   
-      <p>A collection of points representing a line</p>
+      <p>The distance between two features</p>
 
             <details class="quote">
-              <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
-<span class="normal">11</span>
-<span class="normal">12</span>
+              <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">LineFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A collection of points representing a line&quot;&quot;&quot;</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DistanceFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The distance between two features&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">point_list</span><span class="p">:</span> <span class="n">PointList</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Line&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_type</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point_list</span><span class="p">))</span>
-        <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">point_list</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">point</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">end</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">sz</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Distance&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_size</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">start</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">end</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">end</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;LineFeature hash not implemented&quot;</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DistanceFeature hash not implemented&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
 
@@ -1483,7 +1491,7 @@ horizontal line</p>
 
 
 
-<h3 id="feature_extractors.line.LineFeature.__hash__" class="doc doc-heading">
+<h3 id="feature_extractors.distance.DistanceFeature.__hash__" class="doc doc-heading">
           <code class="highlight language-python"><span class="fm">__hash__</span><span class="p">()</span></code>
 
 </h3>
@@ -1492,10 +1500,10 @@ horizontal line</p>
   <div class="doc doc-contents ">
 
           <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;LineFeature hash not implemented&quot;</span><span class="p">)</span>
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DistanceFeature hash not implemented&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1507,8 +1515,8 @@ horizontal line</p>
 
 
 
-<h3 id="feature_extractors.line.LineFeature.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">point_list</span><span class="p">,</span> <span class="nb">type</span><span class="p">)</span></code>
+<h3 id="feature_extractors.distance.DistanceFeature.__init__" class="doc doc-heading">
+          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">sz</span><span class="p">)</span></code>
 
 </h3>
 
@@ -1516,18 +1524,20 @@ horizontal line</p>
   <div class="doc doc-contents ">
 
           <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/line.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
-<span class="normal">14</span>
-<span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">point_list</span><span class="p">:</span> <span class="n">PointList</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Line&quot;</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">add_type</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">add_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point_list</span><span class="p">))</span>
-    <span class="k">for</span> <span class="n">point</span> <span class="ow">in</span> <span class="n">point_list</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">point</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">start</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">end</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">sz</span><span class="p">:</span> <span class="nb">int</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Distance&quot;</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">add_size</span><span class="p">(</span><span class="n">sz</span><span class="p">)</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">start</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">start</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="n">end</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">end</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 </code></pre></div></td></tr></table></div>
           </details>
   </div>
@@ -1543,6 +1553,42 @@ horizontal line</p>
 
 </div>
 
+
+
+<div class="doc doc-object doc-function">
+
+
+
+<h2 id="feature_extractors.distance.chebyshev_distance" class="doc doc-heading">
+          <code class="highlight language-python"><span class="n">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">)</span></code>
+
+</h2>
+
+
+  <div class="doc doc-contents ">
+
+          <details class="quote">
+            <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
+<span class="normal">62</span>
+<span class="normal">63</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">p2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="n">x1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">x2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">y1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">y2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">dx</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">x1</span> <span class="o">-</span> <span class="n">x2</span><span class="p">)</span>
+    <span class="n">dy</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">y1</span> <span class="o">-</span> <span class="n">y2</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">dx</span><span class="p">,</span> <span class="n">dy</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+          </details>
+  </div>
+
+</div>
 
 
 

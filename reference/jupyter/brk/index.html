@@ -432,6 +432,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../../feature_extractors/distance/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    distance
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../feature_extractors/flood/" class="md-nav__link">
         
   
@@ -1091,12 +1112,10 @@
 <span class="normal">33</span>
 <span class="normal">34</span>
 <span class="normal">35</span>
-<span class="normal">36</span>
-<span class="normal">37</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@brk_cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@brk_cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="nd">@click</span><span class="o">.</span><span class="n">argument</span><span class="p">(</span><span class="s2">&quot;function&quot;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">add</span><span class="p">(</span><span class="n">function</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Add a breakpoints by name or function&quot;&quot;&quot;</span>
-
     <span class="n">sym</span> <span class="o">=</span> <span class="n">get_symbol</span><span class="p">(</span><span class="n">function</span><span class="p">)</span>
 
     <span class="n">breakpoints</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">sym</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="n">function</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="s2">&quot;&lt;iPython&gt;&quot;</span><span class="p">)</span>
@@ -1158,10 +1177,10 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/jupyter/brk.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
+<span class="normal">40</span>
 <span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@brk_cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@brk_cli</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
 <span class="k">def</span> <span class="nf">clear</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Remove all breakpoints&quot;&quot;&quot;</span>
     <span class="n">breakpoints</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>

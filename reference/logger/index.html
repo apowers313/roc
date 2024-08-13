@@ -432,6 +432,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../feature_extractors/distance/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    distance
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../feature_extractors/flood/" class="md-nav__link">
         
   
@@ -1050,9 +1071,7 @@ settings, etc.</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/logger.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 96</span>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
@@ -1060,10 +1079,12 @@ settings, etc.</p>
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
-<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">init</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">init</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Initializes the logging module. Installs the filter, fetches the</span>
-<span class="sd">    settings, etc.&quot;&quot;&quot;</span>
-
+<span class="sd">    settings, etc.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">default_log_filter</span>
     <span class="n">default_log_filter</span> <span class="o">=</span> <span class="n">LogFilter</span><span class="p">()</span>
 

@@ -434,6 +434,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../distance/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    distance
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../flood/" class="md-nav__link">
         
   
@@ -1426,6 +1447,8 @@
 
 <a id="feature_extractors.motion"></a>
   <div class="doc doc-contents first">
+  
+      <p>Converts Delta events into Motion events that signify an object moving in a direction</p>
 
   
 
@@ -1472,22 +1495,12 @@
           <p class="doc doc-class-bases">
             Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.motion.MotionFeature" href="#feature_extractors.motion.MotionFeature">MotionFeature</a>]</code></p>
 
+  
+      <p>Component that consumes Delta events and produces Motion events</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 75</span>
-<span class="normal"> 76</span>
-<span class="normal"> 77</span>
-<span class="normal"> 78</span>
-<span class="normal"> 79</span>
-<span class="normal"> 80</span>
-<span class="normal"> 81</span>
-<span class="normal"> 82</span>
-<span class="normal"> 83</span>
-<span class="normal"> 84</span>
-<span class="normal"> 85</span>
-<span class="normal"> 86</span>
-<span class="normal"> 87</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
 <span class="normal"> 88</span>
 <span class="normal"> 89</span>
 <span class="normal"> 90</span>
@@ -1505,8 +1518,24 @@
 <span class="normal">102</span>
 <span class="normal">103</span>
 <span class="normal">104</span>
-<span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;motion&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;motion&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Motion</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">MotionFeature</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Component that consumes Delta events and produces Motion events&quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span> <span class="n">DiffList</span> <span class="o">=</span> <span class="p">[]</span>
@@ -1585,9 +1614,9 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">91</span>
+<span class="normal">92</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="p">:</span> <span class="n">DiffList</span> <span class="o">=</span> <span class="p">[]</span>
 </code></pre></div></td></tr></table></div>
@@ -1611,11 +1640,11 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span>
-<span class="normal">84</span>
-<span class="normal">85</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">95</span>
+<span class="normal">96</span>
+<span class="normal">97</span>
+<span class="normal">98</span>
+<span class="normal">99</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="c1"># only listen to delta:perception events</span>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
@@ -1641,25 +1670,25 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
-<span class="normal"> 88</span>
-<span class="normal"> 89</span>
-<span class="normal"> 90</span>
-<span class="normal"> 91</span>
-<span class="normal"> 92</span>
-<span class="normal"> 93</span>
-<span class="normal"> 94</span>
-<span class="normal"> 95</span>
-<span class="normal"> 96</span>
-<span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span>
-<span class="normal">101</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
 <span class="normal">104</span>
-<span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">diff_list</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
@@ -1708,12 +1737,23 @@
           <p class="doc doc-class-bases">
             Bases: <code><span title="feature_extractors.perception.ComplexFeature">ComplexFeature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.motion.MotionVector" href="#feature_extractors.motion.MotionVector">MotionVector</a>]</code></p>
 
+  
+      <p>A vector describing a motion, including the start point, end point,
+direction and value of the thing moving</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionFeature</span><span class="p">(</span><span class="n">ComplexFeature</span><span class="p">[</span><span class="n">MotionVector</span><span class="p">]):</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">MotionFeature</span><span class="p">(</span><span class="n">ComplexFeature</span><span class="p">[</span><span class="n">MotionVector</span><span class="p">]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A vector describing a motion, including the start point, end point,</span>
+<span class="sd">    direction and value of the thing moving</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">mv</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Motion&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">mv</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -1746,8 +1786,8 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">68</span>
-<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">mv</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">):</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">80</span>
+<span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">mv</span><span class="p">:</span> <span class="n">MotionVector</span><span class="p">):</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Motion&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">mv</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -1783,12 +1823,12 @@
           <p class="doc doc-class-bases">
             Bases: <code><span title="feature_extractors.perception.Transmogrifier">Transmogrifier</span></code></p>
 
+  
+      <p>A Transmogrifier that converts nodes to a motion dataclass and vice versa</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">23</span>
-<span class="normal">24</span>
-<span class="normal">25</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
 <span class="normal">28</span>
@@ -1827,8 +1867,18 @@
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
-<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">MotionVector</span><span class="p">(</span><span class="n">Transmogrifier</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Transmogrifier that converts nodes to a motion dataclass and vice versa&quot;&quot;&quot;</span>
+
     <span class="n">direction</span><span class="p">:</span> <span class="n">Direction</span>
     <span class="n">start_x</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">start_y</span><span class="p">:</span> <span class="nb">int</span>
@@ -1837,12 +1887,15 @@
     <span class="n">val</span><span class="p">:</span> <span class="nb">int</span>
 
     <span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Pydantic config&quot;&quot;&quot;</span>
+
         <span class="n">use_enum_values</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s2">: (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_y</span><span class="si">}</span><span class="s2">) -&gt; (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_y</span><span class="si">}</span><span class="s2">)&quot;</span>
 
     <span class="k">def</span> <span class="nf">add_to_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds nodes and edges to describe the motion&quot;&quot;&quot;</span>
         <span class="n">n</span><span class="o">.</span><span class="n">add_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">)</span>
         <span class="n">n</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_y</span><span class="p">)</span>
         <span class="n">n</span><span class="o">.</span><span class="n">add_orientation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="p">)</span>
@@ -1851,6 +1904,7 @@
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MotionVector</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Converts nodes and edges back into a dataclass that describes the motion&quot;&quot;&quot;</span>
         <span class="n">orig</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="s2">&quot;Origin&quot;</span><span class="p">)</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="n">Feature</span><span class="p">)</span>
         <span class="n">start_loc</span> <span class="o">=</span> <span class="n">orig</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="s2">&quot;Location&quot;</span><span class="p">)</span>
@@ -2010,11 +2064,17 @@
 
   <div class="doc doc-contents ">
 
+  
+      <p>Pydantic config</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
-<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Pydantic config&quot;&quot;&quot;</span>
+
     <span class="n">use_enum_values</span> <span class="o">=</span> <span class="kc">True</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2093,8 +2153,8 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
-<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="si">}</span><span class="s2">: (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_y</span><span class="si">}</span><span class="s2">) -&gt; (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">end_y</span><span class="si">}</span><span class="s2">)&quot;</span>
 </code></pre></div></td></tr></table></div>
           </details>
@@ -2114,15 +2174,19 @@
 
 
   <div class="doc doc-contents ">
+  
+      <p>Adds nodes and edges to describe the motion</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
-<span class="normal">39</span>
-<span class="normal">40</span>
-<span class="normal">41</span>
-<span class="normal">42</span>
-<span class="normal">43</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add_to_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add_to_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Adds nodes and edges to describe the motion&quot;&quot;&quot;</span>
     <span class="n">n</span><span class="o">.</span><span class="n">add_type</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">)</span>
     <span class="n">n</span><span class="o">.</span><span class="n">add_point</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_y</span><span class="p">)</span>
     <span class="n">n</span><span class="o">.</span><span class="n">add_orientation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">direction</span><span class="p">)</span>
@@ -2150,17 +2214,12 @@
 
 
   <div class="doc doc-contents ">
+  
+      <p>Converts nodes and edges back into a dataclass that describes the motion</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
-<span class="normal">46</span>
-<span class="normal">47</span>
-<span class="normal">48</span>
-<span class="normal">49</span>
-<span class="normal">50</span>
-<span class="normal">51</span>
-<span class="normal">52</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
 <span class="normal">55</span>
@@ -2172,8 +2231,17 @@
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
-<span class="normal">64</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
+<span class="normal">64</span>
+<span class="normal">65</span>
+<span class="normal">66</span>
+<span class="normal">67</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@classmethod</span>
 <span class="k">def</span> <span class="nf">from_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MotionVector</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Converts nodes and edges back into a dataclass that describes the motion&quot;&quot;&quot;</span>
     <span class="n">orig</span> <span class="o">=</span> <span class="n">n</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="s2">&quot;Origin&quot;</span><span class="p">)</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">orig</span><span class="p">,</span> <span class="n">Feature</span><span class="p">)</span>
     <span class="n">start_loc</span> <span class="o">=</span> <span class="n">orig</span><span class="o">.</span><span class="n">get_feature</span><span class="p">(</span><span class="s2">&quot;Location&quot;</span><span class="p">)</span>
@@ -2220,28 +2288,37 @@
 
 
   <div class="doc doc-contents ">
+  
+      <p>Helper function to convert two positions into a direction such as 'UP' or
+'DOWN_LEFT'</p>
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">108</span>
-<span class="normal">109</span>
-<span class="normal">110</span>
-<span class="normal">111</span>
-<span class="normal">112</span>
-<span class="normal">113</span>
-<span class="normal">114</span>
-<span class="normal">115</span>
-<span class="normal">116</span>
-<span class="normal">117</span>
-<span class="normal">118</span>
-<span class="normal">119</span>
-<span class="normal">120</span>
-<span class="normal">121</span>
-<span class="normal">122</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">122</span>
 <span class="normal">123</span>
 <span class="normal">124</span>
 <span class="normal">125</span>
-<span class="normal">126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">adjacent_direction</span><span class="p">(</span><span class="n">d1</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">d2</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Direction</span><span class="p">:</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">adjacent_direction</span><span class="p">(</span><span class="n">d1</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">d2</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Direction</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Helper function to convert two positions into a direction such as &#39;UP&#39; or</span>
+<span class="sd">    &#39;DOWN_LEFT&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">lr_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="k">if</span> <span class="n">d1</span><span class="o">.</span><span class="n">x</span> <span class="o">&lt;</span> <span class="n">d2</span><span class="o">.</span><span class="n">x</span><span class="p">:</span>
         <span class="n">lr_str</span> <span class="o">=</span> <span class="s2">&quot;RIGHT&quot;</span>
@@ -2281,20 +2358,20 @@
 
           <details class="quote">
             <summary>Source code in <code>roc/feature_extractors/motion.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">129</span>
-<span class="normal">130</span>
-<span class="normal">131</span>
-<span class="normal">132</span>
-<span class="normal">133</span>
-<span class="normal">134</span>
-<span class="normal">135</span>
-<span class="normal">136</span>
-<span class="normal">137</span>
-<span class="normal">138</span>
-<span class="normal">139</span>
-<span class="normal">140</span>
-<span class="normal">141</span>
-<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">emit_motion</span><span class="p">(</span><span class="n">mc</span><span class="p">:</span> <span class="n">Motion</span><span class="p">,</span> <span class="n">old_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">new_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span>
+<span class="normal">155</span>
+<span class="normal">156</span>
+<span class="normal">157</span>
+<span class="normal">158</span>
+<span class="normal">159</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">emit_motion</span><span class="p">(</span><span class="n">mc</span><span class="p">:</span> <span class="n">Motion</span><span class="p">,</span> <span class="n">old_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">,</span> <span class="n">new_diff</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">mc</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span>
         <span class="n">MotionFeature</span><span class="p">(</span>
             <span class="n">mc</span><span class="p">,</span>
