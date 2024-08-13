@@ -71,6 +71,7 @@ profile:
 check-codestyle:
 	poetry run ruff check --config=./pyproject.toml .
 	poetry run black --config pyproject.toml ./
+	poetry run ruff check --config ./pyproject.toml --fix
 
 .PHONY: mypy
 mypy:
