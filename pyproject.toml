@@ -52,7 +52,6 @@ psutil = "^6.0.0"
 [tool.poetry.group.dev.dependencies]
 bandit = "^1.7.1"
 black = "^24.4.2"
-darglint = "^1.8.1"
 isort = { extras = ["colors"], version = "^5.10.1" }
 mypy = "^1.4.1"
 mypy-extensions = "^1.0.0"
@@ -179,6 +178,8 @@ exclude = ["tests/helpers/nethack_screens.py"]
 extend-select = ["T201"]
 unfixable = ["T201"]
 
+[tool.ruff.pydocstyle]
+convention = "google"
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file

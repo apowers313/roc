@@ -27,14 +27,20 @@ next_new_node: NodeId = cast(NodeId, -1)
 
 
 def true_filter(_: Any) -> bool:
+    """Helper function that accepts any value and returns True. Great for
+    default filters."""
     return True
 
 
 def no_callback(_: Any) -> None:
+    """Helper function that accepts any value and returns None. Great for
+    default callback functions."""
     pass
 
 
 class ErrorSavingDuringDelWarning(Warning):
+    """An error that occurs while saving a Node during __del__"""
+
     pass
 
 
@@ -70,6 +76,17 @@ class GraphDB:
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
+        """Executes a Cypher query and returns the results as an iterator of
+        dictionaries. Used for any query that has a 'RETURN' clause.
+
+        Args:
+            query (str): The Cypher query to execute
+            params (dict[str, Any] | None, optional): Any parameters to pass to
+                the query. Defaults to None. See also: https://memgraph.com/docs/querying/expressions#parameters
+
+        Yields:
+            Iterator[dict[str, Any]]: An iterator of the results from the database.
+        """
         params = params or {}
         logger.trace(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
@@ -82,6 +99,14 @@ class GraphDB:
             yield {dsc.name: row[index] for index, dsc in enumerate(cursor.description)}
 
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
+        """Executes a query with no return value. Used for 'SET', 'DELETE' or
+        other queries without a 'RETURN' clause.
+
+        Args:
+            query (str): The Cypher query to execute
+            params (dict[str, Any] | None, optional): Any parameters to pass to
+                the query. Defaults to None. See also: https://memgraph.com/docs/querying/expressions#parameters
+        """
         params = params or {}
         logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
 
@@ -90,9 +115,13 @@ class GraphDB:
         cursor.fetchall()
 
     def connected(self) -> bool:
+        """Returns True if the database is connected, False otherwise"""
+
         return self.db_conn is not None and self.db_conn.status == mgclient.CONN_STATUS_READY
 
     def connect(self) -> mgclient.Connection:
+        """Connects to the database and returns a Connection object"""
+
         sslmode = mgclient.MG_SSLMODE_REQUIRE if self.encrypted else mgclient.MG_SSLMODE_DISABLE
         connection = mgclient.connect(
             host=self.host,
@@ -107,11 +136,16 @@ class GraphDB:
         return connection
 
     def close(self) -> None:
+        """Closes the connection to the database"""
+
         self.db_conn.close()
         self.closed = True
 
     @classmethod
     def singleton(cls) -> GraphDB:
+        """This returns a singleton object for the graph database. If the
+        singleton isn't created yet, it creates it."""
+
         global graph_db_singleton
         if not graph_db_singleton:
             graph_db_singleton = GraphDB()
@@ -125,6 +159,21 @@ class GraphDB:
         node_ids: set[NodeId] | None = None,
         filter: NodeFilterFn | None = None,
     ) -> nx.DiGraph:
+        """Converts the entire graph database (and local cache of objects) into
+        a NetworkX graph
+
+        Args:
+            db (GraphDB | None, optional): The database to convert to NetworkX.
+                Defaults to the GraphDB singleton if not specified.
+            node_ids (set[NodeId] | None, optional): The NodeIDs to add to the
+                NetworkX graph. Defaults to all IDs if not specified.
+            filter (NodeFilterFn | None, optional): A Node filter to filter out
+                nodes before adding them to the NetworkX graph. Also useful for a
+                callback that can be used for progress updates. Defaults to None.
+
+        Returns:
+            nx.DiGraph: _description_
+        """
         db = db or GraphDB.singleton()
         node_ids = node_ids or Node.all_ids(db=db)
         filter = filter or true_filter
@@ -165,6 +214,8 @@ CacheDefault = TypeVar("CacheDefault")
 
 
 class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
+    """A generic cache that is used for both the Node cache and the Edge cache"""
+
     def __init__(self, maxsize: int):
         super().__init__(maxsize=maxsize)
         self.hits = 0
@@ -179,6 +230,16 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         /,
         default: CacheValue | None = None,
     ) -> CacheValue | None:
+        """Uses the specified CacheKey to fetch an object from the cache.
+
+        Args:
+            key (CacheKey): The key to use to fetch the object
+            default (CacheValue | None, optional): If the object isn't found,
+                the default value to return. Defaults to None.
+
+        Returns:
+            CacheValue | None: The object from the cache, or None if not found.
+        """
         v = super().get(key)
         if not v:
             self.misses = self.misses + 1
@@ -191,6 +252,9 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         return v
 
     def clear(self) -> None:
+        """Clears out all items from the cache and resets the cache
+        statistics"""
+
         super().clear()
         self.hits = 0
         self.misses = 0

@@ -1,3 +1,5 @@
+"""Converts Delta events into Motion events that signify an object moving in a direction"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -22,6 +24,8 @@ from .delta import DeltaFeature, Diff
 
 @dataclass
 class MotionVector(Transmogrifier):
+    """A Transmogrifier that converts nodes to a motion dataclass and vice versa"""
+
     direction: Direction
     start_x: int
     start_y: int
@@ -30,12 +34,15 @@ class MotionVector(Transmogrifier):
     val: int
 
     class Config:
+        """Pydantic config"""
+
         use_enum_values = True
 
     def __str__(self) -> str:
         return f"{self.val} '{chr(self.val)}' {self.direction}: ({self.start_x}, {self.start_y}) -> ({self.end_x}, {self.end_y})"
 
     def add_to_feature(self, n: Feature) -> None:
+        """Adds nodes and edges to describe the motion"""
         n.add_type(self.val)
         n.add_point(self.end_x, self.end_y)
         n.add_orientation(self.direction)
@@ -44,6 +51,7 @@ class MotionVector(Transmogrifier):
 
     @classmethod
     def from_feature(self, n: Feature) -> MotionVector:
+        """Converts nodes and edges back into a dataclass that describes the motion"""
         orig = n.get_feature("Origin")
         assert isinstance(orig, Feature)
         start_loc = orig.get_feature("Location")
@@ -65,6 +73,9 @@ class MotionVector(Transmogrifier):
 
 
 class MotionFeature(ComplexFeature[MotionVector]):
+    """A vector describing a motion, including the start point, end point,
+    direction and value of the thing moving"""
+
     def __init__(self, origin: Component, mv: MotionVector):
         super().__init__("Motion", origin, mv)
 
@@ -74,6 +85,8 @@ DiffList = list[Diff]
 
 @register_component("motion", "perception")
 class Motion(FeatureExtractor[MotionFeature]):
+    """Component that consumes Delta events and produces Motion events"""
+
     def __init__(self) -> None:
         super().__init__()
         self.diff_list: DiffList = []
@@ -106,6 +119,9 @@ class Motion(FeatureExtractor[MotionFeature]):
 
 
 def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
+    """Helper function to convert two positions into a direction such as 'UP' or
+    'DOWN_LEFT'"""
+
     lr_str = ""
     if d1.x < d2.x:
         lr_str = "RIGHT"

@@ -1,3 +1,6 @@
+"""Aggregates all Perception events and determines which locations / objects
+should received focus"""
+
 from abc import ABC
 
 import numpy as np
