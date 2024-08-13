@@ -71,7 +71,7 @@ sphinx-autobuild = "^2021.3.14"
 json-fix = "^0.5.2"
 deptry = "^0.12.0"
 types-cachetools = "^5.3.0.5"
-ruff = "^0.4.8"
+ruff = "^0.5.7"
 interrogate = "^1.5.0"
 mkdocs = "^1.5.2"
 mkdocstrings = { extras = ["python"], version = "^0.22.0" }
@@ -172,14 +172,26 @@ omit-covered-files = false
 [tool.ruff]
 # https://beta.ruff.rs/docs/configuration/
 line-length = 100
+fix-only = true
 exclude = ["tests/helpers/nethack_screens.py"]
 
 [tool.ruff.lint]
 extend-select = ["T201"]
 unfixable = ["T201"]
+select = ["D"]
+ignore = [
+  "D105", # Missing docstring in magic method
+  "D107", # Missing docstring in __init__
+  "D205", # 1 blank line required between summary line and description
+  "D415", # First line should end with a period, question mark, or exclamation point
+]
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.per-file-ignores]
+"tests/**" = ["D"]
+"*_test.py" = ["D"]
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
