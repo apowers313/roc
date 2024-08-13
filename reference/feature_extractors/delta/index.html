@@ -1308,11 +1308,11 @@
 
 
 <a id="feature_extractors.delta"></a>
-  <div class="doc doc-contents first">
-  
+    <div class="doc doc-contents first">
+
       <p>A component for generating Features that represent differences in vision</p>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1328,22 +1328,22 @@
 
 
 <h2 id="feature_extractors.delta.Delta" class="doc doc-heading">
-          <code>Delta</code>
+            <code>Delta</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.delta.DeltaFeature" href="#feature_extractors.delta.DeltaFeature">DeltaFeature</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.delta.DeltaFeature" href="#feature_extractors.delta.DeltaFeature">DeltaFeature</a>]</code></p>
 
-  
+
       <p>A component for detecting changes in vision.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
 <span class="normal">57</span>
 <span class="normal">58</span>
 <span class="normal">59</span>
@@ -1431,9 +1431,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
         <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1448,8 +1448,8 @@
 
 
 <h3 id="feature_extractors.delta.Delta.prev_viz" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">prev_viz</span><span class="p">:</span> <span class="n">VisionData</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
-  
+            <code class="highlight language-python"><span class="n">prev_viz</span><span class="p">:</span> <span class="n">VisionData</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1457,79 +1457,73 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="feature_extractors.delta.Delta.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span><span class="p">:</span> <span class="n">VisionData</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
 
 
 <h3 id="feature_extractors.delta.Delta.event_filter" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">event_filter</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">event_filter</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
 <span class="normal">65</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="feature_extractors.delta.Delta.get_feature" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get_feature</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">get_feature</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">67</span>
 <span class="normal">68</span>
 <span class="normal">69</span>
 <span class="normal">70</span>
@@ -1595,8 +1589,8 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">settled</span><span class="p">()</span>
     <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1604,8 +1598,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1614,22 +1607,22 @@
 
 
 <h2 id="feature_extractors.delta.DeltaFeature" class="doc doc-heading">
-          <code>DeltaFeature</code>
+            <code>DeltaFeature</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.ComplexFeature">ComplexFeature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.delta.Diff" href="#feature_extractors.delta.Diff">Diff</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="feature_extractors.perception.ComplexFeature">ComplexFeature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.delta.Diff" href="#feature_extractors.delta.Diff">Diff</a>]</code></p>
 
-  
+
       <p>A Feature that describes changes in vision</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
 <span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span>
@@ -1639,12 +1632,11 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Delta&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
-
 
 
 
@@ -1657,23 +1649,22 @@
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="feature_extractors.delta.DeltaFeature.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
 <span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">d</span><span class="p">:</span> <span class="n">Diff</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;Delta&quot;</span><span class="p">,</span> <span class="n">origin</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1681,8 +1672,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1691,9 +1681,9 @@
 
 
 <h2 id="feature_extractors.delta.Diff" class="doc doc-heading">
-          <code>Diff</code>
+            <code>Diff</code>
 
-  
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
   </span>
@@ -1701,16 +1691,16 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="feature_extractors.perception.Transmogrifier">Transmogrifier</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="feature_extractors.perception.Transmogrifier">Transmogrifier</span></code></p>
 
-  
+
       <p>A dataclass for representing a changes in vision.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">19</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span>
 <span class="normal">22</span>
@@ -1766,9 +1756,9 @@
         <span class="n">old_val</span> <span class="o">=</span> <span class="n">old</span><span class="o">.</span><span class="n">get_type</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">Diff</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">old_val</span><span class="o">=</span><span class="n">old_val</span><span class="p">,</span> <span class="n">new_val</span><span class="o">=</span><span class="n">new_val</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1783,8 +1773,8 @@
 
 
 <h3 id="feature_extractors.delta.Diff.new_val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">new_val</span><span class="p">:</span> <span class="nb">int</span></code>
-  
+            <code class="highlight language-python"><span class="n">new_val</span><span class="p">:</span> <span class="nb">int</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1792,8 +1782,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1802,8 +1792,8 @@
 
 
 <h3 id="feature_extractors.delta.Diff.old_val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">old_val</span><span class="p">:</span> <span class="nb">int</span></code>
-  
+            <code class="highlight language-python"><span class="n">old_val</span><span class="p">:</span> <span class="nb">int</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1811,8 +1801,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1821,8 +1811,8 @@
 
 
 <h3 id="feature_extractors.delta.Diff.x" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">x</span><span class="p">:</span> <span class="nb">int</span></code>
-  
+            <code class="highlight language-python"><span class="n">x</span><span class="p">:</span> <span class="nb">int</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1830,8 +1820,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1840,8 +1830,8 @@
 
 
 <h3 id="feature_extractors.delta.Diff.y" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">y</span><span class="p">:</span> <span class="nb">int</span></code>
-  
+            <code class="highlight language-python"><span class="n">y</span><span class="p">:</span> <span class="nb">int</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1849,72 +1839,66 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
 
 
-
 <div class="doc doc-object doc-function">
-
 
 
 <h3 id="feature_extractors.delta.Diff.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">old_val</span><span class="p">,</span> <span class="n">new_val</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">old_val</span><span class="p">,</span> <span class="n">new_val</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-  </div>
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
 
 
 <h3 id="feature_extractors.delta.Diff.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
 <span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="feature_extractors.delta.Diff.add_to_feature" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">add_to_feature</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">add_to_feature</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Adds a set of Diff nodes to a Feature</p>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
@@ -1926,19 +1910,17 @@
     <span class="n">ol</span> <span class="o">=</span> <span class="n">OldLocation</span><span class="p">(</span><span class="n">n</span><span class="o">.</span><span class="n">origin</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="p">)</span>
     <span class="n">n</span><span class="o">.</span><span class="n">add_feature</span><span class="p">(</span><span class="s2">&quot;Past&quot;</span><span class="p">,</span> <span class="n">ol</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="feature_extractors.delta.Diff.from_feature" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">from_feature</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
-  
+            <code class="highlight language-python"><span class="n">from_feature</span><span class="p">(</span><span class="n">n</span><span class="p">)</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
   </span>
@@ -1946,13 +1928,13 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Creates a Diff from a Feature that has all the right Nodes</p>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
 <span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span>
@@ -1970,8 +1952,8 @@
     <span class="n">old_val</span> <span class="o">=</span> <span class="n">old</span><span class="o">.</span><span class="n">get_type</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">Diff</span><span class="p">(</span><span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="n">y</span><span class="p">,</span> <span class="n">old_val</span><span class="o">=</span><span class="n">old_val</span><span class="p">,</span> <span class="n">new_val</span><span class="o">=</span><span class="n">new_val</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1979,8 +1961,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1989,7 +1970,7 @@
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 

@@ -1056,9 +1056,9 @@
 
 
 <a id="jupyter.step"></a>
-  <div class="doc doc-contents first">
+    <div class="doc doc-contents first">
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1073,8 +1073,8 @@
 
 
 <h2 id="jupyter.step.step_cnt" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">step_cnt</span> <span class="o">=</span> <span class="mi">0</span></code>
-  
+            <code class="highlight language-python"><span class="n">step_cnt</span> <span class="o">=</span> <span class="mi">0</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1082,29 +1082,27 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="jupyter.step.add_step" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">add_step</span><span class="p">(</span><span class="n">num_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">add_step</span><span class="p">(</span><span class="n">num_steps</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/step.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
@@ -1120,27 +1118,25 @@
     <span class="n">breakpoints</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">do_step</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;step&quot;</span><span class="p">)</span>
     <span class="n">breakpoints</span><span class="o">.</span><span class="n">resume</span><span class="p">(</span><span class="n">quiet</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="jupyter.step.do_step" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">do_step</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">do_step</span><span class="p">()</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/step.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
 <span class="normal">28</span>
@@ -1158,27 +1154,25 @@
 
     <span class="k">return</span> <span class="kc">False</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="jupyter.step.step_cli" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">step_cli</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">step_cli</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/step.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
 <span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@click</span><span class="o">.</span><span class="n">command</span><span class="p">()</span>
@@ -1186,8 +1180,8 @@
 <span class="k">def</span> <span class="nf">step_cli</span><span class="p">(</span><span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">add_step</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1195,7 +1189,7 @@
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 

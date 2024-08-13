@@ -1980,9 +1980,9 @@
 
 
 <a id="jupyter.state"></a>
-  <div class="doc doc-contents first">
+    <div class="doc doc-contents first">
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1997,8 +1997,8 @@
 
 
 <h2 id="jupyter.state.StateType" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">StateType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;StateType&#39;</span><span class="p">)</span></code>
-  
+            <code class="highlight language-python"><span class="n">StateType</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;StateType&#39;</span><span class="p">)</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -2006,8 +2006,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2016,8 +2016,8 @@
 
 
 <h2 id="jupyter.state.states" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">states</span> <span class="o">=</span> <span class="n">StateList</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">states</span> <span class="o">=</span> <span class="n">StateList</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -2025,8 +2025,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2036,20 +2036,20 @@
 
 
 <h2 id="jupyter.state.AvailableMemoryState" class="doc doc-heading">
-          <code>AvailableMemoryState</code>
+            <code>AvailableMemoryState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
 <span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span>
@@ -2073,9 +2073,9 @@
         <span class="n">vm</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">vm</span><span class="o">.</span><span class="n">available</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2090,8 +2090,8 @@
 
 
 <h3 id="jupyter.state.AvailableMemoryState.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2099,88 +2099,82 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.AvailableMemoryState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
 <span class="normal">62</span>
 <span class="normal">63</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;sysmem&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.AvailableMemoryState.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">vm</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Available System Memory: </span><span class="si">{</span><span class="n">bytes2human</span><span class="p">(</span><span class="n">vm</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.AvailableMemoryState.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">69</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="n">vm</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">vm</span><span class="o">.</span><span class="n">available</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2188,8 +2182,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2198,20 +2191,20 @@
 
 
 <h2 id="jupyter.state.CpuLoadState" class="doc doc-heading">
-          <code>CpuLoadState</code>
+            <code>CpuLoadState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[list[float]]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[list[float]]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">74</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">74</span>
 <span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span>
@@ -2233,9 +2226,9 @@
     <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">x</span> <span class="o">/</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">psutil</span><span class="o">.</span><span class="n">getloadavg</span><span class="p">()]</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2250,8 +2243,8 @@
 
 
 <h3 id="jupyter.state.CpuLoadState.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2259,86 +2252,80 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.CpuLoadState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;cpuload&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.CpuLoadState.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">79</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">79</span>
 <span class="normal">80</span>
 <span class="normal">81</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">load</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;CPU Load: </span><span class="si">{</span><span class="n">load</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">1.1f</span><span class="si">}</span><span class="s2">% / </span><span class="si">{</span><span class="n">load</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">1.1f</span><span class="si">}</span><span class="s2">% / </span><span class="si">{</span><span class="n">load</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">:</span><span class="s2">1.1f</span><span class="si">}</span><span class="s2">% (1m / 5m / 15m)&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.CpuLoadState.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">83</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">83</span>
 <span class="normal">84</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">x</span> <span class="o">/</span> <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span> <span class="o">*</span> <span class="mi">100</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">psutil</span><span class="o">.</span><span class="n">getloadavg</span><span class="p">()]</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2346,8 +2333,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2356,20 +2342,20 @@
 
 
 <h2 id="jupyter.state.DiskIoState" class="doc doc-heading">
-          <code>DiskIoState</code>
+            <code>DiskIoState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[dict[str, float]]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[dict[str, float]]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
 <span class="normal"> 88</span>
 <span class="normal"> 89</span>
 <span class="normal"> 90</span>
@@ -2445,9 +2431,9 @@
             <span class="s2">&quot;write_bytes&quot;</span><span class="p">:</span> <span class="n">write_bytes_per_sec</span><span class="p">,</span>
         <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2462,8 +2448,8 @@
 
 
 <h3 id="jupyter.state.DiskIoState.last_read_bytes" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">last_read_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">read_bytes</span></code>
-  
+            <code class="highlight language-python"><span class="n">last_read_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">read_bytes</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2471,8 +2457,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2481,8 +2467,8 @@
 
 
 <h3 id="jupyter.state.DiskIoState.last_read_io" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">last_read_io</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">read_count</span></code>
-  
+            <code class="highlight language-python"><span class="n">last_read_io</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">read_count</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2490,8 +2476,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2500,8 +2486,8 @@
 
 
 <h3 id="jupyter.state.DiskIoState.last_time" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">last_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time_ns</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">last_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time_ns</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2509,8 +2495,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2519,8 +2505,8 @@
 
 
 <h3 id="jupyter.state.DiskIoState.last_write_bytes" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">last_write_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">write_bytes</span></code>
-  
+            <code class="highlight language-python"><span class="n">last_write_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">write_bytes</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2528,8 +2514,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2538,8 +2524,8 @@
 
 
 <h3 id="jupyter.state.DiskIoState.last_write_io" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">last_write_io</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">write_count</span></code>
-  
+            <code class="highlight language-python"><span class="n">last_write_io</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">write_count</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2547,29 +2533,27 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.DiskIoState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">88</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">88</span>
 <span class="normal">89</span>
 <span class="normal">90</span>
 <span class="normal">91</span>
@@ -2585,27 +2569,25 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">last_read_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">read_bytes</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">last_write_bytes</span> <span class="o">=</span> <span class="n">ioc</span><span class="o">.</span><span class="n">write_bytes</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.DiskIoState.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
@@ -2619,27 +2601,25 @@
     <span class="n">write_bytes</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">disk_io</span><span class="p">[</span><span class="s2">&quot;write_bytes&quot;</span><span class="p">])</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Disk Read I/O: </span><span class="si">{</span><span class="n">read_io</span><span class="si">:</span><span class="s2">1.1f</span><span class="si">}</span><span class="s2">/s (</span><span class="si">{</span><span class="n">bytes2human</span><span class="p">(</span><span class="n">read_bytes</span><span class="p">)</span><span class="si">}</span><span class="s2">/s), Write I/O </span><span class="si">{</span><span class="n">write_io</span><span class="si">:</span><span class="s2">1.1f</span><span class="si">}</span><span class="s2">/s (</span><span class="si">{</span><span class="n">bytes2human</span><span class="p">(</span><span class="n">write_bytes</span><span class="p">)</span><span class="si">}</span><span class="s2">/s)&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.DiskIoState.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span>
 <span class="normal">108</span>
@@ -2679,8 +2659,8 @@
         <span class="s2">&quot;write_bytes&quot;</span><span class="p">:</span> <span class="n">write_bytes_per_sec</span><span class="p">,</span>
     <span class="p">}</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2688,8 +2668,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2698,20 +2677,20 @@
 
 
 <h2 id="jupyter.state.LoopState" class="doc doc-heading">
-          <code>LoopState</code>
+            <code>LoopState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">127</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">127</span>
 <span class="normal">128</span>
 <span class="normal">129</span>
 <span class="normal">130</span>
@@ -2725,9 +2704,9 @@
     <span class="k">def</span> <span class="nf">incr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2742,8 +2721,8 @@
 
 
 <h3 id="jupyter.state.LoopState.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="mi">0</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="mi">0</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2751,60 +2730,56 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.LoopState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">128</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">128</span>
 <span class="normal">129</span>
 <span class="normal">130</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;loop&quot;</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="s2">&quot;Loop Number&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="mi">0</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.LoopState.incr" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">incr</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">incr</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">132</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">132</span>
 <span class="normal">133</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">incr</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2812,8 +2787,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2822,20 +2796,20 @@
 
 
 <h2 id="jupyter.state.ProcessMemoryState" class="doc doc-heading">
-          <code>ProcessMemoryState</code>
+            <code>ProcessMemoryState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">45</span>
 <span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
@@ -2861,9 +2835,9 @@
         <span class="n">mem_info</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">mem_info</span><span class="o">.</span><span class="n">rss</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2878,8 +2852,8 @@
 
 
 <h3 id="jupyter.state.ProcessMemoryState.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2887,81 +2861,75 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.ProcessMemoryState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;memory&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.ProcessMemoryState.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
 <span class="normal">51</span>
 <span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">mem</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;Process Memory Usage: </span><span class="si">{</span><span class="n">bytes2human</span><span class="p">(</span><span class="n">mem</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.ProcessMemoryState.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
@@ -2969,8 +2937,8 @@
     <span class="n">mem_info</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span>
     <span class="k">return</span> <span class="n">cast</span><span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="n">mem_info</span><span class="o">.</span><span class="n">rss</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2978,8 +2946,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2988,20 +2955,20 @@
 
 
 <h2 id="jupyter.state.State" class="doc doc-heading">
-          <code>State</code>
+            <code>State</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="abc.ABC">ABC</span></code>, <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="jupyter.state.StateType" href="#jupyter.state.StateType">StateType</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="abc.ABC">ABC</span></code>, <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="jupyter.state.StateType" href="#jupyter.state.StateType">StateType</a>]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
 <span class="normal">19</span>
@@ -3035,9 +3002,9 @@
     <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">StateType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">v</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -3052,8 +3019,8 @@
 
 
 <h3 id="jupyter.state.State.display_name" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">display_name</span> <span class="o">=</span> <span class="n">display_name</span> <span class="ow">or</span> <span class="n">name</span></code>
-  
+            <code class="highlight language-python"><span class="n">display_name</span> <span class="o">=</span> <span class="n">display_name</span> <span class="ow">or</span> <span class="n">name</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -3061,8 +3028,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3071,8 +3038,8 @@
 
 
 <h3 id="jupyter.state.State.name" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
-  
+            <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -3080,8 +3047,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3090,8 +3057,8 @@
 
 
 <h3 id="jupyter.state.State.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span><span class="p">:</span> <span class="n">StateType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span><span class="p">:</span> <span class="n">StateType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -3099,29 +3066,27 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.State.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">17</span>
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">display_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -3129,51 +3094,47 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">display_name</span> <span class="o">=</span> <span class="n">display_name</span> <span class="ow">or</span> <span class="n">name</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="p">:</span> <span class="n">StateType</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
-
 <div class="doc doc-object doc-function">
-
 
 
 <h3 id="jupyter.state.State.__str__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__str__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
 <span class="normal">23</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">display_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">val</span><span class="si">}</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.State.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
 <span class="normal">28</span>
@@ -3183,32 +3144,30 @@
 
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">val</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.State.set" class="doc doc-heading">
-          <code class="highlight language-python"><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="nb">set</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
 <span class="normal">32</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">v</span><span class="p">:</span> <span class="n">StateType</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="n">v</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -3216,8 +3175,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -3226,9 +3184,9 @@
 
 
 <h2 id="jupyter.state.StateList" class="doc doc-heading">
-          <code>StateList</code>
+            <code>StateList</code>
 
-  
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
   </span>
@@ -3236,12 +3194,12 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">136</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">136</span>
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span>
@@ -3255,9 +3213,9 @@
     <span class="n">cpuload</span><span class="p">:</span> <span class="n">CpuLoadState</span> <span class="o">=</span> <span class="n">CpuLoadState</span><span class="p">()</span>
     <span class="n">diskio</span><span class="p">:</span> <span class="n">DiskIoState</span> <span class="o">=</span> <span class="n">DiskIoState</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -3272,8 +3230,8 @@
 
 
 <h3 id="jupyter.state.StateList.cpuload" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">cpuload</span><span class="p">:</span> <span class="n">CpuLoadState</span> <span class="o">=</span> <span class="n">CpuLoadState</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">cpuload</span><span class="p">:</span> <span class="n">CpuLoadState</span> <span class="o">=</span> <span class="n">CpuLoadState</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3282,8 +3240,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3292,8 +3250,8 @@
 
 
 <h3 id="jupyter.state.StateList.diskio" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">diskio</span><span class="p">:</span> <span class="n">DiskIoState</span> <span class="o">=</span> <span class="n">DiskIoState</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">diskio</span><span class="p">:</span> <span class="n">DiskIoState</span> <span class="o">=</span> <span class="n">DiskIoState</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3302,8 +3260,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3312,8 +3270,8 @@
 
 
 <h3 id="jupyter.state.StateList.loop" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">loop</span><span class="p">:</span> <span class="n">LoopState</span> <span class="o">=</span> <span class="n">LoopState</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">loop</span><span class="p">:</span> <span class="n">LoopState</span> <span class="o">=</span> <span class="n">LoopState</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3322,8 +3280,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3332,8 +3290,8 @@
 
 
 <h3 id="jupyter.state.StateList.memory" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">memory</span><span class="p">:</span> <span class="n">ProcessMemoryState</span> <span class="o">=</span> <span class="n">ProcessMemoryState</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">memory</span><span class="p">:</span> <span class="n">ProcessMemoryState</span> <span class="o">=</span> <span class="n">ProcessMemoryState</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3342,8 +3300,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -3352,8 +3310,8 @@
 
 
 <h3 id="jupyter.state.StateList.sysmem" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">sysmem</span><span class="p">:</span> <span class="n">AvailableMemoryState</span> <span class="o">=</span> <span class="n">AvailableMemoryState</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">sysmem</span><span class="p">:</span> <span class="n">AvailableMemoryState</span> <span class="o">=</span> <span class="n">AvailableMemoryState</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3362,27 +3320,25 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.StateList.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="n">ProcessMemoryState</span><span class="p">(),</span> <span class="n">sysmem</span><span class="o">=</span><span class="n">AvailableMemoryState</span><span class="p">(),</span> <span class="n">loop</span><span class="o">=</span><span class="n">LoopState</span><span class="p">(),</span> <span class="n">cpuload</span><span class="o">=</span><span class="n">CpuLoadState</span><span class="p">(),</span> <span class="n">diskio</span><span class="o">=</span><span class="n">DiskIoState</span><span class="p">())</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">memory</span><span class="o">=</span><span class="n">ProcessMemoryState</span><span class="p">(),</span> <span class="n">sysmem</span><span class="o">=</span><span class="n">AvailableMemoryState</span><span class="p">(),</span> <span class="n">loop</span><span class="o">=</span><span class="n">LoopState</span><span class="p">(),</span> <span class="n">cpuload</span><span class="o">=</span><span class="n">CpuLoadState</span><span class="p">(),</span> <span class="n">diskio</span><span class="o">=</span><span class="n">DiskIoState</span><span class="p">())</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-  </div>
+    </div>
 
 </div>
 
@@ -3390,8 +3346,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -3400,20 +3355,20 @@
 
 
 <h2 id="jupyter.state.SystemCpuState" class="doc doc-heading">
-          <code>SystemCpuState</code>
+            <code>SystemCpuState</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><a class="autorefs autorefs-internal" title="jupyter.state.State" href="#jupyter.state.State">State</a>[int]</code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
 <span class="normal">36</span>
 <span class="normal">37</span>
 <span class="normal">38</span>
@@ -3429,9 +3384,9 @@
         <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_times</span><span class="p">()</span>
         <span class="k">return</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -3446,8 +3401,8 @@
 
 
 <h3 id="jupyter.state.SystemCpuState.val" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -3455,62 +3410,58 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.SystemCpuState.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">36</span>
 <span class="normal">37</span>
 <span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">display_name</span><span class="o">=</span><span class="s2">&quot;CPU Usage&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="jupyter.state.SystemCpuState.get" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">get</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="n">psutil</span><span class="o">.</span><span class="n">cpu_times</span><span class="p">()</span>
     <span class="k">return</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -3518,28 +3469,25 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
-
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="jupyter.state.state_cli" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">state_cli</span><span class="p">(</span><span class="n">var</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">state_cli</span><span class="p">(</span><span class="n">var</span><span class="p">)</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/jupyter/state.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">152</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/jupyter/state.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">152</span>
 <span class="normal">153</span>
 <span class="normal">154</span>
 <span class="normal">155</span>
@@ -3559,8 +3507,8 @@
     <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">var</span><span class="p">:</span>
         <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -3568,7 +3516,7 @@
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 

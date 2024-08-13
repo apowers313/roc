@@ -1174,9 +1174,9 @@
 
 
 <a id="intrinsic"></a>
-  <div class="doc doc-contents first">
+    <div class="doc doc-contents first">
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1191,8 +1191,8 @@
 
 
 <h2 id="intrinsic.IntrinsicEvent" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">IntrinsicEvent</span> <span class="o">=</span> <span class="n">Event</span><span class="p">[</span><span class="n">IntrinsicData</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">IntrinsicEvent</span> <span class="o">=</span> <span class="n">Event</span><span class="p">[</span><span class="n">IntrinsicData</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1200,8 +1200,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1210,8 +1210,8 @@
 
 
 <h2 id="intrinsic.IntrinsicFn" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">IntrinsicFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IntrinsicEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">IntrinsicFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">IntrinsicEvent</span><span class="p">],</span> <span class="kc">None</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1219,8 +1219,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1229,8 +1229,8 @@
 
 
 <h2 id="intrinsic.intrinsic_registry" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">intrinsic_registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">IntrinsicFn</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span></code>
-  
+            <code class="highlight language-python"><span class="n">intrinsic_registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">IntrinsicFn</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1238,8 +1238,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1249,29 +1249,28 @@
 
 
 <h2 id="intrinsic.Intrinsic" class="doc doc-heading">
-          <code>Intrinsic</code>
+            <code>Intrinsic</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="intrinsic.component.Component">Component</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="intrinsic.component.Component">Component</span></code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/intrinsic.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/intrinsic.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;intrinsic&quot;</span><span class="p">,</span> <span class="s2">&quot;intrinsic&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Intrinsic</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1280,27 +1279,26 @@
 
 
 <h2 id="intrinsic.IntrinsicData" class="doc doc-heading">
-          <code>IntrinsicData</code>
+            <code>IntrinsicData</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
 
 
-            <details class="quote">
-              <summary>Source code in <code>roc/intrinsic.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/intrinsic.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 9</span>
 <span class="normal">10</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">IntrinsicData</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1309,20 +1307,20 @@
 
 
 <h2 id="intrinsic.register_intrinsic" class="doc doc-heading">
-          <code>register_intrinsic</code>
+            <code>register_intrinsic</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-  
+
       <p>Decorator for registering intrinsics.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/intrinsic.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/intrinsic.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
 <span class="normal">28</span>
@@ -1348,9 +1346,9 @@
 
         <span class="k">return</span> <span class="n">fn</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1365,8 +1363,8 @@
 
 
 <h3 id="intrinsic.register_intrinsic.name" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
-  
+            <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1374,29 +1372,27 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="intrinsic.register_intrinsic.__call__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/intrinsic.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/intrinsic.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
@@ -1410,32 +1406,30 @@
 
     <span class="k">return</span> <span class="n">fn</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="intrinsic.register_intrinsic.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/intrinsic.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/intrinsic.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
 <span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1443,35 +1437,32 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
-
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="intrinsic.noop_intrinsic" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">noop_intrinsic</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">noop_intrinsic</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/intrinsic.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/intrinsic.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_intrinsic</span><span class="p">(</span><span class="s2">&quot;no-op&quot;</span><span class="p">)</span>
 <span class="k">def</span> <span class="nf">noop_intrinsic</span><span class="p">(</span><span class="n">e</span><span class="p">:</span> <span class="n">IntrinsicEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1479,7 +1470,7 @@
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 

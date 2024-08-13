@@ -1426,11 +1426,11 @@
 
 
 <a id="action"></a>
-  <div class="doc doc-contents first">
-  
+    <div class="doc doc-contents first">
+
       <p>The action module decides what action the agent should perform.</p>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1445,8 +1445,8 @@
 
 
 <h2 id="action.ActionData" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">ActionData</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">ActionCount</span> <span class="o">|</span> <span class="n">ActionGo</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">discriminator</span><span class="o">=</span><span class="s1">&#39;type&#39;</span><span class="p">)]</span></code>
-  
+            <code class="highlight language-python"><span class="n">ActionData</span> <span class="o">=</span> <span class="n">Annotated</span><span class="p">[</span><span class="n">ActionCount</span> <span class="o">|</span> <span class="n">ActionGo</span><span class="p">,</span> <span class="n">Field</span><span class="p">(</span><span class="n">discriminator</span><span class="o">=</span><span class="s1">&#39;type&#39;</span><span class="p">)]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1454,8 +1454,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1464,8 +1464,8 @@
 
 
 <h2 id="action.ActionEvent" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">ActionEvent</span> <span class="o">=</span> <span class="n">Event</span><span class="p">[</span><span class="n">ActionData</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">ActionEvent</span> <span class="o">=</span> <span class="n">Event</span><span class="p">[</span><span class="n">ActionData</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1473,8 +1473,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1483,8 +1483,8 @@
 
 
 <h2 id="action.ActionFn" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">ActionFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">int</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">ActionFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">int</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1492,8 +1492,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1502,8 +1502,8 @@
 
 
 <h2 id="action.action_bus" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">action_bus</span> <span class="o">=</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">ActionData</span><span class="p">](</span><span class="s1">&#39;action&#39;</span><span class="p">)</span></code>
-  
+            <code class="highlight language-python"><span class="n">action_bus</span> <span class="o">=</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">ActionData</span><span class="p">](</span><span class="s1">&#39;action&#39;</span><span class="p">)</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1511,8 +1511,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1521,8 +1521,8 @@
 
 
 <h2 id="action.default_action_registry" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">default_action_registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ActionFn</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span></code>
-  
+            <code class="highlight language-python"><span class="n">default_action_registry</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">ActionFn</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1530,8 +1530,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1541,22 +1541,22 @@
 
 
 <h2 id="action.Action" class="doc doc-heading">
-          <code>Action</code>
+            <code>Action</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="action.component.Component">Component</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="action.component.Component">Component</span></code></p>
 
-  
+
       <p>Component for determining which action to take.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/action.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/action.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
@@ -1614,9 +1614,9 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">action_count</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1631,8 +1631,8 @@
 
 
 <h3 id="action.Action.action_bus_conn" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">action_bus_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">action_bus</span><span class="p">)</span></code>
-  
+            <code class="highlight language-python"><span class="n">action_bus_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">action_bus</span><span class="p">)</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1640,8 +1640,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1650,8 +1650,8 @@
 
 
 <h3 id="action.Action.action_count" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">action_count</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span></code>
-  
+            <code class="highlight language-python"><span class="n">action_count</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1659,29 +1659,27 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="action.Action.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">43</span>
 <span class="normal">44</span>
 <span class="normal">45</span>
 <span class="normal">46</span>
@@ -1719,27 +1717,25 @@
     <span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span><span class="p">:</span> <span class="kc">None</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="action.Action.recv_action_count" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">recv_action_count</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">recv_action_count</span><span class="p">(</span><span class="n">e</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">63</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">63</span>
 <span class="normal">64</span>
 <span class="normal">65</span>
 <span class="normal">66</span>
@@ -1749,8 +1745,8 @@
 
     <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">action_count</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1758,8 +1754,7 @@
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1768,23 +1763,23 @@
 
 
 <h2 id="action.ActionCount" class="doc doc-heading">
-          <code>ActionCount</code>
+            <code>ActionCount</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
 
-  
+
       <p>A Pydantic model for communicating the number of actions that can be
 taken.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/action.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/action.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
 <span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
@@ -1798,9 +1793,9 @@ taken.</p>
     <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;action_count&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;action_count&quot;</span>
     <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1815,8 +1810,8 @@ taken.</p>
 
 
 <h3 id="action.ActionCount.action_count" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span></code>
-  
+            <code class="highlight language-python"><span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1824,8 +1819,8 @@ taken.</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1834,8 +1829,8 @@ taken.</p>
 
 
 <h3 id="action.ActionCount.type" class="doc doc-heading">
-          <code class="highlight language-python"><span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;action_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;action_count&#39;</span></code>
-  
+            <code class="highlight language-python"><span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;action_count&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;action_count&#39;</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1844,8 +1839,8 @@ taken.</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1855,8 +1850,7 @@ taken.</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1865,23 +1859,23 @@ taken.</p>
 
 
 <h2 id="action.ActionGo" class="doc doc-heading">
-          <code>ActionGo</code>
+            <code>ActionGo</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
 
-  
+
       <p>A Pydantic model for communicating that the Gym is waiting for the agent
 to take an action.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/action.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/action.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
 <span class="normal">22</span>
 <span class="normal">23</span>
 <span class="normal">24</span>
@@ -1895,9 +1889,9 @@ to take an action.</p>
     <span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;action_go&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;action_go&quot;</span>
     <span class="n">go</span><span class="p">:</span> <span class="nb">bool</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1912,8 +1906,8 @@ to take an action.</p>
 
 
 <h3 id="action.ActionGo.go" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">go</span><span class="p">:</span> <span class="nb">bool</span></code>
-  
+            <code class="highlight language-python"><span class="n">go</span><span class="p">:</span> <span class="nb">bool</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1921,8 +1915,8 @@ to take an action.</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1931,8 +1925,8 @@ to take an action.</p>
 
 
 <h3 id="action.ActionGo.type" class="doc doc-heading">
-          <code class="highlight language-python"><span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;action_go&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;action_go&#39;</span></code>
-  
+            <code class="highlight language-python"><span class="nb">type</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s1">&#39;action_go&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;action_go&#39;</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1941,8 +1935,8 @@ to take an action.</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1952,8 +1946,7 @@ to take an action.</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -1962,21 +1955,21 @@ to take an action.</p>
 
 
 <h2 id="action.register_default_action" class="doc doc-heading">
-          <code>register_default_action</code>
+            <code>register_default_action</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-  
+
       <p>Decorator for registering potential default actions. Default actions are
 set in the configuration.</p>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/action.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">74</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/action.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">74</span>
 <span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span>
@@ -2006,9 +1999,9 @@ set in the configuration.</p>
 
         <span class="k">return</span> <span class="n">fn</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2023,8 +2016,8 @@ set in the configuration.</p>
 
 
 <h3 id="action.register_default_action.name" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
-  
+            <code class="highlight language-python"><span class="n">name</span> <span class="o">=</span> <span class="n">name</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2032,29 +2025,27 @@ set in the configuration.</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="action.register_default_action.__call__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__call__</span><span class="p">(</span><span class="n">fn</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">82</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">82</span>
 <span class="normal">83</span>
 <span class="normal">84</span>
 <span class="normal">85</span>
@@ -2068,32 +2059,30 @@ set in the configuration.</p>
 
     <span class="k">return</span> <span class="n">fn</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="action.register_default_action.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">79</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">79</span>
 <span class="normal">80</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2101,30 +2090,27 @@ set in the configuration.</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
-
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="action.default_pass" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">default_pass</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">default_pass</span><span class="p">()</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Default action for Nethack that passes (the <code>.</code> character in the game)</p>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">91</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">91</span>
 <span class="normal">92</span>
 <span class="normal">93</span>
 <span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_default_action</span><span class="p">(</span><span class="s2">&quot;pass&quot;</span><span class="p">)</span>
@@ -2132,29 +2118,27 @@ set in the configuration.</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Default action for Nethack that passes (the `.` character in the game)&quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="mi">19</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h2 id="action.default_random" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">default_random</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">default_random</span><span class="p">()</span></code>
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>A default action for taking random Nethack actions.</p>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/action.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/action.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
@@ -2170,8 +2154,8 @@ set in the configuration.</p>
 
     <span class="k">return</span> <span class="n">randrange</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">action_count</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2179,7 +2163,7 @@ set in the configuration.</p>
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 

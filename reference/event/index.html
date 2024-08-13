@@ -1468,11 +1468,11 @@
 
 
 <a id="event"></a>
-  <div class="doc doc-contents first">
-  
+    <div class="doc doc-contents first">
+
       <p>This module defines all the communications and eventing interfaces for the system.</p>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1487,8 +1487,8 @@
 
 
 <h2 id="event.EventData" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">EventData</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;EventData&#39;</span><span class="p">)</span></code>
-  
+            <code class="highlight language-python"><span class="n">EventData</span> <span class="o">=</span> <span class="n">TypeVar</span><span class="p">(</span><span class="s1">&#39;EventData&#39;</span><span class="p">)</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1496,8 +1496,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1506,8 +1506,8 @@
 
 
 <h2 id="event.EventFilter" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">EventFilter</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">EventFilter</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="nb">bool</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1515,8 +1515,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1525,8 +1525,8 @@
 
 
 <h2 id="event.EventListener" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">EventListener</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span></code>
-  
+            <code class="highlight language-python"><span class="n">EventListener</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]],</span> <span class="kc">None</span><span class="p">]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1534,8 +1534,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1544,8 +1544,8 @@
 
 
 <h2 id="event.eventbus_names" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">eventbus_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">eventbus_names</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
   </span>
@@ -1553,8 +1553,8 @@
 </h2>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1564,52 +1564,51 @@
 
 
 <h2 id="event.BusConnection" class="doc doc-heading">
-          <code>BusConnection</code>
+            <code>BusConnection</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
 
-  
+
       <p>A connection between an EventBus and a Component, used to send Events</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>Generic</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The data type that will be sent over this connection</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>Generic</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The data type that will be sent over this connection</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/event.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 58</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/event.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 58</span>
 <span class="normal"> 59</span>
 <span class="normal"> 60</span>
 <span class="normal"> 61</span>
@@ -1707,9 +1706,9 @@
         <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">:</span>
             <span class="n">sub</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -1724,8 +1723,8 @@
 
 
 <h3 id="event.BusConnection.attached_bus" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">attached_bus</span> <span class="o">=</span> <span class="n">bus</span></code>
-  
+            <code class="highlight language-python"><span class="n">attached_bus</span> <span class="o">=</span> <span class="n">bus</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1733,8 +1732,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1743,8 +1742,8 @@
 
 
 <h3 id="event.BusConnection.attached_component" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">attached_component</span> <span class="o">=</span> <span class="n">component</span></code>
-  
+            <code class="highlight language-python"><span class="n">attached_component</span> <span class="o">=</span> <span class="n">component</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1752,8 +1751,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1762,8 +1761,8 @@
 
 
 <h3 id="event.BusConnection.subject" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">subject</span></code>
-  
+            <code class="highlight language-python"><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">subject</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1771,8 +1770,8 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -1781,8 +1780,8 @@
 
 
 <h3 id="event.BusConnection.subscribers" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">subscribers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Disposable</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></code>
-  
+            <code class="highlight language-python"><span class="n">subscribers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Disposable</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -1790,29 +1789,27 @@
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.BusConnection.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">bus</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">bus</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
@@ -1824,27 +1821,25 @@
     <span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">subject</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Disposable</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.BusConnection.close" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">close</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">close</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">100</span>
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
@@ -1858,27 +1853,25 @@
     <span class="k">for</span> <span class="n">sub</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="p">:</span>
         <span class="n">sub</span><span class="o">.</span><span class="n">dispose</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.BusConnection.listen" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">listen</span><span class="p">(</span><span class="n">listener</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">listen</span><span class="p">(</span><span class="n">listener</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="nb">filter</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">83</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">83</span>
 <span class="normal">84</span>
 <span class="normal">85</span>
 <span class="normal">86</span>
@@ -1910,60 +1903,57 @@
     <span class="n">sub</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">subject</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="o">*</span><span class="n">pipe_args</span><span class="p">)</span><span class="o">.</span><span class="n">subscribe</span><span class="p">(</span><span class="n">listener</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">subscribers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sub</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.BusConnection.send" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">send</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Send data over the EventBus. Internally, the data is converted to an Event
 with the relevant data (such as the source Component).</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>data</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The data type of the data to be sent</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>data</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The data type of the data to be sent</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
 <span class="normal">73</span>
 <span class="normal">74</span>
 <span class="normal">75</span>
@@ -1983,8 +1973,8 @@ with the relevant data (such as the source Component).</p>
     <span class="n">logger</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&gt;&gt;&gt; Sending </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">attached_bus</span><span class="o">.</span><span class="n">subject</span><span class="o">.</span><span class="n">on_next</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -1992,8 +1982,7 @@ with the relevant data (such as the source Component).</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2002,66 +1991,65 @@ with the relevant data (such as the source Component).</p>
 
 
 <h2 id="event.Event" class="doc doc-heading">
-          <code>Event</code>
+            <code>Event</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="abc.ABC">ABC</span></code>, <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="abc.ABC">ABC</span></code>, <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
 
-  
+
       <p>An abstract event class for sending messages between Components over an EventBus</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>ABC</code></td>
-          <td>
-                <code><span title="abc.ABC">ABC</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>Abstract base class</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-        <tr>
-          <td><code>Generic</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The data to be carried by the event</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>ABC</code></td>
+            <td>
+                  <code><span title="abc.ABC">ABC</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>Abstract base class</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>Generic</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The data to be carried by the event</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/event.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/event.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
 <span class="normal">21</span>
 <span class="normal">22</span>
 <span class="normal">23</span>
@@ -2125,9 +2113,9 @@ with the relevant data (such as the source Component).</p>
             <span class="n">data_str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">data_str</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[EVENT: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">]: </span><span class="si">{</span><span class="n">data_str</span><span class="si">}</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2142,8 +2130,8 @@ with the relevant data (such as the source Component).</p>
 
 
 <h3 id="event.Event.bus" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">bus</span> <span class="o">=</span> <span class="n">bus</span></code>
-  
+            <code class="highlight language-python"><span class="n">bus</span> <span class="o">=</span> <span class="n">bus</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2151,8 +2139,8 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2161,8 +2149,8 @@ with the relevant data (such as the source Component).</p>
 
 
 <h3 id="event.Event.data" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">data</span> <span class="o">=</span> <span class="n">data</span></code>
-  
+            <code class="highlight language-python"><span class="n">data</span> <span class="o">=</span> <span class="n">data</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2170,8 +2158,8 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
 
@@ -2180,8 +2168,8 @@ with the relevant data (such as the source Component).</p>
 
 
 <h3 id="event.Event.src" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">src</span> <span class="o">=</span> <span class="n">src</span></code>
-  
+            <code class="highlight language-python"><span class="n">src</span> <span class="o">=</span> <span class="n">src</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2189,89 +2177,86 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  </div>
+    <div class="doc doc-contents ">
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.Event.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">bus</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">bus</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>The initializer for the Event</p>
 
 
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>data</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The data for this event</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>src</code></td>
+            <td>
+                  <code><span title="event.component.Component">Component</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Component sending the event</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td><code>bus</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventBus" href="#event.EventBus">EventBus</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The EventBus that the event is being sent over</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
-        <tr>
-          <td><code>data</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The data for this event</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>src</code></td>
-          <td>
-                <code><span title="event.component.Component">Component</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The Component sending the event</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-        <tr>
-          <td><code>bus</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventBus" href="#event.EventBus">EventBus</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The EventBus that the event is being sent over</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
-        </tr>
-    </tbody>
-  </table>
-
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
 <span class="normal">29</span>
 <span class="normal">30</span>
 <span class="normal">31</span>
@@ -2293,27 +2278,25 @@ with the relevant data (such as the source Component).</p>
     <span class="bp">self</span><span class="o">.</span><span class="n">src</span> <span class="o">=</span> <span class="n">src</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">bus</span> <span class="o">=</span> <span class="n">bus</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.Event.__repr__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__repr__</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="fm">__repr__</span><span class="p">()</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
@@ -2337,8 +2320,8 @@ with the relevant data (such as the source Component).</p>
         <span class="n">data_str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">data_str</span>
     <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;[EVENT: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> &gt;&gt;&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">bus</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">]: </span><span class="si">{</span><span class="n">data_str</span><span class="si">}</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2346,8 +2329,7 @@ with the relevant data (such as the source Component).</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2356,52 +2338,51 @@ with the relevant data (such as the source Component).</p>
 
 
 <h2 id="event.EventBus" class="doc doc-heading">
-          <code>EventBus</code>
+            <code>EventBus</code>
 
 
 </h2>
 
 
-  <div class="doc doc-contents ">
-          <p class="doc doc-class-bases">
-            Bases: <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="typing.Generic">Generic</span>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code></p>
 
-  
+
       <p>A communication channel for sending events between Components</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>Generic</code></td>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The data type that is allowed to be sent over the bus</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>Generic</code></td>
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The data type that is allowed to be sent over the bus</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-            <details class="quote">
-              <summary>Source code in <code>roc/event.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">112</span>
+              <details class="quote">
+                <summary>Source code in <code>roc/event.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">112</span>
 <span class="normal">113</span>
 <span class="normal">114</span>
 <span class="normal">115</span>
@@ -2469,9 +2450,9 @@ with the relevant data (such as the source Component).</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Clears all EventBusses that have been registered, mostly used for testing.&quot;&quot;&quot;</span>
         <span class="n">eventbus_names</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-            </details>
+              </details>
 
-  
+
 
   <div class="doc doc-children">
 
@@ -2486,8 +2467,8 @@ with the relevant data (such as the source Component).</p>
 
 
 <h3 id="event.EventBus.name" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">name</span></code>
-  
+            <code class="highlight language-python"><span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">name</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2495,10 +2476,10 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>The name of the bus. Used to ensure uniqueness.</p>
-  </div>
+    </div>
 
 </div>
 
@@ -2507,8 +2488,8 @@ with the relevant data (such as the source Component).</p>
 
 
 <h3 id="event.EventBus.subject" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]()</span></code>
-  
+            <code class="highlight language-python"><span class="n">subject</span><span class="p">:</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
   </span>
@@ -2516,31 +2497,29 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>The RxPy Subject that the bus uses to communicate.</p>
-  </div>
+    </div>
 
 </div>
-
 
 
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.EventBus.__init__" class="doc doc-heading">
-          <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
+    <div class="doc doc-contents ">
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">124</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">124</span>
 <span class="normal">125</span>
 <span class="normal">126</span>
 <span class="normal">127</span>
@@ -2552,19 +2531,17 @@ with the relevant data (such as the source Component).</p>
     <span class="n">eventbus_names</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">subject</span> <span class="o">=</span> <span class="n">rx</span><span class="o">.</span><span class="n">Subject</span><span class="p">[</span><span class="n">Event</span><span class="p">[</span><span class="n">EventData</span><span class="p">]]()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.EventBus.clear_names" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">clear_names</span><span class="p">()</span></code>
-  
+            <code class="highlight language-python"><span class="n">clear_names</span><span class="p">()</span></code>
+
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
   </span>
@@ -2572,13 +2549,13 @@ with the relevant data (such as the source Component).</p>
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Clears all EventBusses that have been registered, mostly used for testing.</p>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">142</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">142</span>
 <span class="normal">143</span>
 <span class="normal">144</span>
 <span class="normal">145</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
@@ -2586,83 +2563,79 @@ with the relevant data (such as the source Component).</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Clears all EventBusses that have been registered, mostly used for testing.&quot;&quot;&quot;</span>
     <span class="n">eventbus_names</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
-
 
 <div class="doc doc-object doc-function">
 
 
-
 <h3 id="event.EventBus.connect" class="doc doc-heading">
-          <code class="highlight language-python"><span class="n">connect</span><span class="p">(</span><span class="n">component</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">connect</span><span class="p">(</span><span class="n">component</span><span class="p">)</span></code>
 
 </h3>
 
 
-  <div class="doc doc-contents ">
-  
+    <div class="doc doc-contents ">
+
       <p>Creates a connection between an EventBus and a Component for sending Events</p>
 
 
-
-  <p><strong>Parameters:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>Type</th>
-        <th>Description</th>
-        <th>Default</th>
-      </tr>
-    </thead>
-    <tbody>
+<p><span class="doc-section-title">Parameters:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td><code>component</code></td>
-          <td>
-                <code><span title="event.component.Component">Component</span></code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>The Component to connect to the bus</p>
-            </div>
-          </td>
-          <td>
-              <em>required</em>
-          </td>
+          <th>Name</th>
+          <th>Type</th>
+          <th>Description</th>
+          <th>Default</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td><code>component</code></td>
+            <td>
+                  <code><span title="event.component.Component">Component</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>The Component to connect to the bus</p>
+              </div>
+            </td>
+            <td>
+                <em>required</em>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
 
-
-  <p><strong>Returns:</strong></p>
-  <table>
-    <thead>
-      <tr>
-        <th>Type</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-    <tbody>
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
         <tr>
-          <td>
-                <code><a class="autorefs autorefs-internal" title="event.BusConnection" href="#event.BusConnection">BusConnection</a>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code>
-          </td>
-          <td>
-            <div class="doc-md-description">
-              <p>BusConnection[EventData]: A new connection that can be used to send data</p>
-            </div>
-          </td>
+          <th>Type</th>
+          <th>Description</th>
         </tr>
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="event.BusConnection" href="#event.BusConnection">BusConnection</a>[<a class="autorefs autorefs-internal" title="event.EventData" href="#event.EventData">EventData</a>]</code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>BusConnection[EventData]: A new connection that can be used to send data</p>
+              </div>
+            </td>
+          </tr>
+      </tbody>
+    </table>
 
-          <details class="quote">
-            <summary>Source code in <code>roc/event.py</code></summary>
-            <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">131</span>
+            <details class="quote">
+              <summary>Source code in <code>roc/event.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">131</span>
 <span class="normal">132</span>
 <span class="normal">133</span>
 <span class="normal">134</span>
@@ -2682,8 +2655,8 @@ with the relevant data (such as the source Component).</p>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">BusConnection</span><span class="p">[</span><span class="n">EventData</span><span class="p">](</span><span class="bp">self</span><span class="p">,</span> <span class="n">component</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
-          </details>
-  </div>
+            </details>
+    </div>
 
 </div>
 
@@ -2691,8 +2664,7 @@ with the relevant data (such as the source Component).</p>
 
   </div>
 
-  </div>
-
+    </div>
 
 </div>
 
@@ -2701,7 +2673,7 @@ with the relevant data (such as the source Component).</p>
 
   </div>
 
-  </div>
+    </div>
 
 </div>
 
