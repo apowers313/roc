@@ -11,7 +11,7 @@ from skimage.feature import peak_local_max
 from .component import Component, register_component
 from .event import EventBus
 from .graphdb import Node
-from .location import DebugGrid, GenericGrid
+from .location import DebugGrid, GenericGrid, Grid
 from .perception import (
     ElementPoint,
     Feature,
@@ -36,7 +36,7 @@ class Attention(Component, ABC):
 
 
 class SaliencyMap(GenericGrid[list[Node]]):
-    def __init__(self, grid: VisionData) -> None:
+    def __init__(self, grid: Grid) -> None:
         width = grid.width
         height = grid.height
         self.grid = grid
@@ -154,10 +154,11 @@ class VisionAttention(Attention):
     def do_attention(self, e: PerceptionEvent) -> None:
         # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
+            grid = Grid(e.data.chars)
             if not self.saliency_map:
-                self.saliency_map = SaliencyMap(e.data)
+                self.saliency_map = SaliencyMap(grid)
             else:
-                self.saliency_map.grid = e.data
+                self.saliency_map.grid = grid
             return
 
         # check to see if all feature extractors have settled

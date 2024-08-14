@@ -13,10 +13,10 @@ from roc.feature_extractors.motion import (
 )
 from roc.perception import Feature, Settled, VisionData
 
-screen0 = VisionData(screens[0]["chars"])
-screen1 = VisionData(screens[1]["chars"])
-screen4 = VisionData(screens[4]["chars"])
-screen6 = VisionData(screens[6]["chars"])
+screen0 = VisionData.from_dict(screens[0])
+screen1 = VisionData.from_dict(screens[1])
+screen4 = VisionData.from_dict(screens[4])
+screen6 = VisionData.from_dict(screens[6])
 
 
 class TestMotion:

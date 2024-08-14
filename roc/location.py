@@ -4,6 +4,7 @@ from colorsys import hsv_to_rgb
 from dataclasses import dataclass
 from typing import Any, Generic, Iterator, TypeVar, overload
 
+import numpy as np
 from colored import Back, Fore, Style
 
 
@@ -86,7 +87,9 @@ ValList = list[list[GridVal]]
 class GenericGrid(Generic[GridVal]):
     """A rectangular array of points"""
 
-    def __init__(self, val_list: ValList[GridVal]) -> None:
+    def __init__(self, val_list: ValList[GridVal] | np.ndarray[Any, Any]) -> None:
+        if isinstance(val_list, np.ndarray):
+            val_list = val_list.tolist()
         self.val_list = val_list
 
     def __iter__(self) -> Iterator[GridVal]:
@@ -115,6 +118,13 @@ class GenericGrid(Generic[GridVal]):
         cols = [val for x in range(width)]
         rows = [cols.copy() for x in range(height)]
         return Grid(rows)
+
+
+# class NewGrid:
+#     def __init__(self, val_list: list[list[Any]] | np.ndarray) -> None:
+#         if not isinstance(val_list, np.ndarray):
+#             val_list = np.array(val_list)
+#         self.val_list = val_list
 
 
 class Grid(GenericGrid[int]):

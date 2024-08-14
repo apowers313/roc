@@ -1,7 +1,7 @@
 """Generates Features for things that aren't like their neighbors"""
 
 from ..component import Component, register_component
-from ..location import Point
+from ..location import Grid, Point
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
@@ -34,8 +34,8 @@ class Single(FeatureExtractor[Point]):
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
-        data = e.data
-        assert isinstance(data, VisionData)
+        assert isinstance(e.data, VisionData)
+        data = Grid(e.data.chars)
 
         ## iterate points
         for point in data.points():
@@ -45,7 +45,7 @@ class Single(FeatureExtractor[Point]):
         return None
 
 
-def is_unique_from_neighbors(data: VisionData, point: Point) -> bool:
+def is_unique_from_neighbors(data: Grid, point: Point) -> bool:
     """Helper function to determine if a point in a matrix has the same value as
     any points around it.
 

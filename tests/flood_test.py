@@ -28,7 +28,7 @@ class TestFlood:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [0, 0, 1, 0, 0],
                     [0, 0, 1, 0, 0],
@@ -91,7 +91,7 @@ class TestFlood:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0],
@@ -155,7 +155,7 @@ class TestFlood:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [1, 0, 0, 0, 0],
                     [0, 1, 0, 0, 0],
@@ -227,7 +227,7 @@ class TestFlood:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [0, 0, 0, 0, 1],
                     [0, 0, 0, 1, 0],
@@ -298,7 +298,7 @@ class TestFlood:
             output_bus=c.pb_conn.attached_bus,
         )
 
-        s.input_conn.send(VisionData(screens[0]["chars"]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
 
         # assert s.output.call_count == 4
 
@@ -349,8 +349,8 @@ class TestFlood:
             output_bus=c.pb_conn.attached_bus,
         )
 
-        s.input_conn.send(VisionData(screens[0]["chars"]))
-        s.input_conn.send(VisionData(screens[1]["chars"]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
 
         assert s.output.call_count == 8
 

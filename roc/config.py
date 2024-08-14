@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import warnings
 from typing import Any
 
@@ -17,13 +18,32 @@ class ConfigInitWarning(Warning):
 
 _config_singleton: Config | None = None
 
+config_settings = {
+    "env_prefix": "roc_",
+    "env_file": ".env",
+}
+
+# XXX: this is hacky to include in this module rather than in the tests, but by
+# the time pytest is running this is already set... the purpose of this code is
+# to make sure that .env and roc_* environment variables don't alter the
+# behavior of tests
+if "pytest" in sys.modules:
+    config_settings["env_prefix"] = (
+        "somereallyweirdrandomstringsothattestingdoesntpickupextraneousstuff"
+    )
+    config_settings["env_file"] = (
+        "somereallyweirdrandomstringsothattestingdoesntpickupextraneousstuff"
+    )
+
 
 class Config(BaseSettings):
     """A Pydantic settings model for configuration of the agent."""
 
+    global config_settings
     model_config = SettingsConfigDict(
-        env_prefix="roc_",
-        env_file=".env",
+        # XXX: can't do **config_settings 'cause of TypedDict?
+        env_prefix=config_settings["env_prefix"],
+        env_file=config_settings["env_file"],
         extra="forbid",
     )
     db_host: str = Field(default="127.0.0.1")
@@ -32,10 +52,8 @@ class Config(BaseSettings):
     db_username: str = Field(default="")
     db_password: str = Field(default="")
     db_lazy: bool = Field(default=False)
-    node_cache_size: int = Field(default=2**16)
-    edge_cache_size: int = Field(default=2**16)
-    # node_cache_size: int = Field(default=2**11)
-    # edge_cache_size: int = Field(default=2**11)
+    node_cache_size: int = Field(default=2**30)
+    edge_cache_size: int = Field(default=2**30)
     log_enable: bool = Field(default=True)
     log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
@@ -43,7 +61,6 @@ class Config(BaseSettings):
     perception_components: list[str] = Field(default=["delta:perception"])
     enable_gym_dump_env: bool = Field(default=False)
     max_dump_frames: int = Field(default=10)
-    nethack_spectrum: str = Field(pattern=r"chars|colors|glyphs", default="chars")
 
     @staticmethod
     def get() -> Config:

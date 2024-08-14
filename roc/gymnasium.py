@@ -1,8 +1,9 @@
+# pragma: no cover
+
 """This module is a wrapper around the Gym / Gymnasium interfaces and drives all
 the interactions between the agent and the system, including the main event loop.
 """
 
-# pragma: no cover
 from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any
@@ -65,7 +66,7 @@ class Gym(Component, ABC):
         obs = self.env.reset()
 
         done = False
-        dump_env_start()
+        _dump_env_start()
 
         logger.info("Starting NLE loop...")
 
@@ -78,7 +79,7 @@ class Gym(Component, ABC):
             logger.trace(f"Doing action: {action}")
             step_res = self.env.step(action)
             obs = step_res[0]
-            dump_env_record(obs)
+            _dump_env_record(obs)
 
             if len(step_res) == 5:
                 done = step_res[2] or step_res[3]
@@ -90,7 +91,7 @@ class Gym(Component, ABC):
             states.loop.incr()
 
         logger.info("NLE loop done.")
-        dump_env_end()
+        _dump_env_end()
 
     def decode_action(self, action: int) -> Any:
         return action
@@ -230,9 +231,7 @@ class NethackGym(Gym):
         self.send_intrinsics(obs)
 
     def send_vision(self, obs: Any) -> None:
-        # spectrum = [obs["chars"], obs["colors"], obs["glyphs"]]
-
-        self.env_bus_conn.send(VisionData(obs["chars"]))
+        self.env_bus_conn.send(VisionData.from_dict(obs))
 
     def send_auditory(self) -> None:
         pass
@@ -258,7 +257,7 @@ class NethackGym(Gym):
 dump_env_file: Any = None
 
 
-def ascii_list(al: list[int]) -> str:
+def _ascii_list(al: list[int]) -> str:
     result_string = "# "
 
     for ascii_value in al:
@@ -267,14 +266,14 @@ def ascii_list(al: list[int]) -> str:
     return result_string
 
 
-def print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
+def _print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
     global dump_env_file
     assert dump_env_file
     for row in screen:
-        dump_env_file.write(ascii_list(row) + "\n")
+        dump_env_file.write(_ascii_list(row) + "\n")
 
 
-def dump_env_start() -> None:
+def _dump_env_start() -> None:
     settings = Config.get()
     if not settings.enable_gym_dump_env:
         return
@@ -287,7 +286,7 @@ def dump_env_start() -> None:
 count = 0
 
 
-def dump_env_record(obs: Any) -> None:
+def _dump_env_record(obs: Any) -> None:
     settings = Config.get()
     if not settings.enable_gym_dump_env:
         return
@@ -301,7 +300,7 @@ def dump_env_record(obs: Any) -> None:
     if count >= settings.max_dump_frames:
         return
 
-    print_screen(obs["tty_chars"])
+    _print_screen(obs["tty_chars"])
     dump_env_file.write("{\n# fmt: off\n")
     dump_env_file.write(f"        \"chars\": {obs['chars'].tolist()},\n")
     dump_env_file.write(f"        \"colors\": {obs['colors'].tolist()},\n")
@@ -309,7 +308,7 @@ def dump_env_record(obs: Any) -> None:
     dump_env_file.write("# fmt: on\n},\n")
 
 
-def dump_env_end() -> None:
+def _dump_env_end() -> None:
     settings = Config.get()
     if not settings.enable_gym_dump_env:
         return

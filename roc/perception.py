@@ -10,12 +10,68 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, Self, TypeVar
 
+import numpy as np
+
 from .component import Component
 from .event import Event, EventBus
 from .graphdb import Node
 from .location import Grid
 
-VisionData = Grid
+
+class VisionData:
+    """Vision data received from the environment."""
+
+    def __init__(
+        self,
+        glyphs: np.ndarray[Any, Any],
+        chars: np.ndarray[Any, Any],
+        colors: np.ndarray[Any, Any],
+    ) -> None:
+        self.glyphs = glyphs
+        self.chars = chars
+        self.colors = colors
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> VisionData:
+        """Creates VisionData from an arbitrary dictionary
+
+        Args:
+            d (dict[str, Any]): The dictionary to create VisionData from. Must
+            have 'chars', 'glyphs', and 'colors' members.
+
+        Returns:
+            VisionData: The newly created vision data.
+        """
+
+        def to_numpy(d: dict[str, Any], k: str) -> np.ndarray[Any, Any]:
+            if not k in d:
+                raise Exception(f"Expected '{k}' to exist in dict for VisionData.from_dict()")
+
+            v = d[k]
+            if not isinstance(v, np.ndarray):
+                return np.array(v)
+            return v
+
+        glyphs = to_numpy(d, "glyphs")
+        chars = to_numpy(d, "chars")
+        colors = to_numpy(d, "colors")
+        return VisionData(glyphs, chars, colors)
+
+    @staticmethod
+    def for_test(test_data: list[list[int]]) -> VisionData:
+        """Creates VisionData for a test case, using a static 2D list of values
+        to create all aspects of the VisionData
+
+        Args:
+            test_data (list[list[int]]): The test data to convert into VisionData
+
+        Returns:
+            VisionData: The created VisionData
+        """
+        a = np.array(test_data)
+        return VisionData(a.copy(), a.copy(), a.copy())
+
+
 # TODO: sound input
 # TODO: other input
 

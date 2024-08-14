@@ -27,7 +27,7 @@ class TestLine:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [0, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0],
@@ -114,7 +114,7 @@ class TestLine:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [2, 0, 0, 0, 0, 0, 2, 2],
                     [0, 0, 0, 0, 0, 0, 0, 0],
@@ -153,7 +153,7 @@ class TestLine:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [0, 0, 1, 0, 0],
                     [0, 0, 1, 0, 0],
@@ -192,7 +192,7 @@ class TestLine:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [2, 0, 0, 0, 2],
                     [0, 0, 1, 0, 0],

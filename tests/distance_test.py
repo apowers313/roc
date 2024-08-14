@@ -26,7 +26,7 @@ class TestDistance:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [1, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0],
@@ -64,7 +64,7 @@ class TestDistance:
         )
 
         s.input_conn.send(
-            VisionData(
+            VisionData.for_test(
                 [
                     [1, 0, 0, 0, 0],
                     [0, 0, 0, 0, 0],
@@ -117,7 +117,7 @@ class TestDistance:
             filter=lambda e: e.src.name == "distance",
         )
 
-        s.input_conn.send(VisionData(screens[0]["chars"]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
 
         assert s.output.call_count == 29
 

@@ -185,12 +185,12 @@ class TestVisionAttention:
 
         # print("grid1", VisionData(screens[0]["chars"]))
         # print("grid2", VisionData(screens[1]["chars"]))
-        s.input_conn.send(VisionData(screens[0]["chars"]))
-        s.input_conn.send(VisionData(screens[1]["chars"]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
 
         assert attention.saliency_map
         print("saliency features", attention.saliency_map.size)  # noqa: T201
-        print("vision:\n", VisionData(screens[0]["chars"]))  # noqa: T201
+        print("vision:\n", Grid(screens[0]["chars"]))  # noqa: T201
         print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
         print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
         print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201

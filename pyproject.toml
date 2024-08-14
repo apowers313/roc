@@ -175,6 +175,9 @@ line-length = 100
 fix-only = true
 exclude = ["tests/helpers/nethack_screens.py"]
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
 extend-select = ["T201"]
 unfixable = ["T201"]
@@ -192,6 +195,7 @@ convention = "google"
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
 "*_test.py" = ["D"]
+"roc/gymnasium.py" = ["D102"]
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
@@ -220,7 +224,7 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 follow_imports = "silent"
-plugins = ["pydantic.mypy"]
+plugins = ["pydantic.mypy", "numpy.typing.mypy_plugin"]
 exclude = ["site"]
 
 # [[tool.mypy.overrides]]

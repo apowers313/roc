@@ -51,8 +51,8 @@ class Flood(FeatureExtractor[TypedPointCollection]):
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
-        data = e.data
-        assert isinstance(data, VisionData)
+        assert isinstance(e.data, VisionData)
+        data = Grid(e.data.chars)
 
         check_map = CheckMap(data.width, data.height)
 

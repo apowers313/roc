@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..component import Component, register_component
+from ..location import Grid
 from ..perception import (
     ComplexFeature,
     Feature,
@@ -59,7 +60,7 @@ class Delta(FeatureExtractor[DeltaFeature]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.prev_viz: VisionData | None = None
+        self.prev_viz: Grid | None = None
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
@@ -69,7 +70,7 @@ class Delta(FeatureExtractor[DeltaFeature]):
         assert isinstance(data, VisionData)
 
         prev = self.prev_viz
-        self.prev_viz = curr = data
+        self.prev_viz = curr = Grid(data.chars)  # TODO: glyphs
 
         if prev is None:
             # can't get difference when there was nothing before this
