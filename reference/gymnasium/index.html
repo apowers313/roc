@@ -1636,51 +1636,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#gymnasium.ascii_list" class="md-nav__link">
-    <span class="md-ellipsis">
-      ascii_list
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_end" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_end
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_record" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_record
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_start" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_start
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.print_screen" class="md-nav__link">
-    <span class="md-ellipsis">
-      print_screen
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -3045,51 +3000,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#gymnasium.ascii_list" class="md-nav__link">
-    <span class="md-ellipsis">
-      ascii_list
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_end" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_end
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_record" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_record
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.dump_env_start" class="md-nav__link">
-    <span class="md-ellipsis">
-      dump_env_start
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#gymnasium.print_screen" class="md-nav__link">
-    <span class="md-ellipsis">
-      print_screen
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -3186,8 +3096,7 @@ the interactions between the agent and the system, including the main event loop
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">183</span>
-<span class="normal">184</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">184</span>
 <span class="normal">185</span>
 <span class="normal">186</span>
 <span class="normal">187</span>
@@ -3215,7 +3124,8 @@ the interactions between the agent and the system, including the main event loop
 <span class="normal">209</span>
 <span class="normal">210</span>
 <span class="normal">211</span>
-<span class="normal">212</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">BottomlineStats</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="normal">212</span>
+<span class="normal">213</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">BottomlineStats</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model representing the Nethack bottom line statistics.&quot;&quot;&quot;</span>
 
     <span class="n">X</span><span class="p">:</span> <span class="nb">int</span>
@@ -3802,8 +3712,7 @@ loop and interfaces to the ROC agent.</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 32</span>
-<span class="normal"> 33</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 33</span>
 <span class="normal"> 34</span>
 <span class="normal"> 35</span>
 <span class="normal"> 36</span>
@@ -3875,7 +3784,8 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">102</span>
 <span class="normal">103</span>
 <span class="normal">104</span>
-<span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Gym</span><span class="p">(</span><span class="n">Component</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+<span class="normal">105</span>
+<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Gym</span><span class="p">(</span><span class="n">Component</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event</span>
 <span class="sd">    loop and interfaces to the ROC agent.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -3911,7 +3821,7 @@ loop and interfaces to the ROC agent.</p>
         <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
         <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
-        <span class="n">dump_env_start</span><span class="p">()</span>
+        <span class="n">_dump_env_start</span><span class="p">()</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting NLE loop...&quot;</span><span class="p">)</span>
 
@@ -3924,7 +3834,7 @@ loop and interfaces to the ROC agent.</p>
             <span class="n">logger</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Doing action: </span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="n">step_res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
             <span class="n">obs</span> <span class="o">=</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="n">dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+            <span class="n">_dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_res</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
                 <span class="n">done</span> <span class="o">=</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">or</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
@@ -3936,7 +3846,7 @@ loop and interfaces to the ROC agent.</p>
             <span class="n">states</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">incr</span><span class="p">()</span>
 
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;NLE loop done.&quot;</span><span class="p">)</span>
-        <span class="n">dump_env_end</span><span class="p">()</span>
+        <span class="n">_dump_env_end</span><span class="p">()</span>
 
     <span class="k">def</span> <span class="nf">decode_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">action</span>
@@ -4091,8 +4001,7 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
-<span class="normal">38</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
 <span class="normal">39</span>
 <span class="normal">40</span>
 <span class="normal">41</span>
@@ -4104,7 +4013,8 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">47</span>
 <span class="normal">48</span>
 <span class="normal">49</span>
-<span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">env</span> <span class="o">=</span> <span class="n">gym</span><span class="o">.</span><span class="n">make</span><span class="p">(</span><span class="n">gym_id</span><span class="p">,</span> <span class="o">**</span><span class="n">gym_opts</span><span class="p">)</span>
@@ -4137,14 +4047,14 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 98</span>
-<span class="normal"> 99</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 99</span>
 <span class="normal">100</span>
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
 <span class="normal">104</span>
-<span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">await_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="normal">105</span>
+<span class="normal">106</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">await_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
     <span class="c1"># TODO: self.action_bus_conn.subject.first()</span>
 
     <span class="c1"># warnings.warn(&quot;await action not implemented, defaulting to &#39;.&#39; for every action&quot;)</span>
@@ -4175,9 +4085,9 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">59</span>
-<span class="normal">60</span>
-<span class="normal">61</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">60</span>
+<span class="normal">61</span>
+<span class="normal">62</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
 <span class="k">def</span> <span class="nf">config_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
@@ -4199,8 +4109,8 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">95</span>
-<span class="normal">96</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">decode_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">96</span>
+<span class="normal">97</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">decode_action</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">action</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4225,9 +4135,9 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">55</span>
-<span class="normal">56</span>
-<span class="normal">57</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
 <span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
@@ -4249,8 +4159,7 @@ loop and interfaces to the ROC agent.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">63</span>
-<span class="normal">64</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">64</span>
 <span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span>
@@ -4279,12 +4188,13 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">90</span>
 <span class="normal">91</span>
 <span class="normal">92</span>
-<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@logger</span><span class="o">.</span><span class="n">catch</span>
+<span class="normal">93</span>
+<span class="normal">94</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@logger</span><span class="o">.</span><span class="n">catch</span>
 <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">obs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
 
     <span class="n">done</span> <span class="o">=</span> <span class="kc">False</span>
-    <span class="n">dump_env_start</span><span class="p">()</span>
+    <span class="n">_dump_env_start</span><span class="p">()</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Starting NLE loop...&quot;</span><span class="p">)</span>
 
@@ -4297,7 +4207,7 @@ loop and interfaces to the ROC agent.</p>
         <span class="n">logger</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Doing action: </span><span class="si">{</span><span class="n">action</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="n">step_res</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">action</span><span class="p">)</span>
         <span class="n">obs</span> <span class="o">=</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-        <span class="n">dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+        <span class="n">_dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_res</span><span class="p">)</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
             <span class="n">done</span> <span class="o">=</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">or</span> <span class="n">step_res</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
@@ -4309,7 +4219,7 @@ loop and interfaces to the ROC agent.</p>
         <span class="n">states</span><span class="o">.</span><span class="n">loop</span><span class="o">.</span><span class="n">incr</span><span class="p">()</span>
 
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;NLE loop done.&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_end</span><span class="p">()</span>
+    <span class="n">_dump_env_end</span><span class="p">()</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4345,8 +4255,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">215</span>
-<span class="normal">216</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">216</span>
 <span class="normal">217</span>
 <span class="normal">218</span>
 <span class="normal">219</span>
@@ -4384,8 +4293,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">251</span>
 <span class="normal">252</span>
 <span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">NethackGym</span><span class="p">(</span><span class="n">Gym</span><span class="p">):</span>
+<span class="normal">254</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">NethackGym</span><span class="p">(</span><span class="n">Gym</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Wrapper around the Gym class for driving the Nethack interface to the ROC</span>
 <span class="sd">    agent. Decodes Nethack specific data and sends it to the agent as Events.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -4403,9 +4311,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
         <span class="bp">self</span><span class="o">.</span><span class="n">send_intrinsics</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="c1"># spectrum = [obs[&quot;chars&quot;], obs[&quot;colors&quot;], obs[&quot;glyphs&quot;]]</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">obs</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">pass</span>
@@ -4454,9 +4360,9 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">220</span>
-<span class="normal">221</span>
-<span class="normal">222</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">221</span>
+<span class="normal">222</span>
+<span class="normal">223</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;NetHackScore-v0&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">gym_opts</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -4478,9 +4384,9 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">224</span>
-<span class="normal">225</span>
-<span class="normal">226</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">config_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">225</span>
+<span class="normal">226</span>
+<span class="normal">227</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">config_actions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">a</span> <span class="o">=</span> <span class="n">ActionCount</span><span class="p">(</span><span class="n">action_count</span><span class="o">=</span><span class="n">action_count</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -4502,8 +4408,8 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">237</span>
-<span class="normal">238</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">236</span>
+<span class="normal">237</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4524,7 +4430,8 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">243</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">242</span>
+<span class="normal">243</span>
 <span class="normal">244</span>
 <span class="normal">245</span>
 <span class="normal">246</span>
@@ -4535,8 +4442,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">251</span>
 <span class="normal">252</span>
 <span class="normal">253</span>
-<span class="normal">254</span>
-<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">254</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
     <span class="c1"># NOTE: obs[&quot;blstats&quot;] is an ndarray object from numpy</span>
     <span class="n">bl</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;blstats&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
@@ -4568,9 +4474,9 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">228</span>
-<span class="normal">229</span>
-<span class="normal">230</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">229</span>
+<span class="normal">230</span>
+<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">send_vision</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">send_intrinsics</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -4592,8 +4498,8 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">240</span>
-<span class="normal">241</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">239</span>
+<span class="normal">240</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4614,13 +4520,9 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">232</span>
-<span class="normal">233</span>
-<span class="normal">234</span>
-<span class="normal">235</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="c1"># spectrum = [obs[&quot;chars&quot;], obs[&quot;colors&quot;], obs[&quot;glyphs&quot;]]</span>
-
-    <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;chars&quot;</span><span class="p">]))</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">233</span>
+<span class="normal">234</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">VisionData</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">obs</span><span class="p">))</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4656,8 +4558,7 @@ charisma, position, hit points, etc.)</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">108</span>
-<span class="normal">109</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">109</span>
 <span class="normal">110</span>
 <span class="normal">111</span>
 <span class="normal">112</span>
@@ -4688,7 +4589,8 @@ charisma, position, hit points, etc.)</p>
 <span class="normal">137</span>
 <span class="normal">138</span>
 <span class="normal">139</span>
-<span class="normal">140</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">blstat_offsets</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="normal">140</span>
+<span class="normal">141</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">blstat_offsets</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An enumeration of Nethack bottom line statistics (intelligence, strength,</span>
 <span class="sd">    charisma, position, hit points, etc.)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -5305,8 +5207,7 @@ player is flying, deaf, food poisoned, etc.</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">144</span>
-<span class="normal">145</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">145</span>
 <span class="normal">146</span>
 <span class="normal">147</span>
 <span class="normal">148</span>
@@ -5340,7 +5241,8 @@ player is flying, deaf, food poisoned, etc.</p>
 <span class="normal">176</span>
 <span class="normal">177</span>
 <span class="normal">178</span>
-<span class="normal">179</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">condition_bits</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="normal">179</span>
+<span class="normal">180</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">condition_bits</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Bits for decoding the `CONDITION` bottomline stat to determin if the</span>
 <span class="sd">    player is flying, deaf, food poisoned, etc.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -5999,194 +5901,6 @@ player is flying, deaf, food poisoned, etc.</p>
 
 </div>
 
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="gymnasium.ascii_list" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ascii_list</span><span class="p">(</span><span class="n">al</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-            <details class="quote">
-              <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">261</span>
-<span class="normal">262</span>
-<span class="normal">263</span>
-<span class="normal">264</span>
-<span class="normal">265</span>
-<span class="normal">266</span>
-<span class="normal">267</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">ascii_list</span><span class="p">(</span><span class="n">al</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="n">result_string</span> <span class="o">=</span> <span class="s2">&quot;# &quot;</span>
-
-    <span class="k">for</span> <span class="n">ascii_value</span> <span class="ow">in</span> <span class="n">al</span><span class="p">:</span>
-        <span class="n">result_string</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">ascii_value</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">result_string</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="gymnasium.dump_env_end" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dump_env_end</span><span class="p">()</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-            <details class="quote">
-              <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">312</span>
-<span class="normal">313</span>
-<span class="normal">314</span>
-<span class="normal">315</span>
-<span class="normal">316</span>
-<span class="normal">317</span>
-<span class="normal">318</span>
-<span class="normal">319</span>
-<span class="normal">320</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">dump_env_end</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">settings</span><span class="o">.</span><span class="n">enable_gym_dump_env</span><span class="p">:</span>
-        <span class="k">return</span>
-
-    <span class="k">global</span> <span class="n">dump_env_file</span>
-    <span class="k">assert</span> <span class="n">dump_env_file</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;]</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="gymnasium.dump_env_record" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-            <details class="quote">
-              <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">290</span>
-<span class="normal">291</span>
-<span class="normal">292</span>
-<span class="normal">293</span>
-<span class="normal">294</span>
-<span class="normal">295</span>
-<span class="normal">296</span>
-<span class="normal">297</span>
-<span class="normal">298</span>
-<span class="normal">299</span>
-<span class="normal">300</span>
-<span class="normal">301</span>
-<span class="normal">302</span>
-<span class="normal">303</span>
-<span class="normal">304</span>
-<span class="normal">305</span>
-<span class="normal">306</span>
-<span class="normal">307</span>
-<span class="normal">308</span>
-<span class="normal">309</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">dump_env_record</span><span class="p">(</span><span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">settings</span><span class="o">.</span><span class="n">enable_gym_dump_env</span><span class="p">:</span>
-        <span class="k">return</span>
-
-    <span class="k">global</span> <span class="n">dump_env_file</span>
-    <span class="k">assert</span> <span class="n">dump_env_file</span>
-
-    <span class="k">global</span> <span class="n">count</span>
-    <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
-    <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-    <span class="k">if</span> <span class="n">count</span> <span class="o">&gt;=</span> <span class="n">settings</span><span class="o">.</span><span class="n">max_dump_frames</span><span class="p">:</span>
-        <span class="k">return</span>
-
-    <span class="n">print_screen</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">&quot;tty_chars&quot;</span><span class="p">])</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;{</span><span class="se">\n</span><span class="s2"># fmt: off</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        </span><span class="se">\&quot;</span><span class="s2">chars</span><span class="se">\&quot;</span><span class="s2">: </span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;chars&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        </span><span class="se">\&quot;</span><span class="s2">colors</span><span class="se">\&quot;</span><span class="s2">: </span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;colors&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;        </span><span class="se">\&quot;</span><span class="s2">glyphs</span><span class="se">\&quot;</span><span class="s2">: </span><span class="si">{</span><span class="n">obs</span><span class="p">[</span><span class="s1">&#39;glyphs&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span><span class="si">}</span><span class="s2">,</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;# fmt: on</span><span class="se">\n</span><span class="s2">},</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="gymnasium.dump_env_start" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dump_env_start</span><span class="p">()</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-            <details class="quote">
-              <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">277</span>
-<span class="normal">278</span>
-<span class="normal">279</span>
-<span class="normal">280</span>
-<span class="normal">281</span>
-<span class="normal">282</span>
-<span class="normal">283</span>
-<span class="normal">284</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">dump_env_start</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">settings</span><span class="o">.</span><span class="n">enable_gym_dump_env</span><span class="p">:</span>
-        <span class="k">return</span>
-
-    <span class="k">global</span> <span class="n">dump_env_file</span>
-    <span class="n">dump_env_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;env_dump.py&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span>
-    <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;[</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
-
-<div class="doc doc-object doc-function">
-
-
-<h2 id="gymnasium.print_screen" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">print_screen</span><span class="p">(</span><span class="n">screen</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">as_int</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
-
-</h2>
-
-
-    <div class="doc doc-contents ">
-
-            <details class="quote">
-              <summary>Source code in <code>roc/gymnasium.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">270</span>
-<span class="normal">271</span>
-<span class="normal">272</span>
-<span class="normal">273</span>
-<span class="normal">274</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">print_screen</span><span class="p">(</span><span class="n">screen</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]],</span> <span class="o">*</span><span class="p">,</span> <span class="n">as_int</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="k">global</span> <span class="n">dump_env_file</span>
-    <span class="k">assert</span> <span class="n">dump_env_file</span>
-    <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">screen</span><span class="p">:</span>
-        <span class="n">dump_env_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">ascii_list</span><span class="p">(</span><span class="n">row</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
-</code></pre></div></td></tr></table></div>
-            </details>
-    </div>
-
-</div>
 
 
 
