@@ -166,18 +166,18 @@ class NewGrid(npt.NDArray[Any], Generic[GridType]):
 
     @property
     def width(self) -> int:
-        return self.shape[0]
+        return self.shape[1]
 
     @property
     def height(self) -> int:
-        return self.shape[1]
+        return self.shape[0]
 
     # filled
 
 
 class IntGrid(NewGrid[int]):
     def get_point(self, x: int, y: int) -> Point:
-        return Point(x, y, self[x, y])
+        return Point(x, y, self[y, x])
 
     def points(self) -> Iterator[Point]:
         """Iterate over all the points in the grid"""
@@ -185,7 +185,7 @@ class IntGrid(NewGrid[int]):
             yield Point(x, y, v)
 
 
-class TextGrid(NewGrid[int]):
+class TextGrid(IntGrid):
     def __str__(self) -> str:
         ret = ""
         last_y = 0

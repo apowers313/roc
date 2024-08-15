@@ -1,5 +1,7 @@
+import numpy as np
+
 from ..component import Component, register_component
-from ..location import Grid, Point, PointList, TypedPointCollection
+from ..location import IntGrid, Point, PointList, TypedPointCollection
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 MIN_FLOOD_SIZE = 5
@@ -23,16 +25,15 @@ class CheckMap:
     """Internal utility class for tracking which points in a flood have already been checked"""
 
     def __init__(self, width: int, height: int) -> None:
-        self.grid = Grid.filled(0, width, height)
+        a = np.zeros((height, width))
+        self.grid = a.view(IntGrid)
 
     def find_first_unused_point(self) -> Point | None:
-        ret: Point | None = None
         for p in self.grid.points():
             if p.val == 0:
-                ret = p
-                break
+                return p
 
-        return ret
+        return None
 
     def set(self, x: int, y: int) -> None:
         self.grid.set_val(x, y, 1)
@@ -52,7 +53,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
         assert isinstance(e.data, VisionData)
-        data = Grid(e.data.chars)
+        data = IntGrid(e.data.chars)
 
         check_map = CheckMap(data.width, data.height)
 

@@ -1,5 +1,5 @@
 from ..component import Component, register_component
-from ..location import Grid, Point, PointList, TypedPointCollection
+from ..location import IntGrid, Point, PointList, TypedPointCollection
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 MIN_LINE_COUNT = 4
@@ -30,7 +30,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
         assert isinstance(e.data, VisionData)
-        data = Grid(e.data.chars)
+        data = IntGrid(e.data.chars)
 
         points: PointList = []
 
