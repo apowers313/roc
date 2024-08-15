@@ -1304,9 +1304,7 @@
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">22</span>
-<span class="normal">23</span>
-<span class="normal">24</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">24</span>
 <span class="normal">25</span>
 <span class="normal">26</span>
 <span class="normal">27</span>
@@ -1323,20 +1321,20 @@
 <span class="normal">38</span>
 <span class="normal">39</span>
 <span class="normal">40</span>
-<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CheckMap</span><span class="p">:</span>
+<span class="normal">41</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CheckMap</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Internal utility class for tracking which points in a flood have already been checked&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">filled</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">IntGrid</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">find_first_unused_point</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Point</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">ret</span><span class="p">:</span> <span class="n">Point</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">points</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">val</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="n">ret</span> <span class="o">=</span> <span class="n">p</span>
-                <span class="k">break</span>
+                <span class="k">return</span> <span class="n">p</span>
 
-        <span class="k">return</span> <span class="n">ret</span>
+        <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
@@ -1361,7 +1359,7 @@
 
 
 <h3 id="feature_extractors.flood.CheckMap.grid" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">filled</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">grid</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">IntGrid</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1390,9 +1388,11 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">25</span>
-<span class="normal">26</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">Grid</span><span class="o">.</span><span class="n">filled</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">width</span><span class="p">,</span> <span class="n">height</span><span class="p">)</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">height</span><span class="p">,</span> <span class="n">width</span><span class="p">))</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">grid</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">view</span><span class="p">(</span><span class="n">IntGrid</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1412,8 +1412,8 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">40</span>
-<span class="normal">41</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">checked</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">41</span>
+<span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">checked</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">get_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1434,21 +1434,17 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">28</span>
-<span class="normal">29</span>
-<span class="normal">30</span>
-<span class="normal">31</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">31</span>
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
-<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">find_first_unused_point</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Point</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
-    <span class="n">ret</span><span class="p">:</span> <span class="n">Point</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="normal">35</span>
+<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">find_first_unused_point</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Point</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">points</span><span class="p">():</span>
         <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">val</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="n">ret</span> <span class="o">=</span> <span class="n">p</span>
-            <span class="k">break</span>
+            <span class="k">return</span> <span class="n">p</span>
 
-    <span class="k">return</span> <span class="n">ret</span>
+    <span class="k">return</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1468,8 +1464,8 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
-<span class="normal">38</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">38</span>
+<span class="normal">39</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">set</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">set_val</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1506,8 +1502,7 @@ that all have the same value</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 44</span>
-<span class="normal"> 45</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 45</span>
 <span class="normal"> 46</span>
 <span class="normal"> 47</span>
 <span class="normal"> 48</span>
@@ -1562,7 +1557,8 @@ that all have the same value</p>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;flood&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;flood&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Flood</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">TypedPointCollection</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for creating Flood features -- collections of adjacent points</span>
 <span class="sd">    that all have the same value</span>
@@ -1573,7 +1569,7 @@ that all have the same value</p>
 
     <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
 
         <span class="n">check_map</span> <span class="o">=</span> <span class="n">CheckMap</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
 
@@ -1647,8 +1643,8 @@ that all have the same value</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">50</span>
-<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">51</span>
+<span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1669,8 +1665,7 @@ that all have the same value</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 53</span>
-<span class="normal"> 54</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 54</span>
 <span class="normal"> 55</span>
 <span class="normal"> 56</span>
 <span class="normal"> 57</span>
@@ -1716,9 +1711,10 @@ that all have the same value</p>
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
 
     <span class="n">check_map</span> <span class="o">=</span> <span class="n">CheckMap</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
 
@@ -1798,9 +1794,7 @@ that all have the same value</p>
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 8</span>
-<span class="normal"> 9</span>
-<span class="normal">10</span>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">10</span>
 <span class="normal">11</span>
 <span class="normal">12</span>
 <span class="normal">13</span>
@@ -1809,7 +1803,9 @@ that all have the same value</p>
 <span class="normal">16</span>
 <span class="normal">17</span>
 <span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FloodFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FloodFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A collection of points representing similar values that are all adjacent to each other&quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">point_list</span><span class="p">:</span> <span class="n">PointList</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -1849,8 +1845,8 @@ that all have the same value</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">18</span>
-<span class="normal">19</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">20</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;FloodFeature hash not implemented&quot;</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1871,12 +1867,12 @@ that all have the same value</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/flood.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">11</span>
-<span class="normal">12</span>
-<span class="normal">13</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
 <span class="normal">14</span>
 <span class="normal">15</span>
-<span class="normal">16</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">point_list</span><span class="p">:</span> <span class="n">PointList</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">origin</span><span class="p">:</span> <span class="n">Component</span><span class="p">,</span> <span class="n">point_list</span><span class="p">:</span> <span class="n">PointList</span><span class="p">,</span> <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">origin</span><span class="p">,</span> <span class="s2">&quot;Flood&quot;</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">add_type</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">add_size</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">point_list</span><span class="p">))</span>

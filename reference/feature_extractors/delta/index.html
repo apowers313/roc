@@ -1392,7 +1392,7 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span><span class="p">:</span> <span class="n">IntGrid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
@@ -1402,7 +1402,7 @@
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
         <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
 
         <span class="k">if</span> <span class="n">prev</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># can&#39;t get difference when there was nothing before this</span>
@@ -1448,7 +1448,7 @@
 
 
 <h3 id="feature_extractors.delta.Delta.prev_viz" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">prev_viz</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+            <code class="highlight language-python"><span class="n">prev_viz</span><span class="p">:</span> <span class="n">IntGrid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1481,7 +1481,7 @@
 <span class="normal">62</span>
 <span class="normal">63</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span><span class="p">:</span> <span class="n">Grid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span><span class="p">:</span> <span class="n">IntGrid</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -1560,7 +1560,7 @@
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
     <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">Grid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
 
     <span class="k">if</span> <span class="n">prev</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># can&#39;t get difference when there was nothing before this</span>
