@@ -6,7 +6,7 @@ from helpers.util import StubComponent, check_num_src_edges, check_points, check
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.single import Single, SingleFeature, is_unique_from_neighbors
-from roc.location import Grid, Point
+from roc.location import IntGrid, Point
 from roc.perception import Settled, VisionData
 
 
@@ -109,6 +109,7 @@ class TestSingle:
         assert isinstance(e, Event)
         assert isinstance(e.data, SingleFeature)
         check_type(e.data, ord("|"))
+        print("e.data", e.data)
         check_points(e.data, {(15, 4)})
 
         # event 2
@@ -166,7 +167,7 @@ class TestSingle:
         assert isinstance(e.data, Settled)
 
     def test_unique(self) -> None:
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 0, 0],
                 [0, 0, 0],
@@ -175,7 +176,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(0, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [0, 0, 0],
@@ -184,7 +185,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 1],
                 [0, 0, 0],
@@ -193,7 +194,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(2, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 0, 0],
@@ -202,7 +203,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -211,7 +212,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -220,7 +221,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -229,7 +230,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(0, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -238,7 +239,7 @@ class TestSingle:
         )
         assert is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -248,7 +249,7 @@ class TestSingle:
         assert is_unique_from_neighbors(d, Point(2, 2, 1))
 
     def test_not_unique(self) -> None:
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 1, 0],
                 [0, 0, 0],
@@ -257,7 +258,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 0, 0],
                 [1, 0, 0],
@@ -266,7 +267,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 0, 0],
                 [0, 1, 0],
@@ -275,7 +276,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 1, 0],
                 [0, 0, 0],
@@ -284,7 +285,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 1],
                 [0, 0, 0],
@@ -293,7 +294,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [1, 0, 0],
@@ -302,7 +303,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [0, 1, 0],
@@ -311,7 +312,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [0, 0, 1],
@@ -320,7 +321,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 1],
                 [0, 0, 0],
@@ -329,7 +330,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 1],
                 [0, 1, 0],
@@ -338,7 +339,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 1],
                 [0, 0, 1],
@@ -347,7 +348,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 0, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 0, 0],
                 [1, 0, 0],
@@ -356,7 +357,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [1, 0, 0],
@@ -365,7 +366,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 1, 0],
@@ -374,7 +375,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 0, 0],
@@ -383,7 +384,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 0, 0],
@@ -392,7 +393,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [1, 0, 0],
                 [0, 1, 0],
@@ -401,7 +402,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [0, 1, 0],
@@ -410,7 +411,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 1],
                 [0, 1, 0],
@@ -419,7 +420,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 1, 0],
@@ -428,7 +429,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 1],
@@ -437,7 +438,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -446,7 +447,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -455,7 +456,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -464,7 +465,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 1, 0],
                 [0, 0, 1],
@@ -473,7 +474,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 1],
                 [0, 0, 1],
@@ -482,7 +483,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 1],
@@ -491,7 +492,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -500,7 +501,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -509,7 +510,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 1, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 0, 0],
@@ -518,7 +519,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -527,7 +528,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -536,7 +537,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(0, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [1, 0, 0],
@@ -545,7 +546,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -554,7 +555,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -563,7 +564,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -572,7 +573,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],
@@ -581,7 +582,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(1, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 1, 0],
@@ -590,7 +591,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 1],
@@ -599,7 +600,7 @@ class TestSingle:
         )
         assert not is_unique_from_neighbors(d, Point(2, 2, 1))
 
-        d = Grid(
+        d = IntGrid(
             [
                 [0, 0, 0],
                 [0, 0, 0],

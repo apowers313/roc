@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from colorsys import hsv_to_rgb
 from dataclasses import dataclass
-from typing import Any, Generic, Iterator, TypeVar, overload
+from typing import Any, Generic, Iterator, Self, TypeVar, cast, overload
 
 import numpy as np
+import numpy.typing as npt
 from colored import Back, Fore, Style
 
 
@@ -24,6 +25,11 @@ class Point:
         if not isinstance(p, Point):
             return False
         return self.x == p.x and self.y == p.y and self.val == p.val
+
+    @staticmethod
+    def from_valloc(t: ValLocTuple[int]) -> Point:
+        x, y, v = t
+        return Point(x, y, v)
 
     @overload
     @staticmethod
@@ -120,11 +126,76 @@ class GenericGrid(Generic[GridVal]):
         return Grid(rows)
 
 
-# class NewGrid:
-#     def __init__(self, val_list: list[list[Any]] | np.ndarray) -> None:
-#         if not isinstance(val_list, np.ndarray):
-#             val_list = np.array(val_list)
-#         self.val_list = val_list
+# NDArrayInt = npt.NDArray[np.int_]
+# GridType = TypeVar("GridType", bound=np.generic, covariant=True)
+GridType = TypeVar("GridType")
+
+LocationTuple = tuple[int, int]
+ValLocTuple = tuple[GridType, int, int]
+
+
+class NewGrid(npt.NDArray[Any], Generic[GridType]):
+    def __new__(cls, input_array: npt.ArrayLike, info: str | None = None) -> Self:
+        obj = np.asarray(input_array).view(cls)
+        assert obj.ndim == 2
+        obj.info = info
+        return obj
+
+    def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
+        if obj is None:
+            return
+        self.info = getattr(obj, "info", None)
+
+    def __iter__(self) -> Iterator[ValLocTuple[GridType]]:
+        for y, x in np.ndindex(self.shape):
+            yield (self[y, x], x, y)
+        # yield from np.nditer(self)
+
+    # def __init__(self, val_list: list[list[Any]] | np.ndarray) -> None:
+    #     if not isinstance(val_list, np.ndarray):
+    #         val_list = np.array(val_list)
+    #     assert val_list.ndim == 2
+    #     self.val_list = val_list
+
+    def get_val(self, x: int, y: int) -> GridType:
+        # XXX: not sure why I need to cast here, should this already be typed?
+        return cast(GridType, self[y, x])
+
+    def set_val(self, x: int, y: int, v: GridType) -> None:
+        self[y, x] = v
+
+    @property
+    def width(self) -> int:
+        return self.shape[0]
+
+    @property
+    def height(self) -> int:
+        return self.shape[1]
+
+    # filled
+
+
+class IntGrid(NewGrid[int]):
+    def get_point(self, x: int, y: int) -> Point:
+        return Point(x, y, self[x, y])
+
+    def points(self) -> Iterator[Point]:
+        """Iterate over all the points in the grid"""
+        for v, x, y in self:
+            yield Point(x, y, v)
+
+
+class TextGrid(NewGrid[int]):
+    def __str__(self) -> str:
+        ret = ""
+        last_y = 0
+        for v, x, y in self:
+            if y != last_y:
+                ret += "\n"
+                last_y = y
+
+            ret += chr(v)
+        return ret
 
 
 class Grid(GenericGrid[int]):

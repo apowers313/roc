@@ -1,7 +1,11 @@
 """Generates Features for things that aren't like their neighbors"""
 
+from typing import Any
+
+import numpy.typing as npt
+
 from ..component import Component, register_component
-from ..location import Grid, Point
+from ..location import IntGrid, Point
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
@@ -34,18 +38,21 @@ class Single(FeatureExtractor[Point]):
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
-        assert isinstance(e.data, VisionData)
-        data = Grid(e.data.chars)
+        vd = e.data
+        assert isinstance(vd, VisionData)
+        # assert isinstance(vd.chars, npt.ArrayLike)
+        data = IntGrid(vd.chars)
 
         ## iterate points
-        for point in data.points():
+        for v, x, y in data:
+            point = Point(x, y, v)
             if is_unique_from_neighbors(data, point):
                 self.pb_conn.send(SingleFeature(self, point))
         self.settled()
         return None
 
 
-def is_unique_from_neighbors(data: Grid, point: Point) -> bool:
+def is_unique_from_neighbors(data: IntGrid, point: Point) -> bool:
     """Helper function to determine if a point in a matrix has the same value as
     any points around it.
 

@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Any, Generic, Self, TypeVar
 
 import numpy as np
+import numpy.typing as npt
 
 from .component import Component
 from .event import Event, EventBus
@@ -23,9 +24,9 @@ class VisionData:
 
     def __init__(
         self,
-        glyphs: np.ndarray[Any, Any],
-        chars: np.ndarray[Any, Any],
-        colors: np.ndarray[Any, Any],
+        glyphs: npt.NDArray[Any],
+        chars: npt.NDArray[Any],
+        colors: npt.NDArray[Any],
     ) -> None:
         self.glyphs = glyphs
         self.chars = chars
