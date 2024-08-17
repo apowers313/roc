@@ -31,3 +31,6 @@ prof/
 
 # jupyter
 experiments/.ipynb_checkpoints
+
+# ignore site files
+site/
