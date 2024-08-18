@@ -12,13 +12,13 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.single import Single
 from roc.graphdb import Node
-from roc.location import Grid
+from roc.location import IntGrid
 from roc.perception import VisionData
 
 
 class TestSaliencyMap:
     def test_exists(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -28,7 +28,7 @@ class TestSaliencyMap:
         SaliencyMap(g)
 
     def test_get(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -46,7 +46,7 @@ class TestSaliencyMap:
         assert len(val) == 0
 
     def test_add(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -67,7 +67,7 @@ class TestSaliencyMap:
         assert val[0] is n
 
     def test_add_multiple(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -91,7 +91,7 @@ class TestSaliencyMap:
         assert n2 in val
 
     def test_clear(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -114,7 +114,7 @@ class TestSaliencyMap:
         assert len(val) == 0
 
     def test_strength(self) -> None:
-        g = Grid(
+        g = IntGrid(
             [
                 [32, 32, 32],
                 [49, 50, 51],
@@ -188,9 +188,9 @@ class TestVisionAttention:
         s.input_conn.send(VisionData.from_dict(screens[0]))
         s.input_conn.send(VisionData.from_dict(screens[1]))
 
-        assert attention.saliency_map
+        assert attention.saliency_map is not None
         print("saliency features", attention.saliency_map.size)  # noqa: T201
-        print("vision:\n", Grid(screens[0]["chars"]))  # noqa: T201
+        print("vision:\n", IntGrid(screens[0]["chars"]))  # noqa: T201
         print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
         print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
         print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201

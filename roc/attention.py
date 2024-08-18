@@ -3,15 +3,17 @@ should received focus
 """
 
 from abc import ABC
+from typing import Any, Self
 
 import numpy as np
+import numpy.typing as npt
 from pydantic import BaseModel
 from skimage.feature import peak_local_max
 
 from .component import Component, register_component
 from .event import EventBus
 from .graphdb import Node
-from .location import DebugGrid, GenericGrid, Grid
+from .location import DebugGrid, IntGrid, NewGrid
 from .perception import (
     ElementPoint,
     Feature,
@@ -35,17 +37,31 @@ class Attention(Component, ABC):
     pass
 
 
-class SaliencyMap(GenericGrid[list[Node]]):
-    def __init__(self, grid: Grid) -> None:
+class SaliencyMap(NewGrid[list[Node]]):
+    grid: IntGrid
+
+    def __new__(cls, grid: IntGrid) -> Self:
         width = grid.width
         height = grid.height
-        self.grid = grid
-        map: list[list[list[Node]]] = [[list() for col in range(width)] for row in range(height)]
-        super().__init__(map)
+        # map: list[list[list[Node]]] = [[list() for col in range(width)] for row in range(height)]
+        # print("map", map)
+        # obj = np.array(map).reshape((height, width)).view(SaliencyMap)
+        obj = np.ndarray((height, width), dtype=object).view(cls)
+        for row, col in np.ndindex((height, width)):
+            obj[row, col] = list()
+        obj.grid = grid
+        return obj
+
+    def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
+        if obj is None:
+            return
+
+        # obj.grid = getattr(obj, "grid", None)
 
     def clear(self) -> None:
-        for val in self:
-            val.clear()
+        """Clears out all values from the SaliencyMap."""
+        for row, col in np.ndindex(self.shape):
+            self[row, col].clear()
 
     @property
     def size(self) -> int:
@@ -135,7 +151,7 @@ class VisionAttention(Attention):
         self.pb_conn = self.connect_bus(Perception.bus)
         self.pb_conn.listen(self.do_attention)
         self.att_conn = self.connect_bus(Attention.bus)
-        self.saliency_map = None
+        self.saliency_map: SaliencyMap | None = None
         self.settled: set[str] = set()
 
     # def get_all_feature_extractors(self) -> list[FeatureExtractor]:
@@ -154,8 +170,8 @@ class VisionAttention(Attention):
     def do_attention(self, e: PerceptionEvent) -> None:
         # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
-            grid = Grid(e.data.chars)
-            if not self.saliency_map:
+            grid = IntGrid(e.data.chars)
+            if self.saliency_map is None:
                 self.saliency_map = SaliencyMap(grid)
             else:
                 self.saliency_map.grid = grid
@@ -169,7 +185,7 @@ class VisionAttention(Attention):
             if len(unsettled) == 0:
                 # self.att_conn.send(Settled())
                 self.settled.clear()
-                assert self.saliency_map
+                assert self.saliency_map is not None
                 self.saliency_map.get_focus()
                 # print("done!")
                 # self.saliency_map.clear()
@@ -182,7 +198,7 @@ class VisionAttention(Attention):
 
         def try_add_loc(n: Node) -> None:
             if isinstance(n, ElementPoint):
-                assert self.saliency_map
+                assert self.saliency_map is not None
                 self.saliency_map.add_val(n.x, n.y, n)
 
         # create saliency map

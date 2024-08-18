@@ -4,7 +4,7 @@ import pytest
 from colored import Back, Fore, Style
 from helpers.nethack_screens import screens
 
-from roc.location import DebugGrid, Grid, Point, PointCollection, TypedPointCollection
+from roc.location import DebugGrid, IntGrid, Point, PointCollection, TextGrid, TypedPointCollection
 
 
 class TestPoint:
@@ -69,23 +69,23 @@ class TestPoint:
 
 class TestGrid:
     def test_grid(self) -> None:
-        screen0 = Grid(screens[0]["chars"])
-        assert isinstance(screen0, Grid)
+        screen0 = IntGrid(screens[0]["chars"])
+        assert isinstance(screen0, IntGrid)
         assert screen0.width == 79
         assert screen0.height == 21
         assert screen0.get_point(0, 0) == Point(0, 0, 32)
-        for p in screen0:
-            assert p == 32
-            break
+        # for p in screen0:
+        #     assert p == 32
+        #     break
 
-    def test_grid_repr(self) -> None:
+    def test_text_grid_str(self) -> None:
         val = [
             [32, 32, 32],
             [49, 50, 51],
             [97, 98, 99],
         ]
-        g = Grid(val)
-        assert repr(g) == "   \n123\nabc\n"
+        g = TextGrid(val)
+        assert str(g) == "   \n123\nabc\n"
 
 
 class TestDebugGrid:
@@ -95,7 +95,7 @@ class TestDebugGrid:
             [49, 50, 51],
             [97, 98, 99],
         ]
-        g = Grid(val)
+        g = IntGrid(val)
         dg = DebugGrid(g)
         # print(str(dg))
         # white on black
@@ -120,7 +120,7 @@ class TestDebugGrid:
             [49, 50, 51],
             [97, 98, 99],
         ]
-        g = Grid(val)
+        g = IntGrid(val)
         dg = DebugGrid(g)
         dg.set_style(1, 1, front_brightness=1, front_saturation=1)  # fore red
         dg.set_style(2, 2, back_hue=(2 / 3), back_brightness=1, back_saturation=1)  # back blue

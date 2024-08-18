@@ -10,6 +10,8 @@ from colored import Back, Fore, Style
 
 
 class Point:
+    """Represents a int value at a 2D location (x, y)"""
+
     def __init__(self, x: int, y: int, val: int) -> None:
         self.x = x
         self.y = y
@@ -28,6 +30,14 @@ class Point:
 
     @staticmethod
     def from_valloc(t: ValLocTuple[int]) -> Point:
+        """Converts a value / location tuple (x, y, value) to a Point.
+
+        Args:
+            t (ValLocTuple[int]): The tuple to convert
+
+        Returns:
+            Point: The new point that was created
+        """
         x, y, v = t
         return Point(x, y, v)
 
@@ -78,52 +88,14 @@ PointList = list[Point]
 
 
 class ChangedPoint(Point):
+    """Represents a value changing from `old_val` to `val` at a given (x, y) location."""
+
     def __init_(self, x: int, y: int, val: int, old_val: int) -> None:
         super().__init__(x, y, val)
         self.old_val = old_val
 
     def __repr__(self) -> str:
         return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"  # noqa: E501
-
-
-GridVal = TypeVar("GridVal")
-ValList = list[list[GridVal]]
-
-
-class GenericGrid(Generic[GridVal]):
-    """A rectangular array of points"""
-
-    def __init__(self, val_list: ValList[GridVal] | np.ndarray[Any, Any]) -> None:
-        if isinstance(val_list, np.ndarray):
-            val_list = val_list.tolist()
-        self.val_list = val_list
-
-    def __iter__(self) -> Iterator[GridVal]:
-        """Iterate over all the points in the grid"""
-        for y in range(self.height):
-            for x in range(self.width):
-                yield self.get_val(x, y)
-
-    def get_val(self, x: int, y: int) -> GridVal:
-        """Returns the value located at (x, y)"""
-        return self.val_list[y][x]
-
-    def set_val(self, x: int, y: int, val: GridVal) -> None:
-        self.val_list[y][x] = val
-
-    @property
-    def width(self) -> int:
-        return len(self.val_list[0])
-
-    @property
-    def height(self) -> int:
-        return len(self.val_list)
-
-    @staticmethod
-    def filled(val: int, width: int, height: int) -> Grid:
-        cols = [val for x in range(width)]
-        rows = [cols.copy() for x in range(height)]
-        return Grid(rows)
 
 
 # NDArrayInt = npt.NDArray[np.int_]
@@ -135,16 +107,14 @@ ValLocTuple = tuple[GridType, int, int]
 
 
 class NewGrid(npt.NDArray[Any], Generic[GridType]):
-    def __new__(cls, input_array: npt.ArrayLike, info: str | None = None) -> Self:
+    def __new__(cls, input_array: npt.ArrayLike) -> Self:
         obj = np.asarray(input_array).view(cls)
         assert obj.ndim == 2
-        obj.info = info
         return obj
 
-    def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
-        if obj is None:
-            return
-        self.info = getattr(obj, "info", None)
+    # def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
+    #     if obj is None:
+    #         return
 
     def __iter__(self) -> Iterator[ValLocTuple[GridType]]:
         for y, x in np.ndindex(self.shape):
@@ -172,8 +142,6 @@ class NewGrid(npt.NDArray[Any], Generic[GridType]):
     def height(self) -> int:
         return self.shape[0]
 
-    # filled
-
 
 class IntGrid(NewGrid[int]):
     def get_point(self, x: int, y: int) -> Point:
@@ -195,31 +163,21 @@ class TextGrid(IntGrid):
                 last_y = y
 
             ret += chr(v)
+
+        ret += "\n"
         return ret
-
-
-class Grid(GenericGrid[int]):
-    def get_point(self, x: int, y: int) -> Point:
-        """Returns the Point located at (x, y)"""
-        return Point(x, y, self.get_val(x, y))
-
-    def __repr__(self) -> str:
-        ret = ""
-        for line in self.val_list:
-            for ch in line:
-                ret += chr(ch)
-            ret += "\n"
-        return ret
-
-    def points(self) -> Iterator[Point]:
-        """Iterate over all the points in the grid"""
-        for y in range(self.height):
-            for x in range(self.width):
-                yield self.get_point(x, y)
 
 
 @dataclass
 class GridStyle:
+    """A stylized point on a text grid, where the text can be printed in any
+    foreground or background color or style. Colors can be set using hue,
+    saturation, and brightness (HSV) so that independent variables can control
+    what color, how saturated the color is, and how bright the color is. This
+    gives at least six debugging degrees of freedom for each point in the grid
+    (in addition to value and style).
+    """
+
     front_hue: float
     front_saturation: float
     front_brightness: float
@@ -230,32 +188,58 @@ class GridStyle:
     val: str
 
 
-class DebugGrid(GenericGrid[GridStyle]):
-    def __init__(self, grid: Grid) -> None:
-        width = grid.width
-        height = grid.height
-        map: list[list[GridStyle]] = [
+class DebugGrid(NewGrid[GridStyle]):
+    def __new__(cls, grid: IntGrid) -> DebugGrid:
+        # obj = np.ndarray((grid.height, grid.width), dtype=object).view(DebugGrid)
+        obj = np.array(
             [
-                GridStyle(
-                    front_hue=0,
-                    front_saturation=0,
-                    front_brightness=1,
-                    back_hue=0,
-                    back_saturation=1,
-                    back_brightness=0,
-                    val=" ",
-                    style="none",
-                )
-                for col in range(width)
+                [
+                    GridStyle(
+                        front_hue=0,
+                        front_saturation=0,
+                        front_brightness=1,
+                        back_hue=0,
+                        back_saturation=1,
+                        back_brightness=0,
+                        val=chr(grid[row, col]),
+                        style="none",
+                    )
+                    for col in range(grid.width)
+                ]
+                for row in range(grid.height)
             ]
-            for row in range(height)
-        ]
-        super().__init__(map)
+        ).view(DebugGrid)
+        return obj
 
-        # copy over all the values from the grid
-        for p in grid.points():
-            s = self.get_val(p.x, p.y)
-            s.val = chr(p.val)
+    def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
+        if obj is None:
+            return
+
+    # def __init__(self, grid: NewGrid[Any]) -> None:
+    #     width = grid.width
+    #     height = grid.height
+    #     map: list[list[GridStyle]] = [
+    #         [
+    #             GridStyle(
+    #                 front_hue=0,
+    #                 front_saturation=0,
+    #                 front_brightness=1,
+    #                 back_hue=0,
+    #                 back_saturation=1,
+    #                 back_brightness=0,
+    #                 val=" ",
+    #                 style="none",
+    #             )
+    #             for col in range(width)
+    #         ]
+    #         for row in range(height)
+    #     ]
+    #     super().__init__(map)
+
+    #     # copy over all the values from the grid
+    #     for p in grid.points():
+    #         s = self.get_val(p.x, p.y)
+    #         s.val = chr(p.val)
 
     def set_style(self, x: int, y: int, *, style: str | None = None, **kwargs: float) -> None:
         s = self.get_val(x, y)
@@ -312,6 +296,17 @@ class DebugGrid(GenericGrid[GridStyle]):
 
     @classmethod
     def blue_to_red_hue(cls, val: float) -> float:
+        """Converts a floating point value to a point in a red-to-blue gradient,
+        where high values are red and lower values are blue. Good for
+        representing values in a range as a heat map for easy visualization of
+        higher values.
+
+        Args:
+            val (float): The value to convert.
+
+        Returns:
+            float: The hue in the red-to-blue gradient.
+        """
         # blue = 2/3
         # blue to red spectrum = 2/3 through 3/3
         # return value is a portion of the blue-to-red spectrum
@@ -319,6 +314,16 @@ class DebugGrid(GenericGrid[GridStyle]):
 
     @classmethod
     def five_color_hue(cls, val: float) -> float:
+        """Converts a value to a hue along a red-orange-yellow-green-blue
+        spectrum. Higher values are red, lower values are blue. Good for
+        visually differentiating a range of values.
+
+        Args:
+            val (float): The value to convert.
+
+        Returns:
+            float: The hue in the red-orange-yellow-green-blue gradient.
+        """
         # red = 0
         # blue = 2/3
         # red to blue spectrum = 0 through 2/3

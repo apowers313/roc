@@ -16,7 +16,6 @@ import numpy.typing as npt
 from .component import Component
 from .event import Event, EventBus
 from .graphdb import Node
-from .location import Grid
 
 
 class VisionData:
