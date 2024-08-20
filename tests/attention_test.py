@@ -189,6 +189,7 @@ class TestVisionAttention:
         s.input_conn.send(VisionData.from_dict(screens[1]))
 
         assert attention.saliency_map is not None
+        assert attention.saliency_map.grid is not None
         print("saliency features", attention.saliency_map.size)  # noqa: T201
         print("vision:\n", IntGrid(screens[0]["chars"]))  # noqa: T201
         print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201

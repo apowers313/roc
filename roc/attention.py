@@ -11,9 +11,11 @@ from pydantic import BaseModel
 from skimage.feature import peak_local_max
 
 from .component import Component, register_component
+from .config import Config
 from .event import EventBus
 from .graphdb import Node
-from .location import DebugGrid, IntGrid, NewGrid
+from .location import DebugGrid, IntGrid, NewGrid, Point
+from .logger import logger
 from .perception import (
     ElementPoint,
     Feature,
@@ -27,6 +29,7 @@ from .perception import (
 
 class VisionAttentionData(BaseModel):
     foo: str
+    # focus_points: list[Point]
 
 
 AttentionData = VisionAttentionData
@@ -38,25 +41,23 @@ class Attention(Component, ABC):
 
 
 class SaliencyMap(NewGrid[list[Node]]):
-    grid: IntGrid
+    grid: IntGrid | None
 
-    def __new__(cls, grid: IntGrid) -> Self:
-        width = grid.width
-        height = grid.height
-        # map: list[list[list[Node]]] = [[list() for col in range(width)] for row in range(height)]
-        # print("map", map)
-        # obj = np.array(map).reshape((height, width)).view(SaliencyMap)
-        obj = np.ndarray((height, width), dtype=object).view(cls)
-        for row, col in np.ndindex((height, width)):
+    def __new__(cls, grid: IntGrid | None = None) -> Self:
+        settings = Config.get()
+        my_shape = grid.shape if grid is not None else settings.observation_shape
+        assert my_shape is not None
+        obj = np.ndarray(my_shape, dtype=object).view(cls)
+        for row, col in np.ndindex(my_shape):
             obj[row, col] = list()
         obj.grid = grid
+
         return obj
 
     def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
         if obj is None:
             return
-
-        # obj.grid = getattr(obj, "grid", None)
+        self.grid = getattr(obj, "grid", None)
 
     def clear(self) -> None:
         """Clears out all values from the SaliencyMap."""
@@ -119,20 +120,17 @@ class SaliencyMap(NewGrid[list[Node]]):
         )
 
         m = np.median(fkimg)
-        # print("fkimg", fkimg[15:18, 4:7])
         coordinates = peak_local_max(fkimg, min_distance=5, threshold_rel=m)
-        # print("coordinates", coordinates)
 
+        assert self.grid is not None
         for loc in coordinates:
-            # print("loc", loc)
             x = loc[0]
             y = loc[1]
             p = self.grid.get_point(x, y)
             print("p", p)  # noqa: T201
 
-        # return []
-
     def __str__(self) -> str:
+        assert self.grid is not None
         dg = DebugGrid(self.grid)
         max_str = self.get_max_strength()
         for p in self.grid.points():
@@ -142,39 +140,30 @@ class SaliencyMap(NewGrid[list[Node]]):
         return str(dg)
 
 
-@register_component("vision", "attention")
+@register_component("vision", "attention", auto=True)
 class VisionAttention(Attention):
-    saliency_map: SaliencyMap | None
+    saliency_map: SaliencyMap
 
     def __init__(self) -> None:
         super().__init__()
         self.pb_conn = self.connect_bus(Perception.bus)
         self.pb_conn.listen(self.do_attention)
         self.att_conn = self.connect_bus(Attention.bus)
-        self.saliency_map: SaliencyMap | None = None
+        self.saliency_map = SaliencyMap()
         self.settled: set[str] = set()
 
-    # def get_all_feature_extractors(self) -> list[FeatureExtractor]:
-    #     self.pb_conn.attached_bus
-
     def event_filter(self, e: PerceptionEvent) -> bool:
-        # print("attention.event_filter", e)
         allow = (
             isinstance(e.data, Feature)
             or isinstance(e.data, Settled)
             or isinstance(e.data, VisionData)
         )
-        # print("attention.event_filter passing:", allow)
         return allow
 
     def do_attention(self, e: PerceptionEvent) -> None:
         # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
-            grid = IntGrid(e.data.chars)
-            if self.saliency_map is None:
-                self.saliency_map = SaliencyMap(grid)
-            else:
-                self.saliency_map.grid = grid
+            self.saliency_map.grid = IntGrid(e.data.chars)
             return
 
         # check to see if all feature extractors have settled
@@ -187,6 +176,9 @@ class VisionAttention(Attention):
                 self.settled.clear()
                 assert self.saliency_map is not None
                 self.saliency_map.get_focus()
+                from .jupyter.state import states
+
+                states.salency.set(self.saliency_map.copy())
                 # print("done!")
                 # self.saliency_map.clear()
 
