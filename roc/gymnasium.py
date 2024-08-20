@@ -18,6 +18,7 @@ from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
 from .jupyter.state import states
+from .location import TextGrid
 from .logger import logger
 from .perception import Perception, VisionData
 
@@ -49,6 +50,9 @@ class Gym(Component, ABC):
         # config actions
         self.action_count = self.env.action_space.n
         self.config_actions(self.action_count)
+        settings = Config.get()
+        settings.action_count = self.action_count
+        settings.observation_shape = self.env.observation_space["glyphs"].shape
 
         # TODO: config environment
         # setup which features detectors to use on each bus
@@ -231,7 +235,9 @@ class NethackGym(Gym):
         self.send_intrinsics(obs)
 
     def send_vision(self, obs: Any) -> None:
-        self.env_bus_conn.send(VisionData.from_dict(obs))
+        vd = VisionData.from_dict(obs)
+        self.env_bus_conn.send(vd)
+        states.screen.set(TextGrid(vd.chars))
 
     def send_auditory(self) -> None:
         pass
