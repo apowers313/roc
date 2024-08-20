@@ -17,8 +17,8 @@ class TestDistance:
     def test_basic(self, empty_components) -> None:
         c = Component.get("distance", "perception")
         assert isinstance(c, Distance)
-        s = Component.get("single", "perception")
-        assert isinstance(s, Single)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
@@ -55,8 +55,8 @@ class TestDistance:
     def test_multi(self, empty_components) -> None:
         c = Component.get("distance", "perception")
         assert isinstance(c, Distance)
-        s = Component.get("single", "perception")
-        assert isinstance(s, Single)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
@@ -109,8 +109,8 @@ class TestDistance:
     def test_screen0(self, empty_components) -> None:
         c = Component.get("distance", "perception")
         assert isinstance(c, Distance)
-        s = Component.get("single", "perception")
-        assert isinstance(s, Single)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
