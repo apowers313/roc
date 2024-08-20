@@ -94,7 +94,8 @@ class Component(ABC):
         """
         settings = Config.get()
         component_list = default_components
-        component_list = component_list.union(settings.perception_components)
+        logger.debug("perception components from settings", settings.perception_components)
+        component_list = component_list.union(settings.perception_components, default_components)
         logger.debug(f"Component.init: default components: {component_list}")
 
         # TODO: shutdown previously loaded components
@@ -142,6 +143,16 @@ class Component(ABC):
         return len(component_set)
 
     @staticmethod
+    def get_loaded_components() -> list[str]:
+        """Returns the names and types of all initiated components.
+
+        Returns:
+            list[str]: A list of the names and types of components, as strings.
+        """
+        global loaded_components
+        return [s for s in loaded_components.keys()]
+
+    @staticmethod
     def deregister(name: str, type: str) -> None:
         """Removes a component from the Component registry. Primarlly used for testing.
 
@@ -179,12 +190,14 @@ def _component_registry_key(name: str, type: str) -> str:
 
 
 class register_component:
+    """A decorator to register a new component."""
+
     def __init__(self, name: str, type: str, *, auto: bool = False) -> None:
         self.name = name
         self.type = type
         self.auto = auto
 
-    def __call__(self, cls: type[Component]) -> type[Component]:
+    def __call__(self, cls: type[Component]) -> type[Component]:  # noqa: D102
         global register_component
         global component_registry
 
