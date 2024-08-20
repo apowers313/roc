@@ -8,6 +8,11 @@ from typing import Generic, TypeVar, cast
 import click
 import psutil
 
+from roc.attention import SaliencyMap
+from roc.component import Component
+from roc.graphdb import Edge, Node
+from roc.location import IntGrid, TextGrid
+
 from .utils import bytes2human
 
 StateType = TypeVar("StateType")
@@ -133,6 +138,76 @@ class LoopState(State[int]):
         self.val = self.get() + 1
 
 
+class NodeCacheState(State[float]):
+    def __init__(self) -> None:
+        super().__init__("node-cache", display_name="Node Cache")
+        self.val = 0
+
+    def get(self) -> float:
+        c = Node.get_cache()
+        return c.currsize / c.maxsize
+
+    def __str__(self) -> str:
+        c = Node.get_cache()
+        return f"Node Cache: {c.currsize} / {c.maxsize} ({self.get():1.1f}%)"
+
+
+class EdgeCacheState(State[float]):
+    def __init__(self) -> None:
+        super().__init__("edge-cache", display_name="Edge Cache")
+        self.val = 0
+
+    def get(self) -> float:
+        c = Edge.get_cache()
+        return c.currsize / c.maxsize
+
+    def __str__(self) -> str:
+        c = Edge.get_cache()
+        return f"Edge Cache: {c.currsize} / {c.maxsize} ({self.get():1.1f}%)"
+
+
+class CurrentScreenState(State[TextGrid]):
+    def __init__(self) -> None:
+        super().__init__("curr-screen", display_name="Current Screen")
+
+    def set(self, grid: TextGrid) -> None:
+        self.val = grid
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Screen:\n{str(self.val)}"
+        else:
+            return "Current Screen: None"
+
+
+class CurrentSaliencyMapState(State[SaliencyMap]):
+    def __init__(self) -> None:
+        super().__init__("curr-saliency", display_name="Current Saliency Map")
+
+    def set(self, sal: SaliencyMap) -> None:
+        self.val = sal
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Saliency Map:\n{str(self.val)}"
+        else:
+            return "Current Saliency Map: None"
+
+
+class ComponentsState(State[list[str]]):
+    def __init__(self) -> None:
+        super().__init__("components", display_name="Components")
+        self.val = []
+
+    def get(self) -> list[str]:
+        self.val = Component.get_loaded_components()
+        return self.val
+
+    def __str__(self) -> str:
+        component_str = "\t" + "\n\t".join(self.get())
+        return f"{Component.get_component_count()} components loaded:\n{component_str}"
+
+
 @dataclass
 class StateList:
     memory: ProcessMemoryState = ProcessMemoryState()
@@ -140,22 +215,51 @@ class StateList:
     loop: LoopState = LoopState()
     cpuload: CpuLoadState = CpuLoadState()
     diskio: DiskIoState = DiskIoState()
-    # node cache size / hits / misses
-    # edge cache size / hits / misses
-    # current screen
-    # current saliency map
+    node_cache: NodeCacheState = NodeCacheState()
+    edge_cache: EdgeCacheState = EdgeCacheState()
+    screen: CurrentScreenState = CurrentScreenState()
+    salency: CurrentSaliencyMapState = CurrentSaliencyMapState()
+    components: ComponentsState = ComponentsState()
 
 
 states = StateList()
+all_states = [field.name for field in dataclasses.fields(StateList)]
 
 
 @click.command()
 @click.argument(
     "var",
-    type=click.Choice(
-        [field.name for field in dataclasses.fields(StateList)], case_sensitive=False
-    ),
+    nargs=-1,
+    type=click.Choice(all_states, case_sensitive=False),
 )
 def state_cli(var: list[str]) -> None:
+    if var is None or len(var) < 1:
+        # if no state is specified, print a selection of the most interesting states
+        def header(s: str) -> None:
+            print(f"\n=== {s.upper()} ===")  # noqa: T201
+
+        header("System Health")
+        print(states.cpuload)  # noqa: T201
+        print(states.diskio)  # noqa: T201
+        print(states.memory)  # noqa: T201
+        print(states.sysmem)  # noqa: T201
+
+        header("Environment")
+        print(states.loop)  # noqa: T201
+        print(states.screen)  # noqa: T201
+        # TODO: blstats
+
+        header("Graph DB")
+        print(states.node_cache)  # noqa: T201
+        print(states.edge_cache)  # noqa: T201
+
+        header("Agent")
+        print(states.components)  # noqa: T201
+        print(states.salency)  # noqa: T201
+
+        return
+
     for v in var:
+        s = getattr(states, v)
+        print(str(s))  # noqa: T201
         pass
