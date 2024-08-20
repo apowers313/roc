@@ -50,6 +50,9 @@ def eb_reset() -> None:
 def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
+    settings = Config.get()
+    settings.observation_shape = (21, 79)
+    settings.action_count = 23
     logger_init()
 
     yield

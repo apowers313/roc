@@ -58,7 +58,17 @@ class Config(BaseSettings):
     log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
     default_action: str = Field(default="pass")
-    perception_components: list[str] = Field(default=["delta:perception"])
+    action_count: int | None = None  # configured by the gymnasium
+    observation_shape: tuple[int, ...] | None = None  # configured by the gymnasium
+    perception_components: list[str] = Field(
+        default=[
+            "delta:perception",
+            "distance:perception",
+            "flood:perception",
+            "motion:perception",
+            "single:perception",
+        ]
+    )
     enable_gym_dump_env: bool = Field(default=False)
     max_dump_frames: int = Field(default=10)
 
