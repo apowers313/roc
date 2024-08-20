@@ -404,6 +404,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#config.Config.action_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      action_count
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#config.Config.db_conn_encrypted" class="md-nav__link">
     <span class="md-ellipsis">
       db_conn_encrypted
@@ -533,6 +542,15 @@
   <a href="#config.Config.node_cache_size" class="md-nav__link">
     <span class="md-ellipsis">
       node_cache_size
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config.Config.observation_shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      observation_shape
     </span>
   </a>
   
@@ -1184,6 +1202,15 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#config.Config.action_count" class="md-nav__link">
+    <span class="md-ellipsis">
+      action_count
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#config.Config.db_conn_encrypted" class="md-nav__link">
     <span class="md-ellipsis">
       db_conn_encrypted
@@ -1313,6 +1340,15 @@
   <a href="#config.Config.node_cache_size" class="md-nav__link">
     <span class="md-ellipsis">
       node_cache_size
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#config.Config.observation_shape" class="md-nav__link">
+    <span class="md-ellipsis">
+      observation_shape
     </span>
   </a>
   
@@ -1505,7 +1541,17 @@
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic settings model for configuration of the agent.&quot;&quot;&quot;</span>
 
     <span class="k">global</span> <span class="n">config_settings</span>
@@ -1527,7 +1573,17 @@
     <span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;INFO&quot;</span><span class="p">)</span>
     <span class="n">log_modules</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
     <span class="n">default_action</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s2">&quot;pass&quot;</span><span class="p">)</span>
-    <span class="n">perception_components</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;delta:perception&quot;</span><span class="p">])</span>
+    <span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># configured by the gymnasium</span>
+    <span class="n">observation_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># configured by the gymnasium</span>
+    <span class="n">perception_components</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
+        <span class="n">default</span><span class="o">=</span><span class="p">[</span>
+            <span class="s2">&quot;delta:perception&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;distance:perception&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;flood:perception&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;motion:perception&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;single:perception&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
     <span class="n">enable_gym_dump_env</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">max_dump_frames</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 
@@ -1579,6 +1635,26 @@
 
 
 
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h3 id="config.Config.action_count" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">action_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
 
 <div class="doc doc-object doc-attribute">
 
@@ -1884,8 +1960,28 @@
 
 
 
+<h3 id="config.Config.observation_shape" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">observation_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
+      <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-attribute">
+
+
+
 <h3 id="config.Config.perception_components" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">perception_components</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;delta:perception&#39;</span><span class="p">])</span></code>
+            <code class="highlight language-python"><span class="n">perception_components</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;delta:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;distance:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;flood:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;motion:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;single:perception&#39;</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -1919,17 +2015,17 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">65</span>
-<span class="normal">66</span>
-<span class="normal">67</span>
-<span class="normal">68</span>
-<span class="normal">69</span>
-<span class="normal">70</span>
-<span class="normal">71</span>
-<span class="normal">72</span>
-<span class="normal">73</span>
-<span class="normal">74</span>
-<span class="normal">75</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
     <span class="k">global</span> <span class="n">_config_singleton</span>
     <span class="k">if</span> <span class="n">_config_singleton</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -1965,25 +2061,25 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">77</span>
-<span class="normal">78</span>
-<span class="normal">79</span>
-<span class="normal">80</span>
-<span class="normal">81</span>
-<span class="normal">82</span>
-<span class="normal">83</span>
-<span class="normal">84</span>
-<span class="normal">85</span>
-<span class="normal">86</span>
-<span class="normal">87</span>
-<span class="normal">88</span>
-<span class="normal">89</span>
-<span class="normal">90</span>
-<span class="normal">91</span>
-<span class="normal">92</span>
-<span class="normal">93</span>
-<span class="normal">94</span>
-<span class="normal">95</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">init</span><span class="p">(</span>
     <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -2025,10 +2121,10 @@
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 97</span>
-<span class="normal"> 98</span>
-<span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
 <span class="k">def</span> <span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">global</span> <span class="n">_config_singleton</span>
     <span class="n">_config_singleton</span> <span class="o">=</span> <span class="kc">None</span>
