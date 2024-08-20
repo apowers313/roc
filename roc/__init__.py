@@ -31,25 +31,31 @@ __all__ = [
 ]
 
 
+ng: NethackGym | None = None
+
+
 def init(config: dict[str, Any] | None = None) -> None:
     """Initializes the agent before starting the agent."""
     Config.init(config)
     roc_logger.init()
+    global ng
+    ng = NethackGym()
     Component.init()
-    # Gym.init()
     RocJupyterMagics.init()
 
 
 def start() -> None:
     """Starts the agent."""
-    g = NethackGym()
+    global ng
+    if ng is None:
+        raise Exception("Call .init() before .start()")
 
     if is_jupyter():
         # if running in Jupyter, start in a thread so that we can still inspect
         # or debug from the iPython shell
         roc_logger.logger.debug("Starting ROC: running in thread")
-        t = Thread(target=g.start)
+        t = Thread(target=ng.start)
         t.start()
     else:
         roc_logger.logger.debug("Starting ROC: NOT running in thread")
-        g.start()
+        ng.start()
