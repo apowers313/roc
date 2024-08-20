@@ -109,7 +109,6 @@ class TestSingle:
         assert isinstance(e, Event)
         assert isinstance(e.data, SingleFeature)
         check_type(e.data, ord("|"))
-        print("e.data", e.data)
         check_points(e.data, {(15, 4)})
 
         # event 2
