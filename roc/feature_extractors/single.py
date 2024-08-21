@@ -38,6 +38,14 @@ class Single(FeatureExtractor[Point]):
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
+        """Emits the shape features.
+
+        Args:
+            e (PerceptionEvent): The VisionData
+
+        Returns:
+            Feature | None: None
+        """
         vd = e.data
         assert isinstance(vd, VisionData)
         # assert isinstance(vd.chars, npt.ArrayLike)
