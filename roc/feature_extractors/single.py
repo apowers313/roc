@@ -10,7 +10,7 @@ from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
 
 
 class SingleFeature(Feature):
-    """A collection of points representing similar values that are all adjacent to each other"""
+    """A single isolated feature with no similar features around it."""
 
     def __init__(self, origin: Component, point: Point) -> None:
         super().__init__(origin, "Single")
