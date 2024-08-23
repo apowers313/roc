@@ -1,6 +1,9 @@
 # mypy: disable-error-code="no-untyped-def"
 
 
+from copy import deepcopy
+
+import numpy as np
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
@@ -140,6 +143,23 @@ class TestSaliencyMap:
 
         assert sm.get_max_strength() == 3
         assert sm.get_max_strength() == 3
+
+    def test_copy(self) -> None:
+        g = IntGrid(
+            [
+                [32, 32, 32],
+                [49, 50, 51],
+                [97, 98, 99],
+            ]
+        )
+        sm1 = SaliencyMap(g)
+        sm2 = deepcopy(sm1)
+
+        assert id(sm1) != id(sm2)
+        # assert id(sm1.grid) != id(sm2.grid)
+        arr1 = np.array([1, 2, 3])
+        arr2 = deepcopy(arr1)
+        assert id(arr1) != id(arr2)
 
     # def test_str(self) -> None:
     #     g = Grid(

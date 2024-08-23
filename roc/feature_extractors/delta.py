@@ -27,7 +27,7 @@ class Diff(Transmogrifier):
     new_val: int
 
     def __str__(self) -> str:
-        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.new_val} '{chr(self.new_val)}'\n"
+        return f"({self.x}, {self.y}): {self.old_val} -> {self.new_val}\n"
 
     def add_to_feature(self, n: Feature) -> None:
         """Adds a set of Diff nodes to a Feature"""
@@ -70,7 +70,7 @@ class Delta(FeatureExtractor[DeltaFeature]):
         assert isinstance(data, VisionData)
 
         prev = self.prev_viz
-        self.prev_viz = curr = IntGrid(data.chars)  # TODO: glyphs
+        self.prev_viz = curr = IntGrid(data.glyphs)
 
         if prev is None:
             # can't get difference when there was nothing before this

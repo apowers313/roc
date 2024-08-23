@@ -7,7 +7,7 @@ import pytest
 from roc.component import Component
 from roc.event import BusConnection, Event, EventBus, EventFilter
 from roc.graphdb import Node
-from roc.perception import ElementPoint, ElementSize, ElementType
+from roc.perception import Direction, ElementOrientation, ElementPoint, ElementSize, ElementType
 
 
 def normalize_whitespace(s: str) -> str:
@@ -112,7 +112,17 @@ def check_type(n: object, t: int) -> None:
     assert n.src_edges.count("Type") == 1
     type_node = n.src_edges.get_edges("Type")[0].dst
     assert isinstance(type_node, ElementType)
+    # print("type", type_node.type)
     assert type_node.type == t
+
+
+def check_orientation(n: object, orientation: Direction) -> None:
+    assert isinstance(n, Node)
+    assert n.src_edges.count("Direction") == 1
+    type_node = n.src_edges.get_edges("Direction")[0].dst
+    assert isinstance(type_node, ElementOrientation)
+    # print("orientation", type_node.type)
+    assert type_node.orientation == orientation
 
 
 def check_points(n: object, points: set[tuple[int, int]]) -> None:
@@ -123,6 +133,7 @@ def check_points(n: object, points: set[tuple[int, int]]) -> None:
         p = pn.dst
         assert isinstance(p, ElementPoint)
         pt = (p.x, p.y)
+        # print(f"{pt in points}: got {pt}, expected {points}")
         assert pt in points
 
 

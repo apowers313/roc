@@ -119,70 +119,127 @@ class TestDistance:
 
         s.input_conn.send(VisionData.from_dict(screens[0]))
 
-        assert s.output.call_count == 29
+        assert s.output.call_count == 79
 
-        ##### single point (15, 4): 124 '|'
-        ##### single point (19, 4): 124 '|'
-        # distance (19, 4) (15, 4) 4
-        ##### single point (16, 5): 91 '['
-        # distance (16, 5) (15, 4) 1
-        # distance (16, 5) (19, 4) 3
-        ##### single point (17, 5): 64 '@'
-        # distance (17, 5) (15, 4) 2
-        # distance (17, 5) (19, 4) 2
-        # distance (17, 5) (16, 5) 1
-        ##### single point (18, 5): 120 'x'
-        # distance (18, 5) (15, 4) 3
-        # distance (18, 5) (19, 4) 1
-        # distance (18, 5) (16, 5) 2
-        # distance (18, 5) (17, 5) 1
-        ##### single point (19, 5): 43 '+'
-        # distance (19, 5) (15, 4) 4
-        # distance (19, 5) (19, 4) 1
-        # distance (19, 5) (16, 5) 3
-        # distance (19, 5) (17, 5) 2
-        # distance (19, 5) (18, 5) 1
-        ##### single point (16, 6): 102 'f'
-        # distance (16, 6) (15, 4) 2
-        # distance (16, 6) (19, 4) 3
-        # distance (16, 6) (16, 5) 1
-        # distance (16, 6) (17, 5) 1
-        # distance (16, 6) (18, 5) 2
-        # distance (16, 6) (19, 5) 3
-        ##### single point (19, 8): 45 '-'
-        # distance (19, 8) (15, 4) 4
-        # distance (19, 8) (19, 4) 4
-        # distance (19, 8) (16, 5) 3
-        # distance (19, 8) (17, 5) 3
-        # distance (19, 8) (18, 5) 3
-        # distance (19, 8) (19, 5) 3
-        # distance (19, 8) (16, 6) 3
+        ### single point: (15, 3)
+        ### single point: (19, 3)
+        # distance: (15, 3) (19, 3) 4
+        ### single point: (15, 4)
+        # distance: (15, 3) (15, 4) 1
+        # distance: (19, 3) (15, 4) 4
+        ### single point: (19, 4)
+        # distance: (15, 3) (19, 4) 4
+        # distance: (19, 3) (19, 4) 1
+        # distance: (15, 4) (19, 4) 4
+        ### single point: (15, 5)
+        # distance: (15, 3) (15, 5) 2
+        # distance: (19, 3) (15, 5) 4
+        # distance: (15, 4) (15, 5) 1
+        # distance: (19, 4) (15, 5) 4
+        ### single point: (16, 5)
+        # distance: (15, 3) (16, 5) 2
+        # distance: (19, 3) (16, 5) 3
+        # distance: (15, 4) (16, 5) 1
+        # distance: (19, 4) (16, 5) 3
+        # distance: (15, 5) (16, 5) 1
+        ### single point: (17, 5)
+        # distance: (15, 3) (17, 5) 2
+        # distance: (19, 3) (17, 5) 2
+        # distance: (15, 4) (17, 5) 2
+        # distance: (19, 4) (17, 5) 2
+        # distance: (15, 5) (17, 5) 2
+        # distance: (16, 5) (17, 5) 1
+        ### single point: (18, 5)
+        # distance: (15, 3) (18, 5) 3
+        # distance: (19, 3) (18, 5) 2
+        # distance: (15, 4) (18, 5) 3
+        # distance: (19, 4) (18, 5) 1
+        # distance: (15, 5) (18, 5) 3
+        # distance: (16, 5) (18, 5) 2
+        # distance: (17, 5) (18, 5) 1
+        ### single point: (19, 5)
+        # distance: (15, 3) (19, 5) 4
+        # distance: (19, 3) (19, 5) 2
+        # distance: (15, 4) (19, 5) 4
+        # distance: (19, 4) (19, 5) 1
+        # distance: (15, 5) (19, 5) 4
+        # distance: (16, 5) (19, 5) 3
+        # distance: (17, 5) (19, 5) 2
+        # distance: (18, 5) (19, 5) 1
+        ### single point: (16, 6)
+        # distance: (15, 3) (16, 6) 3
+        # distance: (19, 3) (16, 6) 3
+        # distance: (15, 4) (16, 6) 2
+        # distance: (19, 4) (16, 6) 3
+        # distance: (15, 5) (16, 6) 1
+        # distance: (16, 5) (16, 6) 1
+        # distance: (17, 5) (16, 6) 1
+        # distance: (18, 5) (16, 6) 2
+        # distance: (19, 5) (16, 6) 3
+        ### single point: (15, 8)
+        # distance: (15, 3) (15, 8) 5
+        # distance: (19, 3) (15, 8) 5
+        # distance: (15, 4) (15, 8) 4
+        # distance: (19, 4) (15, 8) 4
+        # distance: (15, 5) (15, 8) 3
+        # distance: (16, 5) (15, 8) 3
+        # distance: (17, 5) (15, 8) 3
+        # distance: (18, 5) (15, 8) 3
+        # distance: (19, 5) (15, 8) 4
+        # distance: (16, 6) (15, 8) 2
+        ### single point: (18, 8)
+        # distance: (15, 3) (18, 8) 5
+        # distance: (19, 3) (18, 8) 5
+        # distance: (15, 4) (18, 8) 4
+        # distance: (19, 4) (18, 8) 4
+        # distance: (15, 5) (18, 8) 3
+        # distance: (16, 5) (18, 8) 3
+        # distance: (17, 5) (18, 8) 3
+        # distance: (18, 5) (18, 8) 3
+        # distance: (19, 5) (18, 8) 3
+        # distance: (16, 6) (18, 8) 2
+        # distance: (15, 8) (18, 8) 3
+        ### single point: (19, 8)
+        # distance: (15, 3) (19, 8) 5
+        # distance: (19, 3) (19, 8) 5
+        # distance: (15, 4) (19, 8) 4
+        # distance: (19, 4) (19, 8) 4
+        # distance: (15, 5) (19, 8) 4
+        # distance: (16, 5) (19, 8) 3
+        # distance: (17, 5) (19, 8) 3
+        # distance: (18, 5) (19, 8) 3
+        # distance: (19, 5) (19, 8) 3
+        # distance: (16, 6) (19, 8) 3
+        # distance: (15, 8) (19, 8) 4
+        # distance: (18, 8) (19, 8) 1
 
-        # # event 1
-        # e = s.output.call_args_list[0].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, DistanceFeature)
-        # check_num_src_edges(e.data, 3)
-        # check_size(e.data, 3)
-        # check_points(e.data, {(0, 0), (3, 3)})
+        # event 1
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, DistanceFeature)
+        check_num_src_edges(e.data, 3)
+        check_size(e.data, 4)
+        check_points(e.data, {(15, 3), (19, 3)})
 
         # # event 2
-        # e = s.output.call_args_list[1].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, DistanceFeature)
-        # check_num_src_edges(e.data, 3)
-        # check_size(e.data, 4)
-        # check_points(e.data, {(0, 0), (1, 4)})
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, DistanceFeature)
+        check_num_src_edges(e.data, 3)
+        check_size(e.data, 1)
+        check_points(e.data, {(15, 3), (15, 4)})
 
-        # # event 3
-        # e = s.output.call_args_list[2].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, DistanceFeature)
-        # check_num_src_edges(e.data, 3)
-        # check_size(e.data, 2)
-        # check_points(e.data, {(3, 3), (1, 4)})
+        # [...]
 
-        # event 4
-        e = s.output.call_args_list[28].args[0]
+        # event 78
+        e = s.output.call_args_list[77].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, DistanceFeature)
+        check_num_src_edges(e.data, 3)
+        check_size(e.data, 1)
+        check_points(e.data, {(18, 8), (19, 8)})
+
+        # event 79
+        e = s.output.call_args_list[78].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)

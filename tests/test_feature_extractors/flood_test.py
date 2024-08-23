@@ -300,42 +300,30 @@ class TestFlood:
 
         s.input_conn.send(VisionData.from_dict(screens[0]))
 
-        # assert s.output.call_count == 4
+        assert s.output.call_count == 3
 
-        # event 1
+        # # event 1
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         check_num_src_edges(e.data, 1631)
         check_size(e.data, 1629)
-        check_type(e.data, 32)
+        check_type(e.data, 2359)  # ' '
 
-        # event 2
+        # # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         check_num_src_edges(e.data, 7)
         check_size(e.data, 5)
-        check_type(e.data, ord("-"))
-        check_points(
-            e.data,
-            {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)},
-        )
-
-        # event 3
-        e = s.output.call_args_list[2].args[0]
-        assert isinstance(e, Event)
-        assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, ord("."))
+        check_type(e.data, 2378)  # .
         check_points(
             e.data,
             {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
         )
 
-        # event 4
-        e = s.output.call_args_list[3].args[0]
+        # event 3
+        e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)
 
@@ -352,7 +340,7 @@ class TestFlood:
         s.input_conn.send(VisionData.from_dict(screens[0]))
         s.input_conn.send(VisionData.from_dict(screens[1]))
 
-        assert s.output.call_count == 8
+        assert s.output.call_count == 5
 
         # event 1
         e = s.output.call_args_list[0].args[0]
@@ -360,7 +348,7 @@ class TestFlood:
         assert isinstance(e.data, FloodFeature)
         check_num_src_edges(e.data, 1631)
         check_size(e.data, 1629)
-        check_type(e.data, 32)
+        check_type(e.data, 2359)  # ' '
 
         # event 2
         e = s.output.call_args_list[1].args[0]
@@ -368,25 +356,13 @@ class TestFlood:
         assert isinstance(e.data, FloodFeature)
         check_num_src_edges(e.data, 7)
         check_size(e.data, 5)
-        check_type(e.data, ord("-"))
-        check_points(
-            e.data,
-            {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)},
-        )
-
-        # event 3
-        e = s.output.call_args_list[2].args[0]
-        assert isinstance(e, Event)
-        assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, ord("."))
+        check_type(e.data, 2378)  # .
         check_points(
             e.data,
             {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
         )
 
-        # event 4
-        e = s.output.call_args_list[3].args[0]
+        # event 3
+        e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)

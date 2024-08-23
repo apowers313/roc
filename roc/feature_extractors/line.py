@@ -30,7 +30,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
         assert isinstance(e.data, VisionData)
-        data = IntGrid(e.data.chars)
+        data = IntGrid(e.data.glyphs)
 
         points: PointList = []
 

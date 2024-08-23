@@ -53,7 +53,14 @@ class Flood(FeatureExtractor[TypedPointCollection]):
 
     def get_feature(self, e: PerceptionEvent) -> Feature | None:
         assert isinstance(e.data, VisionData)
-        data = IntGrid(e.data.chars)
+        data = IntGrid(e.data.glyphs)
+        # cdata = IntGrid(e.data.chars)
+        # for p in {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)}:
+        #     print(f"glyph {p}: {data.get_val(p[0], p[1])}")
+        #     print(f"char {p}: {cdata.get_val(p[0], p[1])} {chr(cdata.get_val(p[0], p[1]))}")
+
+        # for points in data.points():
+        # print(points.val)
 
         check_map = CheckMap(data.width, data.height)
 

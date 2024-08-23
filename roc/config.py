@@ -74,6 +74,12 @@ class Config(BaseSettings):
 
     @staticmethod
     def get() -> Config:
+        """Returns the config singleton, which is strongly typed and can be used to
+        get or set configuration settings.
+
+        Returns:
+            Config: The configuration for ROC.
+        """
         global _config_singleton
         if _config_singleton is None:
             warnings.warn(
@@ -106,5 +112,6 @@ class Config(BaseSettings):
 
     @staticmethod
     def reset() -> None:
+        """Reset the configuration. Mostly used for testing."""
         global _config_singleton
         _config_singleton = None

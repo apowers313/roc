@@ -206,6 +206,14 @@ class Feature(Node, ABC):
         assert isinstance(t, ElementType)
         return t.type
 
+    def get_size(self) -> int:
+        sz = self.get_feature("Size")
+        if not sz:
+            raise Exception("no Size in get_size()")
+
+        assert isinstance(sz, ElementSize)
+        return sz.size
+
     def get_orientation(self) -> Direction:
         o = self.get_feature("Direction")
         if not o:

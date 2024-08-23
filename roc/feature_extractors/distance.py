@@ -47,9 +47,11 @@ class Distance(FeatureExtractor[DistanceFeature]):
         # calculate distance between all previous elements and emit event for each
         assert isinstance(data, SingleFeature)
         curr_pt = data.get_point()
+        # print("### single point:", curr_pt)
         for f in self.prev_features:
             prev_pt = f.get_point()
             dist = chebyshev_distance(curr_pt, prev_pt)
+            # print(f"# distance: ({prev_pt[0]}, {prev_pt[1]}) ({curr_pt[0]}, {curr_pt[1]}) {dist}")
             self.pb_conn.send(DistanceFeature(self, curr_pt, prev_pt, dist))
 
         # add to previous elements

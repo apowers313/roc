@@ -48,8 +48,7 @@ class Single(FeatureExtractor[Point]):
         """
         vd = e.data
         assert isinstance(vd, VisionData)
-        # assert isinstance(vd.chars, npt.ArrayLike)
-        data = IntGrid(vd.chars)
+        data = IntGrid(vd.glyphs)
 
         ## iterate points
         for v, x, y in data:

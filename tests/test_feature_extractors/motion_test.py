@@ -1,7 +1,13 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from helpers.nethack_screens import screens
-from helpers.util import StubComponent
+from helpers.util import (
+    StubComponent,
+    check_num_src_edges,
+    check_orientation,
+    check_points,
+    check_type,
+)
 
 from roc.component import Component
 from roc.event import Event
@@ -11,7 +17,7 @@ from roc.feature_extractors.motion import (
     MotionFeature,
     adjacent_direction,
 )
-from roc.perception import Feature, Settled, VisionData
+from roc.perception import Direction, Feature, Settled, VisionData
 
 screen0 = VisionData.from_dict(screens[0])
 screen1 = VisionData.from_dict(screens[1])
@@ -77,23 +83,23 @@ class TestMotion:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert e.data.get_type() == ord("f")
-        assert e.data.get_orientation() == "RIGHT"
-        assert e.data.get_point() == (17, 6)
+        check_type(e.data, 413)  # f
+        check_orientation(e.data, Direction("RIGHT"))
+        check_points(e.data, {(17, 6)})
         origin = e.data.get_feature("Origin")
         assert isinstance(origin, Feature)
-        assert origin.get_point() == (16, 6)
+        check_points(origin, {(16, 6)})
 
         # # ([EVENT: motion >>> perception]: 46 LEFT: (17, 6) -> (16, 6),)
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert e.data.get_type() == ord(".")
-        assert e.data.get_orientation() == "LEFT"
-        assert e.data.get_point() == (16, 6)
+        check_type(e.data, 2378)  # .
+        check_orientation(e.data, Direction("LEFT"))
+        check_points(e.data, {(16, 6)})
         origin = e.data.get_feature("Origin")
         assert isinstance(origin, Feature)
-        assert origin.get_point() == (17, 6)
+        check_points(origin, {(17, 6)})
 
         # Settled
         e = s.output.call_args_list[3].args[0]
@@ -106,12 +112,12 @@ class TestMotion:
         e = s.output.call_args_list[4].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert e.data.get_type() == ord("f")
-        assert e.data.get_orientation() == "UP_RIGHT"
-        assert e.data.get_point() == (18, 5)
+        check_type(e.data, 413)  # f
+        check_orientation(e.data, Direction("UP_RIGHT"))
+        check_points(e.data, {(18, 5)})
         origin = e.data.get_feature("Origin")
         assert isinstance(origin, Feature)
-        assert origin.get_point() == (17, 6)
+        check_points(origin, {(17, 6)})
 
         # Settled
         e = s.output.call_args_list[5].args[0]
@@ -124,12 +130,12 @@ class TestMotion:
         e = s.output.call_args_list[6].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        assert e.data.get_type() == ord("f")
-        assert e.data.get_orientation() == "DOWN"
-        assert e.data.get_point() == (18, 6)
+        check_type(e.data, 413)  # f
+        check_orientation(e.data, Direction("DOWN"))
+        check_points(e.data, {(18, 6)})
         origin = e.data.get_feature("Origin")
         assert isinstance(origin, Feature)
-        assert origin.get_point() == (18, 5)
+        check_points(origin, {(18, 5)})
 
         # Settled
         e = s.output.call_args_list[7].args[0]

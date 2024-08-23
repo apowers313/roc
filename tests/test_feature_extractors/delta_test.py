@@ -40,20 +40,20 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("."))
+        check_type(e.data, 2378)  # .
         check_points(e.data, {(16, 6)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("f"))
+        check_type(old, 413)  # f
 
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("f"))
+        check_type(e.data, 413)  # f
         check_points(e.data, {(17, 6)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("."))
+        check_type(old, 2378)  # .
 
         # fourth event
         e = s.output.call_args_list[3].args[0]
@@ -113,19 +113,19 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("."))
+        check_type(e.data, 2378)  # .
         check_points(e.data, {(16, 6)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("f"))
+        check_type(old, 413)  # f
 
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("f"))
+        check_type(e.data, 413)  # f
         check_points(e.data, {(17, 6)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("."))
+        check_type(old, 2378)  # .
 
         # second screen settled
         e = s.output.call_args_list[3].args[0]
@@ -142,10 +142,10 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("$"))
+        check_type(e.data, 2316)
         check_points(e.data, {(18, 5)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("x"))
+        check_type(old, 115)
 
         # fourth screen settled
         e = s.output.call_args_list[6].args[0]
@@ -157,19 +157,19 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("f"))
+        check_type(e.data, 413)  # f
         check_points(e.data, {(18, 5)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("$"))
+        check_type(old, 2316)  # $
 
         e = s.output.call_args_list[8].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
         check_num_src_edges(e.data, 3)
-        check_type(e.data, ord("."))
+        check_type(e.data, 2378)  # .
         check_points(e.data, {(17, 6)})
         old = e.data.get_feature("Past")
-        check_type(old, ord("f"))
+        check_type(old, 413)  # f
 
         # fifth screen settled
         e = s.output.call_args_list[9].args[0]
@@ -198,10 +198,10 @@ class TestDelta:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
-        assert str(e.data) == "(16, 6): 102 'f' -> 46 '.'\n"
+        assert str(e.data) == "(16, 6): 413 -> 2378\n"
 
         # # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Feature)
-        assert str(e.data) == "(17, 6): 46 '.' -> 102 'f'\n"
+        assert str(e.data) == "(17, 6): 2378 -> 413\n"
