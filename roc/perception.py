@@ -81,9 +81,6 @@ class Settled:
     pass
 
 
-FeatureType = TypeVar("FeatureType")
-
-
 class ElementSize(Node, extra="forbid"):
     # _no_save = True
     size: int
@@ -305,6 +302,7 @@ class Perception(Component, ABC):
 
 
 fe_list: list[FeatureExtractor[Any]] = []
+FeatureType = TypeVar("FeatureType")
 
 
 class FeatureExtractor(Perception, Generic[FeatureType], ABC):
