@@ -67,6 +67,9 @@ class Config(BaseSettings):
             "flood:perception",
             "motion:perception",
             "single:perception",
+            "line:perception",
+            "color:perception",
+            "shape:perception",
         ]
     )
     enable_gym_dump_env: bool = Field(default=False)
