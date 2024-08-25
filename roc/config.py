@@ -58,6 +58,10 @@ class Config(BaseSettings):
     log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
     default_action: str = Field(default="pass")
+    status_update: int = Field(default=50)
+    enable_gym_dump_env: bool = Field(default=False)
+    dump_file: str = Field(default="env_dump.py")
+    max_dump_frames: int = Field(default=10)
     action_count: int | None = None  # configured by the gymnasium
     observation_shape: tuple[int, ...] | None = None  # configured by the gymnasium
     perception_components: list[str] = Field(
@@ -72,8 +76,6 @@ class Config(BaseSettings):
             "shape:perception",
         ]
     )
-    enable_gym_dump_env: bool = Field(default=False)
-    max_dump_frames: int = Field(default=10)
 
     @staticmethod
     def get() -> Config:
