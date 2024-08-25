@@ -189,7 +189,13 @@ class CurrentSaliencyMapState(State[SaliencyMap]):
 
     def __str__(self) -> str:
         if self.val is not None:
-            return f"Current Saliency Map:\n{str(self.val)}"
+            s = f"Current Saliency Map:\n{str(self.val)}\n"
+            s += f"\tCurrent Focus: {self.val.get_focus()}\n"
+            s += "\tFeatures:\n"
+            features = self.val.feature_report()
+            for feat_name in features:
+                s += f"\t\t{feat_name}: {features[feat_name]}\n"
+            return s
         else:
             return "Current Saliency Map: None"
 
@@ -226,6 +232,30 @@ states = StateList()
 all_states = [field.name for field in dataclasses.fields(StateList)]
 
 
+def print_state() -> None:
+    def header(s: str) -> None:
+        print(f"\n=== {s.upper()} ===")  # noqa: T201
+
+    header("System Health")
+    print(states.cpuload)  # noqa: T201
+    print(states.diskio)  # noqa: T201
+    print(states.memory)  # noqa: T201
+    print(states.sysmem)  # noqa: T201
+
+    header("Environment")
+    print(states.loop)  # noqa: T201
+    print(states.screen)  # noqa: T201
+    # TODO: blstats
+
+    header("Graph DB")
+    print(states.node_cache)  # noqa: T201
+    print(states.edge_cache)  # noqa: T201
+
+    header("Agent")
+    print(states.components)  # noqa: T201
+    print(states.salency)  # noqa: T201
+
+
 @click.command()
 @click.argument(
     "var",
@@ -235,28 +265,7 @@ all_states = [field.name for field in dataclasses.fields(StateList)]
 def state_cli(var: list[str]) -> None:
     if var is None or len(var) < 1:
         # if no state is specified, print a selection of the most interesting states
-        def header(s: str) -> None:
-            print(f"\n=== {s.upper()} ===")  # noqa: T201
-
-        header("System Health")
-        print(states.cpuload)  # noqa: T201
-        print(states.diskio)  # noqa: T201
-        print(states.memory)  # noqa: T201
-        print(states.sysmem)  # noqa: T201
-
-        header("Environment")
-        print(states.loop)  # noqa: T201
-        print(states.screen)  # noqa: T201
-        # TODO: blstats
-
-        header("Graph DB")
-        print(states.node_cache)  # noqa: T201
-        print(states.edge_cache)  # noqa: T201
-
-        header("Agent")
-        print(states.components)  # noqa: T201
-        print(states.salency)  # noqa: T201
-
+        print_state()
         return
 
     for v in var:
