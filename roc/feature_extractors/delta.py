@@ -70,7 +70,8 @@ class Delta(FeatureExtractor[DeltaFeature]):
         assert isinstance(data, VisionData)
 
         prev = self.prev_viz
-        self.prev_viz = curr = IntGrid(data.glyphs)
+        # XXX: NLE reuses numpy arrays rather than creating new ones
+        self.prev_viz = curr = IntGrid(data.glyphs.copy())
 
         if prev is None:
             # can't get difference when there was nothing before this
