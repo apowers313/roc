@@ -2,18 +2,13 @@
 
 
 from helpers.nethack_screens import screens
+from helpers.nethack_screens2 import screens as screens2
 from helpers.util import StubComponent, check_num_src_edges, check_points, check_type
 
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.delta import Delta
 from roc.perception import Feature, Settled, VisionData
-
-screen0 = VisionData.from_dict(screens[0])
-screen1 = VisionData.from_dict(screens[1])
-screen2 = VisionData.from_dict(screens[2])
-screen3 = VisionData.from_dict(screens[3])
-screen4 = VisionData.from_dict(screens[4])
 
 
 class TestDelta:
@@ -25,8 +20,8 @@ class TestDelta:
             output_bus=c.pb_conn.attached_bus,
         )
 
-        s.input_conn.send(screen0)
-        s.input_conn.send(screen1)
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
 
         assert s.output.call_count == 4
 
@@ -60,6 +55,49 @@ class TestDelta:
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)
 
+    def test_basic2(self, empty_components) -> None:
+        c = Component.get("delta", "perception")
+        assert isinstance(c, Delta)
+        s = StubComponent(
+            input_bus=c.pb_conn.attached_bus,
+            output_bus=c.pb_conn.attached_bus,
+        )
+
+        s.input_conn.send(VisionData.from_dict(screens2[0]))
+        s.input_conn.send(VisionData.from_dict(screens2[1]))
+
+        assert s.output.call_count == 4
+
+        # first event
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
+
+        # second event
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Feature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, 397)  # d
+        check_points(e.data, {(4, 14)})
+        old = e.data.get_feature("Past")
+        check_type(old, 2378)  # .
+
+        # # third event
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Feature)
+        check_num_src_edges(e.data, 3)
+        check_type(e.data, 2378)  # .
+        check_points(e.data, {(5, 14)})
+        old = e.data.get_feature("Past")
+        check_type(old, 397)  # d
+
+        # fourth event
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
+
     def test_none(self, empty_components) -> None:
         c = Component.get("delta", "perception")
         assert isinstance(c, Delta)
@@ -69,9 +107,9 @@ class TestDelta:
         )
 
         # same screen, no delta
-        s.input_conn.send(screen0)
-        s.input_conn.send(screen0)
-        s.input_conn.send(screen0)
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[0]))
 
         assert s.output.call_count == 3
 
@@ -95,11 +133,11 @@ class TestDelta:
         )
 
         # send multiple screen
-        s.input_conn.send(screen0)
-        s.input_conn.send(screen1)
-        s.input_conn.send(screen2)
-        s.input_conn.send(screen3)
-        s.input_conn.send(screen4)
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
+        s.input_conn.send(VisionData.from_dict(screens[2]))
+        s.input_conn.send(VisionData.from_dict(screens[3]))
+        s.input_conn.send(VisionData.from_dict(screens[4]))
 
         assert s.output.call_count == 10
 
@@ -184,8 +222,8 @@ class TestDelta:
             output_bus=c.pb_conn.attached_bus,
         )
 
-        s.input_conn.send(screen0)
-        s.input_conn.send(screen1)
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
 
         assert s.output.call_count == 4
 
