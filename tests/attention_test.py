@@ -7,16 +7,20 @@ import numpy as np
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
-from roc.attention import SaliencyMap, VisionAttention
+from roc.attention import SaliencyMap, VisionAttention, VisionAttentionData
 from roc.component import Component
+from roc.event import Event
+from roc.feature_extractors.color import Color
 from roc.feature_extractors.delta import Delta
+from roc.feature_extractors.distance import Distance
 from roc.feature_extractors.flood import Flood
 from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
+from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
 from roc.graphdb import Node
 from roc.location import IntGrid
-from roc.perception import VisionData
+from roc.perception import Feature, VisionData
 
 
 class TestSaliencyMap:
@@ -153,13 +157,79 @@ class TestSaliencyMap:
             ]
         )
         sm1 = SaliencyMap(g)
+        n = Node()
+        sm1.add_val(0, 0, n)
+
         sm2 = deepcopy(sm1)
 
-        assert id(sm1) != id(sm2)
-        # assert id(sm1.grid) != id(sm2.grid)
-        arr1 = np.array([1, 2, 3])
-        arr2 = deepcopy(arr1)
-        assert id(arr1) != id(arr2)
+        assert sm1 is not sm2
+        assert sm1.shape == sm2.shape
+        assert sm2.grid is not None
+        assert sm1.grid is not sm2.grid
+        assert sm2.grid[0, 0] == 32
+        assert sm2.grid[2, 2] == 99
+        assert isinstance(sm2[0, 0], list)
+        assert sm1[0, 0] is not sm2[0, 0]
+        assert sm2[0, 0][0] is n
+
+    def test_report(self) -> None:
+        delta = Component.get("delta", "perception")
+        assert isinstance(delta, Delta)
+        attention = Component.get("vision", "attention")
+        assert isinstance(attention, VisionAttention)
+        flood = Component.get("flood", "perception")
+        assert isinstance(flood, Flood)
+        line = Component.get("line", "perception")
+        assert isinstance(line, Line)
+        motion = Component.get("motion", "perception")
+        assert isinstance(motion, Motion)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
+        distance = Component.get("distance", "perception")
+        assert isinstance(distance, Distance)
+        color = Component.get("color", "perception")
+        assert isinstance(color, Color)
+        shape = Component.get("shape", "perception")
+        assert isinstance(shape, Shape)
+        s = StubComponent(
+            input_bus=delta.pb_conn.attached_bus,
+            output_bus=attention.att_conn.attached_bus,
+        )
+
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
+
+        assert s.output.call_count == 2
+
+        # screen 0
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        sm = e.data.saliency_map
+        d = sm.feature_report()
+        assert len(d.keys()) == 6
+        assert d["FloodFeature"] == 1633
+        assert d["LineFeature"] == 3242
+        assert d["DistanceFeature"] == 155
+        assert d["SingleFeature"] == 12
+        assert d["ColorFeature"] == 12
+        assert d["ShapeFeature"] == 12
+
+        # screen 1
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        sm = e.data.saliency_map
+        d = sm.feature_report()
+        assert len(d.keys()) == 9
+        assert d["FloodFeature"] == 1628
+        assert d["LineFeature"] == 3242
+        assert d["SingleFeature"] == 12
+        assert d["ColorFeature"] == 12
+        assert d["ShapeFeature"] == 12
+        assert d["DeltaFeature"] == 1
+        assert d["OldLocation"] == 3
+        assert d["MotionFeature"] == 1
 
     # def test_str(self) -> None:
     #     g = Grid(
@@ -185,7 +255,55 @@ class TestVisionAttention:
     def test_exists(self) -> None:
         VisionAttention()
 
-    def test_basic(self, empty_components, memory_profile) -> None:
+    def test_basic(self, empty_components) -> None:
+        delta = Component.get("delta", "perception")
+        assert isinstance(delta, Delta)
+        attention = Component.get("vision", "attention")
+        assert isinstance(attention, VisionAttention)
+        flood = Component.get("flood", "perception")
+        assert isinstance(flood, Flood)
+        line = Component.get("line", "perception")
+        assert isinstance(line, Line)
+        motion = Component.get("motion", "perception")
+        assert isinstance(motion, Motion)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
+        # TODO: distance, color, shape
+        s = StubComponent(
+            input_bus=delta.pb_conn.attached_bus,
+            output_bus=attention.att_conn.attached_bus,
+        )
+
+        s.input_conn.send(VisionData.from_dict(screens[0]))
+        s.input_conn.send(VisionData.from_dict(screens[1]))
+
+        # assert attention.saliency_map is not None
+        # assert attention.saliency_map.grid is not None
+        # print("saliency features", attention.saliency_map.size)  # noqa: T201
+        # print("vision:\n", IntGrid(screens[0]["chars"]))  # noqa: T201
+        # print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
+        # print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
+        # print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201
+        # print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))  # noqa: T201
+        # print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))  # noqa: T201
+        # print(attention.saliency_map.grid.get_point(16, 6))  # noqa: T201
+        # print(attention.saliency_map.grid.get_point(17, 6))  # noqa: T201
+
+        assert s.output.call_count == 2
+
+        # first event
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(15, 5)}
+
+        # second event
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(17, 6)}
+
+    def test_four_screen(self, empty_components, memory_profile) -> None:
         delta = Component.get("delta", "perception")
         assert isinstance(delta, Delta)
         attention = Component.get("vision", "attention")
@@ -203,30 +321,35 @@ class TestVisionAttention:
             output_bus=attention.att_conn.attached_bus,
         )
 
-        # print("grid1", VisionData(screens[0]["chars"]))
-        # print("grid2", VisionData(screens[1]["chars"]))
         s.input_conn.send(VisionData.from_dict(screens[0]))
         s.input_conn.send(VisionData.from_dict(screens[1]))
+        s.input_conn.send(VisionData.from_dict(screens[4]))
+        s.input_conn.send(VisionData.from_dict(screens[6]))
 
-        assert attention.saliency_map is not None
-        assert attention.saliency_map.grid is not None
-        print("saliency features", attention.saliency_map.size)  # noqa: T201
-        print("vision:\n", IntGrid(screens[0]["chars"]))  # noqa: T201
-        print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
-        print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
-        print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201
-        print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))  # noqa: T201
-        print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))  # noqa: T201
-        print(attention.saliency_map.grid.get_point(16, 6))  # noqa: T201
-        print(attention.saliency_map.grid.get_point(17, 6))  # noqa: T201
+        assert s.output.call_count == 4
 
-        # assert s.output.call_count == 2
+        # first event
+        e = s.output.call_args_list[0].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(15, 5)}
 
-        # # first event
-        # e = s.output.call_args_list[0].args[0]
-        # assert isinstance(e, Event)
+        # second event
+        e = s.output.call_args_list[1].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(17, 6)}
 
-        # # second event
-        # e = s.output.call_args_list[1].args[0]
-        # assert isinstance(e, Event)
-        # assert isinstance(e.data, Settled)
+        # third event
+        e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(18, 5)}
+        # print(e.data.saliency_map)
+
+        # fourth event
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, VisionAttentionData)
+        assert e.data.focus_points == {(18, 5)}
+        # print(e.data.saliency_map)

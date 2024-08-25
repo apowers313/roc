@@ -2,7 +2,11 @@
 should received focus
 """
 
+from __future__ import annotations
+
 from abc import ABC
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Any, Self
 
 import numpy as np
@@ -27,9 +31,10 @@ from .perception import (
 )
 
 
-class VisionAttentionData(BaseModel):
-    foo: str
-    # focus_points: list[Point]
+@dataclass
+class VisionAttentionData:
+    focus_points: set[tuple[int, int]]
+    saliency_map: SaliencyMap
 
 
 AttentionData = VisionAttentionData
@@ -58,6 +63,12 @@ class SaliencyMap(NewGrid[list[Node]]):
         if obj is None:
             return
         self.grid = getattr(obj, "grid", None)
+
+    def __deepcopy__(self, memodict: object | None = None) -> SaliencyMap:
+        sm = SaliencyMap(deepcopy(self.grid))
+        for row, col in np.ndindex(self.shape):
+            sm[row, col] = self[row, col].copy()
+        return sm
 
     def clear(self) -> None:
         """Clears out all values from the SaliencyMap."""
@@ -110,8 +121,24 @@ class SaliencyMap(NewGrid[list[Node]]):
 
         return ret
 
-    def get_focus(self) -> None:
+    def feature_report(self) -> dict[str, int]:
+        ret: dict[str, int] = dict()
+        for row, col in np.ndindex(self.shape):
+            node_list = self[row, col]
+            for n in node_list:
+                f = Feature.find_parent_feature(n)
+                feature_name = type(f).__name__
+                ret[feature_name] = 0 if feature_name not in ret else ret[feature_name] + 1
+
+        return ret
+
+    def get_focus(self) -> set[tuple[int, int]]:
         max_str = self.get_max_strength()
+
+        # prevent divide by zero
+        if max_str == 0:
+            max_str = 1
+
         fkimg = np.array(
             [
                 [self.get_strength(x, y) / max_str for y in range(self.height)]
@@ -122,17 +149,19 @@ class SaliencyMap(NewGrid[list[Node]]):
         m = np.median(fkimg)
         coordinates = peak_local_max(fkimg, min_distance=5, threshold_rel=m)
 
-        assert self.grid is not None
-        for loc in coordinates:
-            x = loc[0]
-            y = loc[1]
-            p = self.grid.get_point(x, y)
-            print("p", p)  # noqa: T201
+        ret: set[tuple[int, int]] = {(loc[0], loc[1]) for loc in coordinates}
+
+        return ret
 
     def __str__(self) -> str:
         assert self.grid is not None
         dg = DebugGrid(self.grid)
         max_str = self.get_max_strength()
+
+        # prevent divide by zero
+        if max_str == 0:
+            max_str = 1
+
         for p in self.grid.points():
             rel_strength = self.get_strength(p.x, p.y) / max_str
             color = DebugGrid.blue_to_red_hue(rel_strength)
@@ -172,15 +201,24 @@ class VisionAttention(Attention):
 
             unsettled = set(FeatureExtractor.list()) - self.settled
             if len(unsettled) == 0:
-                # self.att_conn.send(Settled())
-                self.settled.clear()
                 assert self.saliency_map is not None
-                self.saliency_map.get_focus()
+                focus = self.saliency_map.get_focus()
+
+                self.att_conn.send(
+                    VisionAttentionData(
+                        focus_points=self.saliency_map.get_focus(),
+                        saliency_map=self.saliency_map,
+                    )
+                )
+
+                # save state so that it can be inspected in Jupyter
                 from .jupyter.state import states
 
-                states.salency.set(self.saliency_map.copy())
-                # print("done!")
-                # self.saliency_map.clear()
+                states.salency.set(deepcopy(self.saliency_map))
+
+                # reset
+                self.settled.clear()
+                self.saliency_map = SaliencyMap()
 
             return
 
