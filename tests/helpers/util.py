@@ -113,7 +113,7 @@ def check_type(n: object, t: int) -> None:
     type_node = n.src_edges.get_edges("Type")[0].dst
     assert isinstance(type_node, ElementType)
     # print("type", type_node.type)
-    assert type_node.type == t
+    assert type_node.type == t, f"Expected node type: {type_node.type}, got {t}"
 
 
 def check_orientation(n: object, orientation: Direction) -> None:
