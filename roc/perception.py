@@ -219,6 +219,30 @@ class Feature(Node, ABC):
         assert isinstance(o, ElementOrientation)
         return o.orientation
 
+    @staticmethod
+    def find_parent_feature(n: Node) -> Feature | None:
+        """Searches up the graph of nodes that point to this node until it finds
+        an instance of Feature. Most Features are trees / DAGs, so this is good
+        for taking a child node of a Feature and figuring out what Feature it
+        belongs to. Note that bad things may happen if this is used on a Node
+        that isn't part of a Feature AND if the parent graph has cycles.
+
+        Args:
+            n (Node): The node to find the parent feature of.
+
+        Returns:
+            Feature | None: The Feature that was found, or None if no feature was found.
+        """
+        if isinstance(n, Feature):
+            return n
+
+        for edge in n.dst_edges:
+            f = Feature.find_parent_feature(edge.src)
+            if f is not None:
+                return f
+
+        return None
+
 
 @dataclass
 class Transmogrifier(ABC):
