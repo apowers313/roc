@@ -17,7 +17,7 @@ from .action import ActionCount, action_bus
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
-from .jupyter.state import states
+from .jupyter.state import print_state, states
 from .location import TextGrid
 from .logger import logger
 from .perception import Perception, VisionData
@@ -68,11 +68,13 @@ class Gym(Component, ABC):
     @logger.catch
     def start(self) -> None:
         obs = self.env.reset()
+        settings = Config.get()
 
         done = False
         _dump_env_start()
 
         logger.info("Starting NLE loop...")
+        loop_num = 0
 
         # main environment loop
         while not done:
@@ -83,7 +85,7 @@ class Gym(Component, ABC):
             logger.trace(f"Doing action: {action}")
             step_res = self.env.step(action)
             obs = step_res[0]
-            _dump_env_record(obs)
+            _dump_env_record(obs, loop_num)
 
             if len(step_res) == 5:
                 done = step_res[2] or step_res[3]
@@ -92,7 +94,10 @@ class Gym(Component, ABC):
 
             # self.env.render()
             logger.trace(f"Main loop done: {done}")
-            states.loop.incr()
+            loop_num += 1
+            states.loop.set(loop_num)
+            if (loop_num % settings.status_update) == 0:
+                print_state()
 
         logger.info("NLE loop done.")
         _dump_env_end()
@@ -158,7 +163,7 @@ class condition_bits(IntEnum):
     CONF =      0x00000008
     DEAF =      0x00000010
     ELF_IRON =  0x00000020
-    FLY =       0x00000040
+    FLY =       0x00000040 # 0100 0000
     FOODPOIS =  0x00000080
     GLOWHANDS = 0x00000100
     GRAB =      0x00000200
@@ -179,7 +184,7 @@ class condition_bits(IntEnum):
     TERMILL   = 0x01000000
     TETHERED =  0x02000000
     TRAPPED =   0x04000000
-    UNCONSC =   0x08000000
+    UNCONSC =   0x08000000 # 0000 1000
     WOUNDEDL =  0x10000000
     HOLDING =   0x20000000
     # fmt: on
@@ -236,6 +241,13 @@ class NethackGym(Gym):
 
     def send_vision(self, obs: Any) -> None:
         vd = VisionData.from_dict(obs)
+        # vd = VisionData.from_dict(
+        #     {
+        #         "chars": obs["chars"].copy(),
+        #         "glyphs": obs["glyphs"].copy(),
+        #         "colors": obs["colors"].copy(),
+        #     }
+        # )
         self.env_bus_conn.send(vd)
         states.screen.set(TextGrid(vd.chars))
 
@@ -257,7 +269,7 @@ class NethackGym(Gym):
         blstat_conds = {bit.name for bit in condition_bits if blstats.CONDITION & bit.value}
         # TODO: remove... just curious if conditions ever get set
         if len(blstat_conds):
-            logger.warning("!!! FOUND CONDITIONS", blstat_conds)
+            logger.warning(f"!!! FOUND CONDITIONS: {blstat_conds}")
 
 
 dump_env_file: Any = None
@@ -285,14 +297,14 @@ def _dump_env_start() -> None:
         return
 
     global dump_env_file
-    dump_env_file = open("env_dump.py", "w")
-    dump_env_file.write("[\n")
+    dump_env_file = open(settings.dump_file, "w")
+    dump_env_file.write("screens = [\n")
 
 
 count = 0
 
 
-def _dump_env_record(obs: Any) -> None:
+def _dump_env_record(obs: Any, loop_num: int) -> None:
     settings = Config.get()
     if not settings.enable_gym_dump_env:
         return
@@ -307,7 +319,7 @@ def _dump_env_record(obs: Any) -> None:
         return
 
     _print_screen(obs["tty_chars"])
-    dump_env_file.write("{\n# fmt: off\n")
+    dump_env_file.write("{ # screen" + str(loop_num) + "\n# fmt: off\n")
     dump_env_file.write(f"        \"chars\": {obs['chars'].tolist()},\n")
     dump_env_file.write(f"        \"colors\": {obs['colors'].tolist()},\n")
     dump_env_file.write(f"        \"glyphs\": {obs['glyphs'].tolist()},\n")
@@ -319,7 +331,10 @@ def _dump_env_end() -> None:
     if not settings.enable_gym_dump_env:
         return
 
+    logger.info("Completing game dump.")
+
     global dump_env_file
     assert dump_env_file
     dump_env_file.write("]\n")
+    dump_env_file.flush()
     dump_env_file.close()
