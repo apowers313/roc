@@ -65,6 +65,8 @@ test:
 profile:
 	# for example:
 	# make TEST=tests/flood_test.py profile
+	# or
+	# make TEST="tests/attention_test.py -k test_basic" profile
 	poetry run pytest -c pyproject.toml --profile-svg $(TEST)
 
 .PHONY: check-codestyle
