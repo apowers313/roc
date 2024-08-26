@@ -8,8 +8,7 @@ from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any
 
-# nle isn't used below, but needs to be loaded so that the environment is registered
-import nle  # noqa
+import nle
 from pydantic import BaseModel
 
 # from roc import init as roc_init
@@ -80,20 +79,34 @@ class Gym(Component, ABC):
         while not done:
             # logger.trace(f"Sending observation: {obs}")
             breakpoints.check()
+
+            # save the current screen
+            screen = nle.nethack.tty_render(obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"])
+            states.screen.set(screen)
+
+            # do all the real work
             self.send_obs(obs)
+
+            # get an action
             action = self.await_action()
             logger.trace(f"Doing action: {action}")
+
+            # perform the action and get the next observation
             step_res = self.env.step(action)
             obs = step_res[0]
+
+            # optionally save the screen to file
             _dump_env_record(obs, loop_num)
 
+            # check to see if we are done
             if len(step_res) == 5:
                 done = step_res[2] or step_res[3]
             else:
                 done = step_res[2]
 
-            # self.env.render()
             logger.trace(f"Main loop done: {done}")
+
+            # set and save the loop number
             loop_num += 1
             states.loop.set(loop_num)
             if (loop_num % settings.status_update) == 0:
@@ -157,36 +170,19 @@ class condition_bits(IntEnum):
     """
 
     # fmt: off
-    BAREH =     0x00000001
-    BLIND =     0x00000002
-    BUSY =      0x00000004
-    CONF =      0x00000008
-    DEAF =      0x00000010
-    ELF_IRON =  0x00000020
-    FLY =       0x00000040 # 0100 0000
-    FOODPOIS =  0x00000080
-    GLOWHANDS = 0x00000100
-    GRAB =      0x00000200
-    HALLU =     0x00000400
-    HELD =      0x00000800
-    ICY =       0x00001000
-    INLAVA =    0x00002000
-    LEV =       0x00004000
-    PARLYZ =    0x00008000
-    RIDE =      0x00010000
-    SLEEPING =  0x00020000
-    SLIME =     0x00040000
-    SLIPPERY =  0x00080000
-    STONE =     0x00100000
-    STRNGL =    0x00200000
-    STUN =      0x00400000
-    SUBMERGED = 0x00800000
-    TERMILL   = 0x01000000
-    TETHERED =  0x02000000
-    TRAPPED =   0x04000000
-    UNCONSC =   0x08000000 # 0000 1000
-    WOUNDEDL =  0x10000000
-    HOLDING =   0x20000000
+    STONE =    nle.nethack.BL_MASK_STONE
+    SLIME =    nle.nethack.BL_MASK_SLIME
+    STRINGL =  nle.nethack.BL_MASK_STRNGL
+    FOODPOIS = nle.nethack.BL_MASK_FOODPOIS
+    TERMILL =  nle.nethack.BL_MASK_TERMILL
+    BLIND =    nle.nethack.BL_MASK_BLIND
+    DEAF =     nle.nethack.BL_MASK_DEAF
+    STUN =     nle.nethack.BL_MASK_STUN
+    CONF =     nle.nethack.BL_MASK_CONF
+    HALLU =    nle.nethack.BL_MASK_HALLU
+    LEV =      nle.nethack.BL_MASK_LEV
+    FLY =      nle.nethack.BL_MASK_FLY
+    RIDE =     nle.nethack.BL_MASK_RIDE
     # fmt: on
 
 
@@ -249,7 +245,6 @@ class NethackGym(Gym):
         #     }
         # )
         self.env_bus_conn.send(vd)
-        states.screen.set(TextGrid(vd.chars))
 
     def send_auditory(self) -> None:
         pass
@@ -269,7 +264,9 @@ class NethackGym(Gym):
         blstat_conds = {bit.name for bit in condition_bits if blstats.CONDITION & bit.value}
         # TODO: remove... just curious if conditions ever get set
         if len(blstat_conds):
-            logger.warning(f"!!! FOUND CONDITIONS: {blstat_conds}")
+            logger.warning(f"!!! FOUND CONDITIONS: {blstats.CONDITION} = {blstat_conds}")
+            logger.warning(f"bltstats: {obs['blstats']} :: {blstat_args}")
+            self.env.render()
 
 
 dump_env_file: Any = None
