@@ -46,24 +46,33 @@ class Config(BaseSettings):
         env_file=config_settings["env_file"],
         extra="forbid",
     )
+    # database config
     db_host: str = Field(default="127.0.0.1")
     db_port: int = Field(default=7687)
     db_conn_encrypted: bool = Field(default=False)
     db_username: str = Field(default="")
     db_password: str = Field(default="")
     db_lazy: bool = Field(default=False)
+    # graph config
     node_cache_size: int = Field(default=2**30)
     edge_cache_size: int = Field(default=2**30)
+    # log config
     log_enable: bool = Field(default=True)
     log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
+    # agent config
     default_action: str = Field(default="pass")
+    action_count: int | None = None  # configured by the gymnasium
+    observation_shape: tuple[int, ...] | None = None  # configured by the gymnasium
+    # jupyter config
     status_update: int = Field(default=50)
+    experiment_dir: str = Field(default="/home/apowers/experiment")
+    data_dir: str = Field(default="/home/apowers/data")
+    # gym config
     enable_gym_dump_env: bool = Field(default=False)
     dump_file: str = Field(default="env_dump.py")
     max_dump_frames: int = Field(default=10)
-    action_count: int | None = None  # configured by the gymnasium
-    observation_shape: tuple[int, ...] | None = None  # configured by the gymnasium
+    # component config
     perception_components: list[str] = Field(
         default=[
             "delta:perception",
