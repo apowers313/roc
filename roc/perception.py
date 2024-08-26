@@ -325,14 +325,14 @@ class Perception(Component, ABC):
         cls.bus = EventBus[PerceptionData]("perception")
 
 
-fe_list: list[FeatureExtractor[Any]] = []
+fe_list: list[weakref.ReferenceType[FeatureExtractor[Any]]] = []
 FeatureType = TypeVar("FeatureType")
 
 
 class FeatureExtractor(Perception, Generic[FeatureType], ABC):
     def __init__(self) -> None:
         super().__init__()
-        fe_list.append(weakref.proxy(self))
+        fe_list.append(weakref.ref(self))
 
     def do_perception(self, e: PerceptionEvent) -> None:
         f = self.get_feature(e)
@@ -350,7 +350,10 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
     @classmethod
     def list(cls) -> list[str]:
         ret: list[str] = []
-        for fe in fe_list:
+        for fe_ref in fe_list:
+            fe = fe_ref()
+            if fe is None:
+                continue
             ret.append(f"{fe.name}:{fe.type}")
 
         return ret
