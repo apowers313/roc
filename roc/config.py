@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import warnings
+from datetime import datetime
 from typing import Any
 
 from pydantic import Field
@@ -70,7 +71,7 @@ class Config(BaseSettings):
     data_dir: str = Field(default="/home/apowers/data")
     # gym config
     enable_gym_dump_env: bool = Field(default=False)
-    dump_file: str = Field(default="env_dump.py")
+    dump_file: str = Field(default=f"env_dump-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.py")
     max_dump_frames: int = Field(default=10)
     # component config
     perception_components: list[str] = Field(
