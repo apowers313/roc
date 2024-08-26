@@ -166,16 +166,16 @@ class EdgeCacheState(State[float]):
         return f"Edge Cache: {c.currsize} / {c.maxsize} ({self.get():1.1f}%)"
 
 
-class CurrentScreenState(State[TextGrid]):
+class CurrentScreenState(State[str]):
     def __init__(self) -> None:
         super().__init__("curr-screen", display_name="Current Screen")
 
-    def set(self, grid: TextGrid) -> None:
-        self.val = grid
+    def set(self, screen: str) -> None:
+        self.val = screen
 
     def __str__(self) -> str:
         if self.val is not None:
-            return f"Current Screen:\n{str(self.val)}"
+            return f"Current Screen:\n-------------\n{self.val}\n-------------"
         else:
             return "Current Screen: None"
 
