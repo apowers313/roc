@@ -413,6 +413,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../color/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    color
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../delta/" class="md-nav__link">
         
   
@@ -682,6 +703,27 @@
   
   <span class="md-ellipsis">
     motion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shape/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    shape
   </span>
   
 
@@ -1558,7 +1600,14 @@ that all have the same value</p>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
-<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;flood&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;flood&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Flood</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">TypedPointCollection</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for creating Flood features -- collections of adjacent points</span>
 <span class="sd">    that all have the same value</span>
@@ -1569,7 +1618,14 @@ that all have the same value</p>
 
     <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
-        <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">glyphs</span><span class="p">)</span>
+        <span class="c1"># cdata = IntGrid(e.data.chars)</span>
+        <span class="c1"># for p in {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)}:</span>
+        <span class="c1">#     print(f&quot;glyph {p}: {data.get_val(p[0], p[1])}&quot;)</span>
+        <span class="c1">#     print(f&quot;char {p}: {cdata.get_val(p[0], p[1])} {chr(cdata.get_val(p[0], p[1]))}&quot;)</span>
+
+        <span class="c1"># for points in data.points():</span>
+        <span class="c1"># print(points.val)</span>
 
         <span class="n">check_map</span> <span class="o">=</span> <span class="n">CheckMap</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
 
@@ -1712,9 +1768,23 @@ that all have the same value</p>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
 <span class="normal">100</span>
-<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
-    <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">glyphs</span><span class="p">)</span>
+    <span class="c1"># cdata = IntGrid(e.data.chars)</span>
+    <span class="c1"># for p in {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)}:</span>
+    <span class="c1">#     print(f&quot;glyph {p}: {data.get_val(p[0], p[1])}&quot;)</span>
+    <span class="c1">#     print(f&quot;char {p}: {cdata.get_val(p[0], p[1])} {chr(cdata.get_val(p[0], p[1]))}&quot;)</span>
+
+    <span class="c1"># for points in data.points():</span>
+    <span class="c1"># print(points.val)</span>
 
     <span class="n">check_map</span> <span class="o">=</span> <span class="n">CheckMap</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">data</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
 

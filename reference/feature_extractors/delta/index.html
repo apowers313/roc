@@ -9,7 +9,7 @@
       
       
       
-        <link rel="prev" href="../../event/">
+        <link rel="prev" href="../color/">
       
       
         <link rel="next" href="../distance/">
@@ -410,6 +410,27 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../color/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    color
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -709,6 +730,27 @@
   
   <span class="md-ellipsis">
     motion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shape/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    shape
   </span>
   
 
@@ -1386,7 +1428,8 @@
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Delta</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">DeltaFeature</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for detecting changes in vision.&quot;&quot;&quot;</span>
 
@@ -1402,7 +1445,8 @@
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
         <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
+        <span class="c1"># XXX: NLE reuses numpy arrays rather than creating new ones</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">glyphs</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
 
         <span class="k">if</span> <span class="n">prev</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="c1"># can&#39;t get difference when there was nothing before this</span>
@@ -1555,12 +1599,14 @@
 <span class="normal"> 97</span>
 <span class="normal"> 98</span>
 <span class="normal"> 99</span>
-<span class="normal">100</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">100</span>
+<span class="normal">101</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
     <span class="n">prev</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span>
-    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">chars</span><span class="p">)</span>  <span class="c1"># TODO: glyphs</span>
+    <span class="c1"># XXX: NLE reuses numpy arrays rather than creating new ones</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">prev_viz</span> <span class="o">=</span> <span class="n">curr</span> <span class="o">=</span> <span class="n">IntGrid</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">glyphs</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
 
     <span class="k">if</span> <span class="n">prev</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># can&#39;t get difference when there was nothing before this</span>
@@ -1737,7 +1783,7 @@
     <span class="n">new_val</span><span class="p">:</span> <span class="nb">int</span>
 
     <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
 
     <span class="k">def</span> <span class="nf">add_to_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n</span><span class="p">:</span> <span class="n">Feature</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Adds a set of Diff nodes to a Feature&quot;&quot;&quot;</span>
@@ -1876,7 +1922,7 @@
               <summary>Source code in <code>roc/feature_extractors/delta.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">29</span>
 <span class="normal">30</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39; -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="si">}</span><span class="s2"> &#39;</span><span class="si">{</span><span class="nb">chr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="p">)</span><span class="si">}</span><span class="s2">&#39;</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">x</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">y</span><span class="si">}</span><span class="s2">): </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">old_val</span><span class="si">}</span><span class="s2"> -&gt; </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">new_val</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

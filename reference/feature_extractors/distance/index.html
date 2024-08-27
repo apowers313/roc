@@ -413,6 +413,27 @@
   
   
     <li class="md-nav__item">
+      <a href="../color/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    color
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../delta/" class="md-nav__link">
         
   
@@ -640,6 +661,27 @@
   
   <span class="md-ellipsis">
     motion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shape/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    shape
   </span>
   
 
@@ -1235,7 +1277,9 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;distance&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;distance&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
 <span class="k">class</span> <span class="nc">Distance</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">DistanceFeature</span><span class="p">]):</span>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
@@ -1258,9 +1302,11 @@ humans, only calculated for a subset of features, and based on the saccades of t
         <span class="c1"># calculate distance between all previous elements and emit event for each</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">SingleFeature</span><span class="p">)</span>
         <span class="n">curr_pt</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+        <span class="c1"># print(&quot;### single point:&quot;, curr_pt)</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span>
             <span class="n">prev_pt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
             <span class="n">dist</span> <span class="o">=</span> <span class="n">chebyshev_distance</span><span class="p">(</span><span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">)</span>
+            <span class="c1"># print(f&quot;# distance: ({prev_pt[0]}, {prev_pt[1]}) ({curr_pt[0]}, {curr_pt[1]}) {dist}&quot;)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DistanceFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">,</span> <span class="n">dist</span><span class="p">))</span>
 
         <span class="c1"># add to previous elements</span>
@@ -1385,7 +1431,9 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">55</span>
 <span class="normal">56</span>
 <span class="normal">57</span>
-<span class="normal">58</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Feature</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
@@ -1396,9 +1444,11 @@ humans, only calculated for a subset of features, and based on the saccades of t
     <span class="c1"># calculate distance between all previous elements and emit event for each</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">SingleFeature</span><span class="p">)</span>
     <span class="n">curr_pt</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
+    <span class="c1"># print(&quot;### single point:&quot;, curr_pt)</span>
     <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span>
         <span class="n">prev_pt</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">get_point</span><span class="p">()</span>
         <span class="n">dist</span> <span class="o">=</span> <span class="n">chebyshev_distance</span><span class="p">(</span><span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">)</span>
+        <span class="c1"># print(f&quot;# distance: ({prev_pt[0]}, {prev_pt[1]}) ({curr_pt[0]}, {curr_pt[1]}) {dist}&quot;)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pb_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">DistanceFeature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">curr_pt</span><span class="p">,</span> <span class="n">prev_pt</span><span class="p">,</span> <span class="n">dist</span><span class="p">))</span>
 
     <span class="c1"># add to previous elements</span>
@@ -1555,14 +1605,14 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">61</span>
-<span class="normal">62</span>
-<span class="normal">63</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">63</span>
 <span class="normal">64</span>
 <span class="normal">65</span>
 <span class="normal">66</span>
 <span class="normal">67</span>
-<span class="normal">68</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">p2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">68</span>
+<span class="normal">69</span>
+<span class="normal">70</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">p2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="n">x1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">x2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">y1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
