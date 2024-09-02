@@ -96,6 +96,8 @@ nx-cugraph-cu12 = "^24.6.1"
 nx-parallel = "^0.2"
 cupy-cuda12x = "^13.2.0"
 types-tabulate = "^0.9.0.20240106"
+pycuda = "^2024.1.2"
+cuda-python = "^12.6.0"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
@@ -173,13 +175,12 @@ omit-covered-files = false
 # https://beta.ruff.rs/docs/configuration/
 line-length = 100
 fix-only = true
-exclude = ["tests/helpers/nethack_screens.py"]
 
 [tool.ruff.format]
 docstring-code-format = true
 
 [tool.ruff.lint]
-extend-select = ["T201"]
+extend-select = ["T201", "F401", "ERA001", "RUF100", "DOC"]
 unfixable = ["T201"]
 select = ["D"]
 ignore = [
