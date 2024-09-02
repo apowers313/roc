@@ -93,7 +93,7 @@ update-dev-deps:
 # Docs
 .PHONY: docs
 docs:
-	poetry run mkdocs build
+	poetry run mkdocs build --clean
 
 .PHONY: edit-docs
 edit-docs:
