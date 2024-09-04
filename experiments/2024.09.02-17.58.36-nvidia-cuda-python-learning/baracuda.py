@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import ctypes
+from abc import ABC, abstractmethod
 from typing import Any, cast
 
 import numpy as np
 from cuda import cuda, cudart, nvrtc
+
+BlockSpec = tuple[int, int, int]
+GridSpec = tuple[int, int, int]
 
 
 def _cudaGetErrorEnum(error: Any) -> Any:
@@ -155,6 +160,40 @@ class CudaMemory:
     # as_buffer
 
 
+class GraphNode(ABC):
+    @abstractmethod
+    def __nv_mknode__(self, graph: Any) -> None: ...
+
+
+class KernelNode(GraphNode):
+    def __init__(
+        self,
+        fn: CudaFunction,
+        *,
+        block: BlockSpec = (1, 1, 1),
+        grid: GridSpec = (1, 1, 1),
+        device: CudaDevice | None = None,
+    ) -> None:
+        self.block = block
+        self.grid = grid
+        self.device = device
+        self.fn = fn
+
+    def __nv_mknode__(self, nv_graph: Any) -> None:
+        kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
+        kernelNodeParams.func = self.fn.kernel  # type: ignore
+        kernelNodeParams.gridDimX = self.grid[0]
+        kernelNodeParams.gridDimY = self.grid[1]
+        kernelNodeParams.gridDimZ = self.grid[2]
+        kernelNodeParams.blockDimX = self.block[0]
+        kernelNodeParams.blockDimY = self.block[1]
+        kernelNodeParams.blockDimZ = self.block[2]
+        kernelNodeParams.sharedMemBytes = 0
+        # kernelNodeParams.kernelParams = kernelArgs
+        kernelNodeParams.kernelParams = 0
+        checkCudaErrors(cuda.cuGraphAddKernelNode(nv_graph, None, 0, kernelNodeParams))
+
+
 class CudaGraph:
     # https://github.com/NVIDIA/cuda-python/blob/main/examples/3_CUDA_Features/simpleCudaGraphs_test.py
     def __init__(self, *, stream: CudaStream | None = None) -> None:
@@ -168,10 +207,15 @@ class CudaGraph:
         self.graphExec = checkCudaErrors(cudart.cudaGraphInstantiate(self.nv_graph, 0))
         checkCudaErrors(cudart.cudaGraphLaunch(self.graphExec, self.stream.nv_stream))
 
+    def add_node(self, n: GraphNode) -> None:
+        self.nodes.append(n)
+        n.__nv_mknode__(self)
+
     # cuStreamBeginCaptureToGraph
     # instantiate()
     # upload()
     # launch()
+
     def add_kernel_node(self, fn: CudaFunction) -> None:
         kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
         self.fn = fn
@@ -210,15 +254,22 @@ class CudaGraph:
     # to_networkx()
 
 
+NvDataType = type[ctypes.c_uint] | type[ctypes.c_void_p]
+
+
+class CudaData:
+    def __init__(self, data: int, datatype: NvDataType | None = None) -> None:
+        self.data = data
+        if datatype is None:
+            datatype = ctypes.c_uint
+        self.type = datatype
+
+
 class CudaFunction:
     def __init__(self, src: CudaSource, name: str) -> None:
         self.src = src
         self.name = name
         self.kernel = checkCudaErrors(cuda.cuModuleGetFunction(src.module, name.encode()))
-
-
-BlockSpec = tuple[int, int, int]
-GridSpec = tuple[int, int, int]
 
 
 class CudaSource:
@@ -280,6 +331,7 @@ class CudaSource:
     def call(
         self,
         name: str,
+        args: CudaData | list[CudaData] | None = None,
         *,
         block: BlockSpec = (1, 1, 1),
         grid: GridSpec = (1, 1, 1),
@@ -293,6 +345,20 @@ class CudaSource:
         print("Calling function:", name)
         fn = self.get_function(name, device=device)
 
+        NvArgs = tuple[
+            tuple[Any, ...],  # list of data
+            tuple[Any, ...],  # list of data types
+        ]
+        if args is None:
+            nv_args: NvArgs | int = 0
+        else:
+            if isinstance(args, CudaData):
+                args = [args]
+
+            nv_data_args = tuple(arg.data for arg in args)
+            nv_type_args = tuple(arg.type for arg in args)
+            nv_args = (nv_data_args, nv_type_args)
+
         checkCudaErrors(
             cuda.cuLaunchKernel(
                 fn.kernel,
@@ -305,7 +371,7 @@ class CudaSource:
                 0,  # dynamic shared memory
                 stream.nv_stream,  # stream
                 #    args.ctypes.data,  # kernel arguments
-                0,  # kernel arguments
+                nv_args,  # kernel arguments
                 0,  # extra (ignore)
             )
         )
