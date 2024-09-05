@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import ctypes
 from abc import ABC, abstractmethod
-from typing import Any, cast
+from typing import Any, NewType, cast
 
 import numpy as np
 from cuda import cuda, cudart, nvrtc
-
-BlockSpec = tuple[int, int, int]
-GridSpec = tuple[int, int, int]
 
 
 def _cudaGetErrorEnum(error: Any) -> Any:
@@ -21,7 +18,7 @@ def _cudaGetErrorEnum(error: Any) -> Any:
         raise RuntimeError("Unknown error type: {}".format(error))
 
 
-def checkCudaErrors(result: Any) -> Any:
+def checkCudaErrors(result: tuple[Any, ...]) -> Any:
     if result[0].value:
         raise RuntimeError(
             "CUDA error code={}({})".format(result[0].value, _cudaGetErrorEnum(result[0]))
@@ -54,7 +51,7 @@ class CudaDevice:
         self.streams: list[CudaStream] = []
 
         # Retrieve handle for device 0
-        self.nv_device = checkCudaErrors(cuda.cuDeviceGet(device_id))
+        self.nv_device: NvDevice = checkCudaErrors(cuda.cuDeviceGet(device_id))
 
     def create_context(self) -> CudaContext:
         # Create context
@@ -65,11 +62,12 @@ class CudaDevice:
 
     @property
     def name(self) -> str:
-        name = cast(bytes, checkCudaErrors(cuda.cuDeviceGetName(512, self.nv_device)))
+        name: bytes = checkCudaErrors(cuda.cuDeviceGetName(512, self.nv_device))
         return name.decode()
 
     @property
     def default_context(self) -> CudaContext:
+        # TODO: cuDevicePrimaryCtxRetain?
         print("getting default context")
         if len(self.contexts) == 0:
             self.contexts.append(self.create_context())
@@ -122,7 +120,7 @@ class CudaDevice:
 class CudaContext:
     def __init__(self, dev: CudaDevice) -> None:
         print("creating context")
-        self.nv_context = checkCudaErrors(cuda.cuCtxCreate(0, dev.nv_device))
+        self.nv_context: NvContext = checkCudaErrors(cuda.cuCtxCreate(0, dev.nv_device))
 
     def __del__(self) -> None:
         checkCudaErrors(cuda.cuCtxDestroy(self.nv_context))
@@ -130,7 +128,7 @@ class CudaContext:
 
 class CudaStream:
     def __init__(self, flags: int = cuda.CUstream_flags.CU_STREAM_DEFAULT) -> None:
-        self.nv_stream = checkCudaErrors(cuda.cuStreamCreate(flags))
+        self.nv_stream: NvStream = checkCudaErrors(cuda.cuStreamCreate(flags))
 
     def __del__(self) -> None:
         self.synchronize()
@@ -150,6 +148,40 @@ class CudaEvent:
 
 
 class CudaMemory:
+    def __init__(self, size: int, ctx: CudaContext | None = None) -> None:
+        if ctx is None:
+            device = CudaDevice.default()
+            ctx = device.default_context
+
+        self.size = size
+        self.nv_memory: NvMemory = checkCudaErrors(cudart.cudaMalloc(size))
+        # self.nv_memory: NvMemory = checkCudaErrors(cuda.cuMemAlloc(size))
+
+    # def __del__(self) -> None:
+    #     checkCudaErrors(cuda.cuMemFree(self.nv_memory))
+
+    @staticmethod
+    def from_np(arr: numpy.ndarray, *, stream: CudaStream | None = None) -> CudaMemory:
+        if stream is None:
+            dev = CudaDevice.default()
+            stream = dev.default_stream
+
+        num_bytes = len(arr) * arr.itemsize
+        mem = CudaMemory(num_bytes)
+        # print("mem.nv_memory", mem.nv_memory)
+        # print("arr.ctypes.data", arr.ctypes.data)
+        # print("num_bytes", num_bytes)
+        # print("stream", stream)
+        checkCudaErrors(
+            cuda.cuMemcpyHtoDAsync(mem.nv_memory, arr.ctypes.data, num_bytes, stream.nv_stream)
+        )
+
+        return mem
+
+    # cuda.cuMemcpy
+    # cuda.cuMemcpyHtoD
+    # cuda.cuMemcpyDtoH
+
     # managed
     # pagelocked
     pass
@@ -169,19 +201,20 @@ class KernelNode(GraphNode):
     def __init__(
         self,
         fn: CudaFunction,
+        args: KernelArgs = None,
         *,
         block: BlockSpec = (1, 1, 1),
         grid: GridSpec = (1, 1, 1),
-        device: CudaDevice | None = None,
+        # device: CudaDevice | None = None,
     ) -> None:
         self.block = block
         self.grid = grid
-        self.device = device
+        # self.device = device
         self.fn = fn
 
-    def __nv_mknode__(self, nv_graph: Any) -> None:
+    def __nv_mknode__(self, graph: CudaGraph) -> None:
         kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
-        kernelNodeParams.func = self.fn.kernel  # type: ignore
+        kernelNodeParams.func = self.fn.nv_kernel
         kernelNodeParams.gridDimX = self.grid[0]
         kernelNodeParams.gridDimY = self.grid[1]
         kernelNodeParams.gridDimZ = self.grid[2]
@@ -191,7 +224,7 @@ class KernelNode(GraphNode):
         kernelNodeParams.sharedMemBytes = 0
         # kernelNodeParams.kernelParams = kernelArgs
         kernelNodeParams.kernelParams = 0
-        checkCudaErrors(cuda.cuGraphAddKernelNode(nv_graph, None, 0, kernelNodeParams))
+        checkCudaErrors(cuda.cuGraphAddKernelNode(graph.nv_graph, None, 0, kernelNodeParams))
 
 
 class CudaGraph:
@@ -201,11 +234,15 @@ class CudaGraph:
             dev = CudaDevice.default()
             stream = dev.default_stream
         self.stream = stream
-        self.nv_graph = checkCudaErrors(cuda.cuGraphCreate(0))
+        self.nodes: list[GraphNode] = []
+        self.nv_graph: NvGraph = checkCudaErrors(cuda.cuGraphCreate(0))
 
     def run(self) -> None:
-        self.graphExec = checkCudaErrors(cudart.cudaGraphInstantiate(self.nv_graph, 0))
-        checkCudaErrors(cudart.cudaGraphLaunch(self.graphExec, self.stream.nv_stream))
+        self.nv_graph_exec: NvGraphExec = checkCudaErrors(
+            cudart.cudaGraphInstantiate(self.nv_graph, 0)
+        )
+
+        checkCudaErrors(cudart.cudaGraphLaunch(self.nv_graph_exec, self.stream.nv_stream))
 
     def add_node(self, n: GraphNode) -> None:
         self.nodes.append(n)
@@ -216,18 +253,18 @@ class CudaGraph:
     # upload()
     # launch()
 
-    def add_kernel_node(self, fn: CudaFunction) -> None:
-        kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
-        self.fn = fn
-        kernelNodeParams.func = fn.kernel  # type: ignore
-        kernelNodeParams.gridDimX = 1
-        kernelNodeParams.gridDimY = kernelNodeParams.gridDimZ = 1
-        kernelNodeParams.blockDimX = 1
-        kernelNodeParams.blockDimY = kernelNodeParams.blockDimZ = 1
-        kernelNodeParams.sharedMemBytes = 0
-        # kernelNodeParams.kernelParams = kernelArgs
-        kernelNodeParams.kernelParams = 0
-        checkCudaErrors(cuda.cuGraphAddKernelNode(self.nv_graph, None, 0, kernelNodeParams))
+    # def add_kernel_node(self, fn: CudaFunction) -> None:
+    #     kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
+    #     self.fn = fn
+    #     kernelNodeParams.func = fn.kernel  # type: ignore
+    #     kernelNodeParams.gridDimX = 1
+    #     kernelNodeParams.gridDimY = kernelNodeParams.gridDimZ = 1
+    #     kernelNodeParams.blockDimX = 1
+    #     kernelNodeParams.blockDimY = kernelNodeParams.blockDimZ = 1
+    #     kernelNodeParams.sharedMemBytes = 0
+    #     # kernelNodeParams.kernelParams = kernelArgs
+    #     kernelNodeParams.kernelParams = 0
+    #     checkCudaErrors(cuda.cuGraphAddKernelNode(self.nv_graph, None, 0, kernelNodeParams))
 
     # add_memcpy_node()
     # add_memset_node()
@@ -244,9 +281,11 @@ class CudaGraph:
     # mem_trim()
     # clone()
     @property
-    def nodes(self) -> list[object]:
+    def nv_nodes(self) -> list[NvGraphNode]:
+        nodes: list[NvGraphNode]
+        numNodes: int
         nodes, numNodes = checkCudaErrors(cudart.cudaGraphGetNodes(self.nv_graph))
-        return cast(list[object], nodes)
+        return nodes
 
     # root_nodes[]
     # edges[]
@@ -258,8 +297,13 @@ NvDataType = type[ctypes.c_uint] | type[ctypes.c_void_p]
 
 
 class CudaData:
-    def __init__(self, data: int, datatype: NvDataType | None = None) -> None:
-        self.data = data
+    def __init__(self, data: int | CudaMemory, datatype: NvDataType | None = None) -> None:
+        if isinstance(data, int):
+            self.data: int | NvMemory = data
+        if isinstance(data, CudaMemory):
+            self.data = data.nv_memory
+            datatype = ctypes.c_void_p
+
         if datatype is None:
             datatype = ctypes.c_uint
         self.type = datatype
@@ -269,7 +313,22 @@ class CudaFunction:
     def __init__(self, src: CudaSource, name: str) -> None:
         self.src = src
         self.name = name
-        self.kernel = checkCudaErrors(cuda.cuModuleGetFunction(src.module, name.encode()))
+        self.nv_kernel: NvKernel = checkCudaErrors(
+            cuda.cuModuleGetFunction(src.nv_module, name.encode())
+        )
+
+
+def make_args(args: KernelArgs) -> NvKernelArgs:
+    if args is None:
+        nv_args: NvKernelArgs | int = 0
+    else:
+        if isinstance(args, CudaData):
+            args = [args]
+
+        nv_data_args = tuple(arg.data for arg in args)
+        nv_type_args = tuple(arg.type for arg in args)
+        nv_args = (nv_data_args, nv_type_args)
+    return nv_args
 
 
 class CudaSource:
@@ -286,7 +345,7 @@ class CudaSource:
         print(f"CODE:\n-------\n{self.code}\n-------\n")
 
         # Create program
-        self.prog = checkCudaErrors(
+        self.nv_prog: NvProgram = checkCudaErrors(
             nvrtc.nvrtcCreateProgram(self.code.encode(), self.progname.encode(), 0, [], [])
         )
 
@@ -295,10 +354,10 @@ class CudaSource:
         # arch_arg = bytes(f"--gpu-architecture=compute_{major}{minor}", "ascii")
         # opts = [b"--fmad=false", arch_arg]
         # ret = nvrtc.nvrtcCompileProgram(prog, len(opts), opts)
-        compile_result = nvrtc.nvrtcCompileProgram(self.prog, 0, [])
-        log_sz = checkCudaErrors(nvrtc.nvrtcGetProgramLogSize(self.prog))
+        compile_result = nvrtc.nvrtcCompileProgram(self.nv_prog, 0, [])
+        log_sz = checkCudaErrors(nvrtc.nvrtcGetProgramLogSize(self.nv_prog))
         buf = b" " * log_sz
-        checkCudaErrors(nvrtc.nvrtcGetProgramLog(self.prog, buf))
+        checkCudaErrors(nvrtc.nvrtcGetProgramLog(self.nv_prog, buf))
         self.compile_log = buf.decode()
         if log_sz > 0:
             print(f"Compilation results:\b{self.compile_log}")
@@ -307,9 +366,9 @@ class CudaSource:
         checkCudaErrors(compile_result)
 
         # Get PTX from compilation
-        self.ptx_size = checkCudaErrors(nvrtc.nvrtcGetPTXSize(self.prog))
-        self.ptx = b" " * self.ptx_size
-        checkCudaErrors(nvrtc.nvrtcGetPTX(self.prog, self.ptx))
+        self.nv_ptx_size = checkCudaErrors(nvrtc.nvrtcGetPTXSize(self.nv_prog))
+        self.ptx = b" " * self.nv_ptx_size
+        checkCudaErrors(nvrtc.nvrtcGetPTX(self.nv_prog, self.ptx))
 
     def get_function(
         self,
@@ -324,44 +383,33 @@ class CudaSource:
 
         # Load PTX as module data and retrieve function
         self.ptx = np.char.array(self.ptx)
-        self.module = checkCudaErrors(cuda.cuModuleLoadData(self.ptx.ctypes.data))
+        self.nv_module = checkCudaErrors(cuda.cuModuleLoadData(self.ptx.ctypes.data))
 
         return CudaFunction(self, name)
 
     def call(
         self,
         name: str,
-        args: CudaData | list[CudaData] | None = None,
+        args: KernelArgs = None,
         *,
         block: BlockSpec = (1, 1, 1),
         grid: GridSpec = (1, 1, 1),
-        device: CudaDevice | None = None,
+        stream: CudaStream | None = None,
     ) -> None:
-        if device is None:
+        if stream is None:
             device = CudaDevice.default()
-        context = device.default_context  # cuModuleLoadData requires a context
-        stream = device.default_stream
+            stream = device.default_stream
 
         print("Calling function:", name)
         fn = self.get_function(name, device=device)
 
-        NvArgs = tuple[
-            tuple[Any, ...],  # list of data
-            tuple[Any, ...],  # list of data types
-        ]
-        if args is None:
-            nv_args: NvArgs | int = 0
-        else:
-            if isinstance(args, CudaData):
-                args = [args]
+        nv_args = make_args(args)
 
-            nv_data_args = tuple(arg.data for arg in args)
-            nv_type_args = tuple(arg.type for arg in args)
-            nv_args = (nv_data_args, nv_type_args)
+        print("nv_args", nv_args)
 
         checkCudaErrors(
             cuda.cuLaunchKernel(
-                fn.kernel,
+                fn.nv_kernel,
                 grid[0],  # grid x dim
                 grid[1],  # grid y dim
                 grid[2],  # grid z dim
@@ -377,7 +425,7 @@ class CudaSource:
         )
 
     def __del__(self) -> None:
-        checkCudaErrors(cuda.cuModuleUnload(self.module))
+        checkCudaErrors(cuda.cuModuleUnload(self.nv_module))
 
 
 class CudaSourceFile(CudaSource):
@@ -385,3 +433,27 @@ class CudaSourceFile(CudaSource):
         with open(filename) as f:
             code = f.read()
         super().__init__(code=code, progname=filename)
+
+
+# internal types
+KernelArgs = CudaData | list[CudaData] | None
+BlockSpec = tuple[int, int, int]
+GridSpec = tuple[int, int, int]
+
+# types for CUDA Python
+NvDevice = NewType("NvDevice", object)  # cuda.CUdevice
+NvContext = NewType("NvContext", object)  # cuda.CUcontext
+NvStream = NewType("NvStream", object)  # cuda.CUstream
+NvGraphExec = NewType("NvGraphExec", object)  # cuda.CUgraphExec
+NvGraph = NewType("NvGraph", object)  # cuda.CUgraph
+NvGraphNode = NewType("NvGraphNode", object)  # cuda.CUgraphNode
+NvKernel = NewType("NvKernel", object)  # cuda.CUkernel
+NvProgram = NewType("NvProgram", object)  # nvrtc.nvrtcGetProgram
+NvMemory = NewType("NvMemory", object)  # cuda.CUdeviceptr
+NvKernelArgs = (
+    int  # for None args
+    | tuple[
+        tuple[Any, ...],  # list of data
+        tuple[Any, ...],  # list of data types
+    ]
+)

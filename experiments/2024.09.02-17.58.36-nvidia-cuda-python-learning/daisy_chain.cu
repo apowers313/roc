@@ -1,7 +1,5 @@
 __global__ void k1() {
   printf("kernel 1 starting...\n");
-  // cudaEvent_t e;
-  // cudaEventCreateWithFlags(&e, cudaEventDisableTiming);
   printf("kernel 1 done.\n");
 }
 
