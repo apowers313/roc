@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import ctypes
-from abc import ABC, abstractmethod
+from abc import ABCMeta, abstractmethod
+from enum import Enum
 from typing import Any, NewType, cast
 
 import numpy as np
@@ -192,9 +193,10 @@ class CudaMemory:
     # as_buffer
 
 
-class GraphNode(ABC):
+class GraphNode(metaclass=ABCMeta):
     @abstractmethod
-    def __nv_mknode__(self, graph: Any) -> None: ...
+    def __nv_mknode__(self, graph: Any) -> None:
+        pass
 
 
 class KernelNode(GraphNode):
@@ -205,26 +207,111 @@ class KernelNode(GraphNode):
         *,
         block: BlockSpec = (1, 1, 1),
         grid: GridSpec = (1, 1, 1),
-        # device: CudaDevice | None = None,
     ) -> None:
         self.block = block
         self.grid = grid
-        # self.device = device
         self.fn = fn
+        self.args = args
+        self.nv_args = make_args(args)
+
+        nv_kernel_node_params = cuda.CUDA_KERNEL_NODE_PARAMS()
+        nv_kernel_node_params.func = self.fn.nv_kernel
+        nv_kernel_node_params.gridDimX = self.grid[0]
+        nv_kernel_node_params.gridDimY = self.grid[1]
+        nv_kernel_node_params.gridDimZ = self.grid[2]
+        nv_kernel_node_params.blockDimX = self.block[0]
+        nv_kernel_node_params.blockDimY = self.block[1]
+        nv_kernel_node_params.blockDimZ = self.block[2]
+        nv_kernel_node_params.sharedMemBytes = 0
+        nv_kernel_node_params.kernelParams = self.nv_args
+        self.nv_kernel_node_params = nv_kernel_node_params
+
+        self.nv_kernel_node: NvKernelNode | None = None
 
     def __nv_mknode__(self, graph: CudaGraph) -> None:
-        kernelNodeParams = cuda.CUDA_KERNEL_NODE_PARAMS()
-        kernelNodeParams.func = self.fn.nv_kernel
-        kernelNodeParams.gridDimX = self.grid[0]
-        kernelNodeParams.gridDimY = self.grid[1]
-        kernelNodeParams.gridDimZ = self.grid[2]
-        kernelNodeParams.blockDimX = self.block[0]
-        kernelNodeParams.blockDimY = self.block[1]
-        kernelNodeParams.blockDimZ = self.block[2]
-        kernelNodeParams.sharedMemBytes = 0
-        # kernelNodeParams.kernelParams = kernelArgs
-        kernelNodeParams.kernelParams = 0
-        checkCudaErrors(cuda.cuGraphAddKernelNode(graph.nv_graph, None, 0, kernelNodeParams))
+        self.nv_kernel_node = checkCudaErrors(
+            cuda.cuGraphAddKernelNode(graph.nv_graph, None, 0, self.nv_kernel_node_params)
+        )
+
+
+class MallocNode(GraphNode):
+    def __init__(self, size: int) -> None:
+        self.size = size
+        self.nv_memory: NvMallocNode | None = None
+
+        nv_memalloc_params = cudart.cudaMemAllocNodeParams()
+        nv_memalloc_params.bytesize = size
+        # nv_memalloc_params.poolProps
+        # nv_memalloc_params.accessDescs
+        # nv_memalloc_params.accessDescCount
+        # nv_memalloc_params.dptr
+        # nv_memalloc_params.getPtr()
+        self.nv_memalloc_params = nv_memalloc_params
+
+    def __nv_mknode__(self, graph: CudaGraph) -> None:
+        self.nv_memory = checkCudaErrors(
+            cudart.cudaGraphAddMemAllocNode(graph.nv_graph, None, 0, self.nv_memalloc_params)
+        )
+
+
+class CopyDirection(Enum):
+    device_to_host = 1
+    host_to_device = 2
+
+
+class MemcpyNode(GraphNode):
+    def __init__(self, src: CudaMemory, dst: CudaMemory, size: int, direction: str) -> None:
+        self.src = src
+        self.dst = dst
+        self.size = size
+        self.direction = CopyDirection[direction]
+        self.nv_src = self.src.nv_memory
+        self.nv_dst = self.dst.nv_memory
+        self.nv_memcpy_node: NvMemcpyNode | None = None
+
+        nv_memcpy_params = cudart.cudaMemcpy3DParms()
+        nv_memcpy_params.srcArray = None
+        nv_memcpy_params.srcPos = cudart.make_cudaPos(0, 0, 0)
+        nv_memcpy_params.srcPtr = cudart.make_cudaPitchedPtr(
+            self.nv_src, np.dtype(np.float64).itemsize, 1, 1
+        )
+        nv_memcpy_params.dstArray = None
+        nv_memcpy_params.dstPos = cudart.make_cudaPos(0, 0, 0)
+        nv_memcpy_params.dstPtr = cudart.make_cudaPitchedPtr(
+            self.nv_dst, np.dtype(np.float64).itemsize, 1, 1
+        )
+        nv_memcpy_params.extent = cudart.make_cudaExtent(np.dtype(np.float64).itemsize, 1, 1)
+        if self.direction == CopyDirection.device_to_host:
+            nv_memcpy_params.kind = cudart.cudaMemcpyKind.cudaMemcpyDeviceToHost
+        else:
+            nv_memcpy_params.kind = cudart.cudaMemcpyKind.cudaMemcpyHostToDevice
+        self.nv_memcpy_params = nv_memcpy_params
+
+    def __nv_mknode__(self, graph: CudaGraph) -> None:
+        self.nv_memcpy_node = checkCudaErrors(
+            cudart.cudaGraphAddMemcpyNode(graph.nv_graph, None, 0, self.nv_memcpy_params)
+        )
+
+
+class MemsetNode(GraphNode):
+    def __init__(self, mem: CudaMemory, value: int, size: int) -> None:
+        self.size = size
+        self.value = value
+        self.nv_memset_node: NvMemsetNode | None = None
+
+        nv_memset_params = cudart.cudaMemsetParams()
+        nv_memset_params.dst = mem.nv_memory
+        nv_memset_params.value = self.value
+        # nv_memset_params.elementSize = np.dtype(np.float32).itemsize
+        nv_memset_params.elementSize = np.dtype(np.uint8).itemsize
+        nv_memset_params.width = self.size
+        nv_memset_params.height = 1
+        self.nv_memset_params = nv_memset_params
+
+    def __nv_mknode__(self, graph: CudaGraph) -> None:
+        self.nv_memset_node = checkCudaErrors(
+            cudart.cudaGraphAddMemsetNode(graph.nv_graph, None, 0, self.nv_memset_params)
+        )
 
 
 class CudaGraph:
@@ -450,6 +537,10 @@ NvGraphNode = NewType("NvGraphNode", object)  # cuda.CUgraphNode
 NvKernel = NewType("NvKernel", object)  # cuda.CUkernel
 NvProgram = NewType("NvProgram", object)  # nvrtc.nvrtcGetProgram
 NvMemory = NewType("NvMemory", object)  # cuda.CUdeviceptr
+NvKernelNode = NewType("NvKernelNode", object)
+NvMallocNode = NewType("NvMallocNode", object)
+NvMemcpyNode = NewType("NvMemcpyNode", object)
+NvMemsetNode = NewType("NvMemsetNode", object)
 NvKernelArgs = (
     int  # for None args
     | tuple[
