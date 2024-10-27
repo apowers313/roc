@@ -82,23 +82,19 @@ class Settled:
 
 
 class ElementSize(Node, extra="forbid"):
-    # _no_save = True
     size: int
 
 
 class ElementType(Node, extra="forbid"):
-    # _no_save = True
     type: int
 
 
 class ElementPoint(Node, extra="forbid"):
-    # _no_save = True
     x: int
     y: int
 
 
 class ElementTypedPoint(Node, extra="forbid"):
-    # _no_save = True
     type: int
     x: int
     y: int
@@ -116,14 +112,12 @@ class Direction(str, Enum):
 
 
 class ElementOrientation(Node, extra="forbid"):
-    # _no_save = True
     orientation: Direction
 
 
 class Feature(Node, ABC):
     """A detail of the environment that has been created by a feature extractor"""
 
-    # _no_save = True
     _origin: str
 
     @property
