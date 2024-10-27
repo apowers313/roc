@@ -10,7 +10,7 @@ import roc.feature_extractors  # noqa: F401
 import roc.logger as roc_logger
 from roc.jupyter import is_jupyter
 
-from .action import ActionData, action_bus
+from .action import Action, ActionData
 from .component import Component
 from .config import Config
 from .gymnasium import NethackGym
@@ -26,8 +26,8 @@ __all__ = [
     "Perception",
     "PerceptionData",
     # Action Exports
-    "action_bus",
     "ActionData",
+    "Action",
 ]
 
 

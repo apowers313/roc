@@ -9,7 +9,7 @@ import psutil
 import pytest
 from helpers.util import FakeData
 
-from roc.action import ActionData, action_bus
+from roc.action import Action, ActionData
 from roc.component import Component, register_component
 from roc.config import Config
 from roc.event import BusConnection, EventBus
@@ -130,7 +130,7 @@ def env_bus_conn(fake_component) -> BusConnection[PerceptionData]:
 
 @pytest.fixture
 def action_bus_conn(fake_component) -> BusConnection[ActionData]:
-    return action_bus.connect(fake_component)
+    return Action.bus.connect(fake_component)
 
 
 @pytest.fixture

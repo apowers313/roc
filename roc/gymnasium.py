@@ -9,15 +9,14 @@ from enum import IntEnum
 from typing import Any
 
 import nle
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-# from roc import init as roc_init
-from .action import ActionCount, action_bus
+from .action import Action, ActionCount
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
+from .intrinsic import Intrinsic
 from .jupyter.state import print_state, states
-from .location import TextGrid
 from .logger import logger
 from .perception import Perception, VisionData
 
@@ -41,10 +40,9 @@ class Gym(Component, ABC):
         self.env = gym.make(gym_id, **gym_opts)
 
         # setup communications
-        self.env_bus = Perception.bus
-        self.action_bus = action_bus
-        self.env_bus_conn = self.env_bus.connect(self)
-        self.action_bus_conn = self.action_bus.connect(self)
+        self.env_bus_conn = Perception.bus.connect(self)
+        self.action_bus_conn = Action.bus.connect(self)
+        self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
 
         # config actions
         self.action_count = self.env.action_space.n
@@ -77,7 +75,7 @@ class Gym(Component, ABC):
 
         # main environment loop
         while not done:
-            # logger.trace(f"Sending observation: {obs}")
+            logger.trace(f"Sending observation: {obs}")
             breakpoints.check()
 
             # save the current screen
@@ -120,8 +118,6 @@ class Gym(Component, ABC):
 
     def await_action(self) -> Any:
         # TODO: self.action_bus_conn.subject.first()
-
-        # warnings.warn("await action not implemented, defaulting to '.' for every action")
 
         default_action = 19  # 19 = 46 = "." = do nothing
         action = self.decode_action(default_action)
@@ -189,33 +185,46 @@ class condition_bits(IntEnum):
 class BottomlineStats(BaseModel):
     """A Pydantic model representing the Nethack bottom line statistics."""
 
-    X: int
-    Y: int
-    STR25: int
-    STR125: int
-    DEX: int
-    CON: int
-    INT: int
-    WIS: int
-    CHA: int
-    SCORE: int
-    HP: int
-    HPMAX: int
-    DEPTH: int
-    GOLD: int
-    ENE: int
-    ENEMAX: int
-    AC: int
-    HD: int
-    XP: int
-    EXP: int
-    TIME: int
-    HUNGER: int
-    CAP: int
-    DNUM: int
-    DLEVEL: int
-    CONDITION: int
-    ALIGN: int
+    x: int
+    y: int
+    str25: int
+    str125: int
+    dex: int
+    con: int
+    intel: int = Field(alias="int")
+    wis: int
+    cha: int
+    score: int
+    hp: int
+    hpmax: int
+    depth: int
+    gold: int
+    ene: int
+    enemax: int
+    ac: int
+    hd: int
+    xp: int
+    exp: int
+    time: int
+    hunger: int
+    cap: int
+    dnum: int
+    dlevel: int
+    condition: int
+    align: int
+    stone: bool
+    slime: bool
+    stringl: bool
+    foodpois: bool
+    termill: bool
+    blind: bool
+    deaf: bool
+    stun: bool
+    conf: bool
+    hallu: bool
+    lev: bool
+    fly: bool
+    ride: bool
 
 
 class NethackGym(Gym):
@@ -237,13 +246,6 @@ class NethackGym(Gym):
 
     def send_vision(self, obs: Any) -> None:
         vd = VisionData.from_dict(obs)
-        # vd = VisionData.from_dict(
-        #     {
-        #         "chars": obs["chars"].copy(),
-        #         "glyphs": obs["glyphs"].copy(),
-        #         "colors": obs["colors"].copy(),
-        #     }
-        # )
         self.env_bus_conn.send(vd)
 
     def send_auditory(self) -> None:
@@ -253,20 +255,15 @@ class NethackGym(Gym):
         pass
 
     def send_intrinsics(self, obs: Any) -> None:
-        pass
-        # NOTE: obs["blstats"] is an ndarray object from numpy
-        bl = obs["blstats"].tolist()
-        blstat_args = {e.name: bl[e.value] for e in blstat_offsets}
-        # print("blstat_args", blstat_args)
+        blstats = obs["blstats"]
+        blstats_vals = {e.name.lower(): blstats[e.value] for e in blstat_offsets}
+        for bit in condition_bits:
+            blstats_vals[bit.name.lower()] = (
+                True if blstats_vals["condition"] & bit.value else False
+            )
 
-        blstats = BottomlineStats(**blstat_args)
-        # print("blstats", blstats.model_dump())
-        blstat_conds = {bit.name for bit in condition_bits if blstats.CONDITION & bit.value}
-        # TODO: remove... just curious if conditions ever get set
-        if len(blstat_conds):
-            logger.warning(f"!!! FOUND CONDITIONS: {blstats.CONDITION} = {blstat_conds}")
-            logger.warning(f"bltstats: {obs['blstats']} :: {blstat_args}")
-            self.env.render()
+        bl = BottomlineStats(**blstats_vals)
+        self.intrinsic_bus_conn.send(bl.dict())
 
 
 dump_env_file: Any = None
@@ -320,6 +317,7 @@ def _dump_env_record(obs: Any, loop_num: int) -> None:
     dump_env_file.write(f"        \"chars\": {obs['chars'].tolist()},\n")
     dump_env_file.write(f"        \"colors\": {obs['colors'].tolist()},\n")
     dump_env_file.write(f"        \"glyphs\": {obs['glyphs'].tolist()},\n")
+    dump_env_file.write(f"        \"blstats\": {obs['blstats'].tolist()},\n")
     dump_env_file.write("# fmt: on\n},\n")
 
 

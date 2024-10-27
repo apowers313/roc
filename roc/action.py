@@ -32,7 +32,6 @@ ActionData = Annotated[
     Field(discriminator="type"),
 ]
 
-action_bus = EventBus[ActionData]("action")
 ActionEvent = Event[ActionData]
 
 
@@ -40,9 +39,11 @@ ActionEvent = Event[ActionData]
 class Action(Component):
     """Component for determining which action to take."""
 
+    bus = EventBus[ActionData]("action")
+
     def __init__(self) -> None:
         super().__init__()
-        self.action_bus_conn = self.connect_bus(action_bus)
+        self.action_bus_conn = self.connect_bus(self.bus)
 
         # XXX: function because you can't type annotate an inline lambda
         def count_filter(e: ActionEvent) -> bool:
@@ -51,9 +52,6 @@ class Action(Component):
         def go_filter(e: ActionEvent) -> bool:
             return e.data.type == "action_go"
 
-        # self.action_bus_conn.subject.pipe(
-        #     op.filter(count_filter),
-        # ).subscribe(self.recv_action_count)
         self.action_bus_conn.listen(
             listener=self.recv_action_count,
             filter=count_filter,

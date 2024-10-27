@@ -63,8 +63,9 @@ class Config(BaseSettings):
     log_modules: str = Field(default="")
     # agent config
     default_action: str = Field(default="pass")
-    action_count: int | None = None  # configured by the gymnasium
-    observation_shape: tuple[int, ...] | None = None  # configured by the gymnasium
+    action_count: int | None = Field(default=None)  # configured by the gym
+    observation_shape: tuple[int, ...] | None = Field(default=None)  # configured by the gym
+    allow_unknown_intrinsic: bool = Field(default=True)
     # jupyter config
     status_update: int = Field(default=50)
     experiment_dir: str = Field(default="/home/apowers/experiment")

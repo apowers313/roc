@@ -11,15 +11,13 @@ from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
-from pydantic import BaseModel
 from skimage.feature import peak_local_max
 
 from .component import Component, register_component
 from .config import Config
-from .event import EventBus
+from .event import Event, EventBus
 from .graphdb import Node
-from .location import DebugGrid, IntGrid, NewGrid, Point
-from .logger import logger
+from .location import DebugGrid, IntGrid, NewGrid
 from .perception import (
     ElementPoint,
     Feature,
@@ -38,11 +36,11 @@ class VisionAttentionData:
 
 
 AttentionData = VisionAttentionData
+AttentionEvent = Event[AttentionData]
 
 
 class Attention(Component, ABC):
     bus = EventBus[AttentionData]("attention")
-    pass
 
 
 class SaliencyMap(NewGrid[list[Node]]):
