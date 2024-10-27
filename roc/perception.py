@@ -115,6 +115,10 @@ class ElementOrientation(Node, extra="forbid"):
     orientation: Direction
 
 
+# @dataclass
+# class NewFeature:
+
+
 class Feature(Node, ABC):
     """A detail of the environment that has been created by a feature extractor"""
 

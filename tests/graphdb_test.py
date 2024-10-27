@@ -714,7 +714,7 @@ class TestEdge:
 
         assert spy.call_count == 1
         assert_similar(
-            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",  # noqa: E501
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",
             normalize_whitespace(spy.call_args[0][1]),
             [("3102", "\d+"), ("3103", "\d+")],
         )
@@ -737,7 +737,7 @@ class TestEdge:
 
         assert spy.call_count == 3
         assert_similar(
-            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",  # noqa: E501
+            "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",
             normalize_whitespace(spy.call_args[0][1]),
             [("3102", "\d+"), ("3103", "\d+")],
         )

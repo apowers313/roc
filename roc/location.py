@@ -95,7 +95,7 @@ class ChangedPoint(Point):
         self.old_val = old_val
 
     def __repr__(self) -> str:
-        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"  # noqa: E501
+        return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"
 
 
 # NDArrayInt = npt.NDArray[np.int_]

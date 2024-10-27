@@ -5,7 +5,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 from __future__ import annotations
 
 from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled, VisionData
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
 from .single import SingleFeature
 
 

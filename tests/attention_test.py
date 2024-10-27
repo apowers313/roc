@@ -3,7 +3,6 @@
 
 from copy import deepcopy
 
-import numpy as np
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
@@ -20,7 +19,7 @@ from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
 from roc.graphdb import Node
 from roc.location import IntGrid
-from roc.perception import Feature, VisionData
+from roc.perception import VisionData
 
 
 class TestSaliencyMap:
@@ -279,15 +278,15 @@ class TestVisionAttention:
 
         # assert attention.saliency_map is not None
         # assert attention.saliency_map.grid is not None
-        # print("saliency features", attention.saliency_map.size)  # noqa: T201
-        # print("vision:\n", IntGrid(screens[0]["chars"]))  # noqa: T201
-        # print(f"saliency map:\n{attention.saliency_map}")  # noqa: T201
-        # print("saliency max strength", attention.saliency_map.get_max_strength())  # noqa: T201
-        # print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))  # noqa: T201
-        # print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))  # noqa: T201
-        # print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))  # noqa: T201
-        # print(attention.saliency_map.grid.get_point(16, 6))  # noqa: T201
-        # print(attention.saliency_map.grid.get_point(17, 6))  # noqa: T201
+        # print("saliency features", attention.saliency_map.size)
+        # print("vision:\n", IntGrid(screens[0]["chars"]))
+        # print(f"saliency map:\n{attention.saliency_map}")
+        # print("saliency max strength", attention.saliency_map.get_max_strength())
+        # print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))
+        # print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))
+        # print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))
+        # print(attention.saliency_map.grid.get_point(16, 6))
+        # print(attention.saliency_map.grid.get_point(17, 6))
 
         assert s.output.call_count == 2
 

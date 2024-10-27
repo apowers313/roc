@@ -3,7 +3,6 @@
 from helpers.nethack_screens import screens
 from helpers.util import (
     StubComponent,
-    check_num_src_edges,
     check_orientation,
     check_points,
     check_type,

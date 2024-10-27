@@ -1,9 +1,5 @@
 """Generates Features for things that aren't like their neighbors"""
 
-from typing import Any
-
-import numpy.typing as npt
-
 from ..component import Component, register_component
 from ..location import IntGrid, Point
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData

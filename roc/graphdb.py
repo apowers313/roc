@@ -636,11 +636,11 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 
         if isinstance(f, str):
             s = f
-            f = lambda e: e.type == s  # noqa: E731
+            f = lambda e: e.type == s
 
         if isinstance(f, int):
             n = f
-            f = lambda e: e.id == n  # noqa: E731
+            f = lambda e: e.id == n
 
         return list(filter(f, self.__iter__()))
 

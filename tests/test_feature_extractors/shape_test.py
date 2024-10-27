@@ -1,13 +1,12 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from helpers.nethack_screens import screens
-from helpers.util import StubComponent, check_num_src_edges, check_points, check_type
+from helpers.util import StubComponent, check_points, check_type
 
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.shape import Shape, ShapeFeature
 from roc.feature_extractors.single import Single
-from roc.location import IntGrid, Point
 from roc.perception import Settled, VisionData
 
 

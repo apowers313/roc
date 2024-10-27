@@ -6,7 +6,7 @@ from typing import Any
 
 # not used here, but the files have to be loaded in order for the components to
 # be registered
-import roc.feature_extractors  # noqa: F401
+import roc.feature_extractors
 import roc.logger as roc_logger
 from roc.jupyter import is_jupyter
 

@@ -23,7 +23,7 @@ def is_jupyter() -> bool:
         global get_ipython
 
         # jupyter environment defines a global function 'get_ipython'
-        get_ipython()  # type: ignore # noqa: F821
+        get_ipython()  # type: ignore
         return True
     except Exception:
         return False
@@ -99,7 +99,7 @@ class RocJupyterMagics(Magics):
             global get_ipython
 
             # jupyter environment defines a global function 'get_ipython'
-            ip = get_ipython()  # type: ignore # noqa: F821
+            ip = get_ipython()  # type: ignore
             logger.debug("jupyter environment found")
             load_ipython_extension(ip)
             logger.debug("jupyter magics loaded")

@@ -11,7 +11,6 @@ import psutil
 from roc.attention import SaliencyMap
 from roc.component import Component
 from roc.graphdb import Edge, Node
-from roc.location import IntGrid, TextGrid
 
 from .utils import bytes2human
 
