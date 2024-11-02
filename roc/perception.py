@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import weakref
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Generic, Self, TypeVar
 
@@ -16,6 +16,7 @@ import numpy.typing as npt
 from .component import Component
 from .event import Event, EventBus
 from .graphdb import Node
+from .location import XLoc, YLoc
 
 
 class VisionData:
@@ -115,8 +116,59 @@ class ElementOrientation(Node, extra="forbid"):
     orientation: Direction
 
 
-# @dataclass
-# class NewFeature:
+@dataclass(kw_only=True)
+class NewFeature:
+    feature_name: str | None = field(default=None)
+    origin: Component
+
+    # # type: int | None = field(default=None)
+    # size: int | None = field(default=None)
+    # old_type: int | None = field(default=None)
+    # points: set[tuple[XLoc, YLoc]] = field(default_factory=set)
+    # start_point: tuple[XLoc, YLoc] | None = field(default=None)
+    # end_point: tuple[XLoc, YLoc] | None = field(default=None)
+    # orientation: Direction | None = field(default=None)
+
+    # def __init__(self, origin: Component | str, name: str, **kwargs: Any) -> None:
+    #     # super().__init__(**kwargs)
+    #     super().__init__()
+    #     print("creating feature", name)
+    #     print("I'm a dataclass", is_dataclass(self))
+    #     print("points", self.points)
+    #     self.feature_name = name
+    #     if isinstance(origin, Component):
+    #         origin = f"{origin.name}:{origin.type}"
+    #     # XXX: don't store a reference to the actual component or you may end up
+    #     # with circular references and memory leaks
+    #     self._origin = origin
+
+    def to_nodes(self) -> Node:
+        n = Node(labels={"Feature", self.feature_name})
+        # TODO: create nodes for each feature value; steal from transmogrifier
+        return n
+
+    @staticmethod
+    def from_nodes(n: Node) -> NewFeature:
+        labels = n.labels - set("Feature")
+        name = next(iter(labels))
+        assert hasattr(n, "_origin")
+        assert isinstance(n._origin, Component)
+        f = NewFeature(origin=n._origin, feature_name=name)
+        # TODO: add feature values from nodes; steal from transmogrifier
+        return f
+
+
+@dataclass(kw_only=True)
+class AreaFeature(NewFeature):
+    type: int
+    points: set[tuple[XLoc, YLoc]]
+    size: int
+
+
+@dataclass(kw_only=True)
+class PointFeature(NewFeature):
+    type: int
+    point: tuple[XLoc, YLoc]
 
 
 class Feature(Node, ABC):
@@ -185,13 +237,13 @@ class Feature(Node, ABC):
         edge_iter = self.src_edges.get_edges(type)
         return list(map(lambda e: e.dst, edge_iter))
 
-    def get_point(self) -> tuple[int, int]:
+    def get_point(self) -> tuple[XLoc, YLoc]:
         pt = self.get_feature("Location")
-        if not pt:
+        if pt is None:
             raise Exception("no Location in get_point()")
 
         assert isinstance(pt, ElementPoint)
-        return (pt.x, pt.y)
+        return (XLoc(pt.x), YLoc(pt.y))
 
     def get_type(self) -> int:
         t = self.get_feature("Type")
@@ -298,7 +350,7 @@ class OldLocation(Feature):
         self.add_point(x, y)
 
 
-PerceptionData = VisionData | Settled | Feature
+PerceptionData = VisionData | Settled | Feature | NewFeature
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -343,7 +395,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> NewFeature | Feature | None: ...
 
     @classmethod
     def list(cls) -> list[str]:

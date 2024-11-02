@@ -1,21 +1,16 @@
 import numpy as np
 
-from ..component import Component, register_component
-from ..location import IntGrid, Point, PointList, TypedPointCollection
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..component import register_component
+from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
+from ..perception import AreaFeature, FeatureExtractor, PerceptionEvent, VisionData
 
 MIN_FLOOD_SIZE = 5
 
 
-class FloodFeature(Feature):
+class FloodFeature(AreaFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
-    def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
-        super().__init__(origin, "Flood")
-        self.add_type(type)
-        self.add_size(len(point_list))
-        for point in point_list:
-            self.add_point(point.x, point.y)
+    feature_name = "Flood"
 
     def __hash__(self) -> int:
         raise NotImplementedError("FloodFeature hash not implemented")
@@ -51,20 +46,13 @@ class Flood(FeatureExtractor[TypedPointCollection]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         assert isinstance(e.data, VisionData)
         data = IntGrid(e.data.glyphs)
-        # cdata = IntGrid(e.data.chars)
-        # for p in {(15, 3), (16, 3), (17, 3), (18, 3), (19, 3)}:
-        #     print(f"glyph {p}: {data.get_val(p[0], p[1])}")
-        #     print(f"char {p}: {cdata.get_val(p[0], p[1])} {chr(cdata.get_val(p[0], p[1]))}")
-
-        # for points in data.points():
-        # print(points.val)
 
         check_map = CheckMap(data.width, data.height)
 
-        def recursive_flood_check(val: int, x: int, y: int, point_list: PointList) -> PointList:
+        def recursive_flood_check(val: int, x: XLoc, y: YLoc, point_list: PointList) -> PointList:
             if x < 0 or y < 0 or x >= data.width or y >= data.height:
                 # out of bounds... move on
                 return point_list
@@ -87,13 +75,13 @@ class Flood(FeatureExtractor[TypedPointCollection]):
             # check up *: already done
 
             # check right
-            recursive_flood_check(val, x + 1, y, point_list)
+            recursive_flood_check(val, XLoc(x + 1), y, point_list)
             # check left down
-            recursive_flood_check(val, x - 1, y + 1, point_list)
+            recursive_flood_check(val, XLoc(x - 1), YLoc(y + 1), point_list)
             # check down
-            recursive_flood_check(val, x, y + 1, point_list)
+            recursive_flood_check(val, x, YLoc(y + 1), point_list)
             # check right down
-            recursive_flood_check(val, x + 1, y + 1, point_list)
+            recursive_flood_check(val, XLoc(x + 1), YLoc(y + 1), point_list)
 
             return point_list
 
@@ -101,8 +89,15 @@ class Flood(FeatureExtractor[TypedPointCollection]):
             val = data.get_val(p.x, p.y)
             point_list = recursive_flood_check(val, p.x, p.y, [])
             if len(point_list) >= MIN_FLOOD_SIZE:
-                self.pb_conn.send(FloodFeature(self, point_list, val))
+                point_set = set([(p.x, p.y) for p in point_list])
+                self.pb_conn.send(
+                    FloodFeature(
+                        origin=self,
+                        points=point_set,
+                        type=val,
+                        size=len(point_set),
+                    )
+                )
             check_map.set(p.x, p.y)
 
         self.settled()
-        return None

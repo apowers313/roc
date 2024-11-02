@@ -1,18 +1,18 @@
 """Generates Features for things that aren't like their neighbors"""
 
-from ..component import Component, register_component
+from dataclasses import dataclass
+
+from ..component import register_component
 from ..location import Point
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled, VisionData
+from ..perception import FeatureExtractor, PerceptionEvent, PointFeature, Settled, VisionData
 from .single import SingleFeature
 
 
-class ShapeFeature(Feature):
+@dataclass(kw_only=True)
+class ShapeFeature(PointFeature):
     """The shape of a single feature."""
 
-    def __init__(self, origin: Component, point: Point) -> None:
-        super().__init__(origin, "Shape")
-        self.add_point(point.x, point.y)
-        self.add_type(point.val)
+    feature_name = "Shape"
 
     def __hash__(self) -> int:
         raise NotImplementedError("ShapeFeature hash not implemented")
@@ -42,7 +42,7 @@ class Shape(FeatureExtractor[Point]):
         """
         return isinstance(e.data, VisionData) or e.src.name == "single"
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         """Emits the shape features.
 
         Args:
@@ -53,7 +53,7 @@ class Shape(FeatureExtractor[Point]):
         """
         if isinstance(e.data, SingleFeature):
             self.queue.append(e.data)
-            return None
+            return
 
         if isinstance(e.data, Settled):
             self.single_settled = True
@@ -63,13 +63,17 @@ class Shape(FeatureExtractor[Point]):
 
         if self.single_settled and self.vd is not None:
             for s in self.queue:
-                x, y = s.get_point()
+                x, y = s.point
                 p = Point(x, y, self.vd.chars[y, x])
-                self.pb_conn.send(ShapeFeature(self, p))
+                self.pb_conn.send(
+                    ShapeFeature(
+                        origin=self,
+                        point=(x, y),
+                        type=self.vd.chars[y, x],
+                    )
+                )
 
             self.settled()
             self.queue.clear()
             self.single_settled = False
             self.vd = None
-
-        return None

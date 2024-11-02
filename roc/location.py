@@ -2,17 +2,20 @@ from __future__ import annotations
 
 from colorsys import hsv_to_rgb
 from dataclasses import dataclass
-from typing import Any, Generic, Iterator, Self, TypeVar, cast, overload
+from typing import Any, Generic, Iterator, NewType, Self, TypeVar, cast, overload
 
 import numpy as np
 import numpy.typing as npt
 from colored import Back, Fore, Style
 
+XLoc = NewType("XLoc", int)
+YLoc = NewType("YLoc", int)
+
 
 class Point:
     """Represents a int value at a 2D location (x, y)"""
 
-    def __init__(self, x: int, y: int, val: int) -> None:
+    def __init__(self, x: XLoc, y: YLoc, val: int) -> None:
         self.x = x
         self.y = y
         self.val = val
@@ -30,7 +33,7 @@ class Point:
 
     @staticmethod
     def from_valloc(t: ValLocTuple[int]) -> Point:
-        """Converts a value / location tuple (x, y, value) to a Point.
+        """Converts a value / location tuple (value, x, y) to a Point.
 
         Args:
             t (ValLocTuple[int]): The tuple to convert
@@ -43,11 +46,11 @@ class Point:
 
     @overload
     @staticmethod
-    def isadjacent(*, x1: int, y1: int, x2: int, y2: int) -> bool: ...
+    def isadjacent(*, x1: XLoc, y1: YLoc, x2: XLoc, y2: YLoc) -> bool: ...
 
     @overload
     @staticmethod
-    def isadjacent(*, p1: Point, x2: int, y2: int) -> bool: ...
+    def isadjacent(*, p1: Point, x2: XLoc, y2: YLoc) -> bool: ...
 
     @overload
     @staticmethod
@@ -57,10 +60,10 @@ class Point:
     def isadjacent(
         # o1: int | Point, o2: int | Point, o3: int | None = None, o4: int | None = None
         *,
-        x1: int | None = None,
-        y1: int | None = None,
-        x2: int | None = None,
-        y2: int | None = None,
+        x1: XLoc | None = None,
+        y1: YLoc | None = None,
+        x2: XLoc | None = None,
+        y2: YLoc | None = None,
         p1: Point | None = None,
         p2: Point | None = None,
     ) -> bool:
@@ -90,7 +93,7 @@ PointList = list[Point]
 class ChangedPoint(Point):
     """Represents a value changing from `old_val` to `val` at a given (x, y) location."""
 
-    def __init_(self, x: int, y: int, val: int, old_val: int) -> None:
+    def __init_(self, x: XLoc, y: YLoc, val: int, old_val: int) -> None:
         super().__init__(x, y, val)
         self.old_val = old_val
 
@@ -102,8 +105,8 @@ class ChangedPoint(Point):
 # GridType = TypeVar("GridType", bound=np.generic, covariant=True)
 GridType = TypeVar("GridType")
 
-LocationTuple = tuple[int, int]
-ValLocTuple = tuple[GridType, int, int]
+LocationTuple = tuple[XLoc, YLoc]
+ValLocTuple = tuple[XLoc, YLoc, GridType]
 
 
 class NewGrid(npt.NDArray[Any], Generic[GridType]):
@@ -118,7 +121,7 @@ class NewGrid(npt.NDArray[Any], Generic[GridType]):
 
     def __iter__(self) -> Iterator[ValLocTuple[GridType]]:
         for y, x in np.ndindex(self.shape):
-            yield (self[y, x], x, y)
+            yield cast(ValLocTuple[GridType], (x, y, self[y, x]))
         # yield from np.nditer(self)
 
     # def __init__(self, val_list: list[list[Any]] | np.ndarray) -> None:
@@ -144,12 +147,12 @@ class NewGrid(npt.NDArray[Any], Generic[GridType]):
 
 
 class IntGrid(NewGrid[int]):
-    def get_point(self, x: int, y: int) -> Point:
+    def get_point(self, x: XLoc, y: YLoc) -> Point:
         return Point(x, y, self[y, x])
 
     def points(self) -> Iterator[Point]:
         """Iterate over all the points in the grid"""
-        for v, x, y in self:
+        for x, y, v in self:
             yield Point(x, y, v)
 
 

@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..component import Component, register_component
-from ..location import Point
+from ..component import register_component
+from ..location import Point, XLoc, YLoc
 from ..perception import (
-    ComplexFeature,
     Direction,
     ElementOrientation,
     ElementPoint,
     ElementType,
     Feature,
     FeatureExtractor,
+    NewFeature,
     OldLocation,
     PerceptionEvent,
     Settled,
     Transmogrifier,
 )
-from .delta import DeltaFeature, Diff
+from .delta import DeltaFeature
 
 
 @dataclass
@@ -72,16 +72,21 @@ class MotionVector(Transmogrifier):
         )
 
 
-class MotionFeature(ComplexFeature[MotionVector]):
+@dataclass(kw_only=True)
+class MotionFeature(NewFeature):
     """A vector describing a motion, including the start point, end point,
     direction and value of the thing moving
     """
 
-    def __init__(self, origin: Component, mv: MotionVector):
-        super().__init__("Motion", origin, mv)
+    feature_name = "Motion"
+
+    start_point: tuple[XLoc, YLoc]
+    end_point: tuple[XLoc, YLoc]
+    type: int
+    direction: Direction
 
 
-DiffList = list[Diff]
+DeltaList = list[DeltaFeature]
 
 
 @register_component("motion", "perception")
@@ -90,7 +95,7 @@ class Motion(FeatureExtractor[MotionFeature]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.diff_list: DiffList = []
+        self.delta_list: DeltaList = []
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         # only listen to delta:perception events
@@ -100,40 +105,38 @@ class Motion(FeatureExtractor[MotionFeature]):
 
     def get_feature(self, e: PerceptionEvent) -> None:
         if isinstance(e.data, Settled):
-            self.diff_list.clear()
+            self.delta_list.clear()
             self.settled()
             return None
 
         assert isinstance(e.data, DeltaFeature)
-        d1 = Diff.from_feature(e.data)
+        d1 = e.data
 
-        for d2 in self.diff_list:
-            if Point.isadjacent(x1=d1.x, y1=d1.y, x2=d2.x, y2=d2.y):
+        for d2 in self.delta_list:
+            if Point.isadjacent(x1=d1.point[0], y1=d1.point[1], x2=d2.point[0], y2=d2.point[1]):
                 if d2.old_val == d1.new_val:
                     emit_motion(self, d2, d1)
                 if d1.old_val == d2.new_val:
                     emit_motion(self, d1, d2)
 
-        self.diff_list.append(d1)
-
-        return None
+        self.delta_list.append(d1)
 
 
-def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
+def adjacent_direction(d1: DeltaFeature, d2: DeltaFeature) -> Direction:
     """Helper function to convert two positions into a direction such as 'UP' or
     'DOWN_LEFT'
     """
     lr_str = ""
-    if d1.x < d2.x:
+    if d1.point[0] < d2.point[0]:
         lr_str = "RIGHT"
-    elif d1.x > d2.x:
+    elif d1.point[0] > d2.point[0]:
         lr_str = "LEFT"
 
     ud_str = ""
     # XXX: top left is 0,0
-    if d1.y > d2.y:
+    if d1.point[1] > d2.point[1]:
         ud_str = "UP"
-    if d1.y < d2.y:
+    if d1.point[1] < d2.point[1]:
         ud_str = "DOWN"
 
     join_str = ""
@@ -143,17 +146,13 @@ def adjacent_direction(d1: Diff, d2: Diff) -> Direction:
     return Direction(f"{ud_str}{join_str}{lr_str}")
 
 
-def emit_motion(mc: Motion, old_diff: Diff, new_diff: Diff) -> None:
+def emit_motion(mc: Motion, old_delta: DeltaFeature, new_delta: DeltaFeature) -> None:
     mc.pb_conn.send(
         MotionFeature(
-            mc,
-            MotionVector(
-                start_x=old_diff.x,
-                start_y=old_diff.y,
-                end_x=new_diff.x,
-                end_y=new_diff.y,
-                val=new_diff.new_val,
-                direction=adjacent_direction(old_diff, new_diff),
-            ),
+            origin=mc,
+            start_point=old_delta.point,
+            end_point=new_delta.point,
+            type=new_delta.new_val,
+            direction=adjacent_direction(old_delta, new_delta),
         )
     )

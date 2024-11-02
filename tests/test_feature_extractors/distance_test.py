@@ -1,7 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from helpers.nethack_screens import screens
-from helpers.util import StubComponent, check_num_src_edges, check_points, check_size
+from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
@@ -43,9 +43,9 @@ class TestDistance:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 4)
-        check_points(e.data, {(0, 0), (4, 4)})
+        assert e.data.start_point == (0, 0)
+        assert e.data.end_point == (4, 4)
+        assert e.data.size == 4
 
         # event 2
         e = s.output.call_args_list[1].args[0]
@@ -81,25 +81,25 @@ class TestDistance:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 3)
-        check_points(e.data, {(0, 0), (3, 3)})
+        assert e.data.size == 3
+        assert e.data.start_point == (0, 0)
+        assert e.data.end_point == (3, 3)
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 4)
-        check_points(e.data, {(0, 0), (1, 4)})
+        assert e.data.size == 4
+        assert e.data.start_point == (0, 0)
+        assert e.data.end_point == (1, 4)
 
         # event 3
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 2)
-        check_points(e.data, {(3, 3), (1, 4)})
+        assert e.data.size == 2
+        assert e.data.start_point == (3, 3)
+        assert e.data.end_point == (1, 4)
 
         # event 4
         e = s.output.call_args_list[3].args[0]
@@ -217,17 +217,17 @@ class TestDistance:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 4)
-        check_points(e.data, {(15, 3), (19, 3)})
+        assert e.data.size == 4
+        assert e.data.start_point == (15, 3)
+        assert e.data.end_point == (19, 3)
 
         # # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 1)
-        check_points(e.data, {(15, 3), (15, 4)})
+        assert e.data.size == 1
+        assert e.data.start_point == (15, 3)
+        assert e.data.end_point == (15, 4)
 
         # [...]
 
@@ -235,9 +235,9 @@ class TestDistance:
         e = s.output.call_args_list[77].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
-        check_num_src_edges(e.data, 3)
-        check_size(e.data, 1)
-        check_points(e.data, {(18, 8), (19, 8)})
+        assert e.data.size == 1
+        assert e.data.start_point == (18, 8)
+        assert e.data.end_point == (19, 8)
 
         # event 79
         e = s.output.call_args_list[78].args[0]

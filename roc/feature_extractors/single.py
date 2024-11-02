@@ -1,20 +1,20 @@
 """Generates Features for things that aren't like their neighbors"""
 
-from ..component import Component, register_component
+from dataclasses import dataclass
+
+from ..component import register_component
 from ..location import IntGrid, Point
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import FeatureExtractor, PerceptionEvent, PointFeature, VisionData
 
 
-class SingleFeature(Feature):
+@dataclass(kw_only=True)
+class SingleFeature(PointFeature):
     """A single isolated feature with no similar features around it."""
 
-    def __init__(self, origin: Component, point: Point) -> None:
-        super().__init__(origin, "Single")
-        self.add_point(point.x, point.y)
-        self.add_type(point.val)
+    feature_name = "Single"
 
-    def __hash__(self) -> int:
-        raise NotImplementedError("SingleFeature hash not implemented")
+    # def __hash__(self) -> int:
+    #     raise NotImplementedError("SingleFeature hash not implemented")
 
 
 @register_component("single", "perception")
@@ -33,7 +33,7 @@ class Single(FeatureExtractor[Point]):
         """
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         """Emits the shape features.
 
         Args:
@@ -47,12 +47,11 @@ class Single(FeatureExtractor[Point]):
         data = IntGrid(vd.glyphs)
 
         ## iterate points
-        for v, x, y in data:
+        for x, y, v in data:
             point = Point(x, y, v)
             if is_unique_from_neighbors(data, point):
-                self.pb_conn.send(SingleFeature(self, point))
+                self.pb_conn.send(SingleFeature(origin=self, point=(x, y), type=v))
         self.settled()
-        return None
 
 
 def is_unique_from_neighbors(data: IntGrid, point: Point) -> bool:

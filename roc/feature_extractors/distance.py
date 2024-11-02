@@ -4,24 +4,26 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 from __future__ import annotations
 
-from ..component import Component, register_component
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
+from dataclasses import dataclass
+
+from ..component import register_component
+from ..location import XLoc, YLoc
+from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, Settled
 from .single import SingleFeature
 
 
-class DistanceFeature(Feature):
+@dataclass(kw_only=True)
+class DistanceFeature(NewFeature):
     """The distance between two features"""
 
-    def __init__(
-        self, origin: Component, start: tuple[int, int], end: tuple[int, int], sz: int
-    ) -> None:
-        super().__init__(origin, "Distance")
-        self.add_size(sz)
-        self.add_point(start[0], start[1])
-        self.add_point(end[0], end[1])
+    start_point: tuple[XLoc, YLoc]
+    end_point: tuple[XLoc, YLoc]
+    size: int
 
-    def __hash__(self) -> int:
-        raise NotImplementedError("DistanceFeature hash not implemented")
+    feature_name = "Distance"
+
+    # def __hash__(self) -> int:
+    #     raise NotImplementedError("DistanceFeature hash not implemented")
 
 
 @register_component("distance", "perception")
@@ -36,31 +38,36 @@ class Distance(FeatureExtractor[DistanceFeature]):
             return True
         return False
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         data = e.data
 
         if isinstance(data, Settled):
             self.prev_features.clear()
             self.settled()
-            return None
+            return
 
         # calculate distance between all previous elements and emit event for each
         assert isinstance(data, SingleFeature)
-        curr_pt = data.get_point()
+        curr_pt = data.point
         # print("### single point:", curr_pt)
         for f in self.prev_features:
-            prev_pt = f.get_point()
+            prev_pt = f.point
             dist = chebyshev_distance(curr_pt, prev_pt)
             # print(f"# distance: ({prev_pt[0]}, {prev_pt[1]}) ({curr_pt[0]}, {curr_pt[1]}) {dist}")
-            self.pb_conn.send(DistanceFeature(self, curr_pt, prev_pt, dist))
+            self.pb_conn.send(
+                DistanceFeature(
+                    origin=self,
+                    start_point=prev_pt,
+                    end_point=curr_pt,
+                    size=dist,
+                )
+            )
 
         # add to previous elements
         self.prev_features.append(data)
 
-        return None
 
-
-def chebyshev_distance(p1: tuple[int, int], p2: tuple[int, int]) -> int:
+def chebyshev_distance(p1: tuple[XLoc, YLoc], p2: tuple[XLoc, YLoc]) -> int:
     x1 = p1[0]
     x2 = p2[0]
     y1 = p1[1]

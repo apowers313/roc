@@ -1,19 +1,21 @@
 from ..component import Component, register_component
-from ..location import IntGrid, Point, PointList, TypedPointCollection
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, VisionData
+from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
+from ..perception import AreaFeature, FeatureExtractor, PerceptionEvent, VisionData
 
 MIN_LINE_COUNT = 4
 
 
-class LineFeature(Feature):
+class LineFeature(AreaFeature):
     """A collection of points representing a line"""
 
     def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
-        super().__init__(origin, "Line")
-        self.add_type(type)
-        self.add_size(len(point_list))
+        point_set: set[tuple[XLoc, YLoc]] = set()
         for point in point_list:
-            self.add_point(point.x, point.y)
+            point_set.add((point.x, point.y))
+
+        super().__init__(
+            origin=origin, feature_name="Line", type=type, points=point_set, size=len(point_set)
+        )
 
     def __hash__(self) -> int:
         raise NotImplementedError("LineFeature hash not implemented")
@@ -28,7 +30,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)
 
-    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+    def get_feature(self, e: PerceptionEvent) -> None:
         assert isinstance(e.data, VisionData)
         data = IntGrid(e.data.glyphs)
 
@@ -45,7 +47,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
         for y in range(data.height):
             for x in range(data.width):
                 val = data.get_val(x, y)
-                points.append(Point(x, y, val))
+                points.append(Point(XLoc(x), YLoc(y), val))
                 if val != points[0].val:
                     p = points.pop()
                     try_emit(self)
@@ -56,7 +58,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
         for x in range(data.width):
             for y in range(data.height):
                 val = data.get_val(x, y)
-                points.append(Point(x, y, val))
+                points.append(Point(XLoc(x), YLoc(y), val))
                 if val != points[0].val:
                     p = points.pop()
                     try_emit(self)
@@ -64,4 +66,3 @@ class Line(FeatureExtractor[TypedPointCollection]):
             try_emit(self)
 
         self.settled()
-        return None

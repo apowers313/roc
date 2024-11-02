@@ -4,45 +4,54 @@ import pytest
 from colored import Back, Fore, Style
 from helpers.nethack_screens import screens
 
-from roc.location import DebugGrid, IntGrid, Point, PointCollection, TextGrid, TypedPointCollection
+from roc.location import (
+    DebugGrid,
+    IntGrid,
+    Point,
+    PointCollection,
+    TextGrid,
+    TypedPointCollection,
+    XLoc,
+    YLoc,
+)
 
 
 class TestPoint:
     def test_equality(self) -> None:
-        p1 = Point(42, 69, 255)
-        p2 = Point(42, 69, 255)
+        p1 = Point(XLoc(42), YLoc(69), 255)
+        p2 = Point(XLoc(42), YLoc(69), 255)
         assert p1 == p2
 
     def test_hash_equality(self) -> None:
-        p1 = Point(42, 69, 255)
-        p2 = Point(42, 69, 255)
+        p1 = Point(XLoc(42), YLoc(69), 255)
+        p2 = Point(XLoc(42), YLoc(69), 255)
         h1 = hash(p1)
         h2 = hash(p2)
         assert h1 == h2
 
     def test_hash_inequality(self) -> None:
-        p1 = Point(42, 69, 255)
-        p2 = Point(43, 69, 255)
+        p1 = Point(XLoc(42), YLoc(69), 255)
+        p2 = Point(XLoc(43), YLoc(69), 255)
         h1 = hash(p1)
         h2 = hash(p2)
         assert h1 != h2
 
     def test_repr(self) -> None:
-        p1 = Point(42, 69, 65)
+        p1 = Point(XLoc(42), YLoc(69), 65)
         assert repr(p1) == "(42, 69): 65 'A'"
 
     def test_isadjacent(self) -> None:
-        p1 = Point(42, 69, 255)
-        p2 = Point(42, 70, 255)
-        p3 = Point(42, 71, 255)
+        p1 = Point(XLoc(42), YLoc(69), 255)
+        p2 = Point(XLoc(42), YLoc(70), 255)
+        p3 = Point(XLoc(42), YLoc(71), 255)
 
         assert Point.isadjacent(p1=p1, p2=p2)
         assert not Point.isadjacent(p1=p1, p2=p3)
 
     def test_isadjacent_args(self) -> None:
-        p1 = Point(42, 69, 255)
-        # p2 = Point(42, 70, 255)
-        # p3 = Point(42, 71, 255)
+        p1 = Point(XLoc(42), YLoc(69), 255)
+        # p2 = Point(XLoc(42), 70, 255)
+        # p3 = Point(XLoc(42), 71, 255)
 
         assert Point.isadjacent(p1=p1, x2=42, y2=70)
         assert Point.isadjacent(x1=42, y1=69, x2=42, y2=70)
@@ -50,18 +59,18 @@ class TestPoint:
         #     assert Point.isadjacent(p1=p1, x1=42, y1=70)
 
     def test_adjacent(self) -> None:
-        origin = Point(x=0, y=0, val=0)
-        res = Point.isadjacent(p1=origin, p2=Point(x=0, y=1, val=120))
+        origin = Point(x=XLoc(0), y=YLoc(0), val=0)
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(0), y=YLoc(1), val=120))
         assert res is True
-        res = Point.isadjacent(p1=origin, p2=Point(x=0, y=2, val=120))
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(0), y=YLoc(2), val=120))
         assert res is False
-        res = Point.isadjacent(p1=origin, p2=Point(x=1, y=0, val=120))
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(1), y=YLoc(0), val=120))
         assert res is True
-        res = Point.isadjacent(p1=origin, p2=Point(x=2, y=0, val=120))
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(2), y=YLoc(0), val=120))
         assert res is False
-        res = Point.isadjacent(p1=origin, p2=Point(x=1, y=1, val=120))
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(1), y=YLoc(1), val=120))
         assert res is True
-        res = Point.isadjacent(p1=origin, p2=Point(x=2, y=1, val=120))
+        res = Point.isadjacent(p1=origin, p2=Point(x=XLoc(2), y=YLoc(1), val=120))
         assert res is False
         res = Point.isadjacent(p1=origin, p2=origin)
         assert res is False
@@ -73,7 +82,7 @@ class TestGrid:
         assert isinstance(screen0, IntGrid)
         assert screen0.width == 79
         assert screen0.height == 21
-        assert screen0.get_point(0, 0) == Point(0, 0, 32)
+        assert screen0.get_point(XLoc(0), YLoc(0)) == Point(XLoc(0), YLoc(0), 32)
         # for p in screen0:
         #     assert p == 32
         #     break
@@ -144,18 +153,18 @@ class TestDebugGrid:
 
 class TestPointCollection:
     def test_create(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 128)
-        p3 = Point(5, 6, 64)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 128)
+        p3 = Point(XLoc(5), YLoc(6), 64)
         pc = PointCollection([p1, p2])
         assert pc.contains(p1)
         assert pc.contains(p2)
         assert not pc.contains(p3)
 
     def test_add(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 128)
-        p3 = Point(5, 6, 64)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 128)
+        p3 = Point(XLoc(5), YLoc(6), 64)
         pc = PointCollection([p1, p2])
         assert pc.contains(p1)
         assert pc.contains(p2)
@@ -166,18 +175,18 @@ class TestPointCollection:
         assert pc.contains(p3)
 
     def test_get_points(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 128)
-        p3 = Point(5, 6, 64)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 128)
+        p3 = Point(XLoc(5), YLoc(6), 64)
         pc = PointCollection([p1, p2, p3])
         assert pc.points == [p1, p2, p3]
 
 
 class TestTypedPointCollection:
     def test_create(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 255)
-        p3 = Point(5, 6, 255)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 255)
+        p3 = Point(XLoc(5), YLoc(6), 255)
         pc = TypedPointCollection(255, [p1, p2])
         assert pc.type == 255
         assert pc.contains(p1)
@@ -185,16 +194,16 @@ class TestTypedPointCollection:
         assert not pc.contains(p3)
 
     def test_create_wrong_type(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 255)
-        p3 = Point(5, 6, 64)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 255)
+        p3 = Point(XLoc(5), YLoc(6), 64)
         with pytest.raises(TypeError):
             TypedPointCollection(255, [p1, p2, p3])
 
     def test_add(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 255)
-        p3 = Point(5, 6, 255)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 255)
+        p3 = Point(XLoc(5), YLoc(6), 255)
         pc = TypedPointCollection(255, [p1, p2])
         assert pc.contains(p1)
         assert pc.contains(p2)
@@ -205,9 +214,9 @@ class TestTypedPointCollection:
         assert pc.contains(p3)
 
     def test_add_wrong_type(self) -> None:
-        p1 = Point(1, 2, 255)
-        p2 = Point(3, 4, 255)
-        p3 = Point(5, 6, 64)
+        p1 = Point(XLoc(1), YLoc(2), 255)
+        p2 = Point(XLoc(3), YLoc(4), 255)
+        p3 = Point(XLoc(5), YLoc(6), 64)
         pc = TypedPointCollection(255, [p1, p2])
         assert pc.contains(p1)
         assert pc.contains(p2)

@@ -3,10 +3,6 @@
 from helpers.nethack_screens import screens
 from helpers.util import (
     StubComponent,
-    check_num_src_edges,
-    check_points,
-    check_size,
-    check_type,
 )
 
 from roc.component import Component
@@ -45,37 +41,47 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 12)
-        check_size(e.data, 10)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {(0, 0), (1, 0), (0, 1), (1, 1), (0, 2), (1, 2), (0, 3), (1, 3), (0, 4), (1, 4)},
-        )
+        assert e.data.size == 10
+        assert e.data.type == 0
+        assert e.data.points == {
+            (0, 0),
+            (1, 0),
+            (0, 1),
+            (1, 1),
+            (0, 2),
+            (1, 2),
+            (0, 3),
+            (1, 3),
+            (0, 4),
+            (1, 4),
+        }
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 1)
-        check_points(
-            e.data,
-            {(2, 0), (2, 1), (2, 2), (2, 3), (2, 4)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 1
+        assert e.data.points == {(2, 0), (2, 1), (2, 2), (2, 3), (2, 4)}
 
         # event 3
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 12)
-        check_size(e.data, 10)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {(3, 0), (4, 0), (3, 1), (4, 1), (3, 2), (4, 2), (3, 3), (4, 3), (3, 4), (4, 4)},
-        )
+        assert e.data.size == 10
+        assert e.data.type == 0
+        assert e.data.points == {
+            (3, 0),
+            (4, 0),
+            (3, 1),
+            (4, 1),
+            (3, 2),
+            (4, 2),
+            (3, 3),
+            (4, 3),
+            (3, 4),
+            (4, 4),
+        }
 
         # event 4
         e = s.output.call_args_list[3].args[0]
@@ -108,38 +114,47 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 12)
-        check_size(e.data, 10)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (3, 1), (4, 1), (2, 1), (1, 1), (0, 1)},
-        )
+        assert e.data.size == 10
+        assert e.data.type == 0
+        assert e.data.points == {
+            (0, 0),
+            (1, 0),
+            (2, 0),
+            (3, 0),
+            (4, 0),
+            (3, 1),
+            (4, 1),
+            (2, 1),
+            (1, 1),
+            (0, 1),
+        }
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 1)
-
-        check_points(
-            e.data,
-            {(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 1
+        assert e.data.points == {(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)}
 
         # event 3
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 12)
-        check_size(e.data, 10)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {(0, 3), (1, 3), (2, 3), (3, 3), (4, 3), (3, 4), (4, 4), (2, 4), (1, 4), (0, 4)},
-        )
+        assert e.data.size == 10
+        assert e.data.type == 0
+        assert e.data.points == {
+            (0, 3),
+            (1, 3),
+            (2, 3),
+            (3, 3),
+            (4, 3),
+            (3, 4),
+            (4, 4),
+            (2, 4),
+            (1, 4),
+            (0, 4),
+        }
 
         # event 4
         e = s.output.call_args_list[3].args[0]
@@ -172,46 +187,38 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 1)
-        check_points(
-            e.data,
-            {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 1
+        assert e.data.points == {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)}
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 22)
-        check_size(e.data, 20)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {
-                (1, 0),
-                (2, 0),
-                (3, 0),
-                (4, 0),
-                (3, 1),
-                (4, 1),
-                (3, 2),
-                (4, 2),
-                (4, 3),
-                (3, 4),
-                (2, 3),
-                (1, 4),
-                (2, 4),
-                (2, 1),
-                (1, 2),
-                (0, 3),
-                (1, 3),
-                (0, 4),
-                (0, 1),
-                (0, 2),
-            },
-        )
+        assert e.data.size == 20
+        assert e.data.type == 0
+        assert e.data.points == {
+            (1, 0),
+            (2, 0),
+            (3, 0),
+            (4, 0),
+            (3, 1),
+            (4, 1),
+            (3, 2),
+            (4, 2),
+            (4, 3),
+            (3, 4),
+            (2, 3),
+            (1, 4),
+            (2, 4),
+            (2, 1),
+            (1, 2),
+            (0, 3),
+            (1, 3),
+            (0, 4),
+            (0, 1),
+            (0, 2),
+        }
 
         # event 3
         e = s.output.call_args_list[2].args[0]
@@ -244,46 +251,38 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 22)
-        check_size(e.data, 20)
-        check_type(e.data, 0)
-        check_points(
-            e.data,
-            {
-                (0, 0),
-                (1, 0),
-                (2, 0),
-                (3, 0),
-                (2, 1),
-                (1, 2),
-                (0, 3),
-                (1, 4),
-                (2, 4),
-                (3, 4),
-                (4, 4),
-                (2, 3),
-                (3, 3),
-                (4, 3),
-                (3, 2),
-                (4, 2),
-                (4, 1),
-                (1, 1),
-                (0, 2),
-                (0, 1),
-            },
-        )
+        assert e.data.size == 20
+        assert e.data.type == 0
+        assert e.data.points == {
+            (0, 0),
+            (1, 0),
+            (2, 0),
+            (3, 0),
+            (2, 1),
+            (1, 2),
+            (0, 3),
+            (1, 4),
+            (2, 4),
+            (3, 4),
+            (4, 4),
+            (2, 3),
+            (3, 3),
+            (4, 3),
+            (3, 2),
+            (4, 2),
+            (4, 1),
+            (1, 1),
+            (0, 2),
+            (0, 1),
+        }
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 1)
-        check_points(
-            e.data,
-            {(4, 0), (3, 1), (2, 2), (1, 3), (0, 4)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 1
+        assert e.data.points == {(4, 0), (3, 1), (2, 2), (1, 3), (0, 4)}
 
         # event 3
         e = s.output.call_args_list[2].args[0]
@@ -306,21 +305,16 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 1631)
-        check_size(e.data, 1629)
-        check_type(e.data, 2359)  # ' '
+        assert e.data.size == 1629
+        assert e.data.type == 2359  # ' '
 
         # # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 2378)  # .
-        check_points(
-            e.data,
-            {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 2378  # .
+        assert e.data.points == {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)}
 
         # event 3
         e = s.output.call_args_list[2].args[0]
@@ -346,21 +340,16 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 1631)
-        check_size(e.data, 1629)
-        check_type(e.data, 2359)  # ' '
+        assert e.data.size == 1629
+        assert e.data.type == 2359  # ' '
 
         # event 2
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
-        check_num_src_edges(e.data, 7)
-        check_size(e.data, 5)
-        check_type(e.data, 2378)  # .
-        check_points(
-            e.data,
-            {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)},
-        )
+        assert e.data.size == 5
+        assert e.data.type == 2378  # .
+        assert e.data.points == {(17, 6), (18, 6), (17, 7), (18, 7), (16, 7)}
 
         # event 3
         e = s.output.call_args_list[2].args[0]

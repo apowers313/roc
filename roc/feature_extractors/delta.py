@@ -4,12 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..component import Component, register_component
-from ..location import IntGrid
+from ..component import register_component
+from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
-    ComplexFeature,
     Feature,
     FeatureExtractor,
+    NewFeature,
     OldLocation,
     PerceptionEvent,
     Transmogrifier,
@@ -21,8 +21,8 @@ from ..perception import (
 class Diff(Transmogrifier):
     """A dataclass for representing a changes in vision."""
 
-    x: int
-    y: int
+    x: XLoc
+    y: YLoc
     old_val: int
     new_val: int
 
@@ -47,11 +47,18 @@ class Diff(Transmogrifier):
         return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
 
-class DeltaFeature(ComplexFeature[Diff]):
+@dataclass(kw_only=True)
+class DeltaFeature(NewFeature):
     """A Feature that describes changes in vision"""
 
-    def __init__(self, origin: Component, d: Diff) -> None:
-        super().__init__("Delta", origin, d)
+    feature_name = "Delta"
+
+    old_val: int
+    new_val: int
+    point: tuple[XLoc, YLoc]
+
+    def __str__(self) -> str:
+        return f"({self.point[0]}, {self.point[1]}): {self.old_val} -> {self.new_val}\n"
 
 
 @register_component("delta", "perception")
@@ -87,15 +94,11 @@ class Delta(FeatureExtractor[DeltaFeature]):
             if old_point.val != new_point.val:
                 self.pb_conn.send(
                     DeltaFeature(
-                        self,
-                        Diff(
-                            x=new_point.x,
-                            y=new_point.y,
-                            old_val=old_point.val,
-                            new_val=new_point.val,
-                        ),
+                        origin=self,
+                        point=(new_point.x, new_point.y),
+                        old_val=old_point.val,
+                        new_val=new_point.val,
                     )
                 )
 
         self.settled()
-        return None

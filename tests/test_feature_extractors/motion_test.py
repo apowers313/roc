@@ -3,20 +3,18 @@
 from helpers.nethack_screens import screens
 from helpers.util import (
     StubComponent,
-    check_orientation,
-    check_points,
-    check_type,
 )
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.delta import Delta, Diff
+from roc.feature_extractors.delta import Delta, DeltaFeature
 from roc.feature_extractors.motion import (
     Motion,
     MotionFeature,
     adjacent_direction,
 )
-from roc.perception import Direction, Feature, Settled, VisionData
+from roc.location import XLoc, YLoc
+from roc.perception import Direction, Settled, VisionData
 
 screen0 = VisionData.from_dict(screens[0])
 screen1 = VisionData.from_dict(screens[1])
@@ -35,22 +33,39 @@ class TestMotion:
     #         print("")
 
     def test_direction(self) -> None:
-        origin = Diff(x=0, y=0, old_val=120, new_val=0)
-        d = adjacent_direction(origin, Diff(x=0, y=1, old_val=0, new_val=120))
+        o = Component()
+        origin = DeltaFeature(origin=o, point=(XLoc(0), YLoc(0)), old_val=120, new_val=0)
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(0), YLoc(1)), old_val=0, new_val=120)
+        )
         assert d == "DOWN"
-        d = adjacent_direction(origin, Diff(x=0, y=-1, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(0), YLoc(-1)), old_val=0, new_val=120)
+        )
         assert d == "UP"
-        d = adjacent_direction(origin, Diff(x=-1, y=0, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(0)), old_val=0, new_val=120)
+        )
         assert d == "LEFT"
-        d = adjacent_direction(origin, Diff(x=1, y=0, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(0)), old_val=0, new_val=120)
+        )
         assert d == "RIGHT"
-        d = adjacent_direction(origin, Diff(x=-1, y=1, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(1)), old_val=0, new_val=120)
+        )
         assert d == "DOWN_LEFT"
-        d = adjacent_direction(origin, Diff(x=1, y=1, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(1)), old_val=0, new_val=120)
+        )
         assert d == "DOWN_RIGHT"
-        d = adjacent_direction(origin, Diff(x=-1, y=-1, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(-1)), old_val=0, new_val=120)
+        )
         assert d == "UP_LEFT"
-        d = adjacent_direction(origin, Diff(x=1, y=-1, old_val=0, new_val=120))
+        d = adjacent_direction(
+            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(-1)), old_val=0, new_val=120)
+        )
         assert d == "UP_RIGHT"
 
     def test_basic(self, empty_components) -> None:
@@ -82,23 +97,19 @@ class TestMotion:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        check_type(e.data, 413)  # f
-        check_orientation(e.data, Direction("RIGHT"))
-        check_points(e.data, {(17, 6)})
-        origin = e.data.get_feature("Origin")
-        assert isinstance(origin, Feature)
-        check_points(origin, {(16, 6)})
+        assert e.data.type == 413  # f
+        assert e.data.direction == Direction("RIGHT")
+        assert e.data.end_point == (17, 6)
+        assert e.data.start_point == (16, 6)
 
         # # ([EVENT: motion >>> perception]: 46 LEFT: (17, 6) -> (16, 6),)
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        check_type(e.data, 2378)  # .
-        check_orientation(e.data, Direction("LEFT"))
-        check_points(e.data, {(16, 6)})
-        origin = e.data.get_feature("Origin")
-        assert isinstance(origin, Feature)
-        check_points(origin, {(17, 6)})
+        assert e.data.type == 2378  # .
+        assert e.data.direction == Direction("LEFT")
+        assert e.data.start_point == (17, 6)
+        assert e.data.end_point == (16, 6)
 
         # Settled
         e = s.output.call_args_list[3].args[0]
@@ -111,12 +122,10 @@ class TestMotion:
         e = s.output.call_args_list[4].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        check_type(e.data, 413)  # f
-        check_orientation(e.data, Direction("UP_RIGHT"))
-        check_points(e.data, {(18, 5)})
-        origin = e.data.get_feature("Origin")
-        assert isinstance(origin, Feature)
-        check_points(origin, {(17, 6)})
+        assert e.data.type == 413  # f
+        assert e.data.direction == Direction("UP_RIGHT")
+        assert e.data.start_point == (17, 6)
+        assert e.data.end_point == (18, 5)
 
         # Settled
         e = s.output.call_args_list[5].args[0]
@@ -129,12 +138,10 @@ class TestMotion:
         e = s.output.call_args_list[6].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
-        check_type(e.data, 413)  # f
-        check_orientation(e.data, Direction("DOWN"))
-        check_points(e.data, {(18, 6)})
-        origin = e.data.get_feature("Origin")
-        assert isinstance(origin, Feature)
-        check_points(origin, {(18, 5)})
+        assert e.data.type == 413  # f
+        assert e.data.direction == Direction("DOWN")
+        assert e.data.start_point == (18, 5)
+        assert e.data.end_point == (18, 6)
 
         # Settled
         e = s.output.call_args_list[7].args[0]
