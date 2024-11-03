@@ -160,7 +160,7 @@ class TextGrid(IntGrid):
     def __str__(self) -> str:
         ret = ""
         last_y = 0
-        for v, x, y in self:
+        for x, y, v in self:
             if y != last_y:
                 ret += "\n"
                 last_y = y
