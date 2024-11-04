@@ -6,8 +6,8 @@ import pytest
 
 from roc.component import Component
 from roc.event import BusConnection, Event, EventBus, EventFilter
-from roc.graphdb import Node
-from roc.perception import Direction, ElementOrientation, ElementPoint, ElementSize, ElementType
+
+# from roc.perception import Direction, ElementOrientation, ElementPoint, ElementSize, ElementType
 
 
 def normalize_whitespace(s: str) -> str:
@@ -94,56 +94,56 @@ def component_response_args(
     return pytest.mark.parametrize("component_response", [arg_tuple], indirect=True)
 
 
-def check_num_src_edges(n: object, num_edges: int) -> None:
-    assert isinstance(n, Node)
-    assert n.src_edges.count() == num_edges
+# def check_num_src_edges(n: object, num_edges: int) -> None:
+#     assert isinstance(n, Node)
+#     assert n.src_edges.count() == num_edges
 
 
-def check_size(n: object, sz: int) -> None:
-    assert isinstance(n, Node)
-    assert n.src_edges.count("Size") == 1
-    sz_node = n.src_edges.get_edges("Size")[0].dst
-    assert isinstance(sz_node, ElementSize)
-    assert sz_node.size == sz
+# def check_size(n: object, sz: int) -> None:
+#     assert isinstance(n, Node)
+#     assert n.src_edges.count("Size") == 1
+#     sz_node = n.src_edges.get_edges("Size")[0].dst
+#     assert isinstance(sz_node, ElementSize)
+#     assert sz_node.size == sz
 
 
-def check_type(n: object, t: int) -> None:
-    assert isinstance(n, Node)
-    assert n.src_edges.count("Type") == 1
-    type_node = n.src_edges.get_edges("Type")[0].dst
-    assert isinstance(type_node, ElementType)
-    # print("type", type_node.type)
-    assert type_node.type == t, f"Expected node type: {type_node.type}, got {t}"
+# def check_type(n: object, t: int) -> None:
+#     assert isinstance(n, Node)
+#     assert n.src_edges.count("Type") == 1
+#     type_node = n.src_edges.get_edges("Type")[0].dst
+#     assert isinstance(type_node, ElementType)
+#     # print("type", type_node.type)
+#     assert type_node.type == t, f"Expected node type: {type_node.type}, got {t}"
 
 
-def check_orientation(n: object, orientation: Direction) -> None:
-    assert isinstance(n, Node)
-    assert n.src_edges.count("Direction") == 1
-    type_node = n.src_edges.get_edges("Direction")[0].dst
-    assert isinstance(type_node, ElementOrientation)
-    # print("orientation", type_node.type)
-    assert type_node.orientation == orientation
+# def check_orientation(n: object, orientation: Direction) -> None:
+#     assert isinstance(n, Node)
+#     assert n.src_edges.count("Direction") == 1
+#     type_node = n.src_edges.get_edges("Direction")[0].dst
+#     assert isinstance(type_node, ElementOrientation)
+#     # print("orientation", type_node.type)
+#     assert type_node.orientation == orientation
 
 
-def check_points(n: object, points: set[tuple[int, int]]) -> None:
-    assert isinstance(n, Node)
-    assert n.src_edges.count("Location") == len(points)
-    points_nodes = n.src_edges.get_edges("Location")
-    for pn in points_nodes:
-        p = pn.dst
-        assert isinstance(p, ElementPoint)
-        pt = (p.x, p.y)
-        # print(f"{pt in points}: got {pt}, expected {points}")
-        assert pt in points
+# def check_points(n: object, points: set[tuple[int, int]]) -> None:
+#     assert isinstance(n, Node)
+#     assert n.src_edges.count("Location") == len(points)
+#     points_nodes = n.src_edges.get_edges("Location")
+#     for pn in points_nodes:
+#         p = pn.dst
+#         assert isinstance(p, ElementPoint)
+#         pt = (p.x, p.y)
+#         # print(f"{pt in points}: got {pt}, expected {points}")
+#         assert pt in points
 
 
-def print_points(n: object) -> None:
-    assert isinstance(n, Node)
-    ln = ""
-    points_nodes = n.src_edges.get_edges("Location")
-    for pn in points_nodes:
-        p = pn.dst
-        assert isinstance(p, ElementPoint)
-        pt = (p.x, p.y)
-        ln += f"{pt}, "
-    print("Points:", ln)  # noqa: T201
+# def print_points(n: object) -> None:
+#     assert isinstance(n, Node)
+#     ln = ""
+#     points_nodes = n.src_edges.get_edges("Location")
+#     for pn in points_nodes:
+#         p = pn.dst
+#         assert isinstance(p, ElementPoint)
+#         pt = (p.x, p.y)
+#         ln += f"{pt}, "
+#     print("Points:", ln)
