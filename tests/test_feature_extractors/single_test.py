@@ -40,6 +40,7 @@ class TestSingle:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, SingleFeature)
+        assert e.data.feature_name == "Single"
         assert e.data.point == (1, 1)
         assert e.data.type == 1
 

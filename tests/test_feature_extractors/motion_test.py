@@ -97,6 +97,7 @@ class TestMotion:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, MotionFeature)
+        assert e.data.feature_name == "Motion"
         assert e.data.type == 413  # f
         assert e.data.direction == Direction("RIGHT")
         assert e.data.end_point == (17, 6)

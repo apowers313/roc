@@ -33,6 +33,7 @@ class TestColor:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, ColorFeature)
+        assert e.data.feature_name == "Color"
         assert e.data.type == 7  # -
         assert e.data.point == (15, 3)
 

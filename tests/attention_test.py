@@ -227,7 +227,6 @@ class TestSaliencyMap:
         assert d["ColorFeature"] == 12
         assert d["ShapeFeature"] == 12
         assert d["DeltaFeature"] == 1
-        assert d["OldLocation"] == 3
         assert d["MotionFeature"] == 1
 
     # def test_str(self) -> None:

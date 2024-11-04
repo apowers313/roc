@@ -4,14 +4,19 @@ from dataclasses import dataclass
 
 from ..component import register_component
 from ..location import IntGrid, Point
-from ..perception import FeatureExtractor, PerceptionEvent, PointFeature, VisionData
+from ..perception import (
+    FeatureExtractor,
+    PerceptionEvent,
+    PointFeature,
+    VisionData,
+)
 
 
 @dataclass(kw_only=True)
 class SingleFeature(PointFeature):
     """A single isolated feature with no similar features around it."""
 
-    feature_name = "Single"
+    feature_name: str = "Single"
 
     # def __hash__(self) -> int:
     #     raise NotImplementedError("SingleFeature hash not implemented")

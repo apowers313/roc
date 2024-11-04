@@ -1,21 +1,22 @@
-from ..component import Component, register_component
+from dataclasses import dataclass
+
+from ..component import register_component
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
-from ..perception import AreaFeature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import (
+    AreaFeature,
+    FeatureExtractor,
+    PerceptionEvent,
+    VisionData,
+)
 
 MIN_LINE_COUNT = 4
 
 
+@dataclass(kw_only=True)
 class LineFeature(AreaFeature):
     """A collection of points representing a line"""
 
-    def __init__(self, origin: Component, point_list: PointList, type: int) -> None:
-        point_set: set[tuple[XLoc, YLoc]] = set()
-        for point in point_list:
-            point_set.add((point.x, point.y))
-
-        super().__init__(
-            origin=origin, feature_name="Line", type=type, points=point_set, size=len(point_set)
-        )
+    feature_name: str = "Line"
 
     def __hash__(self) -> int:
         raise NotImplementedError("LineFeature hash not implemented")
@@ -40,7 +41,15 @@ class Line(FeatureExtractor[TypedPointCollection]):
             nonlocal points
 
             if len(points) >= MIN_LINE_COUNT:
-                ln.pb_conn.send(LineFeature(self, points, points[0].val))
+                point_set = set([(p.x, p.y) for p in points])
+                ln.pb_conn.send(
+                    LineFeature(
+                        origin=self,
+                        points=point_set,
+                        type=points[0].val,
+                        size=len(points),
+                    ),
+                )
             points = []
 
         ## iterate points by 'x' to identify horizontal lines

@@ -34,6 +34,7 @@ class TestDelta:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DeltaFeature)
+        assert e.data.feature_name == "Delta"
         assert e.data.point == (16, 6)
         assert e.data.old_val == 413  # f
         assert e.data.new_val == 2378  # .

@@ -187,6 +187,7 @@ class TestFlood:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
+        assert e.data.feature_name == "Flood"
         assert e.data.size == 5
         assert e.data.type == 1
         assert e.data.points == {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)}

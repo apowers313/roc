@@ -43,6 +43,7 @@ class TestDistance:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, DistanceFeature)
+        assert e.data.feature_name == "Distance"
         assert e.data.start_point == (0, 0)
         assert e.data.end_point == (4, 4)
         assert e.data.size == 4

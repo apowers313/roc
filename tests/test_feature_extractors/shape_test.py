@@ -33,6 +33,7 @@ class TestShape:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, ShapeFeature)
+        assert e.data.feature_name == "Shape"
         assert e.data.type == ord("-")
         assert e.data.point == (15, 3)
 

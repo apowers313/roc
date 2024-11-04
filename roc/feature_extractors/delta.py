@@ -7,58 +7,41 @@ from dataclasses import dataclass
 from ..component import register_component
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
-    Feature,
     FeatureExtractor,
     NewFeature,
-    OldLocation,
     PerceptionEvent,
-    Transmogrifier,
     VisionData,
 )
-
-
-@dataclass
-class Diff(Transmogrifier):
-    """A dataclass for representing a changes in vision."""
-
-    x: XLoc
-    y: YLoc
-    old_val: int
-    new_val: int
-
-    def __str__(self) -> str:
-        return f"({self.x}, {self.y}): {self.old_val} -> {self.new_val}\n"
-
-    def add_to_feature(self, n: Feature) -> None:
-        """Adds a set of Diff nodes to a Feature"""
-        n.add_type(self.new_val)
-        n.add_point(self.x, self.y)
-        ol = OldLocation(n.origin, self.x, self.y, self.old_val)
-        n.add_feature("Past", ol)
-
-    @classmethod
-    def from_feature(self, n: Feature) -> Diff:
-        """Creates a Diff from a Feature that has all the right Nodes"""
-        x, y = n.get_point()
-        new_val = n.get_type()
-        old = n.get_feature("Past")
-        assert isinstance(old, Feature)
-        old_val = old.get_type()
-        return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
 
 @dataclass(kw_only=True)
 class DeltaFeature(NewFeature):
     """A Feature that describes changes in vision"""
 
-    feature_name = "Delta"
-
+    feature_name: str = "Delta"
     old_val: int
     new_val: int
     point: tuple[XLoc, YLoc]
 
     def __str__(self) -> str:
         return f"({self.point[0]}, {self.point[1]}): {self.old_val} -> {self.new_val}\n"
+
+    # def add_to_feature(self, n: Feature) -> None:
+    #     """Adds a set of Diff nodes to a Feature"""
+    #     n.add_type(self.new_val)
+    #     n.add_point(self.x, self.y)
+    #     ol = OldLocation(n.origin, self.x, self.y, self.old_val)
+    #     n.add_feature("Past", ol)
+
+    # @classmethod
+    # def from_feature(self, n: Feature) -> Diff:
+    #     """Creates a Diff from a Feature that has all the right Nodes"""
+    #     x, y = n.get_point()
+    #     new_val = n.get_type()
+    #     old = n.get_feature("Past")
+    #     assert isinstance(old, Feature)
+    #     old_val = old.get_type()
+    #     return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
 
 @register_component("delta", "perception")

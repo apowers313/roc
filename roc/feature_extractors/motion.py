@@ -8,68 +8,12 @@ from ..component import register_component
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
-    ElementOrientation,
-    ElementPoint,
-    ElementType,
-    Feature,
     FeatureExtractor,
     NewFeature,
-    OldLocation,
     PerceptionEvent,
     Settled,
-    Transmogrifier,
 )
 from .delta import DeltaFeature
-
-
-@dataclass
-class MotionVector(Transmogrifier):
-    """A Transmogrifier that converts nodes to a motion dataclass and vice versa"""
-
-    direction: Direction
-    start_x: int
-    start_y: int
-    end_x: int
-    end_y: int
-    val: int
-
-    class Config:
-        """Pydantic config"""
-
-        use_enum_values = True
-
-    def __str__(self) -> str:
-        return f"{self.val} '{chr(self.val)}' {self.direction}: ({self.start_x}, {self.start_y}) -> ({self.end_x}, {self.end_y})"
-
-    def add_to_feature(self, n: Feature) -> None:
-        """Adds nodes and edges to describe the motion"""
-        n.add_type(self.val)
-        n.add_point(self.end_x, self.end_y)
-        n.add_orientation(self.direction)
-        ol = OldLocation(n.origin, self.start_x, self.start_y, self.val)
-        n.add_feature("Origin", ol)
-
-    @classmethod
-    def from_feature(self, n: Feature) -> MotionVector:
-        """Converts nodes and edges back into a dataclass that describes the motion"""
-        orig = n.get_feature("Origin")
-        assert isinstance(orig, Feature)
-        start_loc = orig.get_feature("Location")
-        assert isinstance(start_loc, ElementPoint)
-        val = n.get_feature("Type")
-        assert isinstance(val, ElementType)
-        end_loc = n.get_feature("Location")
-        assert isinstance(end_loc, ElementPoint)
-        dir = n.get_feature("Direction")
-        assert isinstance(dir, ElementOrientation)
-        return MotionVector(
-            direction=dir.orientation,
-            start_x=start_loc.x,
-            start_y=start_loc.y,
-            end_x=end_loc.x,
-            end_y=end_loc.y,
-            val=val.type,
-        )
 
 
 @dataclass(kw_only=True)
@@ -78,12 +22,44 @@ class MotionFeature(NewFeature):
     direction and value of the thing moving
     """
 
-    feature_name = "Motion"
-
+    feature_name: str = "Motion"
     start_point: tuple[XLoc, YLoc]
     end_point: tuple[XLoc, YLoc]
     type: int
     direction: Direction
+
+    def __str__(self) -> str:
+        return f"{self.type} '{chr(self.type)}' {self.direction}: ({self.start_point[0]}, {self.start_point[1]}) -> ({self.end_point[0]}, {self.end_point[1]})"
+
+    # def add_to_feature(self, n: Feature) -> None:
+    #     """Adds nodes and edges to describe the motion"""
+    #     n.add_type(self.val)
+    #     n.add_point(self.end_x, self.end_y)
+    #     n.add_orientation(self.direction)
+    #     ol = OldLocation(n.origin, self.start_x, self.start_y, self.val)
+    #     n.add_feature("Origin", ol)
+
+    # @classmethod
+    # def from_feature(self, n: Feature) -> MotionVector:
+    #     """Converts nodes and edges back into a dataclass that describes the motion"""
+    #     orig = n.get_feature("Origin")
+    #     assert isinstance(orig, Feature)
+    #     start_loc = orig.get_feature("Location")
+    #     assert isinstance(start_loc, ElementPoint)
+    #     val = n.get_feature("Type")
+    #     assert isinstance(val, ElementType)
+    #     end_loc = n.get_feature("Location")
+    #     assert isinstance(end_loc, ElementPoint)
+    #     dir = n.get_feature("Direction")
+    #     assert isinstance(dir, ElementOrientation)
+    #     return MotionVector(
+    #         direction=dir.orientation,
+    #         start_x=start_loc.x,
+    #         start_y=start_loc.y,
+    #         end_x=end_loc.x,
+    #         end_y=end_loc.y,
+    #         val=val.type,
+    #     )
 
 
 DeltaList = list[DeltaFeature]

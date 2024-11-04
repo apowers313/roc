@@ -40,6 +40,7 @@ class TestLine:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, LineFeature)
+        assert e.data.feature_name == "Line"
         assert e.data.size == 5
         assert e.data.type == 0
         assert e.data.points == {(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)}

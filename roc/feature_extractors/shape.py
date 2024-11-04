@@ -4,7 +4,13 @@ from dataclasses import dataclass
 
 from ..component import register_component
 from ..location import Point
-from ..perception import FeatureExtractor, PerceptionEvent, PointFeature, Settled, VisionData
+from ..perception import (
+    FeatureExtractor,
+    PerceptionEvent,
+    PointFeature,
+    Settled,
+    VisionData,
+)
 from .single import SingleFeature
 
 
@@ -12,7 +18,7 @@ from .single import SingleFeature
 class ShapeFeature(PointFeature):
     """The shape of a single feature."""
 
-    feature_name = "Shape"
+    feature_name: str = "Shape"
 
     def __hash__(self) -> int:
         raise NotImplementedError("ShapeFeature hash not implemented")

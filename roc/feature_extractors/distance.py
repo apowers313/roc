@@ -16,11 +16,10 @@ from .single import SingleFeature
 class DistanceFeature(NewFeature):
     """The distance between two features"""
 
+    feature_name: str = "Distance"
     start_point: tuple[XLoc, YLoc]
     end_point: tuple[XLoc, YLoc]
     size: int
-
-    feature_name = "Distance"
 
     # def __hash__(self) -> int:
     #     raise NotImplementedError("DistanceFeature hash not implemented")

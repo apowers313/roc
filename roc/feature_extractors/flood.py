@@ -1,16 +1,24 @@
+from dataclasses import dataclass
+
 import numpy as np
 
 from ..component import register_component
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
-from ..perception import AreaFeature, FeatureExtractor, PerceptionEvent, VisionData
+from ..perception import (
+    AreaFeature,
+    FeatureExtractor,
+    PerceptionEvent,
+    VisionData,
+)
 
 MIN_FLOOD_SIZE = 5
 
 
+@dataclass(kw_only=True)
 class FloodFeature(AreaFeature):
     """A collection of points representing similar values that are all adjacent to each other"""
 
-    feature_name = "Flood"
+    feature_name: str = "Flood"
 
     def __hash__(self) -> int:
         raise NotImplementedError("FloodFeature hash not implemented")
