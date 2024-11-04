@@ -31,6 +31,9 @@ class MotionFeature(NewFeature):
     def __str__(self) -> str:
         return f"{self.type} '{chr(self.type)}' {self.direction}: ({self.start_point[0]}, {self.start_point[1]}) -> ({self.end_point[0]}, {self.end_point[1]})"
 
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        return {self.end_point}
+
     # def add_to_feature(self, n: Feature) -> None:
     #     """Adds nodes and edges to describe the motion"""
     #     n.add_type(self.val)

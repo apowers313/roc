@@ -23,6 +23,9 @@ class DeltaFeature(NewFeature):
     new_val: int
     point: tuple[XLoc, YLoc]
 
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        return {self.point}
+
     def __str__(self) -> str:
         return f"({self.point[0]}, {self.point[1]}): {self.old_val} -> {self.new_val}\n"
 

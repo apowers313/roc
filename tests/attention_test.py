@@ -2,7 +2,10 @@
 
 
 from copy import deepcopy
+from dataclasses import dataclass
+from typing import Generator
 
+import pytest
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
@@ -17,12 +20,27 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
-from roc.graphdb import Node
-from roc.location import IntGrid
-from roc.perception import VisionData
+from roc.location import IntGrid, XLoc, YLoc
+from roc.perception import NewFeature, VisionData
 
 
 class TestSaliencyMap:
+    @pytest.fixture()
+    def feature_for_test(self) -> Generator[type, None, None]:
+        c = Component()
+
+        @dataclass(kw_only=True)
+        class FeatureForTest(NewFeature):
+            origin: Component = c
+            feature_name: str = "Test"
+
+            def get_points(self) -> set[tuple[XLoc, YLoc]]:
+                return set()
+
+        yield FeatureForTest
+
+        c.shutdown()
+
     def test_exists(self) -> None:
         g = IntGrid(
             [
@@ -51,7 +69,7 @@ class TestSaliencyMap:
         assert isinstance(val, list)
         assert len(val) == 0
 
-    def test_add(self) -> None:
+    def test_add(self, feature_for_test) -> None:
         g = IntGrid(
             [
                 [32, 32, 32],
@@ -60,8 +78,8 @@ class TestSaliencyMap:
             ]
         )
         sm = SaliencyMap(g)
-        n = Node(labels=["TestNode"])
-        sm.add_val(1, 2, n)
+        f = feature_for_test()
+        sm.add_val(1, 2, f)
 
         val = sm.get_val(0, 0)
         assert isinstance(val, list)
@@ -70,9 +88,9 @@ class TestSaliencyMap:
         val = sm.get_val(1, 2)
         assert isinstance(val, list)
         assert len(val) == 1
-        assert val[0] is n
+        assert val[0] is f
 
-    def test_add_multiple(self) -> None:
+    def test_add_multiple(self, feature_for_test) -> None:
         g = IntGrid(
             [
                 [32, 32, 32],
@@ -81,10 +99,10 @@ class TestSaliencyMap:
             ]
         )
         sm = SaliencyMap(g)
-        n1 = Node(labels=["TestNode"])
-        n2 = Node(labels=["TestNode"])
-        sm.add_val(2, 2, n1)
-        sm.add_val(2, 2, n2)
+        f1 = feature_for_test()
+        f2 = feature_for_test()
+        sm.add_val(2, 2, f1)
+        sm.add_val(2, 2, f2)
 
         val = sm.get_val(0, 0)
         assert isinstance(val, list)
@@ -93,10 +111,10 @@ class TestSaliencyMap:
         val = sm.get_val(2, 2)
         assert isinstance(val, list)
         assert len(val) == 2
-        assert n1 in val
-        assert n2 in val
+        assert f1 in val
+        assert f2 in val
 
-    def test_clear(self) -> None:
+    def test_clear(self, feature_for_test) -> None:
         g = IntGrid(
             [
                 [32, 32, 32],
@@ -105,13 +123,13 @@ class TestSaliencyMap:
             ]
         )
         sm = SaliencyMap(g)
-        n = Node(labels=["TestNode"])
-        sm.add_val(1, 2, n)
+        f = feature_for_test()
+        sm.add_val(1, 2, f)
 
         val = sm.get_val(1, 2)
         assert isinstance(val, list)
         assert len(val) == 1
-        assert val[0] is n
+        assert val[0] is f
 
         sm.clear()
 
@@ -119,7 +137,7 @@ class TestSaliencyMap:
         assert isinstance(val, list)
         assert len(val) == 0
 
-    def test_strength(self) -> None:
+    def test_strength(self, feature_for_test) -> None:
         g = IntGrid(
             [
                 [32, 32, 32],
@@ -128,26 +146,26 @@ class TestSaliencyMap:
             ]
         )
         sm = SaliencyMap(g)
-        n = Node(labels=["TestNode"])
+        f = feature_for_test()
 
         assert sm.get_strength(0, 1) == 0
 
-        sm.add_val(0, 0, n)
+        sm.add_val(0, 0, f)
         assert sm.get_strength(0, 0) == 1
 
-        sm.add_val(1, 1, n)
-        sm.add_val(1, 1, n)
+        sm.add_val(1, 1, f)
+        sm.add_val(1, 1, f)
         assert sm.get_strength(1, 1) == 2
 
-        sm.add_val(2, 2, n)
-        sm.add_val(2, 2, n)
-        sm.add_val(2, 2, n)
+        sm.add_val(2, 2, f)
+        sm.add_val(2, 2, f)
+        sm.add_val(2, 2, f)
         assert sm.get_strength(2, 2) == 3
 
         assert sm.get_max_strength() == 3
         assert sm.get_max_strength() == 3
 
-    def test_copy(self) -> None:
+    def test_copy(self, feature_for_test) -> None:
         g = IntGrid(
             [
                 [32, 32, 32],
@@ -156,8 +174,8 @@ class TestSaliencyMap:
             ]
         )
         sm1 = SaliencyMap(g)
-        n = Node()
-        sm1.add_val(0, 0, n)
+        f = feature_for_test()
+        sm1.add_val(0, 0, f)
 
         sm2 = deepcopy(sm1)
 
@@ -169,7 +187,7 @@ class TestSaliencyMap:
         assert sm2.grid[2, 2] == 99
         assert isinstance(sm2[0, 0], list)
         assert sm1[0, 0] is not sm2[0, 0]
-        assert sm2[0, 0][0] is n
+        assert sm2[0, 0][0] is f
 
     def test_report(self) -> None:
         delta = Component.get("delta", "perception")
@@ -207,12 +225,12 @@ class TestSaliencyMap:
         sm = e.data.saliency_map
         d = sm.feature_report()
         assert len(d.keys()) == 6
-        assert d["FloodFeature"] == 1633
-        assert d["LineFeature"] == 3242
-        assert d["DistanceFeature"] == 155
-        assert d["SingleFeature"] == 12
-        assert d["ColorFeature"] == 12
-        assert d["ShapeFeature"] == 12
+        assert d["Flood"] == 2
+        assert d["Line"] == 106
+        assert d["Distance"] == 78
+        assert d["Single"] == 13
+        assert d["Color"] == 13
+        assert d["Shape"] == 13
 
         # screen 1
         e = s.output.call_args_list[1].args[0]
@@ -220,14 +238,15 @@ class TestSaliencyMap:
         assert isinstance(e.data, VisionAttentionData)
         sm = e.data.saliency_map
         d = sm.feature_report()
-        assert len(d.keys()) == 9
-        assert d["FloodFeature"] == 1628
-        assert d["LineFeature"] == 3242
-        assert d["SingleFeature"] == 12
-        assert d["ColorFeature"] == 12
-        assert d["ShapeFeature"] == 12
-        assert d["DeltaFeature"] == 1
-        assert d["MotionFeature"] == 1
+        assert len(d.keys()) == 8
+        assert d["Flood"] == 1
+        assert d["Line"] == 106
+        assert d["Single"] == 13
+        assert d["Distance"] == 78
+        assert d["Color"] == 13
+        assert d["Shape"] == 13
+        assert d["Delta"] == 2
+        assert d["Motion"] == 2
 
     # def test_str(self) -> None:
     #     g = Grid(
@@ -331,6 +350,7 @@ class TestVisionAttention:
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
         assert e.data.focus_points == {(15, 5)}
+        print(e.data.saliency_map)
 
         # second event
         e = s.output.call_args_list[1].args[0]
@@ -343,7 +363,6 @@ class TestVisionAttention:
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
         assert e.data.focus_points == {(18, 5)}
-        # print(e.data.saliency_map)
 
         # fourth event
         e = s.output.call_args_list[3].args[0]

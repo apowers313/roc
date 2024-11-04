@@ -21,6 +21,9 @@ class DistanceFeature(NewFeature):
     end_point: tuple[XLoc, YLoc]
     size: int
 
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        return {self.start_point, self.end_point}
+
     # def __hash__(self) -> int:
     #     raise NotImplementedError("DistanceFeature hash not implemented")
 

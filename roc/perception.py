@@ -15,7 +15,6 @@ import numpy.typing as npt
 
 from .component import Component
 from .event import Event, EventBus
-from .graphdb import Node
 from .location import XLoc, YLoc
 
 
@@ -81,23 +80,27 @@ class Settled:
     pass
 
 
-class ElementSize(Node, extra="forbid"):
-    size: int
+# class ElementSize(Node, extra="forbid"):
+#     size: int
 
 
-class ElementType(Node, extra="forbid"):
-    type: int
+# class ElementType(Node, extra="forbid"):
+# #     type: int
 
 
-class ElementPoint(Node, extra="forbid"):
-    x: int
-    y: int
+# class ElementPoint(Node, extra="forbid"):
+#     x: int
+#     y: int
 
 
-class ElementTypedPoint(Node, extra="forbid"):
-    type: int
-    x: int
-    y: int
+# class ElementTypedPoint(Node, extra="forbid"):
+# #     type: int
+#     x: int
+#     y: int
+
+
+# class ElementOrientation(Node, extra="forbid"):
+#     orientation: Direction
 
 
 class Direction(str, Enum):
@@ -111,15 +114,14 @@ class Direction(str, Enum):
     down_left = "DOWN_LEFT"
 
 
-class ElementOrientation(Node, extra="forbid"):
-    orientation: Direction
-
-
 @dataclass(kw_only=True)
-class NewFeature:
+class NewFeature(ABC):
     # feature_name: str | None = field(default=None)
     feature_name: str
     origin: Component
+
+    @abstractmethod
+    def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
     # def to_nodes(self) -> Node:
     #     n = Node(labels={"Feature", self.feature_name})
@@ -257,21 +259,23 @@ class NewFeature:
 #     return feature_definition_decorator
 
 
-class Feature:
-    pass
-
-
 @dataclass(kw_only=True)
 class AreaFeature(NewFeature):
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
 
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        return self.points
+
 
 @dataclass(kw_only=True)
 class PointFeature(NewFeature):
     type: int
     point: tuple[XLoc, YLoc]
+
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        return {self.point}
 
 
 PerceptionData = VisionData | Settled | NewFeature

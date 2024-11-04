@@ -16,12 +16,10 @@ from skimage.feature import peak_local_max
 from .component import Component, register_component
 from .config import Config
 from .event import Event, EventBus
-from .graphdb import Node
 from .location import DebugGrid, IntGrid, NewGrid
 from .perception import (
-    ElementPoint,
-    Feature,
     FeatureExtractor,
+    NewFeature,
     Perception,
     PerceptionEvent,
     Settled,
@@ -43,7 +41,7 @@ class Attention(Component, ABC):
     bus = EventBus[AttentionData]("attention")
 
 
-class SaliencyMap(NewGrid[list[Node]]):
+class SaliencyMap(NewGrid[list[NewFeature]]):
     grid: IntGrid | None
 
     def __new__(cls, grid: IntGrid | None = None) -> Self:
@@ -81,9 +79,9 @@ class SaliencyMap(NewGrid[list[Node]]):
 
         return sz
 
-    def add_val(self, x: int, y: int, val: Node) -> None:
-        node_list = self.get_val(x, y)
-        node_list.append(val)
+    def add_val(self, x: int, y: int, val: NewFeature) -> None:
+        feature_list = self.get_val(x, y)
+        feature_list.append(val)
 
     def get_max_strength(self) -> int:
         max = 0
@@ -96,38 +94,43 @@ class SaliencyMap(NewGrid[list[Node]]):
         return max
 
     def get_strength(self, x: int, y: int) -> int:
-        node_list = self.get_val(x, y)
+        feature_list = self.get_val(x, y)
         # TODO: not really sure that the strength should depend on the number of features
-        ret = len(node_list)
+        ret = len(feature_list)
 
-        def add_strength(n: Node) -> None:
+        def add_strength(f: NewFeature) -> None:
             nonlocal ret
 
             # TODO: this is pretty arbitrary and might be biased based on my
             # domain knowledge... I suspect I will come back and modify this
             # based on object recognition and other factors at some point in
             # the future
-            if "Single" in n.labels:
+            if f.feature_name == "Single":
                 ret += 10
-            if "Delta" in n.labels:
+            if f.feature_name == "Delta":
                 ret += 15
-            if "Motion" in n.labels:
+            if f.feature_name == "Motion":
                 ret += 20
 
-        for n in node_list:
-            Node.walk(n, node_callback=add_strength, mode="dst")
+        for f in feature_list:
+            add_strength(f)
 
         return ret
 
     def feature_report(self) -> dict[str, int]:
-        ret: dict[str, int] = dict()
-        for row, col in np.ndindex(self.shape):
-            node_list = self[row, col]
-            for n in node_list:
-                f = Feature.find_parent_feature(n)
-                feature_name = type(f).__name__
-                ret[feature_name] = 0 if feature_name not in ret else ret[feature_name] + 1
+        feature_id: dict[str, set[int]] = dict()
 
+        # create a set of unique IDs for every distinct feature
+        for row, col in np.ndindex(self.shape):
+            feature_list = self[row, col]
+            for f in feature_list:
+                feature_name = f.feature_name
+                if feature_name not in feature_id:
+                    feature_id[feature_name] = set()
+                feature_id[feature_name].add(id(f))
+
+        # count all the sets
+        ret = {k: len(feature_id[k]) for k in feature_id}
         return ret
 
     def get_focus(self) -> set[tuple[int, int]]:
@@ -181,7 +184,7 @@ class VisionAttention(Attention):
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         allow = (
-            isinstance(e.data, Feature)
+            isinstance(e.data, NewFeature)
             or isinstance(e.data, Settled)
             or isinstance(e.data, VisionData)
         )
@@ -221,19 +224,12 @@ class VisionAttention(Attention):
             return
 
         # register each location in the saliency map
-        assert isinstance(e.data, Node)
+        assert isinstance(e.data, NewFeature)
         f = e.data
 
-        def try_add_loc(n: Node) -> None:
-            if isinstance(n, ElementPoint):
-                assert self.saliency_map is not None
-                self.saliency_map.add_val(n.x, n.y, n)
-
         # create saliency map
-        Node.walk(f, node_callback=try_add_loc)
-
-    # TODO: listen for vision events
-    # TODO: select and emit a single event
+        for p in f.get_points():
+            self.saliency_map.add_val(p[0], p[1], f)
 
 
 # TODO: other attention classes
