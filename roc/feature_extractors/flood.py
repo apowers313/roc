@@ -100,7 +100,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
                 point_set = set([(p.x, p.y) for p in point_list])
                 self.pb_conn.send(
                     FloodFeature(
-                        origin=self,
+                        origin_id=self.id,
                         points=point_set,
                         type=val,
                         size=len(point_set),

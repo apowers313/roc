@@ -44,7 +44,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
                 point_set = set([(p.x, p.y) for p in points])
                 ln.pb_conn.send(
                     LineFeature(
-                        origin=self,
+                        origin_id=self.id,
                         points=point_set,
                         type=points[0].val,
                         size=len(points),

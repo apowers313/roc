@@ -87,6 +87,10 @@ class Component(ABC):
             for obs in self.bus_conns[conn].attached_bus.subject.observers:
                 obs.on_completed()
 
+    @property
+    def id(self) -> tuple[str, str]:
+        return (self.type, self.name)
+
     @staticmethod
     def init() -> None:
         """Loads all components registered as `auto` and perception components

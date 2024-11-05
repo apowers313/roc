@@ -118,7 +118,7 @@ class Direction(str, Enum):
 class NewFeature(ABC):
     # feature_name: str | None = field(default=None)
     feature_name: str
-    origin: Component
+    origin_id: tuple[str, str]
 
     @abstractmethod
     def get_points(self) -> set[tuple[XLoc, YLoc]]: ...

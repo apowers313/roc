@@ -80,7 +80,7 @@ class Delta(FeatureExtractor[DeltaFeature]):
             if old_point.val != new_point.val:
                 self.pb_conn.send(
                     DeltaFeature(
-                        origin=self,
+                        origin_id=self.id,
                         point=(new_point.x, new_point.y),
                         old_val=old_point.val,
                         new_val=new_point.val,

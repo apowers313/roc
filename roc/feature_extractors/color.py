@@ -72,7 +72,7 @@ class Color(FeatureExtractor[Point]):
                 x, y = s.point
                 self.pb_conn.send(
                     ColorFeature(
-                        origin=self,
+                        origin_id=self.id,
                         point=(x, y),
                         type=self.vd.colors[y, x],
                     )

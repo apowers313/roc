@@ -73,7 +73,7 @@ class Shape(FeatureExtractor[Point]):
                 p = Point(x, y, self.vd.chars[y, x])
                 self.pb_conn.send(
                     ShapeFeature(
-                        origin=self,
+                        origin_id=self.id,
                         point=(x, y),
                         type=self.vd.chars[y, x],
                     )

@@ -55,7 +55,13 @@ class Single(FeatureExtractor[Point]):
         for x, y, v in data:
             point = Point(x, y, v)
             if is_unique_from_neighbors(data, point):
-                self.pb_conn.send(SingleFeature(origin=self, point=(x, y), type=v))
+                self.pb_conn.send(
+                    SingleFeature(
+                        origin_id=self.id,
+                        point=(x, y),
+                        type=v,
+                    )
+                )
         self.settled()
 
 

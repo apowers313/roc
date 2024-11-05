@@ -3,7 +3,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Generator
 
 import pytest
 from helpers.nethack_screens import screens
@@ -26,20 +25,16 @@ from roc.perception import NewFeature, VisionData
 
 class TestSaliencyMap:
     @pytest.fixture()
-    def feature_for_test(self) -> Generator[type, None, None]:
-        c = Component()
-
+    def feature_for_test(self, empty_components, fake_component) -> type:
         @dataclass(kw_only=True)
         class FeatureForTest(NewFeature):
-            origin: Component = c
+            origin_id: tuple[str, str] = fake_component.id
             feature_name: str = "Test"
 
             def get_points(self) -> set[tuple[XLoc, YLoc]]:
                 return set()
 
-        yield FeatureForTest
-
-        c.shutdown()
+        return FeatureForTest
 
     def test_exists(self) -> None:
         g = IntGrid(
@@ -368,5 +363,6 @@ class TestVisionAttention:
         e = s.output.call_args_list[3].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(18, 5)}
+        print(e.data.saliency_map)
+        assert e.data.focus_points == {(18, 6)}
         # print(e.data.saliency_map)

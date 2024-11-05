@@ -34,37 +34,37 @@ class TestMotion:
 
     def test_direction(self) -> None:
         o = Component()
-        origin = DeltaFeature(origin=o, point=(XLoc(0), YLoc(0)), old_val=120, new_val=0)
+        origin = DeltaFeature(origin_id=o.id, point=(XLoc(0), YLoc(0)), old_val=120, new_val=0)
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(0), YLoc(1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(0), YLoc(1)), old_val=0, new_val=120)
         )
         assert d == "DOWN"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(0), YLoc(-1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(0), YLoc(-1)), old_val=0, new_val=120)
         )
         assert d == "UP"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(0)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(-1), YLoc(0)), old_val=0, new_val=120)
         )
         assert d == "LEFT"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(0)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(1), YLoc(0)), old_val=0, new_val=120)
         )
         assert d == "RIGHT"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(-1), YLoc(1)), old_val=0, new_val=120)
         )
         assert d == "DOWN_LEFT"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(1), YLoc(1)), old_val=0, new_val=120)
         )
         assert d == "DOWN_RIGHT"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(-1), YLoc(-1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(-1), YLoc(-1)), old_val=0, new_val=120)
         )
         assert d == "UP_LEFT"
         d = adjacent_direction(
-            origin, DeltaFeature(origin=o, point=(XLoc(1), YLoc(-1)), old_val=0, new_val=120)
+            origin, DeltaFeature(origin_id=o.id, point=(XLoc(1), YLoc(-1)), old_val=0, new_val=120)
         )
         assert d == "UP_RIGHT"
 

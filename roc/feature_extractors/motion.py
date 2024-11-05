@@ -128,7 +128,7 @@ def adjacent_direction(d1: DeltaFeature, d2: DeltaFeature) -> Direction:
 def emit_motion(mc: Motion, old_delta: DeltaFeature, new_delta: DeltaFeature) -> None:
     mc.pb_conn.send(
         MotionFeature(
-            origin=mc,
+            origin_id=mc.id,
             start_point=old_delta.point,
             end_point=new_delta.point,
             type=new_delta.new_val,

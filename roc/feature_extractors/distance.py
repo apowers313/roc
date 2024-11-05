@@ -58,7 +58,7 @@ class Distance(FeatureExtractor[DistanceFeature]):
             # print(f"# distance: ({prev_pt[0]}, {prev_pt[1]}) ({curr_pt[0]}, {curr_pt[1]}) {dist}")
             self.pb_conn.send(
                 DistanceFeature(
-                    origin=self,
+                    origin_id=self.id,
                     start_point=prev_pt,
                     end_point=curr_pt,
                     size=dist,
