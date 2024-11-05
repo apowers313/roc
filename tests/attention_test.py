@@ -25,10 +25,10 @@ from roc.perception import NewFeature, VisionData
 
 class TestSaliencyMap:
     @pytest.fixture()
-    def feature_for_test(self, empty_components, fake_component) -> type:
+    def feature_for_test(self, empty_components) -> type:
         @dataclass(kw_only=True)
         class FeatureForTest(NewFeature):
-            origin_id: tuple[str, str] = fake_component.id
+            origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
             def get_points(self) -> set[tuple[XLoc, YLoc]]:
