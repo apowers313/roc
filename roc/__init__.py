@@ -8,13 +8,13 @@ from typing import Any
 # be registered
 import roc.feature_extractors
 import roc.logger as roc_logger
-from roc.jupyter import is_jupyter
 
 from .action import Action, ActionData
 from .component import Component
 from .config import Config
 from .gymnasium import NethackGym
-from .jupyter import RocJupyterMagics
+from .jupyter import RocJupyterMagics, is_jupyter
+from .jupyter.state import init_state
 from .perception import Perception, PerceptionData
 
 __all__ = [
@@ -42,6 +42,7 @@ def init(config: dict[str, Any] | None = None) -> None:
     ng = NethackGym()
     Component.init()
     RocJupyterMagics.init()
+    init_state()
 
 
 def start() -> None:

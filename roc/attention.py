@@ -220,12 +220,6 @@ class VisionAttention(Attention):
                     )
                 )
 
-                # TODO: jupyter should just listen for the event..
-                # save state so that it can be inspected in Jupyter
-                from .jupyter.state import states
-
-                states.salency.set(deepcopy(self.saliency_map))
-
                 # reset
                 self.settled.clear()
                 self.saliency_map = SaliencyMap()

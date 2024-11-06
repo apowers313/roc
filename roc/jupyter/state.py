@@ -2,14 +2,16 @@ import dataclasses
 import os
 import time
 from abc import ABC
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Generic, TypeVar, cast
 
 import click
 import psutil
 
-from roc.attention import SaliencyMap
+from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
+from roc.event import Event
 from roc.graphdb import Edge, Node
 
 from .utils import bytes2human
@@ -189,7 +191,6 @@ class CurrentSaliencyMapState(State[SaliencyMap]):
     def __str__(self) -> str:
         if self.val is not None:
             s = f"Current Saliency Map:\n{str(self.val)}\n"
-            s += f"\tCurrent Focus: {self.val.get_focus()}\n"
             s += "\tFeatures:\n"
             features = self.val.feature_report()
             for feat_name in features:
@@ -197,6 +198,22 @@ class CurrentSaliencyMapState(State[SaliencyMap]):
             return s
         else:
             return "Current Saliency Map: None"
+
+
+class CurrentAttentionState(State[VisionAttentionData]):
+    def __init__(self) -> None:
+        super().__init__("curr-saliency", display_name="Current Saliency Map")
+
+    def set(self, att: VisionAttentionData) -> None:
+        self.val = att
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            s = f"Current Attention:\n{str(self.val)}\n"
+            s += f"\tCurrent Focus: {self.val.focus_points}\n"
+            return s
+        else:
+            return "Current Attention: None"
 
 
 class ComponentsState(State[list[str]]):
@@ -224,6 +241,7 @@ class StateList:
     edge_cache: EdgeCacheState = EdgeCacheState()
     screen: CurrentScreenState = CurrentScreenState()
     salency: CurrentSaliencyMapState = CurrentSaliencyMapState()
+    attention: CurrentAttentionState = CurrentAttentionState()
     components: ComponentsState = ComponentsState()
 
 
@@ -231,7 +249,32 @@ states = StateList()
 all_states = [field.name for field in dataclasses.fields(StateList)]
 
 
+class StateComponent(Component):
+    pass
+
+
+_state_init_done = False
+
+
+def init_state() -> None:
+    global _state_init_done
+    if _state_init_done:
+        return
+
+    att_conn = Attention.bus.connect(StateComponent())
+
+    def att_evt_handler(e: Event[VisionAttentionData]) -> None:
+        assert isinstance(e.data, VisionAttentionData)
+        states.salency.set(deepcopy(e.data.saliency_map))
+        states.attention.set(deepcopy(e.data))
+
+    att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
+    _state_init_done = True
+
+
 def print_state() -> None:
+    init_state()
+
     def header(s: str) -> None:
         print(f"\n=== {s.upper()} ===")  # noqa: T201
 
@@ -253,6 +296,7 @@ def print_state() -> None:
     header("Agent")
     print(states.components)  # noqa: T201
     print(states.salency)  # noqa: T201
+    print(states.attention)  # noqa: T201
 
 
 @click.command()
