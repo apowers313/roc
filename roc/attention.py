@@ -32,6 +32,14 @@ class VisionAttentionData:
     focus_points: set[tuple[int, int]]
     saliency_map: SaliencyMap
 
+    def __str__(self) -> str:
+        assert self.saliency_map.grid is not None
+        dg = DebugGrid(self.saliency_map.grid)
+        for p in self.focus_points:
+            dg.set_style(p[0], p[1], back_brightness=1, back_hue=1)
+
+        return str(dg)
+
 
 AttentionData = VisionAttentionData
 AttentionEvent = Event[AttentionData]
@@ -54,6 +62,21 @@ class SaliencyMap(NewGrid[list[NewFeature]]):
         obj.grid = grid
 
         return obj
+
+    def __str__(self) -> str:
+        assert self.grid is not None
+        dg = DebugGrid(self.grid)
+        max_str = self.get_max_strength()
+
+        # prevent divide by zero
+        if max_str == 0:
+            max_str = 1
+
+        for p in self.grid.points():
+            rel_strength = self.get_strength(p.x, p.y) / max_str
+            color = DebugGrid.blue_to_red_hue(rel_strength)
+            dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
+        return str(dg)
 
     def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
         if obj is None:
@@ -154,21 +177,6 @@ class SaliencyMap(NewGrid[list[NewFeature]]):
 
         return ret
 
-    def __str__(self) -> str:
-        assert self.grid is not None
-        dg = DebugGrid(self.grid)
-        max_str = self.get_max_strength()
-
-        # prevent divide by zero
-        if max_str == 0:
-            max_str = 1
-
-        for p in self.grid.points():
-            rel_strength = self.get_strength(p.x, p.y) / max_str
-            color = DebugGrid.blue_to_red_hue(rel_strength)
-            dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
-        return str(dg)
-
 
 @register_component("vision", "attention", auto=True)
 class VisionAttention(Attention):
@@ -212,6 +220,7 @@ class VisionAttention(Attention):
                     )
                 )
 
+                # TODO: jupyter should just listen for the event..
                 # save state so that it can be inspected in Jupyter
                 from .jupyter.state import states
 
