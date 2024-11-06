@@ -68,7 +68,6 @@ class Intrinsic(Component):
         self.int_conn.listen(self.do_intrinsic)
 
     def event_filter(self, e: IntrinsicEvent) -> bool:
-        print("Intrinsic event filter")
         return True
 
     def do_intrinsic(self, e: IntrinsicEvent) -> None:
