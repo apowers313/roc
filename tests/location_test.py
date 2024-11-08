@@ -131,20 +131,30 @@ class TestDebugGrid:
         ]
         g = IntGrid(val)
         dg = DebugGrid(g)
-        dg.set_style(1, 1, front_brightness=1, front_saturation=1)  # fore red
+        dg.set_style(1, 1, front_brightness=1, front_saturation=1, front_hue=0.5)  # fore blue
+        dg.set_style(
+            0,
+            2,
+            front_brightness=1,
+            front_saturation=1,
+            front_hue=0.5,
+            back_hue=(2 / 3),
+            back_brightness=1,
+            back_saturation=1,
+        )  # fore red, back blue
         dg.set_style(2, 2, back_hue=(2 / 3), back_brightness=1, back_saturation=1)  # back blue
         # print(str(dg))
-        # middle red, bottom right blue
+        # middle blue, bottom left blue on blue, bottom right blue
         assert str(dg) == (
             f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)} {Style.reset}"
             + "\n"
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}1{Style.reset}"
-            + f"{Fore.rgb(255, 0, 0)}{Back.rgb(0, 0, 0)}2{Style.reset}"  # fore red
+            + f"{Fore.rgb(0, 255, 255)}{Back.rgb(0, 0, 0)}2{Style.reset}"  # fore blue
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}3{Style.reset}"
             + "\n"
-            + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}a{Style.reset}"
+            + f"{Fore.rgb(0, 255, 255)}{Back.rgb(0, 0, 255)}a{Style.reset}"  # blue on blue
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 0)}b{Style.reset}"
             + f"{Fore.rgb(255, 255, 255)}{Back.rgb(0, 0, 255)}c{Style.reset}"  # back blue
             + "\n"
