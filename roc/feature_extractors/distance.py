@@ -8,12 +8,12 @@ from dataclasses import dataclass
 
 from ..component import register_component
 from ..location import XLoc, YLoc
-from ..perception import FeatureExtractor, NewFeature, PerceptionEvent, Settled
+from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
 from .single import SingleFeature
 
 
 @dataclass(kw_only=True)
-class DistanceFeature(NewFeature):
+class DistanceFeature(Feature):
     """The distance between two features"""
 
     feature_name: str = "Distance"

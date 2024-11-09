@@ -8,14 +8,14 @@ from ..component import register_component
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
     FeatureExtractor,
-    NewFeature,
+    Feature,
     PerceptionEvent,
     VisionData,
 )
 
 
 @dataclass(kw_only=True)
-class DeltaFeature(NewFeature):
+class DeltaFeature(Feature):
     """A Feature that describes changes in vision"""
 
     feature_name: str = "Delta"

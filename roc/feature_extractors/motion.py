@@ -8,8 +8,8 @@ from ..component import register_component
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
+    Feature,
     FeatureExtractor,
-    NewFeature,
     PerceptionEvent,
     Settled,
 )
@@ -17,7 +17,7 @@ from .delta import DeltaFeature
 
 
 @dataclass(kw_only=True)
-class MotionFeature(NewFeature):
+class MotionFeature(Feature):
     """A vector describing a motion, including the start point, end point,
     direction and value of the thing moving
     """

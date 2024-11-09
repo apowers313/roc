@@ -115,8 +115,7 @@ class Direction(str, Enum):
 
 
 @dataclass(kw_only=True)
-class NewFeature(ABC):
-    # feature_name: str | None = field(default=None)
+class Feature(ABC):
     feature_name: str
     origin_id: tuple[str, str]
 
@@ -129,12 +128,12 @@ class NewFeature(ABC):
     #     return n
 
     # @staticmethod
-    # def from_nodes(n: Node) -> NewFeature:
+    # def from_nodes(n: Node) -> Feature:
     #     labels = n.labels - set("Feature")
     #     name = next(iter(labels))
     #     assert hasattr(n, "_origin")
     #     assert isinstance(n._origin, Component)
-    #     f = NewFeature(origin=n._origin, feature_name=name)
+    #     f = Feature(origin=n._origin, feature_name=name)
     #     # TODO: add feature values from nodes; steal from transmogrifier
     #     return f
 
@@ -243,7 +242,7 @@ class NewFeature(ABC):
     #     return None
 
 
-# FeatureCls = TypeVar("FeatureCls", bound=type[NewFeature])
+# FeatureCls = TypeVar("FeatureCls", bound=type[Feature])
 # def feature_definition(name: str) -> Callable[[type], type]:
 #     def feature_definition_decorator(cls: type) -> type:
 #         # set the type of 'feature_name' on the new class, so that dataclass
@@ -260,7 +259,7 @@ class NewFeature(ABC):
 
 
 @dataclass(kw_only=True)
-class AreaFeature(NewFeature):
+class AreaFeature(Feature):
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
@@ -270,7 +269,7 @@ class AreaFeature(NewFeature):
 
 
 @dataclass(kw_only=True)
-class PointFeature(NewFeature):
+class PointFeature(Feature):
     type: int
     point: tuple[XLoc, YLoc]
 
@@ -278,7 +277,7 @@ class PointFeature(NewFeature):
         return {self.point}
 
 
-PerceptionData = VisionData | Settled | NewFeature
+PerceptionData = VisionData | Settled | Feature
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -323,7 +322,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> NewFeature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
 
     @classmethod
     def list(cls) -> list[str]:

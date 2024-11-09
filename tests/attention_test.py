@@ -22,14 +22,14 @@ from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
 from roc.location import IntGrid, XLoc, YLoc
-from roc.perception import NewFeature, VisionData
+from roc.perception import Feature, VisionData
 
 
 class TestSaliencyMap:
     @pytest.fixture()
     def feature_for_test(self, empty_components) -> type:
         @dataclass(kw_only=True)
-        class FeatureForTest(NewFeature):
+        class FeatureForTest(Feature):
             origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
@@ -493,6 +493,7 @@ class TestVisionAttention:
         assert isinstance(motion, Motion)
         single = Component.get("single", "perception")
         assert isinstance(single, Single)
+        # TODO: distance, color, shape
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
