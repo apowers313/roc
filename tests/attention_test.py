@@ -8,19 +8,11 @@ import numpy as np
 import pandas as pd
 import pytest
 from helpers.nethack_screens import screens
-from helpers.util import StubComponent
+from helpers.util import LoadedComponents, StubComponent
 
 from roc.attention import SaliencyMap, VisionAttention, VisionAttentionData
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.color import Color
-from roc.feature_extractors.delta import Delta
-from roc.feature_extractors.distance import Distance
-from roc.feature_extractors.flood import Flood
-from roc.feature_extractors.line import Line
-from roc.feature_extractors.motion import Motion
-from roc.feature_extractors.shape import Shape
-from roc.feature_extractors.single import Single
 from roc.location import IntGrid, XLoc, YLoc
 from roc.perception import Feature, VisionData
 
@@ -186,25 +178,11 @@ class TestSaliencyMap:
         assert sm1[0, 0] is not sm2[0, 0]
         assert sm2[0, 0][0] is f
 
-    def test_report(self) -> None:
+    def test_report(self, load_components) -> None:
         delta = Component.get("delta", "perception")
-        assert isinstance(delta, Delta)
-        attention = Component.get("vision", "attention")
-        assert isinstance(attention, VisionAttention)
-        flood = Component.get("flood", "perception")
-        assert isinstance(flood, Flood)
-        line = Component.get("line", "perception")
-        assert isinstance(line, Line)
-        motion = Component.get("motion", "perception")
-        assert isinstance(motion, Motion)
-        single = Component.get("single", "perception")
-        assert isinstance(single, Single)
-        distance = Component.get("distance", "perception")
-        assert isinstance(distance, Distance)
-        color = Component.get("color", "perception")
-        assert isinstance(color, Color)
-        shape = Component.get("shape", "perception")
-        assert isinstance(shape, Shape)
+        assert isinstance(load_components, LoadedComponents)
+        delta = load_components.delta
+        attention = load_components.attention
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
@@ -269,20 +247,10 @@ class TestVisionAttention:
     def test_exists(self) -> None:
         VisionAttention()
 
-    def test_basic(self, empty_components) -> None:
-        delta = Component.get("delta", "perception")
-        assert isinstance(delta, Delta)
-        attention = Component.get("vision", "attention")
-        assert isinstance(attention, VisionAttention)
-        flood = Component.get("flood", "perception")
-        assert isinstance(flood, Flood)
-        line = Component.get("line", "perception")
-        assert isinstance(line, Line)
-        motion = Component.get("motion", "perception")
-        assert isinstance(motion, Motion)
-        single = Component.get("single", "perception")
-        assert isinstance(single, Single)
-        # TODO: distance, color, shape
+    def test_basic(self, load_components) -> None:
+        assert isinstance(load_components, LoadedComponents)
+        delta = load_components.delta
+        attention = load_components.attention
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
@@ -291,39 +259,12 @@ class TestVisionAttention:
         s.input_conn.send(VisionData.from_dict(screens[0]))
         s.input_conn.send(VisionData.from_dict(screens[1]))
 
-        # assert attention.saliency_map is not None
-        # assert attention.saliency_map.grid is not None
-        # print("saliency features", attention.saliency_map.size)
-        # print("vision:\n", IntGrid(screens[0]["chars"]))
-        # print(f"saliency map:\n{attention.saliency_map}")
-        # print("saliency max strength", attention.saliency_map.get_max_strength())
-        # print("saliency strength (0,0)", attention.saliency_map.get_strength(0, 0))
-        # print("saliency strength (16,5)", attention.saliency_map.get_strength(16, 5))
-        # print("saliency strength (16,6)", attention.saliency_map.get_strength(16, 6))
-        # print(attention.saliency_map.grid.get_point(16, 6))
-        # print(attention.saliency_map.grid.get_point(17, 6))
-
         assert s.output.call_count == 2
 
         # first event
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        d = e.data.focus_points.to_dict()
-        #     x   y   strength label
-        # 0   15  3       1.0      1
-        # 1   15  4       1.0      1
-        # 2   15  5       1.0      1
-        # 3   15  8       1.0      2
-        # 4   16  5       1.0      1
-        # 5   16  6       1.0      1
-        # 6   17  5       1.0      1
-        # 7   18  5       1.0      1
-        # 8   18  8       1.0      3
-        # 9   19  3       1.0      1
-        # 10  19  4       1.0      1
-        # 11  19  5       1.0      1
-        # 12  19  8       1.0      3
         df = pd.DataFrame(
             {
                 "x": {
@@ -394,22 +335,6 @@ class TestVisionAttention:
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        d = e.data.focus_points.to_dict()
-        #      x  y  strength  label
-        # 0   17  6  1.000000      1
-        # 1   16  6  0.770833      1
-        # 2   15  3  0.229167      1
-        # 3   15  4  0.229167      1
-        # 4   15  5  0.229167      1
-        # 5   15  8  0.229167      2
-        # 6   16  5  0.229167      1
-        # 7   17  5  0.229167      1
-        # 8   18  5  0.229167      1
-        # 9   18  8  0.229167      3
-        # 10  19  3  0.229167      1
-        # 11  19  4  0.229167      1
-        # 12  19  5  0.229167      1
-        # 13  19  8  0.229167      3
         df = pd.DataFrame(
             {
                 "x": {
@@ -446,19 +371,19 @@ class TestVisionAttention:
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.7708333333333334,
-                    2: 0.22916666666666666,
-                    3: 0.22916666666666666,
-                    4: 0.22916666666666666,
-                    5: 0.22916666666666666,
-                    6: 0.22916666666666666,
-                    7: 0.22916666666666666,
-                    8: 0.22916666666666666,
-                    9: 0.22916666666666666,
-                    10: 0.22916666666666666,
-                    11: 0.22916666666666666,
-                    12: 0.22916666666666666,
-                    13: 0.22916666666666666,
+                    1: 0.5967741935483871,
+                    2: 0.4032258064516129,
+                    3: 0.4032258064516129,
+                    4: 0.4032258064516129,
+                    5: 0.4032258064516129,
+                    6: 0.4032258064516129,
+                    7: 0.4032258064516129,
+                    8: 0.4032258064516129,
+                    9: 0.4032258064516129,
+                    10: 0.4032258064516129,
+                    11: 0.4032258064516129,
+                    12: 0.4032258064516129,
+                    13: 0.4032258064516129,
                 },
                 "label": {
                     0: 1,
@@ -480,20 +405,10 @@ class TestVisionAttention:
         )
         assert np.allclose(e.data.focus_points, df)
 
-    def test_four_screen(self, empty_components) -> None:
-        delta = Component.get("delta", "perception")
-        assert isinstance(delta, Delta)
-        attention = Component.get("vision", "attention")
-        assert isinstance(attention, VisionAttention)
-        flood = Component.get("flood", "perception")
-        assert isinstance(flood, Flood)
-        line = Component.get("line", "perception")
-        assert isinstance(line, Line)
-        motion = Component.get("motion", "perception")
-        assert isinstance(motion, Motion)
-        single = Component.get("single", "perception")
-        assert isinstance(single, Single)
-        # TODO: distance, color, shape
+    def test_four_screen(self, load_components) -> None:
+        assert isinstance(load_components, LoadedComponents)
+        delta = load_components.delta
+        attention = load_components.attention
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
@@ -616,19 +531,19 @@ class TestVisionAttention:
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.7708333333333334,
-                    2: 0.22916666666666666,
-                    3: 0.22916666666666666,
-                    4: 0.22916666666666666,
-                    5: 0.22916666666666666,
-                    6: 0.22916666666666666,
-                    7: 0.22916666666666666,
-                    8: 0.22916666666666666,
-                    9: 0.22916666666666666,
-                    10: 0.22916666666666666,
-                    11: 0.22916666666666666,
-                    12: 0.22916666666666666,
-                    13: 0.22916666666666666,
+                    1: 0.5967741935483871,
+                    2: 0.4032258064516129,
+                    3: 0.4032258064516129,
+                    4: 0.4032258064516129,
+                    5: 0.4032258064516129,
+                    6: 0.4032258064516129,
+                    7: 0.4032258064516129,
+                    8: 0.4032258064516129,
+                    9: 0.4032258064516129,
+                    10: 0.4032258064516129,
+                    11: 0.4032258064516129,
+                    12: 0.4032258064516129,
+                    13: 0.4032258064516129,
                 },
                 "label": {
                     0: 1,
@@ -658,63 +573,63 @@ class TestVisionAttention:
             {
                 "x": {
                     0: 18,
-                    1: 17,
+                    1: 15,
                     2: 15,
                     3: 15,
                     4: 15,
-                    5: 15,
-                    6: 16,
-                    7: 17,
-                    8: 18,
+                    5: 16,
+                    6: 17,
+                    7: 18,
+                    8: 19,
                     9: 19,
                     10: 19,
                     11: 19,
-                    12: 19,
+                    12: 17,
                 },
                 "y": {
                     0: 5,
-                    1: 6,
-                    2: 3,
-                    3: 4,
-                    4: 5,
-                    5: 8,
+                    1: 3,
+                    2: 4,
+                    3: 5,
+                    4: 8,
+                    5: 5,
                     6: 5,
-                    7: 5,
-                    8: 8,
-                    9: 3,
-                    10: 4,
-                    11: 5,
-                    12: 8,
+                    7: 8,
+                    8: 3,
+                    9: 4,
+                    10: 5,
+                    11: 8,
+                    12: 6,
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.3541666666666667,
-                    2: 0.22916666666666666,
-                    3: 0.22916666666666666,
-                    4: 0.22916666666666666,
-                    5: 0.22916666666666666,
-                    6: 0.22916666666666666,
-                    7: 0.22916666666666666,
-                    8: 0.22916666666666666,
-                    9: 0.22916666666666666,
-                    10: 0.22916666666666666,
-                    11: 0.22916666666666666,
-                    12: 0.22916666666666666,
+                    1: 0.39344262295081966,
+                    2: 0.39344262295081966,
+                    3: 0.39344262295081966,
+                    4: 0.39344262295081966,
+                    5: 0.39344262295081966,
+                    6: 0.39344262295081966,
+                    7: 0.39344262295081966,
+                    8: 0.39344262295081966,
+                    9: 0.39344262295081966,
+                    10: 0.39344262295081966,
+                    11: 0.39344262295081966,
+                    12: 0.2786885245901639,
                 },
                 "label": {
                     0: 1,
                     1: 1,
                     2: 1,
                     3: 1,
-                    4: 1,
-                    5: 2,
+                    4: 2,
+                    5: 1,
                     6: 1,
-                    7: 1,
-                    8: 3,
+                    7: 3,
+                    8: 1,
                     9: 1,
                     10: 1,
-                    11: 1,
-                    12: 3,
+                    11: 3,
+                    12: 1,
                 },
             }
         )
@@ -758,18 +673,18 @@ class TestVisionAttention:
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.5625,
-                    2: 0.22916666666666666,
-                    3: 0.22916666666666666,
-                    4: 0.22916666666666666,
-                    5: 0.22916666666666666,
-                    6: 0.22916666666666666,
-                    7: 0.22916666666666666,
-                    8: 0.22916666666666666,
-                    9: 0.22916666666666666,
-                    10: 0.22916666666666666,
-                    11: 0.22916666666666666,
-                    12: 0.22916666666666666,
+                    1: 0.6612903225806451,
+                    2: 0.4032258064516129,
+                    3: 0.4032258064516129,
+                    4: 0.4032258064516129,
+                    5: 0.4032258064516129,
+                    6: 0.4032258064516129,
+                    7: 0.4032258064516129,
+                    8: 0.4032258064516129,
+                    9: 0.4032258064516129,
+                    10: 0.4032258064516129,
+                    11: 0.4032258064516129,
+                    12: 0.4032258064516129,
                 },
                 "label": {
                     0: 1,

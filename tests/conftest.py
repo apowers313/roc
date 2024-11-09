@@ -7,12 +7,21 @@ from typing import Any, Generator
 
 import psutil
 import pytest
-from helpers.util import FakeData
+from helpers.util import FakeData, LoadedComponents
 
 from roc.action import Action, ActionData
+from roc.attention import VisionAttention
 from roc.component import Component, register_component
 from roc.config import Config
 from roc.event import BusConnection, EventBus
+from roc.feature_extractors.color import Color
+from roc.feature_extractors.delta import Delta
+from roc.feature_extractors.distance import Distance
+from roc.feature_extractors.flood import Flood
+from roc.feature_extractors.line import Line
+from roc.feature_extractors.motion import Motion
+from roc.feature_extractors.shape import Shape
+from roc.feature_extractors.single import Single
 from roc.graphdb import Edge, GraphDB, Node
 from roc.logger import init as logger_init
 from roc.perception import Perception, PerceptionData
@@ -148,6 +157,41 @@ def requires_module(request) -> None:
 
     for mod in mods:
         import_module(mod)
+
+
+@pytest.fixture
+def load_components(empty_components) -> Generator[LoadedComponents, None, None]:
+    delta = Component.get("delta", "perception")
+    assert isinstance(delta, Delta)
+    attention = Component.get("vision", "attention")
+    assert isinstance(attention, VisionAttention)
+    flood = Component.get("flood", "perception")
+    assert isinstance(flood, Flood)
+    line = Component.get("line", "perception")
+    assert isinstance(line, Line)
+    motion = Component.get("motion", "perception")
+    assert isinstance(motion, Motion)
+    single = Component.get("single", "perception")
+    assert isinstance(single, Single)
+    distance = Component.get("distance", "perception")
+    assert isinstance(distance, Distance)
+    color = Component.get("color", "perception")
+    assert isinstance(color, Color)
+    shape = Component.get("shape", "perception")
+    assert isinstance(shape, Shape)
+    # TODO: distance, color, shape
+
+    yield LoadedComponents(
+        attention=attention,
+        delta=delta,
+        flood=flood,
+        line=line,
+        single=single,
+        motion=motion,
+        distance=distance,
+        color=color,
+        shape=shape,
+    )
 
 
 @pytest.fixture
