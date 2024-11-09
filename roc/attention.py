@@ -18,7 +18,7 @@ from skimage.morphology import reconstruction
 from .component import Component, register_component
 from .config import Config
 from .event import Event, EventBus
-from .location import DebugGrid, IntGrid, NewGrid
+from .location import DebugGrid, Grid, IntGrid
 from .perception import (
     Feature,
     FeatureExtractor,
@@ -54,7 +54,7 @@ class Attention(Component, ABC):
     bus = EventBus[AttentionData]("attention")
 
 
-class SaliencyMap(NewGrid[list[Feature]]):
+class SaliencyMap(Grid[list[Feature]]):
     grid: IntGrid | None
 
     def __new__(cls, grid: IntGrid | None = None) -> Self:

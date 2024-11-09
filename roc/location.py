@@ -109,7 +109,7 @@ LocationTuple = tuple[XLoc, YLoc]
 ValLocTuple = tuple[XLoc, YLoc, GridType]
 
 
-class NewGrid(npt.NDArray[Any], Generic[GridType]):
+class Grid(npt.NDArray[Any], Generic[GridType]):
     def __new__(cls, input_array: npt.ArrayLike) -> Self:
         obj = np.asarray(input_array).view(cls)
         assert obj.ndim == 2
@@ -146,7 +146,7 @@ class NewGrid(npt.NDArray[Any], Generic[GridType]):
         return self.shape[0]
 
 
-class IntGrid(NewGrid[int]):
+class IntGrid(Grid[int]):
     def get_point(self, x: XLoc, y: YLoc) -> Point:
         return Point(x, y, self[y, x])
 
@@ -191,7 +191,7 @@ class GridStyle:
     val: str
 
 
-class DebugGrid(NewGrid[GridStyle]):
+class DebugGrid(Grid[GridStyle]):
     def __new__(cls, grid: IntGrid) -> DebugGrid:
         # obj = np.ndarray((grid.height, grid.width), dtype=object).view(DebugGrid)
         obj = np.array(
@@ -218,7 +218,7 @@ class DebugGrid(NewGrid[GridStyle]):
         if obj is None:
             return
 
-    # def __init__(self, grid: NewGrid[Any]) -> None:
+    # def __init__(self, grid: Grid[Any]) -> None:
     #     width = grid.width
     #     height = grid.height
     #     map: list[list[GridStyle]] = [
