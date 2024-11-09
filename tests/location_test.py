@@ -53,8 +53,8 @@ class TestPoint:
         # p2 = Point(XLoc(42), 70, 255)
         # p3 = Point(XLoc(42), 71, 255)
 
-        assert Point.isadjacent(p1=p1, x2=42, y2=70)
-        assert Point.isadjacent(x1=42, y1=69, x2=42, y2=70)
+        assert Point.isadjacent(p1=p1, x2=XLoc(42), y2=YLoc(70))
+        assert Point.isadjacent(x1=XLoc(42), y1=YLoc(69), x2=XLoc(42), y2=YLoc(70))
         # with pytest.raises(TypeError):
         #     assert Point.isadjacent(p1=p1, x1=42, y1=70)
 
