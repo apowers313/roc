@@ -4,6 +4,8 @@
 from copy import deepcopy
 from dataclasses import dataclass
 
+import numpy as np
+import pandas as pd
 import pytest
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
@@ -307,15 +309,178 @@ class TestVisionAttention:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(15, 5)}
+        d = e.data.focus_points.to_dict()
+        #     x   y   strength label
+        # 0   15  3       1.0      1
+        # 1   15  4       1.0      1
+        # 2   15  5       1.0      1
+        # 3   15  8       1.0      2
+        # 4   16  5       1.0      1
+        # 5   16  6       1.0      1
+        # 6   17  5       1.0      1
+        # 7   18  5       1.0      1
+        # 8   18  8       1.0      3
+        # 9   19  3       1.0      1
+        # 10  19  4       1.0      1
+        # 11  19  5       1.0      1
+        # 12  19  8       1.0      3
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 15,
+                    1: 15,
+                    2: 15,
+                    3: 15,
+                    4: 16,
+                    5: 16,
+                    6: 17,
+                    7: 18,
+                    8: 18,
+                    9: 19,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                },
+                "y": {
+                    0: 3,
+                    1: 4,
+                    2: 5,
+                    3: 8,
+                    4: 5,
+                    5: 6,
+                    6: 5,
+                    7: 5,
+                    8: 8,
+                    9: 3,
+                    10: 4,
+                    11: 5,
+                    12: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 1.0,
+                    2: 1.0,
+                    3: 1.0,
+                    4: 1.0,
+                    5: 1.0,
+                    6: 1.0,
+                    7: 1.0,
+                    8: 1.0,
+                    9: 1.0,
+                    10: 1.0,
+                    11: 1.0,
+                    12: 1.0,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 2,
+                    4: 1,
+                    5: 1,
+                    6: 1,
+                    7: 1,
+                    8: 3,
+                    9: 1,
+                    10: 1,
+                    11: 1,
+                    12: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)
 
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(17, 6)}
+        d = e.data.focus_points.to_dict()
+        #      x  y  strength  label
+        # 0   17  6  1.000000      1
+        # 1   16  6  0.770833      1
+        # 2   15  3  0.229167      1
+        # 3   15  4  0.229167      1
+        # 4   15  5  0.229167      1
+        # 5   15  8  0.229167      2
+        # 6   16  5  0.229167      1
+        # 7   17  5  0.229167      1
+        # 8   18  5  0.229167      1
+        # 9   18  8  0.229167      3
+        # 10  19  3  0.229167      1
+        # 11  19  4  0.229167      1
+        # 12  19  5  0.229167      1
+        # 13  19  8  0.229167      3
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 17,
+                    1: 16,
+                    2: 15,
+                    3: 15,
+                    4: 15,
+                    5: 15,
+                    6: 16,
+                    7: 17,
+                    8: 18,
+                    9: 18,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                    13: 19,
+                },
+                "y": {
+                    0: 6,
+                    1: 6,
+                    2: 3,
+                    3: 4,
+                    4: 5,
+                    5: 8,
+                    6: 5,
+                    7: 5,
+                    8: 5,
+                    9: 8,
+                    10: 3,
+                    11: 4,
+                    12: 5,
+                    13: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 0.7708333333333334,
+                    2: 0.22916666666666666,
+                    3: 0.22916666666666666,
+                    4: 0.22916666666666666,
+                    5: 0.22916666666666666,
+                    6: 0.22916666666666666,
+                    7: 0.22916666666666666,
+                    8: 0.22916666666666666,
+                    9: 0.22916666666666666,
+                    10: 0.22916666666666666,
+                    11: 0.22916666666666666,
+                    12: 0.22916666666666666,
+                    13: 0.22916666666666666,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 1,
+                    4: 1,
+                    5: 2,
+                    6: 1,
+                    7: 1,
+                    8: 1,
+                    9: 3,
+                    10: 1,
+                    11: 1,
+                    12: 1,
+                    13: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)
 
-    def test_four_screen(self, empty_components, memory_profile) -> None:
+    def test_four_screen(self, empty_components) -> None:
         delta = Component.get("delta", "perception")
         assert isinstance(delta, Delta)
         attention = Component.get("vision", "attention")
@@ -344,25 +509,282 @@ class TestVisionAttention:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(15, 5)}
-        print(e.data.saliency_map)
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 15,
+                    1: 15,
+                    2: 15,
+                    3: 15,
+                    4: 16,
+                    5: 16,
+                    6: 17,
+                    7: 18,
+                    8: 18,
+                    9: 19,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                },
+                "y": {
+                    0: 3,
+                    1: 4,
+                    2: 5,
+                    3: 8,
+                    4: 5,
+                    5: 6,
+                    6: 5,
+                    7: 5,
+                    8: 8,
+                    9: 3,
+                    10: 4,
+                    11: 5,
+                    12: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 1.0,
+                    2: 1.0,
+                    3: 1.0,
+                    4: 1.0,
+                    5: 1.0,
+                    6: 1.0,
+                    7: 1.0,
+                    8: 1.0,
+                    9: 1.0,
+                    10: 1.0,
+                    11: 1.0,
+                    12: 1.0,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 2,
+                    4: 1,
+                    5: 1,
+                    6: 1,
+                    7: 1,
+                    8: 3,
+                    9: 1,
+                    10: 1,
+                    11: 1,
+                    12: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)
 
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(17, 6)}
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 17,
+                    1: 16,
+                    2: 15,
+                    3: 15,
+                    4: 15,
+                    5: 15,
+                    6: 16,
+                    7: 17,
+                    8: 18,
+                    9: 18,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                    13: 19,
+                },
+                "y": {
+                    0: 6,
+                    1: 6,
+                    2: 3,
+                    3: 4,
+                    4: 5,
+                    5: 8,
+                    6: 5,
+                    7: 5,
+                    8: 5,
+                    9: 8,
+                    10: 3,
+                    11: 4,
+                    12: 5,
+                    13: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 0.7708333333333334,
+                    2: 0.22916666666666666,
+                    3: 0.22916666666666666,
+                    4: 0.22916666666666666,
+                    5: 0.22916666666666666,
+                    6: 0.22916666666666666,
+                    7: 0.22916666666666666,
+                    8: 0.22916666666666666,
+                    9: 0.22916666666666666,
+                    10: 0.22916666666666666,
+                    11: 0.22916666666666666,
+                    12: 0.22916666666666666,
+                    13: 0.22916666666666666,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 1,
+                    4: 1,
+                    5: 2,
+                    6: 1,
+                    7: 1,
+                    8: 1,
+                    9: 3,
+                    10: 1,
+                    11: 1,
+                    12: 1,
+                    13: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)
 
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        assert e.data.focus_points == {(18, 5)}
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 18,
+                    1: 17,
+                    2: 15,
+                    3: 15,
+                    4: 15,
+                    5: 15,
+                    6: 16,
+                    7: 17,
+                    8: 18,
+                    9: 19,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                },
+                "y": {
+                    0: 5,
+                    1: 6,
+                    2: 3,
+                    3: 4,
+                    4: 5,
+                    5: 8,
+                    6: 5,
+                    7: 5,
+                    8: 8,
+                    9: 3,
+                    10: 4,
+                    11: 5,
+                    12: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 0.3541666666666667,
+                    2: 0.22916666666666666,
+                    3: 0.22916666666666666,
+                    4: 0.22916666666666666,
+                    5: 0.22916666666666666,
+                    6: 0.22916666666666666,
+                    7: 0.22916666666666666,
+                    8: 0.22916666666666666,
+                    9: 0.22916666666666666,
+                    10: 0.22916666666666666,
+                    11: 0.22916666666666666,
+                    12: 0.22916666666666666,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 1,
+                    4: 1,
+                    5: 2,
+                    6: 1,
+                    7: 1,
+                    8: 3,
+                    9: 1,
+                    10: 1,
+                    11: 1,
+                    12: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)
 
         # fourth event
         e = s.output.call_args_list[3].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        print(e.data.saliency_map)
-        assert e.data.focus_points == {(18, 6)}
-        # print(e.data.saliency_map)
+        df = pd.DataFrame(
+            {
+                "x": {
+                    0: 18,
+                    1: 18,
+                    2: 15,
+                    3: 15,
+                    4: 15,
+                    5: 15,
+                    6: 16,
+                    7: 17,
+                    8: 18,
+                    9: 19,
+                    10: 19,
+                    11: 19,
+                    12: 19,
+                },
+                "y": {
+                    0: 6,
+                    1: 5,
+                    2: 3,
+                    3: 4,
+                    4: 5,
+                    5: 8,
+                    6: 5,
+                    7: 5,
+                    8: 8,
+                    9: 3,
+                    10: 4,
+                    11: 5,
+                    12: 8,
+                },
+                "strength": {
+                    0: 1.0,
+                    1: 0.5625,
+                    2: 0.22916666666666666,
+                    3: 0.22916666666666666,
+                    4: 0.22916666666666666,
+                    5: 0.22916666666666666,
+                    6: 0.22916666666666666,
+                    7: 0.22916666666666666,
+                    8: 0.22916666666666666,
+                    9: 0.22916666666666666,
+                    10: 0.22916666666666666,
+                    11: 0.22916666666666666,
+                    12: 0.22916666666666666,
+                },
+                "label": {
+                    0: 1,
+                    1: 1,
+                    2: 1,
+                    3: 1,
+                    4: 1,
+                    5: 2,
+                    6: 1,
+                    7: 1,
+                    8: 3,
+                    9: 1,
+                    10: 1,
+                    11: 1,
+                    12: 3,
+                },
+            }
+        )
+        assert np.allclose(e.data.focus_points, df)

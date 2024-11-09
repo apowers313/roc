@@ -11,7 +11,9 @@ from typing import Any, Self
 
 import numpy as np
 import numpy.typing as npt
-from skimage.feature import peak_local_max
+import pandas as pd
+from scipy.ndimage import label
+from skimage.morphology import reconstruction
 
 from .component import Component, register_component
 from .config import Config
@@ -29,16 +31,19 @@ from .perception import (
 
 @dataclass
 class VisionAttentionData:
-    focus_points: set[tuple[int, int]]
+    focus_points: pd.DataFrame
     saliency_map: SaliencyMap
 
     def __str__(self) -> str:
         assert self.saliency_map.grid is not None
         dg = DebugGrid(self.saliency_map.grid)
-        for p in self.focus_points:
-            dg.set_style(p[0], p[1], back_brightness=1, back_hue=1)
 
-        return str(dg)
+        for idx, row in self.focus_points.iterrows():
+            x = int(row["x"])
+            y = int(row["y"])
+            dg.set_style(x, y, back_brightness=row["strength"], back_hue=1)
+
+        return f"{str(dg)}\n\nFocus Points:\n{self.focus_points}"
 
 
 AttentionData = VisionAttentionData
@@ -156,7 +161,7 @@ class SaliencyMap(NewGrid[list[NewFeature]]):
         ret = {k: len(feature_id[k]) for k in feature_id}
         return ret
 
-    def get_focus(self) -> set[tuple[int, int]]:
+    def get_focus(self) -> pd.DataFrame:
         max_str = self.get_max_strength()
 
         # prevent divide by zero
@@ -170,12 +175,46 @@ class SaliencyMap(NewGrid[list[NewFeature]]):
             ]
         )
 
-        m = np.median(fkimg)
-        coordinates = peak_local_max(fkimg, min_distance=5, threshold_rel=m)
+        # find peaks through dilation
+        seed = np.copy(fkimg)
+        seed[1:-1, 1:-1] = fkimg.min()
+        rec = reconstruction(seed, fkimg, method="dilation")
+        peaks = fkimg - rec
 
-        ret: set[tuple[int, int]] = {(loc[0], loc[1]) for loc in coordinates}
+        # get coordinates of peaks
+        nz = peaks.nonzero()
+        coords = np.column_stack(nz)
 
-        return ret
+        # label points that are adjacent / diagonal
+        structure = np.ones((3, 3), dtype=int)
+        labeled, ncomponents = label(peaks, structure)
+
+        # get values for each coordinate
+        flat_indicies = np.ravel_multi_index(tuple(coords.T), fkimg.shape)
+        vals = np.take(fkimg, flat_indicies)
+        labels = np.take(labeled, flat_indicies)
+
+        # append values to coordinates
+        # vert_vals = np.reshape(vals, (coords.shape[0], 1))
+        # vert_labels = np.reshape(labels, (coords.shape[0], 1))
+        # peak_info = np.hstack((coords, vert_vals, vert_labels))
+        # ordered_peak_info = peak_info[peak_info[:, 2].argsort()[::-1]]
+
+        # create table of peak info, ordered by strength
+        df = (
+            pd.DataFrame(
+                {
+                    "x": nz[0],
+                    "y": nz[1],
+                    "strength": vals,
+                    "label": labels,
+                }
+            )
+            .sort_values("strength", ascending=False)
+            .reset_index(drop=True)
+        )
+
+        return df
 
 
 @register_component("vision", "attention", auto=True)
