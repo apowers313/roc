@@ -4,11 +4,11 @@ re-assembled as concepts.
 
 from __future__ import annotations
 
-import weakref
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, TypeVar
+from weakref import ReferenceType, WeakValueDictionary, ref
 
 import numpy as np
 import numpy.typing as npt
@@ -16,6 +16,9 @@ import numpy.typing as npt
 from .component import Component
 from .event import Event, EventBus
 from .location import XLoc, YLoc
+
+FeatureType = TypeVar("FeatureType")
+NodeType = TypeVar("NodeType")
 
 
 class VisionData:
@@ -114,18 +117,48 @@ class Direction(str, Enum):
     down_left = "DOWN_LEFT"
 
 
+# class FeatureNodeCache(Generic[FeatureType], ABC):
+#     def __init__(self) -> None:
+#         self.cache: dict[int, FeatureType] = dict()
+
+#     @abstractmethod
+#     @property
+#     def db_query(self) -> str: ...
+
+#     @abstractmethod
+#     def get_node(self, f: FeatureType) -> Node: ...
+
+
+class CacheRegistry:
+    def __init__(self) -> None:
+        self.registry: dict[str, WeakValueDictionary[int, Feature[Any]]] = dict()
+
+    def __getattr__(self, key: str) -> WeakValueDictionary[int, Feature[Any]]:
+        if key not in self.registry:
+            self.registry[key] = WeakValueDictionary()
+
+        return self.registry[key]
+
+
+cache_registry = CacheRegistry()
+
+
 @dataclass(kw_only=True)
-class Feature(ABC):
+class Feature(ABC, Generic[NodeType]):
     feature_name: str
     origin_id: tuple[str, str]
+
+    # @abstractmethod
+    # def __hash__(self) -> int: ...
 
     @abstractmethod
     def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
-    # def to_nodes(self) -> Node:
-    #     n = Node(labels={"Feature", self.feature_name})
-    #     # TODO: create nodes for each feature value; steal from transmogrifier
-    #     return n
+    # @abstractmethod
+    # def to_nodes(self) -> NodeType: ...
+
+    # n = Node(labels={"Feature", self.feature_name})
+    # return n
 
     # @staticmethod
     # def from_nodes(n: Node) -> Feature:
@@ -259,7 +292,7 @@ class Feature(ABC):
 
 
 @dataclass(kw_only=True)
-class AreaFeature(Feature):
+class AreaFeature(Feature[NodeType]):
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
@@ -269,7 +302,7 @@ class AreaFeature(Feature):
 
 
 @dataclass(kw_only=True)
-class PointFeature(Feature):
+class PointFeature(Feature[NodeType]):
     type: int
     point: tuple[XLoc, YLoc]
 
@@ -277,7 +310,7 @@ class PointFeature(Feature):
         return {self.point}
 
 
-PerceptionData = VisionData | Settled | Feature
+PerceptionData = VisionData | Settled | Feature[Any]
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -302,14 +335,13 @@ class Perception(Component, ABC):
         cls.bus = EventBus[PerceptionData]("perception")
 
 
-fe_list: list[weakref.ReferenceType[FeatureExtractor[Any]]] = []
-FeatureType = TypeVar("FeatureType")
+fe_list: list[ReferenceType[FeatureExtractor[Any]]] = []
 
 
 class FeatureExtractor(Perception, Generic[FeatureType], ABC):
     def __init__(self) -> None:
         super().__init__()
-        fe_list.append(weakref.ref(self))
+        fe_list.append(ref(self))
 
     def do_perception(self, e: PerceptionEvent) -> None:
         f = self.get_feature(e)
@@ -322,7 +354,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature[Any] | None: ...
 
     @classmethod
     def list(cls) -> list[str]:
@@ -331,7 +363,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
             fe = fe_ref()
             if fe is None:
                 continue
-            ret.append(f"{fe.name}:{fe.type}")
+            ret.append(str(fe.id))
 
         return ret
 

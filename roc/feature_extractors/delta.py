@@ -3,19 +3,20 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from ..component import register_component
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
-    FeatureExtractor,
     Feature,
+    FeatureExtractor,
     PerceptionEvent,
     VisionData,
 )
 
 
 @dataclass(kw_only=True)
-class DeltaFeature(Feature):
+class DeltaFeature(Feature[Any]):
     """A Feature that describes changes in vision"""
 
     feature_name: str = "Delta"

@@ -12,7 +12,7 @@ from reactivex import operators as op
 from reactivex.abc.disposable import DisposableBase as Disposable
 from rich.pretty import pretty_repr
 
-from .component import Component
+from .component import Component, ComponentId
 
 EventData = TypeVar("EventData")
 
@@ -25,16 +25,16 @@ class Event(ABC, Generic[EventData]):
         Generic (EventData): The data to be carried by the event
     """
 
-    def __init__(self, data: EventData, src: Component, bus: EventBus[EventData]):
+    def __init__(self, data: EventData, src_id: ComponentId, bus: EventBus[EventData]):
         """The initializer for the Event
 
         Args:
             data (EventData): The data for this event
-            src (Component): The Component sending the event
+            src_id (ComponentId): The name and type of the Component sending the event
             bus (EventBus): The EventBus that the event is being sent over
         """
         self.data = data
-        self.src = src
+        self.src_id = src_id
         self.bus = bus
 
     def __repr__(self) -> str:
@@ -48,7 +48,7 @@ class Event(ABC, Generic[EventData]):
         )
         if "\n" in data_str:
             data_str = "\n" + data_str
-        return f"[EVENT: {self.src.name} >>> {self.bus.name}]: {data_str}"
+        return f"[EVENT: {self.src_id} >>> {self.bus.name}]: {data_str}"
 
 
 EventFilter = Callable[[Event[EventData]], bool]
@@ -76,7 +76,7 @@ class BusConnection(Generic[EventData]):
         Args:
             data (EventData): The data type of the data to be sent
         """
-        e = Event[EventData](data, self.attached_component, self.attached_bus)
+        e = Event[EventData](data, self.attached_component.id, self.attached_bus)
         logger.trace(f">>> Sending {e}")
         self.attached_bus.subject.on_next(e)
 
@@ -98,12 +98,14 @@ class BusConnection(Generic[EventData]):
         self.subscribers.append(sub)
 
     def close(self) -> None:
-        logger.trace(
-            f"Closing connection {self.attached_component.name} -> {self.attached_bus.name}"
+        logger.debug(
+            f"Closing connection from component {self.attached_component.id}  -> {self.attached_bus.name} bus"
         )
 
         for sub in self.subscribers:
             sub.dispose()
+
+        # del self.attached_component
 
 
 eventbus_names: set[str] = set()

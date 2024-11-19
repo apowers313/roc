@@ -7,7 +7,7 @@ from __future__ import annotations
 
 # import traceback
 from abc import ABC
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, cast
 from weakref import WeakSet
 
 from typing_extensions import Self
@@ -22,6 +22,14 @@ loaded_components: dict[str, Component] = {}
 component_set: WeakSet[Component] = WeakSet()
 
 T = TypeVar("T")
+
+
+class ComponentId(NamedTuple):
+    type: str
+    name: str
+
+    def __str__(self) -> str:
+        return f"{self.name}:{self.type}"
 
 
 class Component(ABC):
@@ -75,7 +83,7 @@ class Component(ABC):
         Returns:
             bool: True if the event should be sent, False if it should be dropped
         """
-        return e.src is not self
+        return e.src_id != self.id
 
     def shutdown(self) -> None:
         """De-initializes the component, removing any bus connections and any
@@ -86,10 +94,11 @@ class Component(ABC):
         for conn in self.bus_conns:
             for obs in self.bus_conns[conn].attached_bus.subject.observers:
                 obs.on_completed()
+            self.bus_conns[conn].close()
 
     @property
-    def id(self) -> tuple[str, str]:
-        return (self.type, self.name)
+    def id(self) -> ComponentId:
+        return ComponentId(self.type, self.name)
 
     @staticmethod
     def init() -> None:

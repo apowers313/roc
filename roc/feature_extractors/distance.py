@@ -5,6 +5,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from ..component import register_component
 from ..location import XLoc, YLoc
@@ -13,7 +14,7 @@ from .single import SingleFeature
 
 
 @dataclass(kw_only=True)
-class DistanceFeature(Feature):
+class DistanceFeature(Feature[Any]):
     """The distance between two features"""
 
     feature_name: str = "Distance"
@@ -36,7 +37,7 @@ class Distance(FeatureExtractor[DistanceFeature]):
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         # only listen to single:perception events
-        if e.src.name == "single" and e.src.type == "perception":
+        if e.src_id.name == "single" and e.src_id.type == "perception":
             return True
         return False
 

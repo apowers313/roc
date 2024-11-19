@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import IntGrid, Point
 from ..perception import (
     FeatureExtractor,
@@ -12,8 +13,13 @@ from ..perception import (
 )
 
 
+class SingleNode(Node):
+    type: int
+    point: tuple[int, int]
+
+
 @dataclass(kw_only=True)
-class SingleFeature(PointFeature):
+class SingleFeature(PointFeature[SingleNode]):
     """A single isolated feature with no similar features around it."""
 
     feature_name: str = "Single"

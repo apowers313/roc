@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from ..component import register_component
 from ..location import Point, XLoc, YLoc
@@ -17,7 +18,7 @@ from .delta import DeltaFeature
 
 
 @dataclass(kw_only=True)
-class MotionFeature(Feature):
+class MotionFeature(Feature[Any]):
     """A vector describing a motion, including the start point, end point,
     direction and value of the thing moving
     """
@@ -78,7 +79,7 @@ class Motion(FeatureExtractor[MotionFeature]):
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         # only listen to delta:perception events
-        if e.src.name == "delta" and e.src.type == "perception":
+        if e.src_id.name == "delta" and e.src_id.type == "perception":
             return True
         return False
 

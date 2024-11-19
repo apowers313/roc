@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -15,7 +16,7 @@ MIN_FLOOD_SIZE = 5
 
 
 @dataclass(kw_only=True)
-class FloodFeature(AreaFeature):
+class FloodFeature(AreaFeature[Any]):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     feature_name: str = "Flood"

@@ -22,7 +22,7 @@ class TestColor:
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
-            filter=lambda e: e.src.name == "color",
+            filter=lambda e: e.src_id.name == "color",
         )
 
         s.input_conn.send(VisionData.from_dict(screens[0]))

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from ..component import register_component
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
@@ -13,7 +14,7 @@ MIN_LINE_COUNT = 4
 
 
 @dataclass(kw_only=True)
-class LineFeature(AreaFeature):
+class LineFeature(AreaFeature[Any]):
     """A collection of points representing a line"""
 
     feature_name: str = "Line"

@@ -5,7 +5,11 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.single import Single, SingleFeature, is_unique_from_neighbors
+from roc.feature_extractors.single import (
+    Single,
+    SingleFeature,
+    is_unique_from_neighbors,
+)
 from roc.location import IntGrid, Point, XLoc, YLoc
 from roc.perception import Settled, VisionData
 

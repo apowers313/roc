@@ -1,21 +1,11 @@
 import re
-from dataclasses import dataclass
 from typing import Any, Callable, Generic, TypeVar, cast
 from unittest.mock import MagicMock
 
 import pytest
 
-from roc.attention import VisionAttention
 from roc.component import Component
 from roc.event import BusConnection, Event, EventBus, EventFilter
-from roc.feature_extractors.color import Color
-from roc.feature_extractors.delta import Delta
-from roc.feature_extractors.distance import Distance
-from roc.feature_extractors.flood import Flood
-from roc.feature_extractors.line import Line
-from roc.feature_extractors.motion import Motion
-from roc.feature_extractors.shape import Shape
-from roc.feature_extractors.single import Single
 
 # from roc.perception import Direction, ElementOrientation, ElementPoint, ElementSize, ElementType
 
@@ -102,19 +92,6 @@ def component_response_args(
     # request.params
     arg_tuple = (name, type, input_conn_attr, output_conn_attr, vals)
     return pytest.mark.parametrize("component_response", [arg_tuple], indirect=True)
-
-
-@dataclass
-class LoadedComponents:
-    delta: Delta
-    attention: VisionAttention
-    flood: Flood
-    line: Line
-    single: Single
-    motion: Motion
-    distance: Distance
-    color: Color
-    shape: Shape
 
 
 # def check_num_src_edges(n: object, num_edges: int) -> None:

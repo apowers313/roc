@@ -1,6 +1,7 @@
 """Generates Features for things that aren't like their neighbors"""
 
 from dataclasses import dataclass
+from typing import Any
 
 from ..component import register_component
 from ..location import Point
@@ -15,7 +16,7 @@ from .single import SingleFeature
 
 
 @dataclass(kw_only=True)
-class ColorFeature(PointFeature):
+class ColorFeature(PointFeature[Any]):
     """The color of a single feature."""
 
     feature_name: str = "Color"
@@ -46,7 +47,7 @@ class Color(FeatureExtractor[Point]):
             bool: Returns True if the event is a SingleFeature or VisionData to
             keep processing it, False otherwise.
         """
-        return isinstance(e.data, VisionData) or e.src.name == "single"
+        return isinstance(e.data, VisionData) or e.src_id.name == "single"
 
     def get_feature(self, e: PerceptionEvent) -> None:
         """Emits the color features.

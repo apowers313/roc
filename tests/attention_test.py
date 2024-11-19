@@ -1,18 +1,26 @@
 # mypy: disable-error-code="no-untyped-def"
 
-
 from copy import deepcopy
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import pandas as pd
 import pytest
 from helpers.nethack_screens import screens
-from helpers.util import LoadedComponents, StubComponent
+from helpers.util import StubComponent
 
 from roc.attention import SaliencyMap, VisionAttention, VisionAttentionData
 from roc.component import Component
 from roc.event import Event
+from roc.feature_extractors.color import Color
+from roc.feature_extractors.delta import Delta
+from roc.feature_extractors.distance import Distance
+from roc.feature_extractors.flood import Flood
+from roc.feature_extractors.line import Line
+from roc.feature_extractors.motion import Motion
+from roc.feature_extractors.shape import Shape
+from roc.feature_extractors.single import Single
 from roc.location import IntGrid, XLoc, YLoc
 from roc.perception import Feature, VisionData
 
@@ -21,7 +29,7 @@ class TestSaliencyMap:
     @pytest.fixture()
     def feature_for_test(self, empty_components) -> type:
         @dataclass(kw_only=True)
-        class FeatureForTest(Feature):
+        class FeatureForTest(Feature[Any]):
             origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
@@ -178,11 +186,25 @@ class TestSaliencyMap:
         assert sm1[0, 0] is not sm2[0, 0]
         assert sm2[0, 0][0] is f
 
-    def test_report(self, load_components) -> None:
+    def test_report(self, empty_components) -> None:
         delta = Component.get("delta", "perception")
-        assert isinstance(load_components, LoadedComponents)
-        delta = load_components.delta
-        attention = load_components.attention
+        assert isinstance(delta, Delta)
+        attention = Component.get("vision", "attention")
+        assert isinstance(attention, VisionAttention)
+        flood = Component.get("flood", "perception")
+        assert isinstance(flood, Flood)
+        line = Component.get("line", "perception")
+        assert isinstance(line, Line)
+        motion = Component.get("motion", "perception")
+        assert isinstance(motion, Motion)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
+        distance = Component.get("distance", "perception")
+        assert isinstance(distance, Distance)
+        color = Component.get("color", "perception")
+        assert isinstance(color, Color)
+        shape = Component.get("shape", "perception")
+        assert isinstance(shape, Shape)
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
@@ -247,10 +269,25 @@ class TestVisionAttention:
     def test_exists(self) -> None:
         VisionAttention()
 
-    def test_basic(self, load_components) -> None:
-        assert isinstance(load_components, LoadedComponents)
-        delta = load_components.delta
-        attention = load_components.attention
+    def test_basic(self, empty_components) -> None:
+        delta = Component.get("delta", "perception")
+        assert isinstance(delta, Delta)
+        attention = Component.get("vision", "attention")
+        assert isinstance(attention, VisionAttention)
+        flood = Component.get("flood", "perception")
+        assert isinstance(flood, Flood)
+        line = Component.get("line", "perception")
+        assert isinstance(line, Line)
+        motion = Component.get("motion", "perception")
+        assert isinstance(motion, Motion)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
+        distance = Component.get("distance", "perception")
+        assert isinstance(distance, Distance)
+        color = Component.get("color", "perception")
+        assert isinstance(color, Color)
+        shape = Component.get("shape", "perception")
+        assert isinstance(shape, Shape)
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,
@@ -405,10 +442,25 @@ class TestVisionAttention:
         )
         assert np.allclose(e.data.focus_points, df)
 
-    def test_four_screen(self, load_components) -> None:
-        assert isinstance(load_components, LoadedComponents)
-        delta = load_components.delta
-        attention = load_components.attention
+    def test_four_screen(self, empty_components) -> None:
+        delta = Component.get("delta", "perception")
+        assert isinstance(delta, Delta)
+        attention = Component.get("vision", "attention")
+        assert isinstance(attention, VisionAttention)
+        flood = Component.get("flood", "perception")
+        assert isinstance(flood, Flood)
+        line = Component.get("line", "perception")
+        assert isinstance(line, Line)
+        motion = Component.get("motion", "perception")
+        assert isinstance(motion, Motion)
+        single = Component.get("single", "perception")
+        assert isinstance(single, Single)
+        distance = Component.get("distance", "perception")
+        assert isinstance(distance, Distance)
+        color = Component.get("color", "perception")
+        assert isinstance(color, Color)
+        shape = Component.get("shape", "perception")
+        assert isinstance(shape, Shape)
         s = StubComponent(
             input_bus=delta.pb_conn.attached_bus,
             output_bus=attention.att_conn.attached_bus,

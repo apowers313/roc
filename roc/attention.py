@@ -14,6 +14,7 @@ import numpy.typing as npt
 import pandas as pd
 from scipy.ndimage import label
 from skimage.morphology import reconstruction
+from strictly_typed_pandas import DataSet
 
 from .component import Component, register_component
 from .config import Config
@@ -29,9 +30,16 @@ from .perception import (
 )
 
 
+class VisionAttentionSchema:
+    x: np.int64
+    y: np.int64
+    strength: np.float64
+    label: np.int32
+
+
 @dataclass
 class VisionAttentionData:
-    focus_points: pd.DataFrame
+    focus_points: DataSet[VisionAttentionSchema]
     saliency_map: SaliencyMap
 
     def __str__(self) -> str:
@@ -54,7 +62,7 @@ class Attention(Component, ABC):
     bus = EventBus[AttentionData]("attention")
 
 
-class SaliencyMap(Grid[list[Feature]]):
+class SaliencyMap(Grid[list[Feature[Any]]]):
     grid: IntGrid | None
 
     def __new__(cls, grid: IntGrid | None = None) -> Self:
@@ -107,7 +115,7 @@ class SaliencyMap(Grid[list[Feature]]):
 
         return sz
 
-    def add_val(self, x: int, y: int, val: Feature) -> None:
+    def add_val(self, x: int, y: int, val: Feature[Any]) -> None:
         feature_list = self.get_val(x, y)
         feature_list.append(val)
 
@@ -126,7 +134,7 @@ class SaliencyMap(Grid[list[Feature]]):
         # TODO: not really sure that the strength should depend on the number of features
         ret = len(feature_list)
 
-        def add_strength(f: Feature) -> None:
+        def add_strength(f: Feature[Any]) -> None:
             nonlocal ret
 
             # TODO: this is pretty arbitrary and might be biased based on my
@@ -161,7 +169,7 @@ class SaliencyMap(Grid[list[Feature]]):
         ret = {k: len(feature_id[k]) for k in feature_id}
         return ret
 
-    def get_focus(self) -> pd.DataFrame:
+    def get_focus(self) -> DataSet[VisionAttentionSchema]:
         max_str = self.get_max_strength()
 
         # prevent divide by zero
@@ -194,12 +202,6 @@ class SaliencyMap(Grid[list[Feature]]):
         vals = np.take(fkimg, flat_indicies)
         labels = np.take(labeled, flat_indicies)
 
-        # append values to coordinates
-        # vert_vals = np.reshape(vals, (coords.shape[0], 1))
-        # vert_labels = np.reshape(labels, (coords.shape[0], 1))
-        # peak_info = np.hstack((coords, vert_vals, vert_labels))
-        # ordered_peak_info = peak_info[peak_info[:, 2].argsort()[::-1]]
-
         # create table of peak info, ordered by strength
         df = (
             pd.DataFrame(
@@ -214,7 +216,7 @@ class SaliencyMap(Grid[list[Feature]]):
             .reset_index(drop=True)
         )
 
-        return df
+        return DataSet[VisionAttentionSchema](df)
 
 
 @register_component("vision", "attention", auto=True)
@@ -245,7 +247,7 @@ class VisionAttention(Attention):
 
         # check to see if all feature extractors have settled
         if isinstance(e.data, Settled):
-            self.settled.add(f"{e.src.name}:{e.src.type}")
+            self.settled.add(str(e.src_id))
 
             unsettled = set(FeatureExtractor.list()) - self.settled
             if len(unsettled) == 0:

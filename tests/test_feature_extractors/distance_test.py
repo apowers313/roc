@@ -22,7 +22,7 @@ class TestDistance:
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
-            filter=lambda e: e.src.name == "distance",
+            filter=lambda e: e.src_id.name == "distance",
         )
 
         s.input_conn.send(
@@ -61,7 +61,7 @@ class TestDistance:
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
-            filter=lambda e: e.src.name == "distance",
+            filter=lambda e: e.src_id.name == "distance",
         )
 
         s.input_conn.send(
@@ -115,7 +115,7 @@ class TestDistance:
         s = StubComponent(
             input_bus=c.pb_conn.attached_bus,
             output_bus=c.pb_conn.attached_bus,
-            filter=lambda e: e.src.name == "distance",
+            filter=lambda e: e.src_id.name == "distance",
         )
 
         s.input_conn.send(VisionData.from_dict(screens[0]))

@@ -76,7 +76,7 @@ class TestMotion:
         s = StubComponent(
             input_bus=d.pb_conn.attached_bus,
             output_bus=m.pb_conn.attached_bus,
-            filter=lambda e: e.src.name == "motion",
+            filter=lambda e: e.src_id.name == "motion",
         )
 
         s.input_conn.send(screen0)
