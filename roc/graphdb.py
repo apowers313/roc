@@ -765,7 +765,7 @@ class Node(BaseModel, extra="allow"):
 
     @classmethod
     def load_many(
-        cls, node_set: set[NodeId], db: GraphDB | None = NotImplemented, load_edges: bool = False
+        cls, node_set: set[NodeId], db: GraphDB | None = None, load_edges: bool = False
     ) -> list[Self]:
         db = db or GraphDB.singleton()
         node_ids = ",".join(map(str, node_set))
