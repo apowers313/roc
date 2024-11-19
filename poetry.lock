@@ -2478,10 +2478,10 @@ numpy = [
     {version = ">=1.21.2", markers = "python_version >= \"3.10\""},
     {version = ">=1.21.4", markers = "python_version >= \"3.10\" and platform_system == \"Darwin\""},
     {version = ">=1.23.5", markers = "python_version >= \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
     {version = ">=1.19.3", markers = "python_version >= \"3.6\" and platform_system == \"Linux\" and platform_machine == \"aarch64\" or python_version >= \"3.9\""},
     {version = ">=1.17.0", markers = "python_version >= \"3.7\""},
     {version = ">=1.17.3", markers = "python_version >= \"3.8\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
 ]
 
 [[package]]
@@ -2580,17 +2580,20 @@ xml = ["lxml (>=4.9.2)"]
 
 [[package]]
 name = "pandas-stubs"
-version = "2.2.3.241009"
+version = "2.2.2.240603"
 description = "Type annotations for pandas"
 optional = false
-python-versions = ">=3.10"
+python-versions = ">=3.9"
 files = [
-    {file = "pandas_stubs-2.2.3.241009-py3-none-any.whl", hash = "sha256:3a6f8f142105a42550be677ba741ba532621f4e0acad2155c0e7b2450f114cfa"},
-    {file = "pandas_stubs-2.2.3.241009.tar.gz", hash = "sha256:d4ab618253f0acf78a5d0d2bfd6dffdd92d91a56a69bdc8144e5a5c6d25be3b5"},
+    {file = "pandas_stubs-2.2.2.240603-py3-none-any.whl", hash = "sha256:e08ce7f602a4da2bff5a67475ba881c39f2a4d4f7fccc1cba57c6f35a379c6c0"},
+    {file = "pandas_stubs-2.2.2.240603.tar.gz", hash = "sha256:2dcc86e8fa6ea41535a4561c1f08b3942ba5267b464eff2e99caeee66f9e4cd1"},
 ]
 
 [package.dependencies]
-numpy = ">=1.23.5"
+numpy = [
+    {version = ">=1.23.5", markers = "python_version >= \"3.9\" and python_version < \"3.12\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\" and python_version < \"3.13\""},
+]
 types-pytz = ">=2022.1.1"
 
 [[package]]
@@ -4387,6 +4390,22 @@ files = [
 pbr = ">=2.0.0,<2.1.0 || >2.1.0"
 
 [[package]]
+name = "strictly-typed-pandas"
+version = "0.3.4"
+description = "Static type checking of pandas DataFrames"
+optional = false
+python-versions = ">=3.8.0"
+files = [
+    {file = "strictly_typed_pandas-0.3.4-py3-none-any.whl", hash = "sha256:9356c57ab78437093be68d35862ebea5c02c1d42e5809d52364e9d05989dd33e"},
+    {file = "strictly_typed_pandas-0.3.4.tar.gz", hash = "sha256:ea74bd3af273294749e41a26866e2f9d13f61489cf508ba61f303aaca586ad8a"},
+]
+
+[package.dependencies]
+numpy = "<=2.0.1"
+pandas = "<=2.2.2"
+pandas-stubs = "<=2.2.2.240603"
+
+[[package]]
 name = "tabulate"
 version = "0.9.0"
 description = "Pretty-print tabular data"
@@ -4737,4 +4756,4 @@ viz = ["matplotlib", "nc-time-axis", "seaborn"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3433b78dc7b00e5675b54e3c36869c5b38b7c18fc2984ec192b7fd80318cf76d"
+content-hash = "b338c981686a6850bf504237669924e40ed036e0bfacbbfdb3338c65defcc451"
