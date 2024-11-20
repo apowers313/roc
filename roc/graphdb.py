@@ -765,27 +765,47 @@ class Node(BaseModel, extra="allow"):
 
     @classmethod
     def load_many(
-        cls, node_set: set[NodeId], db: GraphDB | None = None, load_edges: bool = False
+        cls,
+        node_set: set[NodeId],
+        db: GraphDB | None = None,
+        load_edges: bool = False,
     ) -> list[Self]:
         db = db or GraphDB.singleton()
         node_ids = ",".join(map(str, node_set))
 
-        if load_edges:
-            edge_fmt = "e"
-        else:
-            edge_fmt = "{id: id(e), start: id(startNode(e)), end: id(endNode(e))}"
-        res_iter = db.raw_fetch(
-            f"""
-                MATCH (n)-[e]-(m) WHERE id(n) IN [{node_ids}]
-                RETURN n, collect({edge_fmt}) AS edges
-                """,
+        return cls.find(
+            where=f"id(src) IN [{node_ids}]",
+            db=db,
+            load_edges=load_edges,
         )
 
-        # edges = list(
-        #     map(lambda r: {"id": r["e_id"], "start": r["e_start"], "end": r["e_end"]}, res)
-        # )
-        # src_edges = list(map(lambda e: e["id"], filter(lambda e: e["start"] == id, edges)))
-        # dst_edges = list(map(lambda e: e["id"], filter(lambda e: e["end"] == id, edges)))
+    @classmethod
+    def find(
+        cls,
+        where: str,
+        src_node_name: str = "src",
+        src_labels: set[str] = set(),
+        edge_name: str = "e",
+        edge_labels: set[str] = set(),
+        dst_node_name: str = "dst",
+        dst_labels: set[str] = set(),
+        params: dict[str, str] = dict(),
+        db: GraphDB | None = None,
+        load_edges: bool = False,
+    ) -> list[Self]:
+        db = db or GraphDB.singleton()
+
+        if load_edges:
+            edge_fmt = f"{edge_name}"
+        else:
+            edge_fmt = f"{{id: id({edge_name}), start: id(startNode({edge_name})), end: id(endNode({edge_name}))}}"
+
+        res_iter = db.raw_fetch(
+            f"""
+                MATCH ({src_node_name})-[{edge_name}]-({dst_node_name}) WHERE {where}
+                RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
+                """,
+        )
 
         ret_list = list()
         for r in res_iter:

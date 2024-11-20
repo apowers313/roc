@@ -150,6 +150,12 @@ class TestNode:
             for e in n.dst_edges:
                 assert e.id in ec
 
+    def test_node_find(self) -> None:
+        nodes = Node.find("src.name = 'Winter Is Coming'")
+        assert len(nodes) == 1
+        assert nodes[0].id == 4
+        assert nodes[0].name == "Winter Is Coming"  # type: ignore
+
     def test_node_cache(self) -> None:
         c = Node.get_cache()
         assert c.hits == 0
