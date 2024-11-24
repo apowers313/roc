@@ -744,12 +744,7 @@ class Node(BaseModel, extra="allow"):
         Returns:
             Self: The node from the database
         """
-        res = cls.load_many(
-            {
-                id,
-            },
-            db=db,
-        )
+        res = cls.load_many({id}, db=db)
 
         # print("RES", res)
 
@@ -773,11 +768,18 @@ class Node(BaseModel, extra="allow"):
         db = db or GraphDB.singleton()
         node_ids = ",".join(map(str, node_set))
 
-        return cls.find(
+        ret = cls.find(
             where=f"id(src) IN [{node_ids}]",
             db=db,
             load_edges=load_edges,
         )
+
+        if len(ret) != len(node_set):
+            id_set = {n.id for n in ret}
+            missing_ids = node_set - id_set
+            raise NodeNotFound(f"Couldn't find node IDs: {', '.join(map(str, missing_ids))}")
+
+        return ret
 
     @classmethod
     def find(
@@ -786,7 +788,7 @@ class Node(BaseModel, extra="allow"):
         src_node_name: str = "src",
         src_labels: set[str] = set(),
         edge_name: str = "e",
-        edge_labels: set[str] = set(),
+        edge_label: str = "",
         dst_node_name: str = "dst",
         dst_labels: set[str] = set(),
         params: dict[str, str] = dict(),
@@ -796,22 +798,63 @@ class Node(BaseModel, extra="allow"):
         db = db or GraphDB.singleton()
 
         if load_edges:
+            fix_for_collect = ""
             edge_fmt = f"{edge_name}"
         else:
+            # TODO: remove
+            fix_for_collect = f"""UNWIND
+                    CASE
+                        WHEN {edge_name} = [] THEN [NULL] 
+                        ELSE {edge_name} 
+                    END AS e2"""
             edge_fmt = f"{{id: id({edge_name}), start: id(startNode({edge_name})), end: id(endNode({edge_name}))}}"
+            # edge_fmt = "{id: id(e2), start: id(startNode(e2)), end: id(endNode(e2))}"
+
+        if len(src_labels) == 0:
+            src_label_str = ""
+        else:
+            src_label_str = f":{':'.join(src_labels)}"
+
+        if len(dst_labels) == 0:
+            dst_label_str = ""
+        else:
+            dst_label_str = f":{':'.join(dst_labels)}"
+
+        if len(edge_label) > 0:
+            edge_label = ":" + edge_label
 
         res_iter = db.raw_fetch(
             f"""
-                MATCH ({src_node_name})-[{edge_name}]-({dst_node_name}) WHERE {where}
+                MATCH
+                ({src_node_name}{src_label_str})-[{edge_name}{edge_label}*0..1]-({dst_node_name}{dst_label_str}) 
+                WITH {src_node_name}, head({edge_name}) AS {edge_name}
+                WHERE {where}
                 RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
                 """,
+            # f"""
+            #     MATCH
+            #     ({src_node_name}{src_label_str})-[{edge_name}{edge_label}*0..1]-({dst_node_name}{dst_label_str})
+            #     WHERE {where}
+            #     {fix_for_collect}
+            #     RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
+            #     """,
         )
 
         ret_list = list()
         for r in res_iter:
+            logger.trace(f"find result: {r}")
             n = r["n"]
             if n is None:
-                raise NodeNotFound(f"Couldn't find node ID: {id}")
+                # NOTE: I can't think of any circumstances where there would be
+                # multiple "None" results, so I think this is just an empty list
+                continue
+
+            # if (
+            #     isinstance(r["edges"], list)
+            #     and "end" in r["edges"][0]
+            #     and r["edges"][0]["end"] is None
+            # ):
+            #     continue
 
             if load_edges:
                 # XXX: memgraph converts edges to Relationship objects if you
@@ -820,6 +863,12 @@ class Node(BaseModel, extra="allow"):
                 dst_edges = list()
                 edge_cache = Edge.get_cache()
                 for e in r["edges"]:
+                    # if isinstance(e, list):
+                    #     if len(e) == 0:
+                    #         continue
+
+                    #     e = e[0]
+
                     # add edge_id to to the right list for the node creation below
                     if n.id == e.start_id:
                         src_edges.append(e.id)
@@ -843,15 +892,22 @@ class Node(BaseModel, extra="allow"):
                     )
                     edge_cache[e.id] = new_edge
             else:
+                # edges are just the IDs
                 src_edges = [e["id"] for e in r["edges"] if e["start"] == n.id]
                 dst_edges = [e["id"] for e in r["edges"] if e["end"] == n.id]
-            new_node = cls(
-                _id=n.id,
-                _src_edges=EdgeList(src_edges),
-                _dst_edges=EdgeList(dst_edges),
-                labels=n.labels,
-                **n.properties,
-            )
+
+            node_cache = cls.get_cache()
+            if n.id in node_cache:
+                new_node = cast(Self, node_cache[n.id])
+            else:
+                new_node = cls(
+                    _id=n.id,
+                    _src_edges=EdgeList(src_edges),
+                    _dst_edges=EdgeList(dst_edges),
+                    labels=n.labels,
+                    **n.properties,
+                )
+                node_cache[n.id] = new_node
             ret_list.append(new_node)
 
         return ret_list
@@ -928,9 +984,8 @@ class Node(BaseModel, extra="allow"):
         """
         cache = Node.get_cache()
         n = cache.get(id)
-        if not n:
+        if n is None:
             n = cls.load(id, db=db)
-            cache[id] = n
 
         return cast(Self, n)
 

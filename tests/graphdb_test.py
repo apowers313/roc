@@ -151,10 +151,184 @@ class TestNode:
                 assert e.id in ec
 
     def test_node_find(self) -> None:
+        node_cache = Node.get_cache()
+        edge_cache = Edge.get_cache()
+        assert 4 not in node_cache
+        assert len(edge_cache) == 0
+
         nodes = Node.find("src.name = 'Winter Is Coming'")
         assert len(nodes) == 1
         assert nodes[0].id == 4
         assert nodes[0].name == "Winter Is Coming"  # type: ignore
+        assert 4 in node_cache
+        assert len(node_cache) == 1
+        assert len(edge_cache) == 0
+
+    def test_node_find_with_alt_names(self) -> None:
+        cache = Node.get_cache()
+        assert 4 not in cache
+
+        nodes = Node.find(
+            "n.name = 'Zalla' AND type(e) = 'LOYAL_TO' AND m.name = 'Smallfolk'",
+            src_node_name="n",
+            edge_name="e",
+            dst_node_name="m",
+        )
+        assert len(nodes) == 1
+        assert nodes[0].id == 295
+        assert nodes[0].name == "Zalla"  # type: ignore
+
+    def test_node_find_not_found(self) -> None:
+        cache = Node.get_cache()
+        assert len(cache) == 0
+
+        nodes = Node.find("src.name = 'asdfasdfasdfasdfasdfasdf'")
+        assert len(nodes) == 0
+        assert len(cache) == 0
+
+    def test_node_find_dst(self) -> None:
+        cache = Node.get_cache()
+        assert len(cache) == 0
+
+        nodes = Node.find("dst.name =~ 'Z.*'")
+        print("\n\n\nnodes", nodes)
+        for n in nodes:
+            print("n.name", n)
+        assert len(nodes) == 3
+        assert nodes[0].id == 892
+        assert nodes[1].id == 28
+        assert nodes[2].id == 93
+
+    def test_node_find_label(self) -> None:
+        cache = Node.get_cache()
+        assert len(cache) == 0
+
+        nodes = Node.find("src.name =~ 'B.*'", src_labels={"Location"})
+        assert len(nodes) == 2
+        assert nodes[0].id == 310
+        assert nodes[0].name == "Braavos"  # type: ignore
+        assert nodes[1].id == 1
+        assert nodes[1].name == "Beyond the Wall"  # type: ignore
+
+    def test_node_find_single_node_with_no_relationships(self) -> None:
+        cache = Node.get_cache()
+        n = Node(
+            labels=["TestNode", "Foo"], testname="test_node_find_single_node_with_no_relationships"
+        )
+        Node.save(n)
+        old_id = n.id
+        cache.clear()
+        assert len(cache) == 0
+
+        n2 = Node.get(old_id)
+        assert n2.id == old_id
+        assert n2.testname == "test_node_find_single_node_with_no_relationships"  # type: ignore
+        assert n2.labels == {"TestNode", "Foo"}
+
+    def test_node_find_multiple_labels(self) -> None:
+        cache = Node.get_cache()
+        n = Node(labels=["TestNode", "Foo"], testname="test_node_find_multiple_labels")
+        Node.save(n)
+        old_id = n.id
+        cache.clear()
+        assert len(cache) == 0
+
+        nodes = Node.find(
+            "src.testname = 'test_node_find_multiple_labels'", src_labels={"TestNode", "Foo"}
+        )
+        assert len(nodes) == 1
+        assert nodes[0].id == old_id
+        assert nodes[0].testname == "test_node_find_multiple_labels"  # type: ignore
+        assert nodes[0].labels == {"TestNode", "Foo"}
+
+    def test_node_dst_find_label(self) -> None:
+        cache = Node.get_cache()
+        assert len(cache) == 0
+
+        nodes = Node.find("dst.name =~ 'A.*'", dst_labels={"Location"})
+        assert len(nodes) == 8
+        ids = {n.id for n in nodes}
+        assert ids == {641, 651, 652, 653, 654, 655, 656, 657}
+
+    def test_node_find_edge_label(self) -> None:
+        cache = Node.get_cache()
+        assert len(cache) == 0
+
+        nodes = Node.find("dst.name =~ 'Z.*'", edge_label="VICTIM_IN")
+        assert len(nodes) == 1
+        assert nodes[0].id == 892
+
+    def test_node_find_cached(self) -> None:
+        cache = Node.get_cache()
+        assert 4 not in cache
+        n1 = Node.get(NodeId(4))
+        assert 4 in cache
+
+        nodes = Node.find("src.name = 'Winter Is Coming'")
+        assert len(nodes) == 1
+        assert nodes[0].id == 4
+        assert 4 in cache
+        assert len(cache) == 1
+        assert n1 is nodes[0]
+
+    def test_node_find_adds_to_cache(self) -> None:
+        cache = Node.get_cache()
+        assert 4 not in cache
+        nodes = Node.find("src.name = 'Winter Is Coming'")
+        assert 4 in cache
+
+        n1 = Node.get(NodeId(4))
+        assert 4 in cache
+        assert len(cache) == 1
+        assert n1 is nodes[0]
+
+    def test_node_find_multiple_some_cached(self) -> None:
+        cache = Node.get_cache()
+        assert 4 not in cache
+        assert len(cache) == 0
+        n1 = Node.get(NodeId(349))
+        assert 349 in cache
+        n2 = Node.get(NodeId(266))
+        assert 266 in cache
+        n3 = Node.get(NodeId(362))
+        assert 362 in cache
+        assert len(cache) == 3
+
+        nodes = Node.find("src.name =~ 'E.*'")
+        assert len(nodes) == 5
+        assert len(cache) == 5
+        node_ids = {n.id for n in nodes}
+        assert node_ids == {425, 349, 266, 362, 37}
+        for nid in node_ids:
+            assert nid in cache
+        new_n1 = next((n for n in nodes if n.id == 349), None)
+        new_n2 = next((n for n in nodes if n.id == 266), None)
+        new_n3 = next((n for n in nodes if n.id == 362), None)
+        assert new_n1 is n1
+        assert new_n2 is n2
+        assert new_n3 is n3
+
+    def test_node_find_and_load_edges(self) -> None:
+        node_cache = Node.get_cache()
+        edge_cache = Edge.get_cache()
+        assert len(node_cache) == 0
+        assert len(edge_cache) == 0
+
+        nodes = Node.find("src.name = 'Winter Is Coming'", load_edges=True)
+        assert len(nodes) == 1
+        assert len(node_cache) == 1
+        assert nodes[0].id == 4
+        assert len(node_cache) == 1
+        assert len(edge_cache) == 8
+        src_edge_ids = {e.id for e in nodes[0].src_edges}
+        assert src_edge_ids == {17}
+        dst_edge_ids = {e.id for e in nodes[0].dst_edges}
+        assert dst_edge_ids == {5295, 5298, 5301, 5304, 5307, 5310, 5313}
+
+    # params
+    # make sure we get the right number of edges
+    # find node with one cached edge and one uncached edge, and load edges
+    # find edge with different edge name and load edges
 
     def test_node_cache(self) -> None:
         c = Node.get_cache()
@@ -401,7 +575,7 @@ class TestNode:
         assert c.hits == 0
         assert c.misses == 0
         # old ID doesn't exist in cache
-        with pytest.raises(NodeNotFound):
+        with pytest.raises(NodeNotFound, match=f"Couldn't find node IDs: {old_id}"):
             Node.get(old_id)
         assert c.hits == 0
         assert c.misses == 1
@@ -430,7 +604,7 @@ class TestNode:
 
         spy.assert_called_once()
         assert old_id not in Node.get_cache()
-        with pytest.raises(NodeNotFound):
+        with pytest.raises(NodeNotFound, match=f"Couldn't find node IDs: {old_id}"):
             Node.get(old_id)
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 DELETE n",
