@@ -788,9 +788,7 @@ class Node(BaseModel, extra="allow"):
         src_node_name: str = "src",
         src_labels: set[str] = set(),
         edge_name: str = "e",
-        edge_label: str = "",
-        dst_node_name: str = "dst",
-        dst_labels: set[str] = set(),
+        edge_type: str = "",
         params: dict[str, str] = dict(),
         db: GraphDB | None = None,
         load_edges: bool = False,
@@ -798,46 +796,25 @@ class Node(BaseModel, extra="allow"):
         db = db or GraphDB.singleton()
 
         if load_edges:
-            fix_for_collect = ""
             edge_fmt = f"{edge_name}"
         else:
-            # TODO: remove
-            fix_for_collect = f"""UNWIND
-                    CASE
-                        WHEN {edge_name} = [] THEN [NULL] 
-                        ELSE {edge_name} 
-                    END AS e2"""
             edge_fmt = f"{{id: id({edge_name}), start: id(startNode({edge_name})), end: id(endNode({edge_name}))}}"
-            # edge_fmt = "{id: id(e2), start: id(startNode(e2)), end: id(endNode(e2))}"
 
         if len(src_labels) == 0:
             src_label_str = ""
         else:
             src_label_str = f":{':'.join(src_labels)}"
 
-        if len(dst_labels) == 0:
-            dst_label_str = ""
-        else:
-            dst_label_str = f":{':'.join(dst_labels)}"
-
-        if len(edge_label) > 0:
-            edge_label = ":" + edge_label
+        if len(edge_type) > 0:
+            edge_type = ":" + edge_type
 
         res_iter = db.raw_fetch(
             f"""
-                MATCH
-                ({src_node_name}{src_label_str})-[{edge_name}{edge_label}*0..1]-({dst_node_name}{dst_label_str}) 
+                MATCH ({src_node_name}{src_label_str})-[{edge_name}{edge_type}*0..1]-() 
                 WITH {src_node_name}, head({edge_name}) AS {edge_name}
                 WHERE {where}
                 RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
                 """,
-            # f"""
-            #     MATCH
-            #     ({src_node_name}{src_label_str})-[{edge_name}{edge_label}*0..1]-({dst_node_name}{dst_label_str})
-            #     WHERE {where}
-            #     {fix_for_collect}
-            #     RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
-            #     """,
         )
 
         ret_list = list()
@@ -849,13 +826,6 @@ class Node(BaseModel, extra="allow"):
                 # multiple "None" results, so I think this is just an empty list
                 continue
 
-            # if (
-            #     isinstance(r["edges"], list)
-            #     and "end" in r["edges"][0]
-            #     and r["edges"][0]["end"] is None
-            # ):
-            #     continue
-
             if load_edges:
                 # XXX: memgraph converts edges to Relationship objects if you
                 # return the whole edge
@@ -863,12 +833,6 @@ class Node(BaseModel, extra="allow"):
                 dst_edges = list()
                 edge_cache = Edge.get_cache()
                 for e in r["edges"]:
-                    # if isinstance(e, list):
-                    #     if len(e) == 0:
-                    #         continue
-
-                    #     e = e[0]
-
                     # add edge_id to to the right list for the node creation below
                     if n.id == e.start_id:
                         src_edges.append(e.id)

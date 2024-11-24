@@ -169,10 +169,9 @@ class TestNode:
         assert 4 not in cache
 
         nodes = Node.find(
-            "n.name = 'Zalla' AND type(e) = 'LOYAL_TO' AND m.name = 'Smallfolk'",
+            "n.name = 'Zalla' AND type(e) = 'LOYAL_TO'",
             src_node_name="n",
             edge_name="e",
-            dst_node_name="m",
         )
         assert len(nodes) == 1
         assert nodes[0].id == 295
@@ -185,19 +184,6 @@ class TestNode:
         nodes = Node.find("src.name = 'asdfasdfasdfasdfasdfasdf'")
         assert len(nodes) == 0
         assert len(cache) == 0
-
-    def test_node_find_dst(self) -> None:
-        cache = Node.get_cache()
-        assert len(cache) == 0
-
-        nodes = Node.find("dst.name =~ 'Z.*'")
-        print("\n\n\nnodes", nodes)
-        for n in nodes:
-            print("n.name", n)
-        assert len(nodes) == 3
-        assert nodes[0].id == 892
-        assert nodes[1].id == 28
-        assert nodes[2].id == 93
 
     def test_node_find_label(self) -> None:
         cache = Node.get_cache()
@@ -241,22 +227,13 @@ class TestNode:
         assert nodes[0].testname == "test_node_find_multiple_labels"  # type: ignore
         assert nodes[0].labels == {"TestNode", "Foo"}
 
-    def test_node_dst_find_label(self) -> None:
+    def test_node_find_edge_type(self) -> None:
         cache = Node.get_cache()
         assert len(cache) == 0
 
-        nodes = Node.find("dst.name =~ 'A.*'", dst_labels={"Location"})
-        assert len(nodes) == 8
-        ids = {n.id for n in nodes}
-        assert ids == {641, 651, 652, 653, 654, 655, 656, 657}
-
-    def test_node_find_edge_label(self) -> None:
-        cache = Node.get_cache()
-        assert len(cache) == 0
-
-        nodes = Node.find("dst.name =~ 'Z.*'", edge_label="VICTIM_IN")
+        nodes = Node.find("src.name =~ 'Z.*'", edge_type="VICTIM_IN")
         assert len(nodes) == 1
-        assert nodes[0].id == 892
+        assert nodes[0].id == 295
 
     def test_node_find_cached(self) -> None:
         cache = Node.get_cache()
