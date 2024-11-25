@@ -164,6 +164,20 @@ class TestNode:
         assert len(node_cache) == 1
         assert len(edge_cache) == 0
 
+    def test_node_find_with_params(self) -> None:
+        node_cache = Node.get_cache()
+        edge_cache = Edge.get_cache()
+        assert 4 not in node_cache
+        assert len(edge_cache) == 0
+
+        nodes = Node.find("src.name = $title", params={"title": "Winter Is Coming"})
+        assert len(nodes) == 1
+        assert nodes[0].id == 4
+        assert nodes[0].name == "Winter Is Coming"  # type: ignore
+        assert 4 in node_cache
+        assert len(node_cache) == 1
+        assert len(edge_cache) == 0
+
     def test_node_find_with_alt_names(self) -> None:
         cache = Node.get_cache()
         assert 4 not in cache
@@ -302,10 +316,24 @@ class TestNode:
         dst_edge_ids = {e.id for e in nodes[0].dst_edges}
         assert dst_edge_ids == {5295, 5298, 5301, 5304, 5307, 5310, 5313}
 
-    # params
-    # make sure we get the right number of edges
-    # find node with one cached edge and one uncached edge, and load edges
-    # find edge with different edge name and load edges
+    def test_node_find_and_load_edges_with_different_edge_name(self) -> None:
+        node_cache = Node.get_cache()
+        edge_cache = Edge.get_cache()
+        assert len(node_cache) == 0
+        assert len(edge_cache) == 0
+
+        nodes = Node.find("src.name = 'Winter Is Coming'", load_edges=True, edge_name="bob")
+        assert len(nodes) == 1
+        assert len(node_cache) == 1
+        assert nodes[0].id == 4
+        assert len(node_cache) == 1
+        assert len(edge_cache) == 8
+        src_edge_ids = {e.id for e in nodes[0].src_edges}
+        assert src_edge_ids == {17}
+        dst_edge_ids = {e.id for e in nodes[0].dst_edges}
+        assert dst_edge_ids == {5295, 5298, 5301, 5304, 5307, 5310, 5313}
+
+    # TODO: find node with one cached edge and one uncached edge, and load edges
 
     def test_node_cache(self) -> None:
         c = Node.get_cache()

@@ -58,6 +58,8 @@ class GraphDBInternalError(Exception):
 #########
 graph_db_singleton: GraphDB | None = None
 
+QueryParamType = dict[str, Any]
+
 
 class GraphDB:
     """A graph database singleton. Settings for the graph database come from the config module."""
@@ -769,7 +771,7 @@ class Node(BaseModel, extra="allow"):
         node_ids = ",".join(map(str, node_set))
 
         ret = cls.find(
-            where=f"id(src) IN [{node_ids}]",
+            where=f"id(src) IN [{node_ids}]",  # TODO: use params?
             db=db,
             load_edges=load_edges,
         )
@@ -789,7 +791,7 @@ class Node(BaseModel, extra="allow"):
         src_labels: set[str] = set(),
         edge_name: str = "e",
         edge_type: str = "",
-        params: dict[str, str] = dict(),
+        params: QueryParamType = dict(),
         db: GraphDB | None = None,
         load_edges: bool = False,
     ) -> list[Self]:
@@ -815,6 +817,7 @@ class Node(BaseModel, extra="allow"):
                 WHERE {where}
                 RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
                 """,
+            params=params,
         )
 
         ret_list = list()
