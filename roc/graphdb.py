@@ -7,7 +7,7 @@ from __future__ import annotations
 import warnings
 from collections.abc import Iterator, Mapping, MutableSet
 from itertools import islice
-from typing import Any, Callable, Generic, Literal, NewType, TypeVar, cast
+from typing import Any, Callable, Generic, Literal, NewType, Sequence, TypeVar, cast
 
 import mgclient
 import networkx as nx
@@ -23,6 +23,7 @@ CacheType = TypeVar("CacheType")
 CacheId = TypeVar("CacheId")
 EdgeId = NewType("EdgeId", int)
 NodeId = NewType("NodeId", int)
+NodeType = TypeVar("NodeType", bound="Node")
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
 
@@ -1169,6 +1170,28 @@ class Node(BaseModel, extra="allow"):
 
         # return the combination of both
         return db_ids.union(cached_ids)
+
+    @staticmethod
+    def list_to_single(nodes: Sequence[NodeType]) -> NodeType | None:
+        """Reduces a list of Node.find results down to a single node. Raises an
+        exception of the list contains more than one node.
+
+        Args:
+            nodes (Sequence[NodeType]): The list of nodes returned by Node.find
+
+        Raises:
+            Exception: Raised if there is more than 1 node in the list
+
+        Returns:
+            NodeType | None: Returns None if the list is empty, or the node in the list.
+        """
+        match len(nodes):
+            case 0:
+                return None
+            case 1:
+                return nodes[0]
+            case _:
+                raise Exception("expected zero or one node in list_to_single")
 
     @staticmethod
     def walk(
