@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
@@ -17,8 +17,13 @@ from ..perception import (
 from .delta import DeltaFeature
 
 
+class MotionNode(Node):
+    type: int
+    direction: Direction
+
+
 @dataclass(kw_only=True)
-class MotionFeature(Feature[Any]):
+class MotionFeature(Feature[MotionNode]):
     """A vector describing a motion, including the start point, end point,
     direction and value of the thing moving
     """
@@ -34,6 +39,19 @@ class MotionFeature(Feature[Any]):
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
         return {self.end_point}
+
+    def node_hash(self) -> int:
+        return hash((self.type, self.direction))
+
+    def _create_nodes(self) -> MotionNode:
+        return MotionNode(type=self.type, direction=self.direction)
+
+    def _dbfetch_nodes(self) -> MotionNode | None:
+        nodes = MotionNode.find(
+            "src.type = $type AND src.direction = $direction",
+            params={"type": self.type, "direction": self.direction},
+        )
+        return Node.list_to_single(nodes)
 
     # def add_to_feature(self, n: Feature) -> None:
     #     """Adds nodes and edges to describe the motion"""

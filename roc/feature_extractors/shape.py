@@ -1,9 +1,9 @@
 """Generates Features for things that aren't like their neighbors"""
 
 from dataclasses import dataclass
-from typing import Any
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -15,14 +15,22 @@ from ..perception import (
 from .single import SingleFeature
 
 
+class ShapeNode(Node):
+    type: int
+
+
 @dataclass(kw_only=True)
-class ShapeFeature(PointFeature[Any]):
+class ShapeFeature(PointFeature[ShapeNode]):
     """The shape of a single feature."""
 
     feature_name: str = "Shape"
 
-    def __hash__(self) -> int:
-        raise NotImplementedError("ShapeFeature hash not implemented")
+    def _create_nodes(self) -> ShapeNode:
+        return ShapeNode(type=self.type)
+
+    def _dbfetch_nodes(self) -> ShapeNode | None:
+        nodes = ShapeNode.find("src.type = $type", params={"type": self.type})
+        return Node.list_to_single(nodes)
 
 
 @register_component("shape", "perception")

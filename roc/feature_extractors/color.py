@@ -1,9 +1,9 @@
 """Generates Features for things that aren't like their neighbors"""
 
 from dataclasses import dataclass
-from typing import Any
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -15,14 +15,22 @@ from ..perception import (
 from .single import SingleFeature
 
 
+class ColorNode(Node):
+    type: int
+
+
 @dataclass(kw_only=True)
-class ColorFeature(PointFeature[Any]):
+class ColorFeature(PointFeature[ColorNode]):
     """The color of a single feature."""
 
     feature_name: str = "Color"
 
-    # def __hash__(self) -> int:
-    #     raise NotImplementedError("ColorFeature hash not implemented")
+    def _create_nodes(self) -> ColorNode:
+        return ColorNode(type=self.type)
+
+    def _dbfetch_nodes(self) -> ColorNode | None:
+        nodes = ColorNode.find("src.type = $type", params={"type": self.type})
+        return Node.list_to_single(nodes)
 
 
 @register_component("color", "perception")

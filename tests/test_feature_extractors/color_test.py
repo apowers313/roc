@@ -5,14 +5,22 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.color import Color, ColorFeature
+from roc.feature_extractors.color import Color, ColorFeature, ColorNode
 from roc.feature_extractors.single import Single
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestColor:
     def test_color_exists(self) -> None:
         Color()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = ColorFeature(origin_id=("foo", "bar"), type=31337, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert isinstance(n, ColorNode)
+        assert n.labels == {"Feature", "Color"}
+        assert n.type == 31337
 
     def test_screen0(self, empty_components) -> None:
         c = Component.get("color", "perception")

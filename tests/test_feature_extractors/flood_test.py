@@ -7,13 +7,22 @@ from helpers.util import (
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.flood import Flood, FloodFeature
+from roc.feature_extractors.flood import Flood, FloodFeature, FloodNode
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestFlood:
     def test_flood_exists(self) -> None:
         Flood()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = FloodFeature(origin_id=("foo", "bar"), type=3, size=1, points={(XLoc(1), YLoc(2))})
+        n = f.to_nodes()
+        assert isinstance(n, FloodNode)
+        assert n.labels == {"Feature", "Flood"}
+        assert n.type == 3
+        assert n.size == 1
 
     def test_flood_vertical(self, empty_components) -> None:
         c = Component.get("flood", "perception")

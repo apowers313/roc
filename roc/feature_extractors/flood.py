@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
 from ..perception import (
     AreaFeature,
@@ -15,14 +15,25 @@ from ..perception import (
 MIN_FLOOD_SIZE = 5
 
 
+class FloodNode(Node):
+    type: int
+    size: int
+
+
 @dataclass(kw_only=True)
-class FloodFeature(AreaFeature[Any]):
+class FloodFeature(AreaFeature[FloodNode]):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     feature_name: str = "Flood"
 
-    def __hash__(self) -> int:
-        raise NotImplementedError("FloodFeature hash not implemented")
+    def _create_nodes(self) -> FloodNode:
+        return FloodNode(type=self.type, size=self.size)
+
+    def _dbfetch_nodes(self) -> FloodNode | None:
+        nodes = FloodNode.find(
+            "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
+        )
+        return Node.list_to_single(nodes)
 
 
 class CheckMap:

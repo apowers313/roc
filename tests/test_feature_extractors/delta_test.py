@@ -7,11 +7,20 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.delta import Delta, DeltaFeature
+from roc.feature_extractors.delta import Delta, DeltaFeature, DeltaNode
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestDelta:
+    def test_to_nodes(self, fake_component) -> None:
+        f = DeltaFeature(origin_id=("foo", "bar"), old_val=13, new_val=14, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert isinstance(n, DeltaNode)
+        assert n.labels == {"Feature", "Delta"}
+        assert n.old_val == 13
+        assert n.new_val == 14
+
     def test_basic(self, empty_components) -> None:
         c = Component.get("delta", "perception")
         assert isinstance(c, Delta)

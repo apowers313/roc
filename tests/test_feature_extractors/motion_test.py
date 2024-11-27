@@ -1,5 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
+from unittest.mock import MagicMock
+
 from helpers.nethack_screens import screens
 from helpers.util import (
     StubComponent,
@@ -11,10 +13,12 @@ from roc.feature_extractors.delta import Delta, DeltaFeature
 from roc.feature_extractors.motion import (
     Motion,
     MotionFeature,
+    MotionNode,
     adjacent_direction,
 )
+from roc.graphdb import GraphDB, Node
 from roc.location import XLoc, YLoc
-from roc.perception import Direction, Settled, VisionData
+from roc.perception import Direction, Settled, VisionData, cache_registry
 
 screen0 = VisionData.from_dict(screens[0])
 screen1 = VisionData.from_dict(screens[1])
@@ -31,6 +35,64 @@ class TestMotion:
     #         for ch in line:
     #             print(chr(ch), end="")
     #         print("")
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = MotionFeature(
+            origin_id=("foo", "bar"),
+            type=8008,
+            start_point=(XLoc(1), YLoc(2)),
+            end_point=(XLoc(3), YLoc(4)),
+            direction=Direction.down,
+        )
+        n = f.to_nodes()
+        assert isinstance(n, MotionNode)
+        assert n.labels == {"Feature", "Motion"}
+        assert n.type == 8008
+        assert n.direction == Direction.down
+
+    def test_to_nodes_dbfetch(self, mocker) -> None:
+        # setup
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
+        cache = Node.get_cache()
+        cache_registry.clear()
+        assert len(cache) == 0
+        assert len(cache_registry) == 0
+
+        # create node, save, clear cache
+        f = MotionFeature(
+            origin_id=("foo", "bar"),
+            type=8008,
+            start_point=(XLoc(1), YLoc(2)),
+            end_point=(XLoc(3), YLoc(4)),
+            direction=Direction.down,
+        )
+        n = f.to_nodes()
+        assert spy.call_count == 1  # tried to load, not found
+        assert len(cache_registry) == 1
+        assert "Motion" in cache_registry
+        assert len(cache) == 1
+        Node.save(n)
+        assert spy.call_count == 2  # saving node
+        del n
+        cache.clear()
+        cache_registry.clear()
+
+        # reload node from database
+        f = MotionFeature(
+            origin_id=("foo", "bar"),
+            type=8008,
+            start_point=(XLoc(1), YLoc(2)),
+            end_point=(XLoc(3), YLoc(4)),
+            direction=Direction.down,
+        )
+        n = f.to_nodes()
+        assert len(cache) == 1
+        assert len(cache_registry) == 1
+        assert "Motion" in cache_registry
+        assert spy.call_count == 3
+        assert spy.call_args_list[2][1] == {"params": {"type": 8008, "direction": Direction.down}}
+        assert n.type == 8008
+        assert n.direction == Direction.down
 
     def test_direction(self) -> None:
         o = Component()

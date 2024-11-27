@@ -6,13 +6,22 @@ from helpers.util import (
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.line import Line, LineFeature
+from roc.feature_extractors.line import Line, LineFeature, LineNode
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestLine:
     def test_line_exists(self) -> None:
         Line()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = LineFeature(origin_id=("foo", "bar"), type=3, size=1, points={(XLoc(1), YLoc(2))})
+        n = f.to_nodes()
+        assert isinstance(n, LineNode)
+        assert n.labels == {"Feature", "Line"}
+        assert n.type == 3
+        assert n.size == 1
 
     def test_horizontal(self, empty_components) -> None:
         c = Component.get("line", "perception")

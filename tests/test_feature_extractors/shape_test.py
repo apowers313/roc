@@ -5,14 +5,22 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.shape import Shape, ShapeFeature
+from roc.feature_extractors.shape import Shape, ShapeFeature, ShapeNode
 from roc.feature_extractors.single import Single
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestShape:
     def test_shape_exists(self) -> None:
         Shape()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = ShapeFeature(origin_id=("foo", "bar"), type=42, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert isinstance(n, ShapeNode)
+        assert n.labels == {"Feature", "Shape"}
+        assert n.type == 42
 
     def test_screen0(self, empty_components) -> None:
         c = Component.get("shape", "perception")

@@ -5,14 +5,27 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.distance import Distance, DistanceFeature
+from roc.feature_extractors.distance import Distance, DistanceFeature, DistanceNode
 from roc.feature_extractors.single import Single
+from roc.location import XLoc, YLoc
 from roc.perception import Settled, VisionData
 
 
 class TestDistance:
     def test_distance_exists(self) -> None:
         Distance()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = DistanceFeature(
+            origin_id=("foo", "bar"),
+            size=7,
+            start_point=(XLoc(1), YLoc(2)),
+            end_point=(XLoc(3), YLoc(4)),
+        )
+        n = f.to_nodes()
+        assert isinstance(n, DistanceNode)
+        assert n.labels == {"Feature", "Distance"}
+        assert n.size == 7
 
     def test_basic(self, empty_components) -> None:
         c = Component.get("distance", "perception")

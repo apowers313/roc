@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from typing import Any
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
 from ..perception import (
     AreaFeature,
@@ -13,14 +13,25 @@ from ..perception import (
 MIN_LINE_COUNT = 4
 
 
+class LineNode(Node):
+    type: int
+    size: int
+
+
 @dataclass(kw_only=True)
-class LineFeature(AreaFeature[Any]):
+class LineFeature(AreaFeature[LineNode]):
     """A collection of points representing a line"""
 
     feature_name: str = "Line"
 
-    def __hash__(self) -> int:
-        raise NotImplementedError("LineFeature hash not implemented")
+    def _create_nodes(self) -> LineNode:
+        return LineNode(type=self.type, size=self.size)
+
+    def _dbfetch_nodes(self) -> LineNode | None:
+        nodes = LineNode.find(
+            "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
+        )
+        return Node.list_to_single(nodes)
 
 
 @register_component("line", "perception")

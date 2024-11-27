@@ -15,10 +15,11 @@ import numpy.typing as npt
 
 from .component import Component
 from .event import Event, EventBus
+from .graphdb import Node
 from .location import XLoc, YLoc
 
 FeatureType = TypeVar("FeatureType")
-NodeType = TypeVar("NodeType")
+NodeType = TypeVar("NodeType", bound=Node)
 
 
 class VisionData:
@@ -129,18 +130,20 @@ class Direction(str, Enum):
 #     def get_node(self, f: FeatureType) -> Node: ...
 
 
-class CacheRegistry:
-    def __init__(self) -> None:
-        self.registry: dict[str, WeakValueDictionary[int, Feature[Any]]] = dict()
+# class CacheRegistry:
+#     def __init__(self) -> None:
+#         self.registry: dict[str, WeakValueDictionary[int, Feature[Any]]] = dict()
 
-    def __getattr__(self, key: str) -> WeakValueDictionary[int, Feature[Any]]:
-        if key not in self.registry:
-            self.registry[key] = WeakValueDictionary()
+#     def __index__(self, key: str) -> WeakValueDictionary[int, Feature[Any]]:
+#         if key not in self.registry:
+#             self.registry[key] = WeakValueDictionary()
 
-        return self.registry[key]
+#         return self.registry[key]
 
 
-cache_registry = CacheRegistry()
+# cache_registry = CacheRegistry()
+
+cache_registry: dict[str, WeakValueDictionary[int, Node]] = dict()
 
 
 @dataclass(kw_only=True)
@@ -148,17 +151,43 @@ class Feature(ABC, Generic[NodeType]):
     feature_name: str
     origin_id: tuple[str, str]
 
-    # @abstractmethod
-    # def __hash__(self) -> int: ...
-
     @abstractmethod
     def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
-    # @abstractmethod
-    # def to_nodes(self) -> NodeType: ...
+    def to_nodes(self) -> NodeType:
+        # check local cache
+        try:
+            cache = cache_registry[self.feature_name]
+        except KeyError:
+            cache = cache_registry[self.feature_name] = WeakValueDictionary()
 
-    # n = Node(labels={"Feature", self.feature_name})
-    # return n
+        h = self.node_hash()
+        if h in cache:
+            return cache[h]  # type: ignore
+
+        # if cache miss, find node in database
+        n = self._dbfetch_nodes()
+        if n is None:
+            # if node doesn't exist, create it
+            n = self._create_nodes()
+            n.labels.add("Feature")
+            n.labels.add(self.feature_name)
+
+        cache[h] = n
+        return n
+
+    @abstractmethod
+    def _create_nodes(self) -> NodeType: ...
+
+    @abstractmethod
+    def _dbfetch_nodes(self) -> NodeType | None: ...
+
+    @abstractmethod
+    def node_hash(self) -> int: ...
+
+    # def to_nodes(self) -> NodeType:
+    #     n = Node(labels={"Feature", self.feature_name})
+    #     return n
 
     # @staticmethod
     # def from_nodes(n: Node) -> Feature:
@@ -300,6 +329,9 @@ class AreaFeature(Feature[NodeType]):
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
         return self.points
 
+    def node_hash(self) -> int:
+        return hash((self.type, self.size))
+
 
 @dataclass(kw_only=True)
 class PointFeature(Feature[NodeType]):
@@ -308,6 +340,9 @@ class PointFeature(Feature[NodeType]):
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
         return {self.point}
+
+    def node_hash(self) -> int:
+        return self.type
 
 
 PerceptionData = VisionData | Settled | Feature[Any]

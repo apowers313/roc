@@ -15,7 +15,6 @@ from ..perception import (
 
 class SingleNode(Node):
     type: int
-    point: tuple[int, int]
 
 
 @dataclass(kw_only=True)
@@ -24,8 +23,12 @@ class SingleFeature(PointFeature[SingleNode]):
 
     feature_name: str = "Single"
 
-    # def __hash__(self) -> int:
-    #     raise NotImplementedError("SingleFeature hash not implemented")
+    def _create_nodes(self) -> SingleNode:
+        return SingleNode(type=self.type)
+
+    def _dbfetch_nodes(self) -> SingleNode | None:
+        nodes = SingleNode.find("src.type = $type", params={"type": self.type})
+        return Node.list_to_single(nodes)
 
 
 @register_component("single", "perception")

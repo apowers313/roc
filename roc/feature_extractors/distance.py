@@ -5,16 +5,20 @@ humans, only calculated for a subset of features, and based on the saccades of t
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from ..component import register_component
+from ..graphdb import Node
 from ..location import XLoc, YLoc
 from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
 from .single import SingleFeature
 
 
+class DistanceNode(Node):
+    size: int
+
+
 @dataclass(kw_only=True)
-class DistanceFeature(Feature[Any]):
+class DistanceFeature(Feature[DistanceNode]):
     """The distance between two features"""
 
     feature_name: str = "Distance"
@@ -25,8 +29,15 @@ class DistanceFeature(Feature[Any]):
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
         return {self.start_point, self.end_point}
 
-    # def __hash__(self) -> int:
-    #     raise NotImplementedError("DistanceFeature hash not implemented")
+    def node_hash(self) -> int:
+        return hash(self.size)
+
+    def _create_nodes(self) -> DistanceNode:
+        return DistanceNode(size=self.size)
+
+    def _dbfetch_nodes(self) -> DistanceNode | None:
+        nodes = DistanceNode.find("src.size = $size", params={"size": self.size})
+        return Node.list_to_single(nodes)
 
 
 @register_component("distance", "perception")

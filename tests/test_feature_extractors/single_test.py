@@ -1,5 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
+from unittest.mock import MagicMock
+
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
@@ -8,15 +10,78 @@ from roc.event import Event
 from roc.feature_extractors.single import (
     Single,
     SingleFeature,
+    SingleNode,
     is_unique_from_neighbors,
 )
+from roc.graphdb import GraphDB, Node
 from roc.location import IntGrid, Point, XLoc, YLoc
-from roc.perception import Settled, VisionData
+from roc.perception import Settled, VisionData, cache_registry
 
 
 class TestSingle:
     def test_single_exists(self) -> None:
         Single()
+
+    def test_to_nodes(self, fake_component) -> None:
+        f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert isinstance(n, SingleNode)
+        assert n.labels == {"Feature", "Single"}
+        assert n.type == 3
+
+    def test_to_nodes_local_cache(self, mocker) -> None:
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
+        cache_registry.clear()
+        assert len(cache_registry) == 0
+
+        # create first node
+        f1 = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
+        n1 = f1.to_nodes()
+        assert spy.call_count == 1
+        assert len(cache_registry) == 1
+        assert "Single" in cache_registry
+        assert len(cache_registry["Single"]) == 1
+
+        # create second node, same as the first
+        f2 = SingleFeature(origin_id=("baz", "bat"), type=3, point=(XLoc(3), YLoc(4)))
+        n2 = f2.to_nodes()
+        assert spy.call_count == 1  # didn't query database, pulled from local cache
+
+        # nodes are the same
+        assert n1 is n2
+        assert len(cache_registry) == 1
+        assert "Single" in cache_registry
+        assert len(cache_registry["Single"]) == 1
+
+    def test_to_nodes_dbfetch(self, mocker) -> None:
+        # setup
+        spy: MagicMock = mocker.spy(GraphDB, "raw_fetch")
+        cache = Node.get_cache()
+        cache_registry.clear()
+        assert len(cache) == 0
+        assert len(cache_registry) == 0
+
+        # create node, save, clear cache
+        f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert spy.call_count == 1  # tried to load, not found
+        assert len(cache_registry) == 1
+        assert "Single" in cache_registry
+        assert len(cache) == 1
+        Node.save(n)
+        assert spy.call_count == 2  # saving node
+        del n
+        cache.clear()
+        cache_registry.clear()
+
+        # reload node from database
+        f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
+        n = f.to_nodes()
+        assert len(cache) == 1
+        assert len(cache_registry) == 1
+        assert "Single" in cache_registry
+        assert spy.call_count == 3
+        assert spy.call_args_list[2][1] == {"params": {"type": 3}}
 
     def test_basic(self, empty_components) -> None:
         c = Component.get("single", "perception")
