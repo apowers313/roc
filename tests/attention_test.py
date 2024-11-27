@@ -2,7 +2,6 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -21,6 +20,7 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
+from roc.graphdb import Node
 from roc.location import IntGrid, XLoc, YLoc
 from roc.perception import Feature, VisionData
 
@@ -29,12 +29,21 @@ class TestSaliencyMap:
     @pytest.fixture()
     def feature_for_test(self, empty_components) -> type:
         @dataclass(kw_only=True)
-        class FeatureForTest(Feature[Any]):
+        class FeatureForTest(Feature[Node]):
             origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
             def get_points(self) -> set[tuple[XLoc, YLoc]]:
                 return set()
+
+            def node_hash(self) -> int:
+                return 0
+
+            def _create_nodes(self) -> Node:
+                return Node()
+
+            def _dbfetch_nodes(self) -> Node | None:
+                return None
 
         return FeatureForTest
 
