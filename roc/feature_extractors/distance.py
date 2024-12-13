@@ -7,13 +7,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import XLoc, YLoc
-from ..perception import Feature, FeatureExtractor, PerceptionEvent, Settled
+from ..perception import Feature, FeatureExtractor, FeatureNode, PerceptionEvent, Settled
 from .single import SingleFeature
 
 
-class DistanceNode(Node):
+class DistanceNode(FeatureNode):
     size: int
 
 
@@ -36,8 +35,7 @@ class DistanceFeature(Feature[DistanceNode]):
         return DistanceNode(size=self.size)
 
     def _dbfetch_nodes(self) -> DistanceNode | None:
-        nodes = DistanceNode.find("src.size = $size", params={"size": self.size})
-        return Node.list_to_single(nodes)
+        return DistanceNode.find_one("src.size = $size", params={"size": self.size})
 
 
 @register_component("distance", "perception")

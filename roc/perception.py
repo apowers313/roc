@@ -5,6 +5,7 @@ re-assembled as concepts.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Generic, TypeVar
@@ -19,7 +20,6 @@ from .graphdb import Node
 from .location import XLoc, YLoc
 
 FeatureType = TypeVar("FeatureType")
-NodeType = TypeVar("NodeType", bound=Node)
 
 
 class VisionData:
@@ -117,49 +117,32 @@ class Direction(str, Enum):
     down_right = "DOWN_RIGHT"
     down_left = "DOWN_LEFT"
 
-
-# class FeatureNodeCache(Generic[FeatureType], ABC):
-#     def __init__(self) -> None:
-#         self.cache: dict[int, FeatureType] = dict()
-
-#     @abstractmethod
-#     @property
-#     def db_query(self) -> str: ...
-
-#     @abstractmethod
-#     def get_node(self, f: FeatureType) -> Node: ...
+    def __str__(self) -> str:
+        return self.value
 
 
-# class CacheRegistry:
-#     def __init__(self) -> None:
-#         self.registry: dict[str, WeakValueDictionary[int, Feature[Any]]] = dict()
-
-#     def __index__(self, key: str) -> WeakValueDictionary[int, Feature[Any]]:
-#         if key not in self.registry:
-#             self.registry[key] = WeakValueDictionary()
-
-#         return self.registry[key]
+class FeatureNode(Node):
+    def __hash__(self) -> int:
+        # XXX: this is dangerous because ID changes when a node is saved
+        # should be okay for this use case though
+        return self.id
 
 
-# cache_registry = CacheRegistry()
-
-cache_registry: dict[str, WeakValueDictionary[int, Node]] = dict()
+cache_registry: dict[str, WeakValueDictionary[int, Node]] = defaultdict(WeakValueDictionary)
+FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
 
 
 @dataclass(kw_only=True)
-class Feature(ABC, Generic[NodeType]):
+class Feature(ABC, Generic[FeatureNodeType]):
     feature_name: str
     origin_id: tuple[str, str]
 
     @abstractmethod
     def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
-    def to_nodes(self) -> NodeType:
+    def to_nodes(self) -> FeatureNodeType:
         # check local cache
-        try:
-            cache = cache_registry[self.feature_name]
-        except KeyError:
-            cache = cache_registry[self.feature_name] = WeakValueDictionary()
+        cache = cache_registry[self.feature_name]
 
         h = self.node_hash()
         if h in cache:
@@ -177,10 +160,10 @@ class Feature(ABC, Generic[NodeType]):
         return n
 
     @abstractmethod
-    def _create_nodes(self) -> NodeType: ...
+    def _create_nodes(self) -> FeatureNodeType: ...
 
     @abstractmethod
-    def _dbfetch_nodes(self) -> NodeType | None: ...
+    def _dbfetch_nodes(self) -> FeatureNodeType | None: ...
 
     @abstractmethod
     def node_hash(self) -> int: ...
@@ -321,7 +304,7 @@ class Feature(ABC, Generic[NodeType]):
 
 
 @dataclass(kw_only=True)
-class AreaFeature(Feature[NodeType]):
+class AreaFeature(Feature[FeatureNodeType]):
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
@@ -334,7 +317,7 @@ class AreaFeature(Feature[NodeType]):
 
 
 @dataclass(kw_only=True)
-class PointFeature(Feature[NodeType]):
+class PointFeature(Feature[FeatureNodeType]):
     type: int
     point: tuple[XLoc, YLoc]
 

@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
 from ..perception import (
     AreaFeature,
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     VisionData,
 )
@@ -13,7 +13,7 @@ from ..perception import (
 MIN_LINE_COUNT = 4
 
 
-class LineNode(Node):
+class LineNode(FeatureNode):
     type: int
     size: int
 
@@ -28,10 +28,9 @@ class LineFeature(AreaFeature[LineNode]):
         return LineNode(type=self.type, size=self.size)
 
     def _dbfetch_nodes(self) -> LineNode | None:
-        nodes = LineNode.find(
+        return LineNode.find_one(
             "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
         )
-        return Node.list_to_single(nodes)
 
 
 @register_component("line", "perception")

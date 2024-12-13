@@ -5,19 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
     Feature,
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     Settled,
 )
 from .delta import DeltaFeature
 
 
-class MotionNode(Node):
+class MotionNode(FeatureNode):
     type: int
     direction: Direction
 
@@ -47,11 +47,11 @@ class MotionFeature(Feature[MotionNode]):
         return MotionNode(type=self.type, direction=self.direction)
 
     def _dbfetch_nodes(self) -> MotionNode | None:
-        nodes = MotionNode.find(
+        return MotionNode.find_one(
             "src.type = $type AND src.direction = $direction",
             params={"type": self.type, "direction": self.direction},
+            # params_to_str=False,
         )
-        return Node.list_to_single(nodes)
 
     # def add_to_feature(self, n: Feature) -> None:
     #     """Adds nodes and edges to describe the motion"""

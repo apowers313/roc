@@ -3,17 +3,17 @@
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import IntGrid, Point
 from ..perception import (
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     PointFeature,
     VisionData,
 )
 
 
-class SingleNode(Node):
+class SingleNode(FeatureNode):
     type: int
 
 
@@ -27,8 +27,7 @@ class SingleFeature(PointFeature[SingleNode]):
         return SingleNode(type=self.type)
 
     def _dbfetch_nodes(self) -> SingleNode | None:
-        nodes = SingleNode.find("src.type = $type", params={"type": self.type})
-        return Node.list_to_single(nodes)
+        return SingleNode.find_one("src.type = $type", params={"type": self.type})
 
 
 @register_component("single", "perception")

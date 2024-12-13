@@ -81,7 +81,7 @@ class TestSingle:
         assert len(cache_registry) == 1
         assert "Single" in cache_registry
         assert spy.call_count == 3
-        assert spy.call_args_list[2][1] == {"params": {"type": 3}}
+        assert spy.call_args_list[2][1] == {"params": {"type": "3"}}
 
     def test_basic(self, empty_components) -> None:
         c = Component.get("single", "perception")

@@ -20,16 +20,15 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
-from roc.graphdb import Node
 from roc.location import IntGrid, XLoc, YLoc
-from roc.perception import Feature, VisionData
+from roc.perception import Feature, FeatureNode, VisionData
 
 
 class TestSaliencyMap:
     @pytest.fixture()
     def feature_for_test(self, empty_components) -> type:
         @dataclass(kw_only=True)
-        class FeatureForTest(Feature[Node]):
+        class FeatureForTest(Feature[FeatureNode]):
             origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
@@ -39,10 +38,10 @@ class TestSaliencyMap:
             def node_hash(self) -> int:
                 return 0
 
-            def _create_nodes(self) -> Node:
-                return Node()
+            def _create_nodes(self) -> FeatureNode:
+                return FeatureNode()
 
-            def _dbfetch_nodes(self) -> Node | None:
+            def _dbfetch_nodes(self) -> FeatureNode | None:
                 return None
 
         return FeatureForTest

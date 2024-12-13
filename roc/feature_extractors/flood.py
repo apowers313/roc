@@ -3,11 +3,11 @@ from dataclasses import dataclass
 import numpy as np
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
 from ..perception import (
     AreaFeature,
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     VisionData,
 )
@@ -15,7 +15,7 @@ from ..perception import (
 MIN_FLOOD_SIZE = 5
 
 
-class FloodNode(Node):
+class FloodNode(FeatureNode):
     type: int
     size: int
 
@@ -30,10 +30,9 @@ class FloodFeature(AreaFeature[FloodNode]):
         return FloodNode(type=self.type, size=self.size)
 
     def _dbfetch_nodes(self) -> FloodNode | None:
-        nodes = FloodNode.find(
+        return FloodNode.find_one(
             "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
         )
-        return Node.list_to_single(nodes)
 
 
 class CheckMap:

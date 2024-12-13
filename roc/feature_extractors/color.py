@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     PointFeature,
     Settled,
@@ -15,8 +15,70 @@ from ..perception import (
 from .single import SingleFeature
 
 
-class ColorNode(Node):
+class ColorNode(FeatureNode):
     type: int
+
+    def __str__(self) -> str:
+        color: str
+        # https://github.com/NetHack/NetHack/blob/8bb764e624aa228ce2a5374739408ed81b77d40e/include/color.h#L14
+        match self.type:
+            case 0:
+                color = "BLACK"
+            case 1:
+                color = "RED"
+            case 2:
+                color = "GREEN"
+            case 3:
+                color = "BROWN"
+            case 4:
+                color = "BLUE"
+            case 5:
+                color = "MAGENTA"
+            case 6:
+                color = "CYAN"
+            case 7:
+                color = "GREY"
+            case 8:
+                color = "NO COLOR"
+            case 9:
+                color = "ORANGE"
+            case 10:
+                color = "BRIGHT GREEN"
+            case 11:
+                color = "YELLOW"
+            case 12:
+                color = "BRIGHT BLUE"
+            case 13:
+                color = "BRIGHT MAGENTA"
+            case 14:
+                color = "BRIGHT CYAN"
+            case 15:
+                color = "WHITE"
+            case 16:
+                color = "MAX"
+            case _:
+                raise Exception("impossible color")
+
+        return f"ColorNode({color})"
+
+
+# define CLR_BLACK 0
+# define CLR_RED 1
+# define CLR_GREEN 2
+# define CLR_BROWN 3 /* on IBM, low-intensity yellow is brown */
+# define CLR_BLUE 4
+# define CLR_MAGENTA 5
+# define CLR_CYAN 6
+# define CLR_GRAY 7 /* low-intensity white */
+# define NO_COLOR 8
+# define CLR_ORANGE 9
+# define CLR_BRIGHT_GREEN 10
+# define CLR_YELLOW 11
+# define CLR_BRIGHT_BLUE 12
+# define CLR_BRIGHT_MAGENTA 13
+# define CLR_BRIGHT_CYAN 14
+# define CLR_WHITE 15
+# define CLR_MAX 16
 
 
 @dataclass(kw_only=True)
@@ -29,8 +91,7 @@ class ColorFeature(PointFeature[ColorNode]):
         return ColorNode(type=self.type)
 
     def _dbfetch_nodes(self) -> ColorNode | None:
-        nodes = ColorNode.find("src.type = $type", params={"type": self.type})
-        return Node.list_to_single(nodes)
+        return ColorNode.find_one("src.type = $type", params={"type": self.type})
 
 
 @register_component("color", "perception")

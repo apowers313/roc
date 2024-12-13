@@ -5,17 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
     Feature,
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     VisionData,
 )
 
 
-class DeltaNode(Node):
+class DeltaNode(FeatureNode):
     old_val: int
     new_val: int
 
@@ -42,11 +42,10 @@ class DeltaFeature(Feature[DeltaNode]):
         return DeltaNode(old_val=self.old_val, new_val=self.new_val)
 
     def _dbfetch_nodes(self) -> DeltaNode | None:
-        nodes = DeltaNode.find(
+        return DeltaNode.find_one(
             "src.old_val = $old_val AND src.new_val = $new_val",
             params={"old_val": self.old_val, "new_val": self.new_val},
         )
-        return Node.list_to_single(nodes)
 
     # def add_to_feature(self, n: Feature) -> None:
     #     """Adds a set of Diff nodes to a Feature"""

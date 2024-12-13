@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 
 from ..component import register_component
-from ..graphdb import Node
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
+    FeatureNode,
     PerceptionEvent,
     PointFeature,
     Settled,
@@ -15,8 +15,11 @@ from ..perception import (
 from .single import SingleFeature
 
 
-class ShapeNode(Node):
+class ShapeNode(FeatureNode):
     type: int
+
+    def __str__(self) -> str:
+        return f"ShapeNode({chr(self.type)})"
 
 
 @dataclass(kw_only=True)
@@ -29,8 +32,7 @@ class ShapeFeature(PointFeature[ShapeNode]):
         return ShapeNode(type=self.type)
 
     def _dbfetch_nodes(self) -> ShapeNode | None:
-        nodes = ShapeNode.find("src.type = $type", params={"type": self.type})
-        return Node.list_to_single(nodes)
+        return ShapeNode.find_one("src.type = $type", params={"type": self.type})
 
 
 @register_component("shape", "perception")

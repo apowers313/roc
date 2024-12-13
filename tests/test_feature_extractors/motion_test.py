@@ -90,7 +90,7 @@ class TestMotion:
         assert len(cache_registry) == 1
         assert "Motion" in cache_registry
         assert spy.call_count == 3
-        assert spy.call_args_list[2][1] == {"params": {"type": 8008, "direction": Direction.down}}
+        assert spy.call_args_list[2][1] == {"params": {"type": "8008", "direction": "DOWN"}}
         assert n.type == 8008
         assert n.direction == Direction.down
 

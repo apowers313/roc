@@ -31,10 +31,10 @@ from .perception import (
 
 
 class VisionAttentionSchema:
-    x: np.int64
-    y: np.int64
-    strength: np.float64
-    label: np.int32
+    x: int
+    y: int
+    strength: float
+    label: int
 
 
 @dataclass
@@ -212,6 +212,7 @@ class SaliencyMap(Grid[list[Feature[Any]]]):
                     "label": labels,
                 }
             )
+            .astype({"x": int, "y": int, "strength": float, "label": int})
             .sort_values("strength", ascending=False)
             .reset_index(drop=True)
         )
