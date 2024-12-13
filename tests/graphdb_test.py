@@ -9,7 +9,17 @@ from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
 from pydantic import ValidationError
 
-from roc.graphdb import Edge, EdgeId, EdgeNotFound, GraphDB, Node, NodeId, NodeNotFound
+from roc.graphdb import (
+    Edge,
+    EdgeId,
+    EdgeNotFound,
+    GraphDB,
+    Node,
+    NodeId,
+    NodeNotFound,
+    node_registry,
+    register_node,
+)
 
 
 class TestGraphDB:
@@ -745,6 +755,32 @@ class TestNode:
         node_set = Node.all_ids()
         assert isinstance(node_set, set)
         assert len(node_set) > 0
+
+    def test_register_node(self) -> None:
+        @register_node("Foo", "TestNode")
+        class Foo(Node):
+            name: str
+
+        f = Foo(name="bar")
+        assert f.labels == {"Foo", "TestNode"}
+        k = frozenset(["Foo", "TestNode"])
+        assert k in node_registry
+        assert node_registry[k] is Foo
+
+    def test_resolve_registered_node(self) -> None:
+        @register_node("Foo", "TestNode")
+        class Foo(Node):
+            name: str
+
+        f = Foo(name="bar")
+        Node.save(f)
+        old_id = f.id
+        del f
+        node_cache = Node.get_cache()
+        node_cache.clear()
+        f2 = Node.get(old_id)
+
+        assert isinstance(f2, Foo)
 
 
 # deletes edges

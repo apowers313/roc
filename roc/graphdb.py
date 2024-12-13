@@ -4,15 +4,16 @@ database-specific features as various classes (GraphDB, Node, Edge, etc)
 
 from __future__ import annotations
 
+import functools
 import warnings
 from collections.abc import Iterator, Mapping, MutableSet
 from itertools import islice
-from typing import Any, Callable, Generic, Literal, NewType, Sequence, TypeVar, cast
+from typing import Any, Callable, Generic, Literal, NewType, TypeVar, cast
 
 import mgclient
 import networkx as nx
 from cachetools import LRUCache
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, create_model, field_validator
 from typing_extensions import Self
 
 from .config import Config
@@ -674,7 +675,7 @@ class Node(BaseModel, extra="allow"):
     """An graph database node that automatically handles CRUD for the underlying graph database objects"""
 
     _id: NodeId
-    labels: set[str] = Field(exclude=True, default_factory=lambda: set())
+    labels: set[str] = Field(exclude=True, default_factory=set)
     _orig_labels: set[str]
     _src_edges: EdgeList
     _dst_edges: EdgeList
@@ -795,6 +796,7 @@ class Node(BaseModel, extra="allow"):
         params: QueryParamType = dict(),
         db: GraphDB | None = None,
         load_edges: bool = False,
+        params_to_str: bool = True,
     ) -> list[Self]:
         db = db or GraphDB.singleton()
 
@@ -810,6 +812,10 @@ class Node(BaseModel, extra="allow"):
 
         if len(edge_type) > 0:
             edge_type = ":" + edge_type
+
+        if params_to_str:
+            for k in params.keys():
+                params[k] = str(params[k])
 
         res_iter = db.raw_fetch(
             f"""
@@ -868,7 +874,11 @@ class Node(BaseModel, extra="allow"):
             if n.id in node_cache:
                 new_node = cast(Self, node_cache[n.id])
             else:
-                new_node = cls(
+                mkcls = cls
+                cls_lbls = frozenset(n.labels)
+                if cls is Node and cls_lbls in node_registry:
+                    mkcls = node_registry[cls_lbls]
+                new_node = mkcls(
                     _id=n.id,
                     _src_edges=EdgeList(src_edges),
                     _dst_edges=EdgeList(dst_edges),
@@ -879,6 +889,54 @@ class Node(BaseModel, extra="allow"):
             ret_list.append(new_node)
 
         return ret_list
+
+    @classmethod
+    def find_one(
+        cls,
+        where: str,
+        src_node_name: str = "src",
+        src_labels: set[str] = set(),
+        edge_name: str = "e",
+        edge_type: str = "",
+        params: QueryParamType = dict(),
+        db: GraphDB | None = None,
+        load_edges: bool = False,
+        params_to_str: bool = True,
+        exactly_one: bool = False,
+    ) -> Self | None:
+        """Finds a single Node.find results down to a single node. Raises an
+        exception of the list contains more than one node.
+
+        Args:
+            nodes (Sequence[NodeType]): The list of nodes returned by Node.find
+
+        Raises:
+            Exception: Raised if there is more than 1 node in the list
+
+        Returns:
+            NodeType | None: Returns None if the list is empty, or the node in the list.
+        """
+        nodes = cls.find(
+            where=where,
+            src_node_name=src_node_name,
+            src_labels=src_labels,
+            edge_name=edge_name,
+            edge_type=edge_type,
+            params=params,
+            db=db,
+            load_edges=load_edges,
+            params_to_str=params_to_str,
+        )
+
+        match len(nodes):
+            case 0:
+                if exactly_one:
+                    raise Exception("expect exactly one node in find_one")
+                return None
+            case 1:
+                return nodes[0]
+            case _:
+                raise Exception("expected zero or one node in find_one")
 
     @classmethod
     def get_many(
@@ -1172,28 +1230,6 @@ class Node(BaseModel, extra="allow"):
         return db_ids.union(cached_ids)
 
     @staticmethod
-    def list_to_single(nodes: Sequence[NodeType]) -> NodeType | None:
-        """Reduces a list of Node.find results down to a single node. Raises an
-        exception of the list contains more than one node.
-
-        Args:
-            nodes (Sequence[NodeType]): The list of nodes returned by Node.find
-
-        Raises:
-            Exception: Raised if there is more than 1 node in the list
-
-        Returns:
-            NodeType | None: Returns None if the list is empty, or the node in the list.
-        """
-        match len(nodes):
-            case 0:
-                return None
-            case 1:
-                return nodes[0]
-            case _:
-                raise Exception("expected zero or one node in list_to_single")
-
-    @staticmethod
     def walk(
         n: Node,
         *,
@@ -1246,6 +1282,31 @@ class Node(BaseModel, extra="allow"):
                         node_callback=node_callback,
                         _walk_history=_walk_history,
                     )
+
+
+node_registry: dict[frozenset[str], type] = {}
+
+
+def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
+    def node_register_decorator(cls: type[NodeType]) -> type[NodeType]:
+        lbls = frozenset(args)
+        # lbls = frozenset({c.__name__ for c in MyModel.__mro__ if c.__name__ not in ["BaseModel", "object"]})
+
+        WrapperClass = create_model(
+            "WrapperClass",
+            __base__=cls,
+            labels=(set, Field(exclude=True, default_factory=lambda: set(lbls))),
+        )
+
+        # class WrapperClass(cls):  # type: ignore
+        #     labels: set[str] = Field(default=set(lbls))
+
+        functools.update_wrapper(WrapperClass, cls, updated=())
+        node_registry[lbls] = WrapperClass
+
+        return WrapperClass
+
+    return node_register_decorator
 
 
 WalkMode = Literal["src", "dst", "both"]
