@@ -161,7 +161,7 @@ cleanup: pycache-remove dsstore-remove mypycache-remove ipynbcheckpoints-remove 
 
 # commit hooks
 .PHONY: pre-commit
-pre-commit: lint
+pre-commit: 
 
 .PHONY: pre-push
-pre-push: doc-coverage test coverage docs
+pre-push: doc-coverage test coverage docs lint
