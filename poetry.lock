@@ -995,6 +995,20 @@ tqdm = "*"
 xarray = "*"
 
 [[package]]
+name = "flexihumanhash"
+version = "0.9.2"
+description = ""
+optional = false
+python-versions = "<4.0,>=3.10"
+files = [
+    {file = "flexihumanhash-0.9.2-py3-none-any.whl", hash = "sha256:16d010598f3742599f8f7eda14170c5f32b8f7a644439cbc4c6a5e5e66be87e4"},
+    {file = "flexihumanhash-0.9.2.tar.gz", hash = "sha256:f7ff639e5c0c96b9ed8bef05bf57066fcb77d6776b4f0b55e9ce9b9639e42f83"},
+]
+
+[package.dependencies]
+jinja2 = ">=3.1.4,<4.0.0"
+
+[[package]]
 name = "fonttools"
 version = "4.53.1"
 description = "Tools to manipulate font files"
@@ -4756,4 +4770,4 @@ viz = ["matplotlib", "nc-time-axis", "seaborn"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b338c981686a6850bf504237669924e40ed036e0bfacbbfdb3338c65defcc451"
+content-hash = "b40fbfdd3e59e0d4830fbe7e17d9c5297797908805ad9d03716e6024f8079c30"
