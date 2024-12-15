@@ -94,13 +94,18 @@ findpeaks = "^2.6.4"
 opencv-python = "^4.10.0.84"
 gputil = "^1.4.0"
 networkx-gdf = "^1.3.3"
-nx-cugraph-cu12 = "^24.6.1"
 nx-parallel = "^0.2"
-cupy-cuda12x = "^13.2.0"
 types-tabulate = "^0.9.0.20240106"
+pandas-stubs = "^2.2.2.240603"
+
+[tool.poetry.group.nvidia]
+optional = true
+
+[tool.poetry.group.nvidia.dependencies]
+nx-cugraph-cu12 = "^24.6.1"
+cupy-cuda12x = "^13.2.0"
 pycuda = "^2024.1.2"
 cuda-python = "^12.6.0"
-pandas-stubs = "^2.2.2.240603"
 
 [tool.poetry.scripts]
 play = "roc.script:cli"
