@@ -79,10 +79,16 @@ check-codestyle:
 mypy:
 	poetry run mypy --config-file pyproject.toml ./
 
+# safety check exceptions:
+# 51457, 70612: Py 1.11.0 Regexp DoS - not processing external data
+# 67599: Pip --extra-index-url - not using --extra-index-url
+# 72715: MKDocs Material RXSS vulnerability - not publishing docs in a way where
+# XSS matters
+
 .PHONY: check-safety
 check-safety:
 	poetry check
-	poetry run safety check --full-report -i 51457 -i 67599 -i 70612
+	poetry run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715
 	poetry run bandit -ll --recursive roc tests
 
 .PHONY: update-dev-deps
