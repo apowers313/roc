@@ -16,6 +16,9 @@ from ..perception import (
 class SingleNode(FeatureNode):
     type: int
 
+    def __str__(self) -> str:
+        return f"SingleNode({self.type})"
+
 
 @dataclass(kw_only=True)
 class SingleFeature(PointFeature[SingleNode]):

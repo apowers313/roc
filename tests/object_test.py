@@ -1,23 +1,77 @@
 # mypy: disable-error-code="no-untyped-def"
 
+
+from typing import Any
+
+import pytest
 from helpers.nethack_screens2 import screens
 from helpers.util import StubComponent
 
 from roc.attention import VisionAttention
 from roc.component import Component
 from roc.event import Event
-from roc.feature_extractors.color import Color
+from roc.feature_extractors.color import Color, ColorFeature
 from roc.feature_extractors.delta import Delta
 from roc.feature_extractors.distance import Distance
 from roc.feature_extractors.flood import Flood
 from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
-from roc.feature_extractors.shape import Shape
+from roc.feature_extractors.shape import Shape, ShapeFeature
 from roc.feature_extractors.single import Single, SingleFeature
 from roc.graphdb import Node
 from roc.location import XLoc, YLoc
 from roc.object import CandidateObjects, Object, ObjectResolver
-from roc.perception import VisionData
+from roc.perception import FeatureNode, VisionData
+
+
+@pytest.fixture
+def features() -> Any:
+    # colors
+    color1: FeatureNode = ColorFeature(
+        origin_id=("foo", "bar"), type=2, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    color2: FeatureNode = ColorFeature(
+        origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    color3: FeatureNode = ColorFeature(
+        origin_id=("foo", "bar"), type=4, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+
+    # shapes
+    shape1: FeatureNode = ShapeFeature(
+        origin_id=("foo", "bar"), type=64, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    shape2: FeatureNode = ShapeFeature(
+        origin_id=("foo", "bar"), type=106, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    shape3: FeatureNode = ShapeFeature(
+        origin_id=("foo", "bar"), type=100, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+
+    # singles
+    single1: FeatureNode = SingleFeature(
+        origin_id=("foo", "bar"), type=1, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    single2: FeatureNode = SingleFeature(
+        origin_id=("foo", "bar"), type=2, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+    single3: FeatureNode = SingleFeature(
+        origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))
+    ).to_nodes()
+
+    ret: dict[str, Any] = {
+        "color1": color1,
+        "color2": color2,
+        "color3": color3,
+        "shape1": shape1,
+        "shape2": shape2,
+        "shape3": shape3,
+        "single1": single1,
+        "single2": single2,
+        "single3": single3,
+    }
+
+    return ret
 
 
 class TestObject:
@@ -25,6 +79,24 @@ class TestObject:
         o = Object()
         assert o.uuid > 0
         assert isinstance(o, Node)
+
+    def test_distance_zero(self, features) -> None:
+        obj = Object.with_features([features["shape1"], features["color1"], features["single1"]])
+
+        dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
+        assert dist == 0
+
+    def test_distance_one(self, features) -> None:
+        obj = Object.with_features([features["shape1"], features["color1"]])
+
+        dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
+        assert dist == 1
+
+    def test_distance_two_exclusive(self, features) -> None:
+        obj = Object.with_features([features["shape1"], features["color1"]])
+
+        dist = Object.distance(obj, [features["color1"], features["single1"]])
+        assert dist == 2
 
 
 class TestCandidateObjects:
@@ -40,62 +112,56 @@ class TestCandidateObjects:
         Node.connect(o, fn, "Feature")
         objs = CandidateObjects([fn])
         assert len(objs) == 1
-        o2, str = objs[0]
+        o2, dist = objs[0]
         assert o2 is o
-        assert str == 1.0
+        assert dist == 0
 
-    def test_two_objects(self) -> None:
-        f1 = SingleFeature(origin_id=("foo", "bar"), type=1, point=(XLoc(1), YLoc(2))).to_nodes()
-        f2 = SingleFeature(origin_id=("foo", "bar"), type=2, point=(XLoc(1), YLoc(2))).to_nodes()
-        f3 = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))).to_nodes()
-        assert f1 is not f2
-        assert f2 is not f3
-        assert f1 is not f3
-        o1 = Object.with_features([f1, f2])
-        o2 = Object.with_features([f2, f3])
+    def test_two_objects(self, features) -> None:
+        o1 = Object.with_features([features["single1"], features["single2"]])
+        o2 = Object.with_features([features["single2"], features["single3"]])
         assert o1 is not o2
 
         # feature common to both objects
-        objs = CandidateObjects([f2])
+        objs = CandidateObjects([features["single2"]])
         assert len(objs) == 2
         assert o1.id in objs.order
         assert o2.id in objs.order
 
         # feature only in object 1
-        objs = CandidateObjects([f1])
+        objs = CandidateObjects([features["single1"]])
         assert len(objs) == 1
         assert o1.id in objs.order
         assert o2.id not in objs.order
 
         # feature only in object 2
-        objs = CandidateObjects([f3])
+        objs = CandidateObjects([features["single3"]])
         assert len(objs) == 1
         assert o1.id not in objs.order
         assert o2.id in objs.order
 
         # overlapping features, object 1 is stronger
-        objs = CandidateObjects([f1, f2])
+        objs = CandidateObjects([features["single1"], features["single2"]])
         assert len(objs) == 2
         assert o1.id in objs.order
         assert o2.id in objs.order
-        ret_obj, str = objs[0]
+        ret_obj, dist = objs[0]
         assert ret_obj is o1
-        assert str == 2.0
-        ret_obj, str = objs[1]
+        assert dist == 0
+        ret_obj, dist = objs[1]
         assert ret_obj is o2
-        assert str == 1.0
+        assert dist == 2
 
         # overlapping features, object 2 is stronger
-        objs = CandidateObjects([f2, f3])
+        objs = CandidateObjects([features["single2"], features["single3"]])
         assert len(objs) == 2
         assert o1.id in objs.order
         assert o2.id in objs.order
-        ret_obj, str = objs[0]
+        ret_obj, dist = objs[0]
         assert ret_obj is o2
-        assert str == 2.0
-        ret_obj, str = objs[1]
+        assert dist == 0
+        ret_obj, dist = objs[1]
         assert ret_obj is o1
-        assert str == 1.0
+        assert dist == 2
 
 
 class TestObjectResolver:
@@ -140,7 +206,7 @@ class TestObjectResolver:
         assert isinstance(e.data, Object)
         o = e.data
         # assert o.resolve_count == 0
-        uuid = o.uuid
+        first_uuid = o.uuid
 
         # second event
         e = s.output.call_args_list[1].args[0]
@@ -148,12 +214,15 @@ class TestObjectResolver:
         assert isinstance(e.data, Object)
         o = e.data
         # assert o.resolve_count == 1
-        assert o.uuid == uuid
+        second_uuid = o.uuid
+        assert second_uuid != first_uuid
 
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Object)
         o = e.data
-        assert o.resolve_count == 2
-        assert o.uuid == uuid
+        third_uuid = o.uuid
+        assert third_uuid != first_uuid
+        assert third_uuid == second_uuid
+        assert o.resolve_count == 1

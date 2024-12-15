@@ -15,6 +15,9 @@ from .single import SingleFeature
 class DistanceNode(FeatureNode):
     size: int
 
+    def __str__(self) -> str:
+        return f"DistanceNode({self.size})"
+
 
 @dataclass(kw_only=True)
 class DistanceFeature(Feature[DistanceNode]):
