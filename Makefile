@@ -30,7 +30,7 @@ install:
 	poetry config virtualenvs.in-project true
 	poetry lock -n && poetry export --without-hashes > requirements.txt
 	poetry env use 3.11
-	poetry install -n --verbose
+	poetry -vv install -n
 	poetry run mypy --install-types --non-interactive ./
 
 .PHONY: pre-commit-install
