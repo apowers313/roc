@@ -8,6 +8,9 @@ from abc import ABC, abstractmethod
 from enum import IntEnum
 from typing import Any
 
+# TODO: try to import 'gym' and 'gymnasium' for proper typing
+# TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
+import gymnasium as gym
 import nle
 from pydantic import BaseModel, Field
 
@@ -19,14 +22,6 @@ from .intrinsic import Intrinsic
 from .jupyter.state import print_state, states
 from .logger import logger
 from .perception import Perception, VisionData
-
-# TODO: try to import 'gym' and 'gymnasium' for proper typing
-# TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
-
-try:
-    import gym
-except ModuleNotFoundError:
-    import gymnasium as gym
 
 
 class Gym(Component, ABC):
@@ -45,11 +40,12 @@ class Gym(Component, ABC):
         self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
 
         # config actions
-        self.action_count = self.env.action_space.n
-        self.config_actions(self.action_count)
         settings = Config.get()
+        assert isinstance(self.env.action_space, gym.spaces.Discrete)
+        self.action_count = int(self.env.action_space.n)
+        self.config_actions(self.action_count)
         settings.action_count = self.action_count
-        settings.observation_shape = self.env.observation_space["glyphs"].shape
+        settings.observation_shape = nle.nethack.DUNGEON_SHAPE
 
         # TODO: config environment
         # setup which features detectors to use on each bus
@@ -64,17 +60,18 @@ class Gym(Component, ABC):
 
     @logger.catch
     def start(self) -> None:
-        obs = self.env.reset()
+        obs, reset_info = self.env.reset()
         settings = Config.get()
 
         done = False
+        truncated = False
         _dump_env_start()
 
         logger.info("Starting NLE loop...")
         loop_num = 0
 
         # main environment loop
-        while not done:
+        while not done and not truncated:
             logger.trace(f"Sending observation: {obs}")
             breakpoints.check()
 
@@ -90,19 +87,12 @@ class Gym(Component, ABC):
             logger.trace(f"Doing action: {action}")
 
             # perform the action and get the next observation
-            step_res = self.env.step(action)
-            obs = step_res[0]
+            obs, reward, done, truncated, info = self.env.step(action)
 
             # optionally save the screen to file
             _dump_env_record(obs, loop_num)
 
-            # check to see if we are done
-            if len(step_res) == 5:
-                done = step_res[2] or step_res[3]
-            else:
-                done = step_res[2]
-
-            logger.trace(f"Main loop done: {done}")
+            logger.trace(f"Main loop done: {done}, {truncated}")
 
             # set and save the loop number
             loop_num += 1
