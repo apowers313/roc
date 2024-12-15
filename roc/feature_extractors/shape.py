@@ -18,8 +18,9 @@ from .single import SingleFeature
 class ShapeNode(FeatureNode):
     type: int
 
-    def __str__(self) -> str:
-        return f"ShapeNode({chr(self.type)})"
+    @property
+    def attr_strs(self) -> list[str]:
+        return [chr(self.type)]
 
 
 @dataclass(kw_only=True)

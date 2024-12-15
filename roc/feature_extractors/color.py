@@ -18,8 +18,10 @@ from .single import SingleFeature
 class ColorNode(FeatureNode):
     type: int
 
-    def __str__(self) -> str:
+    @property
+    def attr_strs(self) -> list[str]:
         color: str
+
         # https://github.com/NetHack/NetHack/blob/8bb764e624aa228ce2a5374739408ed81b77d40e/include/color.h#L14
         match self.type:
             case 0:
@@ -59,7 +61,7 @@ class ColorNode(FeatureNode):
             case _:
                 raise Exception("impossible color")
 
-        return f"ColorNode({color})"
+        return [color]
 
 
 # define CLR_BLACK 0

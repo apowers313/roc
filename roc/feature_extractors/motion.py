@@ -21,6 +21,10 @@ class MotionNode(FeatureNode):
     type: int
     direction: Direction
 
+    @property
+    def attr_strs(self) -> list[str]:
+        return [str(self.type), str(self.direction)]
+
 
 @dataclass(kw_only=True)
 class MotionFeature(Feature[MotionNode]):

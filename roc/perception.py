@@ -127,6 +127,13 @@ class FeatureNode(Node):
         # should be okay for this use case though
         return self.id
 
+    def __str__(self) -> str:
+        return f"""{self.__class__.__name__}({",".join(self.attr_strs)})"""
+
+    @property
+    @abstractmethod
+    def attr_strs(self) -> list[str]: ...
+
 
 cache_registry: dict[str, WeakValueDictionary[int, Node]] = defaultdict(WeakValueDictionary)
 FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
@@ -136,9 +143,6 @@ FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
 class Feature(ABC, Generic[FeatureNodeType]):
     feature_name: str
     origin_id: tuple[str, str]
-
-    @abstractmethod
-    def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
     def to_nodes(self) -> FeatureNodeType:
         # check local cache
@@ -158,6 +162,9 @@ class Feature(ABC, Generic[FeatureNodeType]):
 
         cache[h] = n
         return n
+
+    @abstractmethod
+    def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
 
     @abstractmethod
     def _create_nodes(self) -> FeatureNodeType: ...

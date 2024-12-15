@@ -17,6 +17,10 @@ class LineNode(FeatureNode):
     type: int
     size: int
 
+    @property
+    def attr_strs(self) -> list[str]:
+        return [str(self.type), str(self.size)]
+
 
 @dataclass(kw_only=True)
 class LineFeature(AreaFeature[LineNode]):

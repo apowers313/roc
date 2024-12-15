@@ -28,6 +28,11 @@ from roc.perception import Feature, FeatureNode, VisionData
 class TestSaliencyMap:
     @pytest.fixture()
     def feature_for_test(self, empty_components) -> type:
+        class TestFeatureNode(FeatureNode):
+            @property
+            def attr_strs(self) -> list[str]:
+                return []
+
         @dataclass(kw_only=True)
         class FeatureForTest(Feature[FeatureNode]):
             origin_id: tuple[str, str] = ("foo", "bar")
@@ -40,7 +45,7 @@ class TestSaliencyMap:
                 return 0
 
             def _create_nodes(self) -> FeatureNode:
-                return FeatureNode()
+                return TestFeatureNode()
 
             def _dbfetch_nodes(self) -> FeatureNode | None:
                 return None

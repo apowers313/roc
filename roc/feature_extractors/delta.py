@@ -19,6 +19,10 @@ class DeltaNode(FeatureNode):
     old_val: int
     new_val: int
 
+    @property
+    def attr_strs(self) -> list[str]:
+        return [str(self.old_val), str(self.new_val)]
+
 
 @dataclass(kw_only=True)
 class DeltaFeature(Feature[DeltaNode]):
