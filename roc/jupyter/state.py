@@ -13,6 +13,7 @@ from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
 from roc.event import Event
 from roc.graphdb import Edge, Node
+from roc.object import Object, ObjectResolver
 
 from .utils import bytes2human
 
@@ -216,6 +217,20 @@ class CurrentAttentionState(State[VisionAttentionData]):
             return "Current Attention: None"
 
 
+class CurrentObjectState(State[Object]):
+    def __init__(self) -> None:
+        super().__init__("curr-object", display_name="Current Object")
+
+    def set(self, obj: Object) -> None:
+        self.val = obj
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Object:\n{str(self.val)}\n"
+        else:
+            return "Current Object: None"
+
+
 class ComponentsState(State[list[str]]):
     def __init__(self) -> None:
         super().__init__("components", display_name="Components")
@@ -242,6 +257,7 @@ class StateList:
     screen: CurrentScreenState = CurrentScreenState()
     salency: CurrentSaliencyMapState = CurrentSaliencyMapState()
     attention: CurrentAttentionState = CurrentAttentionState()
+    object: CurrentObjectState = CurrentObjectState()
     components: ComponentsState = ComponentsState()
 
 
@@ -261,6 +277,7 @@ def init_state() -> None:
     if _state_init_done:
         return
 
+    # attention
     att_conn = Attention.bus.connect(StateComponent())
 
     def att_evt_handler(e: Event[VisionAttentionData]) -> None:
@@ -269,6 +286,15 @@ def init_state() -> None:
         states.attention.set(deepcopy(e.data))
 
     att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
+
+    # object
+    obj_conn = ObjectResolver.bus.connect(StateComponent())
+
+    def obj_evt_handler(e: Event[Object]) -> None:
+        states.object.set(e.data)
+
+    obj_conn.listen(obj_evt_handler, filter=lambda e: isinstance(e.data, Object))
+
     _state_init_done = True
 
 
@@ -297,6 +323,7 @@ def print_state() -> None:
     print(states.components)  # noqa: T201
     print(states.salency)  # noqa: T201
     print(states.attention)  # noqa: T201
+    print(states.object)  # noqa: T201
 
 
 @click.command()
