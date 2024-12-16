@@ -167,6 +167,10 @@ build-remove:
 .PHONY: cleanup
 cleanup: pycache-remove dsstore-remove mypycache-remove ipynbcheckpoints-remove pytestcache-remove
 
+.PHONY: clean
+clean:
+	git clean -fxd
+
 # commit hooks
 .PHONY: pre-commit
 pre-commit: 
