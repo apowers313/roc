@@ -14,8 +14,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class ConfigInitWarning(Warning):
     """A Warning for when attempting to access config before it has been initialized."""
 
-    pass
-
 
 _config_singleton: Config | None = None
 
@@ -87,6 +85,18 @@ class Config(BaseSettings):
             "shape:perception",
         ]
     )
+
+    def __str__(self) -> str:
+        ret = ""
+        d = self.dict()
+        for k in d:
+            ret += f"{k} = {str(d[k])}\n"
+
+        return ret
+
+    @staticmethod
+    def print() -> None:
+        print(Config.get())  # noqa: T201
 
     @staticmethod
     def get() -> Config:

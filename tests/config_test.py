@@ -17,3 +17,7 @@ class TestConfig:
         Config.init({"db_host": "x.y.z"})
         settings = Config.get()
         assert settings.db_host == "x.y.z"
+
+    def test_str(self) -> None:
+        assert len(str(Config.get())) > 0
+        # Config.print()
