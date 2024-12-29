@@ -72,6 +72,9 @@ class Config(BaseSettings):
     enable_gym_dump_env: bool = Field(default=False)
     dump_file: str = Field(default=f"env_dump-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.py")
     max_dump_frames: int = Field(default=10)
+    # experiment modules
+    expmod_dirs: list[str] = ["experiments/modules"]
+    expmods: list[str] = []
     # component config
     perception_components: list[str] = Field(
         default=[
