@@ -61,37 +61,31 @@ class RocJupyterMagics(Magics):
     @magic_cli_decorator(roc_cli)
     def roc(self, line: str) -> None:
         """Start executing roc, use '%roc --help' for more information"""
-        pass
 
     @line_magic
     @magic_cli_decorator(brk_cli)
     def brk(self, line: str) -> None:
         """Halt execution of roc, use '%brk --help' for more information"""
-        pass
 
     @line_magic
     @magic_cli_decorator(cont_cli)
     def cont(self, line: str) -> None:
         """Resume execution after calling break, use '%cont --help' for more information"""
-        pass
 
     @line_magic
     @magic_cli_decorator(step_cli)
     def step(self, line: str) -> None:
         """Runs the ROC loop for <n> more steps and then breaks, use '%step --help' for more information"""
-        pass
 
     @line_magic
     @magic_cli_decorator(state_cli)
     def state(self, line: str) -> None:
         """Displays information about the internal state of ROC, use '%state --help' for more information"""
-        pass
 
     @line_magic
     @magic_cli_decorator(save_cli)
     def save(self, line: str) -> None:
         """Exports the graph to a file, use '%state --help' for more information"""
-        pass
 
     @staticmethod
     def init() -> None:

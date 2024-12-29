@@ -341,4 +341,3 @@ def state_cli(var: list[str]) -> None:
     for v in var:
         s = getattr(states, v)
         print(str(s))  # noqa: T201
-        pass

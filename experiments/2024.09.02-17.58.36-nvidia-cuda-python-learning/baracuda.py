@@ -185,7 +185,6 @@ class CudaMemory:
 
     # managed
     # pagelocked
-    pass
     # malloc
     # to_device
     # from_device

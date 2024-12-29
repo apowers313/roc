@@ -40,19 +40,14 @@ def no_callback(_: Any) -> None:
     """Helper function that accepts any value and returns None. Great for
     default callback functions.
     """
-    pass
 
 
 class ErrorSavingDuringDelWarning(Warning):
     """An error that occurs while saving a Node during __del__"""
 
-    pass
-
 
 class GraphDBInternalError(Exception):
     """An generic exception for unexpected errors"""
-
-    pass
 
 
 #########
@@ -655,13 +650,9 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 class NodeNotFound(Exception):
     """An exception raised when trying to retreive a Node that doesn't exist."""
 
-    pass
-
 
 class NodeCreationFailed(Exception):
     """An exception raised when trying to create a Node in the graph database fails"""
-
-    pass
 
 
 def get_next_new_node_id() -> NodeId:
