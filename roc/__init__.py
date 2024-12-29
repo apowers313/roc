@@ -12,6 +12,7 @@ import roc.logger as roc_logger
 from .action import Action, ActionData
 from .component import Component
 from .config import Config
+from .expmod import ExpMod
 from .gymnasium import NethackGym
 from .jupyter import RocJupyterMagics, is_jupyter
 from .jupyter.state import init_state
@@ -28,6 +29,8 @@ __all__ = [
     # Action Exports
     "ActionData",
     "Action",
+    # Experiment Module Support
+    "ExpMod",
 ]
 
 
@@ -41,6 +44,7 @@ def init(config: dict[str, Any] | None = None) -> None:
     global ng
     ng = NethackGym()
     Component.init()
+    ExpMod.init()
     RocJupyterMagics.init()
     init_state()
 
