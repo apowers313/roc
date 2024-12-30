@@ -69,9 +69,10 @@ class Gym(Component, ABC):
 
         logger.info("Starting NLE loop...")
         loop_num = 0
+        game_num = 0
 
         # main environment loop
-        while not done and not truncated:
+        while game_num < settings.num_games:
             logger.trace(f"Sending observation: {obs}")
             breakpoints.check()
 
@@ -100,7 +101,12 @@ class Gym(Component, ABC):
             if (loop_num % settings.status_update) == 0:
                 print_state()
 
-        logger.info("NLE loop done.")
+            if done or truncated:
+                logger.info(f"Game {game_num} completed, starting next game")
+                self.env.reset()
+                game_num += 1
+
+        logger.info("NLE loop done, exiting.")
         _dump_env_end()
 
     def decode_action(self, action: int) -> Any:

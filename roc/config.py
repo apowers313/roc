@@ -69,6 +69,7 @@ class Config(BaseSettings):
     experiment_dir: str = Field(default="/home/apowers/experiment")
     data_dir: str = Field(default="/home/apowers/data")
     # gym config
+    num_games: int = Field(default=5)
     enable_gym_dump_env: bool = Field(default=False)
     dump_file: str = Field(default=f"env_dump-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.py")
     max_dump_frames: int = Field(default=10)
