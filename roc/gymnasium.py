@@ -14,7 +14,7 @@ import gymnasium as gym
 import nle
 from pydantic import BaseModel, Field
 
-from .action import Action, ActionCount
+from .action import Action
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
@@ -40,23 +40,16 @@ class Gym(Component, ABC):
         self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
 
         # config actions
-        settings = Config.get()
-        assert isinstance(self.env.action_space, gym.spaces.Discrete)
-        self.action_count = int(self.env.action_space.n)
-        self.config_actions(self.action_count)
-        settings.action_count = self.action_count
-        settings.observation_shape = nle.nethack.DUNGEON_SHAPE
+        self.config(self.env)
 
         # TODO: config environment
         # setup which features detectors to use on each bus
 
     @abstractmethod
-    def send_obs(self, obs: Any) -> None:
-        pass
+    def send_obs(self, obs: Any) -> None: ...
 
     @abstractmethod
-    def config_actions(self, action_count: int) -> None:
-        pass
+    def config(self, env: gym.core.Env[Any, Any]) -> None: ...
 
     @logger.catch
     def start(self) -> None:
@@ -232,9 +225,13 @@ class NethackGym(Gym):
         gym_opts = gym_opts or {}
         super().__init__("NetHackScore-v0", **gym_opts)
 
-    def config_actions(self, action_count: int) -> None:
-        a = ActionCount(action_count=action_count)
-        self.action_bus_conn.send(a)
+    def config(self, env: gym.core.Env[Any, Any]) -> None:
+        settings = Config.get()
+        assert isinstance(self.env.action_space, gym.spaces.Discrete)
+        self.action_count = int(self.env.action_space.n)
+
+        settings.action_count = self.action_count
+        settings.observation_shape = nle.nethack.DUNGEON_SHAPE
 
     def send_obs(self, obs: Any) -> None:
         self.send_vision(obs)
