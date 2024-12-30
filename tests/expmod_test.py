@@ -1,16 +1,11 @@
 # mypy: disable-error-code="no-untyped-def"
 
-from typing import Generator
+from typing import Any, Generator
 
 import pytest
 
 from roc.config import Config
 from roc.expmod import ExpMod, expmod_loaded, expmod_modtype_current, expmod_registry
-
-
-@ExpMod.register("foo")
-class MyTestExpMod(ExpMod):
-    modtype = "test"
 
 
 class TestExpMod:
@@ -38,15 +33,23 @@ class TestExpMod:
         expmod_modtype_current.clear()
         expmod_loaded.clear()
 
-    def test_exists(self) -> None:
+    @pytest.fixture
+    def MyTestExpMod(self) -> Any:
+        @ExpMod.register("foo")
+        class MyTestExpMod(ExpMod):
+            modtype = "test"
+
+        return MyTestExpMod
+
+    def test_exists(self, MyTestExpMod) -> None:
         MyTestExpMod()
 
-    def test_set(self) -> None:
+    def test_set(self, MyTestExpMod) -> None:
         MyTestExpMod.set("foo")
         ret = MyTestExpMod.get()
         assert ret == expmod_registry["test"]["foo"]
 
-    def test_get_with_default(self) -> None:
+    def test_get_with_default(self, MyTestExpMod) -> None:
         ret = MyTestExpMod.get("foo")
         assert ret == expmod_registry["test"]["foo"]
 
