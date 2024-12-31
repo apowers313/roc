@@ -211,7 +211,6 @@ class CurrentAttentionState(State[VisionAttentionData]):
     def __str__(self) -> str:
         if self.val is not None:
             s = f"Current Attention:\n{str(self.val)}\n"
-            s += f"\tCurrent Focus: {self.val.focus_points}\n"
             return s
         else:
             return "Current Attention: None"
