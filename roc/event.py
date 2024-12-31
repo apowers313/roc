@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC
+from collections import deque
 from typing import Any, Callable, Generic, TypeVar
 
 import reactivex as rx
@@ -123,12 +124,18 @@ class EventBus(Generic[EventData]):
     subject: rx.Subject[Event[EventData]]
     """The RxPy Subject that the bus uses to communicate."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, cache_depth: int = 0) -> None:
         if name in eventbus_names:
             raise Exception(f"Duplicate EventBus name: {name}")
         self.name = name
         eventbus_names.add(name)
         self.subject = rx.Subject[Event[EventData]]()
+        self.cache_depth = cache_depth
+        self.cache: deque[Event[EventData]] | None = None
+
+        if cache_depth > 0:
+            self.cache = deque(maxlen=cache_depth)
+            self.subject.subscribe(lambda e: self.cache.append(e))  # type: ignore
 
     def connect(self, component: Component) -> BusConnection[EventData]:
         """Creates a connection between an EventBus and a Component for sending Events

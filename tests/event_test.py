@@ -55,3 +55,58 @@ class TestEventBus:
         EventBus[FakeData]("test")
         with pytest.raises(Exception, match="Duplicate EventBus name: test"):
             EventBus[FakeData]("test")
+
+    def test_event_conn_cache(self, eb_reset, mocker, fake_component):
+        eb = EventBus[FakeData]("test")
+        stub: MagicMock = mocker.stub(name="event_callback")
+        eb.subject.subscribe(stub)
+
+        eb_conn = eb.connect(fake_component, cache_depth=10)
+        assert eb_conn.cache is not None
+        assert len(eb_conn.cache) == 0
+
+        d = FakeData("bar", 42)
+        eb_conn.send(d)
+
+        assert len(eb_conn.cache) == 1
+        assert eb_conn.cache[0].data is d
+
+    def test_event_conn_cache_multi(self, eb_reset, mocker, fake_component):
+        eb = EventBus[FakeData]("test")
+        stub: MagicMock = mocker.stub(name="event_callback")
+        eb.subject.subscribe(stub)
+
+        eb_conn = eb.connect(fake_component, cache_depth=10)
+        assert eb_conn.cache is not None
+        assert len(eb_conn.cache) == 0
+
+        d1 = FakeData("bar", 41)
+        d2 = FakeData("bar", 42)
+        d3 = FakeData("bar", 43)
+        eb_conn.send(d1)
+        eb_conn.send(d2)
+        eb_conn.send(d3)
+
+        assert len(eb_conn.cache) == 3
+        assert eb_conn.cache[0].data is d1
+        assert eb_conn.cache[1].data is d2
+        assert eb_conn.cache[2].data is d3
+
+    def test_event_conn_cache_one(self, eb_reset, mocker, fake_component):
+        eb = EventBus[FakeData]("test")
+        stub: MagicMock = mocker.stub(name="event_callback")
+        eb.subject.subscribe(stub)
+
+        eb_conn = eb.connect(fake_component, cache_depth=1)
+        assert eb_conn.cache is not None
+        assert len(eb_conn.cache) == 0
+
+        d1 = FakeData("bar", 41)
+        d2 = FakeData("bar", 42)
+        d3 = FakeData("bar", 43)
+        eb_conn.send(d1)
+        eb_conn.send(d2)
+        eb_conn.send(d3)
+
+        assert len(eb_conn.cache) == 1
+        assert eb_conn.cache[0].data is d3

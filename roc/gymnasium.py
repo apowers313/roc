@@ -14,7 +14,7 @@ import gymnasium as gym
 import nle
 from pydantic import BaseModel, Field
 
-from .action import Action
+from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
@@ -51,6 +51,9 @@ class Gym(Component, ABC):
     @abstractmethod
     def config(self, env: gym.core.Env[Any, Any]) -> None: ...
 
+    @abstractmethod
+    def get_action(self) -> Any: ...
+
     @logger.catch
     def start(self) -> None:
         obs, reset_info = self.env.reset()
@@ -77,7 +80,7 @@ class Gym(Component, ABC):
             self.send_obs(obs)
 
             # get an action
-            action = self.await_action()
+            action = self.get_action()
             logger.trace(f"Doing action: {action}")
 
             # perform the action and get the next observation
@@ -101,16 +104,6 @@ class Gym(Component, ABC):
 
         logger.info("NLE loop done, exiting.")
         _dump_env_end()
-
-    def decode_action(self, action: int) -> Any:
-        return action
-
-    def await_action(self) -> Any:
-        # TODO: self.action_bus_conn.subject.first()
-
-        default_action = 19  # 19 = 46 = "." = do nothing
-        action = self.decode_action(default_action)
-        return action
 
 
 class blstat_offsets(IntEnum):
@@ -236,6 +229,17 @@ class NethackGym(Gym):
     def send_obs(self, obs: Any) -> None:
         self.send_vision(obs)
         self.send_intrinsics(obs)
+
+    def get_action(self) -> Any:
+        self.action_bus_conn.send(ActionRequest())
+
+        # get result using cache
+        assert self.action_bus_conn.attached_bus.cache is not None
+        cache = self.action_bus_conn.attached_bus.cache
+        a = list(filter(lambda e: isinstance(e.data, TakeAction), cache))[-1]
+        assert isinstance(a.data, TakeAction)
+
+        return a.data.action
 
     def send_vision(self, obs: Any) -> None:
         vd = VisionData.from_dict(obs)
