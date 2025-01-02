@@ -32,6 +32,7 @@ class Gym(Component, ABC):
     def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
         super().__init__()
         gym_opts = gym_opts or {}
+        logger.info(f"Gym options: {gym_opts}")
         self.env = gym.make(gym_id, **gym_opts)
 
         # setup communications
@@ -39,7 +40,7 @@ class Gym(Component, ABC):
         self.action_bus_conn = Action.bus.connect(self)
         self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
 
-        # config actions
+        # config
         self.config(self.env)
 
         # TODO: config environment
@@ -216,19 +217,31 @@ class NethackGym(Gym):
 
     def __init__(self, *, gym_opts: dict[str, Any] | None = None) -> None:
         gym_opts = gym_opts or {}
-        super().__init__("NetHackScore-v0", **gym_opts)
+        settings = Config.get()
+        gym_opts["options"] = list(nle.nethack.NETHACKOPTIONS) + settings.nethack_extra_options
+        gym_opts["max_episode_steps"] = settings.nethack_max_turns
+        # XXX: note that 'gym_opts["character"]' sets the character type, not
+        # the player name... player name is forced to be "Agent" by NLE
+
+        # XXX: env name options include: "NetHack", "NetHackScore", "NetHackStaircase", "NetHackStaircasePet", "NetHackOracle", "NetHackGold", "NetHackEat", "NetHackScout", "NetHackChallenge"
+        # see: https://github.com/heiner/nle/blob/731f2aaa94f6d67838228f9c9b5b04faa31cb862/nle/env/__init__.py#L9
+        # and: https://github.com/heiner/nle/blob/731f2aaa94f6d67838228f9c9b5b04faa31cb862/nle/env/tasks.py
+        # "NetHack" is the vanilla environment
+        # "NetHackScore" and "NetHackChallenge" also appear to be interesting
+        super().__init__("NetHack-v0", gym_opts=gym_opts)
 
     def config(self, env: gym.core.Env[Any, Any]) -> None:
         settings = Config.get()
         assert isinstance(self.env.action_space, gym.spaces.Discrete)
         self.action_count = int(self.env.action_space.n)
 
-        settings.action_count = self.action_count
+        settings.gym_actions = tuple(self.env.unwrapped.actions)  # type: ignore
         settings.observation_shape = nle.nethack.DUNGEON_SHAPE
 
     def send_obs(self, obs: Any) -> None:
         self.send_vision(obs)
         self.send_intrinsics(obs)
+        self.send_auditory(obs)
 
     def get_action(self) -> Any:
         self.action_bus_conn.send(ActionRequest())
@@ -245,7 +258,9 @@ class NethackGym(Gym):
         vd = VisionData.from_dict(obs)
         self.env_bus_conn.send(vd)
 
-    def send_auditory(self) -> None:
+    def send_auditory(self, obs: Any) -> None:
+        # msg = "".join(chr(ch) for ch in obs["message"])
+        # print("message", msg)
         pass
 
     def send_proprioceptive(self) -> None:

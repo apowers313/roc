@@ -66,6 +66,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod1"]
+        settings.expmods_use = []
 
         ExpMod.init()
 
@@ -91,6 +92,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
+        settings.expmods_use = ["test:testy"]
 
         ExpMod.init()
 
@@ -100,3 +102,55 @@ class TestExpMod:
         MyTestExpModClass = expmod_loaded["testmod2"].MyTestExpModClass
         ret = MyTestExpModClass.get("testy")
         assert ret.do_thing() == 31337
+
+    def test_init_uses_module(self):
+        assert len(expmod_loaded) == 0
+        settings = Config.get()
+        settings.expmod_dirs = ["tests/helpers"]
+        settings.expmods = ["testmod2"]
+        settings.expmods_use = ["test:testy"]
+        assert len(expmod_modtype_current) == 0
+
+        ExpMod.init()
+
+        assert len(expmod_loaded) == 1
+        assert len(expmod_modtype_current) == 1
+
+        assert expmod_modtype_current["test"] == "testy"
+
+    def test_init_uses_duplicate_module(self):
+        assert len(expmod_loaded) == 0
+        settings = Config.get()
+        settings.expmod_dirs = ["tests/helpers"]
+        settings.expmods = ["testmod2"]
+        settings.expmods_use = ["test:testy", "test:testy"]
+        assert len(expmod_modtype_current) == 0
+
+        with pytest.raises(
+            Exception, match="ExpMod.init found multiple attempts to set the same modules: test"
+        ):
+            ExpMod.init()
+
+    def test_init_uses_missing_module(self):
+        assert len(expmod_loaded) == 0
+        settings = Config.get()
+        settings.expmod_dirs = ["tests/helpers"]
+        settings.expmods = ["testmod2"]
+        settings.expmods_use = ["foo:bar"]
+        assert len(expmod_modtype_current) == 0
+
+        with pytest.raises(Exception, match="ExpMod.set can't find module for type: 'foo'"):
+            ExpMod.init()
+
+    def test_init_uses_missing_name(self):
+        assert len(expmod_loaded) == 0
+        settings = Config.get()
+        settings.expmod_dirs = ["tests/helpers"]
+        settings.expmods = ["testmod2"]
+        settings.expmods_use = ["test:foo"]
+        assert len(expmod_modtype_current) == 0
+
+        with pytest.raises(
+            Exception, match="ExpMod.set can't find module for name: 'foo' in module 'test'"
+        ):
+            ExpMod.init()

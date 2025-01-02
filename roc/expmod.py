@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from collections import defaultdict
+from abc import abstractmethod
+from collections import Counter, defaultdict
 from pathlib import Path
 from types import ModuleType
 from typing import Callable, Self, cast
@@ -24,6 +25,10 @@ class ExpMod:
     @staticmethod
     def register(name: str) -> Callable[[type[ExpMod]], type[ExpMod]]:
         def register_decorator(cls: type[ExpMod]) -> type[ExpMod]:
+            if name in expmod_registry[cls.modtype]:
+                raise Exception(
+                    f"ExpMod.register attempting to register duplicate name '{name}' for module '{cls.modtype}'"
+                )
             expmod_registry[cls.modtype][name] = cls()
 
             return cls
@@ -33,7 +38,6 @@ class ExpMod:
     @classmethod
     def get(cls, default: str | None = None) -> Self:
         modtype = cls.modtype
-        print("modtype", modtype)
         name: str | None = (
             expmod_modtype_current[modtype]
             if expmod_modtype_current[modtype] is not None
@@ -45,15 +49,24 @@ class ExpMod:
         return cast(Self, expmod_registry[modtype][name])
 
     @classmethod
-    def set(cls, name: str) -> None:
-        expmod_modtype_current[cls.modtype] = name
+    def set(cls, name: str, modtype: str | None = None) -> None:
+        if modtype is None:
+            modtype = cls.modtype
+
+        if modtype not in expmod_registry:
+            raise Exception(f"ExpMod.set can't find module for type: '{modtype}'")
+
+        if name not in expmod_registry[modtype]:
+            raise Exception(
+                f"ExpMod.set can't find module for name: '{name}' in module '{modtype}'"
+            )
+
+        expmod_modtype_current[modtype] = name
 
     @staticmethod
     def import_file(filename: str, basepath: str = "") -> ModuleType:
-        print(f"ExpMod.import_file: {basepath}/{filename}")
         module_name = f"roc:expmod:{filename}"
         filepath = Path(basepath) / filename
-        print("filepath", filepath.resolve())
 
         spec = importlib.util.spec_from_file_location(module_name, filepath)
         assert spec is not None
@@ -73,6 +86,7 @@ class ExpMod:
         basepaths = settings.expmod_dirs.copy()
         basepaths.insert(0, "")
 
+        # load module files
         missing_mods: list[str] = []
         for base in basepaths:
             for mod in mods:
@@ -86,3 +100,22 @@ class ExpMod:
 
         if len(mods) > 0:
             raise FileNotFoundError(f"could not load experiment modules: {mods}")
+
+        # set modules
+        use_mods = [m.split(":") for m in settings.expmods_use]
+        mod_name_count = Counter([m[0] for m in use_mods])
+        duplicate_names = {k: v for k, v in mod_name_count.items() if v > 1}
+        if len(duplicate_names) > 0:
+            dupes = ", ".join(duplicate_names.keys())
+            raise Exception(f"ExpMod.init found multiple attempts to set the same modules: {dupes}")
+
+        for mod_tn in use_mods:
+            t, n = mod_tn
+            ExpMod.set(name=n, modtype=t)
+
+
+class DefaultActionExpMod(ExpMod):
+    modtype = "action"
+
+    @abstractmethod
+    def get_action(self) -> int: ...

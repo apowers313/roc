@@ -52,7 +52,18 @@ def do_init() -> Generator[None, None, None]:
     Config.init()
     settings = Config.get()
     settings.observation_shape = (21, 79)
-    settings.action_count = 23
+    settings.gym_actions = (
+        ord("j"),
+        ord("k"),
+        ord("h"),
+        ord("l"),
+        ord("y"),
+        ord("u"),
+        ord("b"),
+        ord("n"),
+        ord("e"),
+        ord("."),
+    )
     logger_init()
 
     yield

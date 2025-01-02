@@ -60,8 +60,7 @@ class Config(BaseSettings):
     log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
     # agent config
-    default_action: str = Field(default="pass")
-    action_count: int | None = Field(default=None)  # configured by the gym
+    gym_actions: tuple[int, ...] | None = Field(default=None)  # configured by the gym
     observation_shape: tuple[int, ...] | None = Field(default=None)  # configured by the gym
     allow_unknown_intrinsic: bool = Field(default=True)
     # jupyter config
@@ -73,9 +72,13 @@ class Config(BaseSettings):
     enable_gym_dump_env: bool = Field(default=False)
     dump_file: str = Field(default=f"env_dump-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.py")
     max_dump_frames: int = Field(default=10)
+    # nethack config
+    nethack_extra_options: list[str] = ["autoopen"]
+    nethack_max_turns: int = Field(default=100000)
     # experiment modules
     expmod_dirs: list[str] = ["experiments/modules"]
     expmods: list[str] = []
+    expmods_use: list[str] = ["action:weighted"]
     # component config
     perception_components: list[str] = Field(
         default=[
