@@ -57,28 +57,28 @@ class TestEventBus:
             EventBus[FakeData]("test")
 
     def test_event_conn_cache(self, eb_reset, mocker, fake_component):
-        eb = EventBus[FakeData]("test")
+        eb = EventBus[FakeData]("test", cache_depth=10)
         stub: MagicMock = mocker.stub(name="event_callback")
         eb.subject.subscribe(stub)
 
-        eb_conn = eb.connect(fake_component, cache_depth=10)
-        assert eb_conn.cache is not None
-        assert len(eb_conn.cache) == 0
+        eb_conn = eb.connect(fake_component)
+        assert eb.cache is not None
+        assert len(eb.cache) == 0
 
         d = FakeData("bar", 42)
         eb_conn.send(d)
 
-        assert len(eb_conn.cache) == 1
-        assert eb_conn.cache[0].data is d
+        assert len(eb.cache) == 1
+        assert eb.cache[0].data is d
 
     def test_event_conn_cache_multi(self, eb_reset, mocker, fake_component):
-        eb = EventBus[FakeData]("test")
+        eb = EventBus[FakeData]("test", cache_depth=10)
         stub: MagicMock = mocker.stub(name="event_callback")
         eb.subject.subscribe(stub)
 
-        eb_conn = eb.connect(fake_component, cache_depth=10)
-        assert eb_conn.cache is not None
-        assert len(eb_conn.cache) == 0
+        eb_conn = eb.connect(fake_component)
+        assert eb.cache is not None
+        assert len(eb.cache) == 0
 
         d1 = FakeData("bar", 41)
         d2 = FakeData("bar", 42)
@@ -87,19 +87,19 @@ class TestEventBus:
         eb_conn.send(d2)
         eb_conn.send(d3)
 
-        assert len(eb_conn.cache) == 3
-        assert eb_conn.cache[0].data is d1
-        assert eb_conn.cache[1].data is d2
-        assert eb_conn.cache[2].data is d3
+        assert len(eb.cache) == 3
+        assert eb.cache[0].data is d1
+        assert eb.cache[1].data is d2
+        assert eb.cache[2].data is d3
 
     def test_event_conn_cache_one(self, eb_reset, mocker, fake_component):
-        eb = EventBus[FakeData]("test")
+        eb = EventBus[FakeData]("test", cache_depth=1)
         stub: MagicMock = mocker.stub(name="event_callback")
         eb.subject.subscribe(stub)
 
-        eb_conn = eb.connect(fake_component, cache_depth=1)
-        assert eb_conn.cache is not None
-        assert len(eb_conn.cache) == 0
+        eb_conn = eb.connect(fake_component)
+        assert eb.cache is not None
+        assert len(eb.cache) == 0
 
         d1 = FakeData("bar", 41)
         d2 = FakeData("bar", 42)
@@ -108,5 +108,5 @@ class TestEventBus:
         eb_conn.send(d2)
         eb_conn.send(d3)
 
-        assert len(eb_conn.cache) == 1
-        assert eb_conn.cache[0].data is d3
+        assert len(eb.cache) == 1
+        assert eb.cache[0].data is d3
