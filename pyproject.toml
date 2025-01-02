@@ -100,6 +100,7 @@ pandas-stubs = "^2.2.2.240603"
 nltk = "^3.9.1"
 pyttsx3 = "^2.98"
 gtts = "^2.5.4"
+gruut = "^2.4.0"
 
 [tool.poetry.group.nvidia]
 optional = true
