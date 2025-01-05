@@ -601,6 +601,9 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
 
         return e_id in self.__edges
 
+    def __add__(self, l2: EdgeList) -> EdgeList:
+        return EdgeList(self.__edges + l2.__edges)
+
     def add(self, e: Edge | EdgeId) -> None:
         """Adds a new Edge to the list"""
         e_id = Edge.to_id(e)
@@ -677,18 +680,46 @@ class Node(BaseModel, extra="allow"):
 
     @property
     def id(self) -> NodeId:
+        """The unique ID of the node"""
         return self._id
 
     @property
     def src_edges(self) -> EdgeList:
+        """All Edges that originate at this Node"""
         return self._src_edges
 
     @property
     def dst_edges(self) -> EdgeList:
+        """All Edges that terminate at this Node"""
         return self._dst_edges
 
     @property
+    def edges(self) -> EdgeList:
+        """All Edges attached to this Node, regardless of direction"""
+        return self._src_edges + self._dst_edges
+
+    @property
+    def predecessors(self) -> list[Node]:
+        """All Nodes connected with an directed Edge that ends with this node.
+        Also referred to as an 'in-neighbor'.
+        """
+        return [e.src for e in self.dst_edges]
+
+    @property
+    def successors(self) -> list[Node]:
+        """All Nodes connected with an directed Edge that starts with this node.
+        Also referred to as an 'out-neighbor'.
+        """
+        return [e.dst for e in self.src_edges]
+
+    @property
+    def neighbors(self) -> list[Node]:
+        """All adjacent nodes, regardless of edge direction"""
+        return self.successors + self.predecessors
+
+    @property
     def new(self) -> bool:
+        """Whether or not this Node is new (not saved to the database yet)"""
         return self._new
 
     def __init__(
@@ -1281,16 +1312,12 @@ node_registry: dict[frozenset[str], type] = {}
 def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
     def node_register_decorator(cls: type[NodeType]) -> type[NodeType]:
         lbls = frozenset(args)
-        # lbls = frozenset({c.__name__ for c in MyModel.__mro__ if c.__name__ not in ["BaseModel", "object"]})
 
         WrapperClass = create_model(
             "WrapperClass",
             __base__=cls,
             labels=(set, Field(exclude=True, default_factory=lambda: set(lbls))),
         )
-
-        # class WrapperClass(cls):  # type: ignore
-        #     labels: set[str] = Field(default=set(lbls))
 
         functools.update_wrapper(WrapperClass, cls, updated=())
         node_registry[lbls] = WrapperClass

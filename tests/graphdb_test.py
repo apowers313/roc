@@ -12,6 +12,7 @@ from pydantic import ValidationError
 from roc.graphdb import (
     Edge,
     EdgeId,
+    EdgeList,
     EdgeNotFound,
     GraphDB,
     Node,
@@ -782,6 +783,27 @@ class TestNode:
 
         assert isinstance(f2, Foo)
 
+    def test_predecessors(self) -> None:
+        n = Node.get(NodeId(0))
+
+        assert len(n.predecessors) == 1
+        assert n.predecessors[0].id == NodeId(2)
+
+    def test_successors(self) -> None:
+        n = Node.get(NodeId(0))
+
+        assert len(n.successors) == 2
+        assert n.successors[0].id == NodeId(6)
+        assert n.successors[1].id == NodeId(453)
+
+    def test_neighbors(self) -> None:
+        n = Node.get(NodeId(0))
+
+        assert len(n.neighbors) == 3
+        assert n.neighbors[0].id == NodeId(6)
+        assert n.neighbors[1].id == NodeId(453)
+        assert n.neighbors[2].id == NodeId(2)
+
 
 # deletes edges
 
@@ -877,6 +899,18 @@ class TestEdgeList:
 
         killed_count = n.src_edges.count(lambda e: e.type == "KILLED")
         assert killed_count == 6
+
+    def test_add(self) -> None:
+        list1 = EdgeList([EdgeId(1), EdgeId(2)])
+        list2 = EdgeList([EdgeId(3), EdgeId(4)])
+
+        new_list = list1 + list2
+
+        assert len(new_list) == 4
+        assert EdgeId(1) in new_list
+        assert EdgeId(2) in new_list
+        assert EdgeId(3) in new_list
+        assert EdgeId(4) in new_list
 
 
 class TestEdge:
