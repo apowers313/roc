@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Collection, NewType
+from typing import Any, Collection, NewType, cast
 from uuid import uuid4
 
 from flexihumanhash import FlexiHumanHash
@@ -12,7 +12,7 @@ from .component import Component, register_component
 from .event import EventBus
 from .graphdb import Node, NodeId, register_node
 from .location import XLoc, YLoc
-from .perception import FeatureNode
+from .perception import Feature, FeatureNode
 
 ObjectId = NewType("ObjectId", int)
 
@@ -24,8 +24,14 @@ class Object(Node):
     resolve_count: int = Field(default=0)
 
     @property
-    def features(self) -> Collection[Node]:
-        return [e.dst for e in self.src_edges if e.type == "Feature"]
+    def features(self) -> list[FeatureNode]:
+        feature_groups = [e.dst for e in self.src_edges if e.type == "Features"]
+        feature_nodes: list[FeatureNode] = []
+        for fg in feature_groups:
+            assert isinstance(fg, FeatureGroup)
+            feature_nodes += fg.feature_nodes
+
+        return feature_nodes
 
     def __str__(self) -> str:
         fhh = FlexiHumanHash(
@@ -39,27 +45,45 @@ class Object(Node):
         return ret
 
     @staticmethod
-    def with_features(features: Collection[FeatureNode]) -> Object:
+    def with_features(fg: FeatureGroup) -> Object:
         o = Object()
-        for f in features:
-            Node.connect(o, f, "Feature")
+        Node.connect(o, fg, "Features")
 
         return o
 
     @staticmethod
-    def distance(obj: Node, features: Collection[FeatureNode]) -> float:
+    def distance(obj: Object, features: Collection[FeatureNode]) -> float:
         assert isinstance(obj, Object)
         # TODO: allowed_attrs is physical attributes, not really great but
         # NetHack doesn't give us much feature-space to work with. in the future
         # we may want to come back and use motion or other features for object recognition
-        allowed_attrs = {"Single", "Color", "Shape"}
+        allowed_attrs = {"Single", "Color", "Shape"}  # TODO: line? flood?
         features_strs: set[str] = {str(f) for f in features if f.labels & allowed_attrs}
         obj_features: set[str] = {
-            str(e.dst)
-            for e in obj.src_edges
-            if e.type == "Feature" and e.dst.labels & allowed_attrs
+            str(f) for f in obj.features if isinstance(f, FeatureNode) and f.labels & allowed_attrs
         }
         return float(len(features_strs ^ obj_features))
+
+
+@register_node("FeatureGroup")
+class FeatureGroup(Node):
+    @staticmethod
+    def with_features(features: Collection[Feature[Any]]) -> FeatureGroup:
+        feature_nodes: set[FeatureNode] = {f.to_nodes() for f in features}
+
+        return FeatureGroup.from_nodes(feature_nodes)
+
+    @staticmethod
+    def from_nodes(feature_nodes: Collection[FeatureNode]) -> FeatureGroup:
+        fg = FeatureGroup()
+        for f in feature_nodes:
+            Node.connect(fg, f, "Feature")
+
+        return fg
+
+    @property
+    def feature_nodes(self) -> list[FeatureNode]:
+        return [cast(FeatureNode, e.dst) for e in self.src_edges if e.type == "Feature"]
 
 
 class CandidateObjects:
@@ -68,15 +92,16 @@ class CandidateObjects:
         # the other objects in the current context should influence resolution
         distance_idx: dict[NodeId, float] = defaultdict(float)
 
-        def node_to_obj_ids(n: FeatureNode) -> None:
-            for e in n.dst_edges:
-                if "Object" in e.src.labels:
-                    # XXX: this is silly, just a placeholder until we have some
-                    # weighted features
-                    distance_idx[e.src.id] += Object.distance(e.src, feature_nodes)
-
-        for n in feature_nodes:
-            node_to_obj_ids(n)
+        # TODO: getting all objects for the set of features is going to be a
+        # huge explosion of objects... need to come back to this an make a
+        # smarter selection algorithm
+        feature_groups = [
+            fg for n in feature_nodes for fg in n.predecessors.select(labels={"FeatureGroup"})
+        ]
+        objs = [obj for fg in feature_groups for obj in fg.predecessors.select(labels={"Object"})]
+        for obj in objs:
+            assert isinstance(obj, Object)
+            distance_idx[obj.id] += Object.distance(obj, feature_nodes)
 
         self.distance_idx = distance_idx
         self.order: list[NodeId] = sorted(self.distance_idx, key=lambda k: self.distance_idx[k])
@@ -103,12 +128,16 @@ class ObjectResolver(Component):
         return e.src_id.name == "vision" and e.src_id.type == "attention"
 
     def do_object_resolution(self, e: AttentionEvent) -> None:
+        # TODO: instead of just taking the first focus_point (highest saliency
+        # strength) we probably want to adjust the strength for known objects /
+        # novel objects
         focus_point = e.data.focus_points.iloc[0]
         x = XLoc(int(focus_point["x"]))
         y = YLoc(int(focus_point["y"]))
         features = e.data.saliency_map.get_val(x, y)
-        feature_nodes: set[FeatureNode] = {f.to_nodes() for f in features}
-        objs = CandidateObjects(feature_nodes)
+        fg = FeatureGroup.with_features(features)
+        # Argument 1 to "with_features" of "FeatureGroup" has incompatible type "list[Feature[Any]]"; expected "FeatureGroup"
+        objs = CandidateObjects(fg.feature_nodes)
 
         o: Object | None = None
         if len(objs) > 0:
@@ -119,6 +148,6 @@ class ObjectResolver(Component):
         # should it be a % of features?
         # or the cutoff for matching be determined by how well the prediction is works?
         if o is None or dist > 1:
-            o = Object.with_features(feature_nodes)
+            o = Object.with_features(fg)
 
         self.obj_res_conn.send(o)

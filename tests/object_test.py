@@ -20,7 +20,7 @@ from roc.feature_extractors.shape import Shape, ShapeFeature
 from roc.feature_extractors.single import Single, SingleFeature
 from roc.graphdb import Node
 from roc.location import XLoc, YLoc
-from roc.object import CandidateObjects, Object, ObjectResolver
+from roc.object import CandidateObjects, FeatureGroup, Object, ObjectResolver
 from roc.perception import FeatureNode, VisionData
 
 
@@ -80,20 +80,32 @@ class TestObject:
         assert o.uuid > 0
         assert isinstance(o, Node)
 
+    def test_object_features(self, features) -> None:
+        fg = FeatureGroup.from_nodes([features["shape1"], features["color1"], features["single1"]])
+        obj = Object.with_features(fg)
+
+        assert len(obj.features) == 3
+        assert features["shape1"] in obj.features
+        assert features["color1"] in obj.features
+        assert features["single1"] in obj.features
+
     def test_distance_zero(self, features) -> None:
-        obj = Object.with_features([features["shape1"], features["color1"], features["single1"]])
+        fg = FeatureGroup.from_nodes([features["shape1"], features["color1"], features["single1"]])
+        obj = Object.with_features(fg)
 
         dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
         assert dist == 0
 
     def test_distance_one(self, features) -> None:
-        obj = Object.with_features([features["shape1"], features["color1"]])
+        fg = FeatureGroup.from_nodes([features["shape1"], features["color1"]])
+        obj = Object.with_features(fg)
 
         dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
         assert dist == 1
 
     def test_distance_two_exclusive(self, features) -> None:
-        obj = Object.with_features([features["shape1"], features["color1"]])
+        fg = FeatureGroup.from_nodes([features["shape1"], features["color1"]])
+        obj = Object.with_features(fg)
 
         dist = Object.distance(obj, [features["color1"], features["single1"]])
         assert dist == 2
@@ -109,7 +121,10 @@ class TestCandidateObjects:
     def test_one_object(self) -> None:
         o = Object()
         fn = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))).to_nodes()
-        Node.connect(o, fn, "Feature")
+        fg = FeatureGroup.from_nodes([fn])
+        Node.connect(o, fg, "Features")
+        print("o srcs", len(o.src_edges))
+        print("o dsts", len(o.dst_edges))
         objs = CandidateObjects([fn])
         assert len(objs) == 1
         o2, dist = objs[0]
@@ -117,8 +132,10 @@ class TestCandidateObjects:
         assert dist == 0
 
     def test_two_objects(self, features) -> None:
-        o1 = Object.with_features([features["single1"], features["single2"]])
-        o2 = Object.with_features([features["single2"], features["single3"]])
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["single2"]])
+        o1 = Object.with_features(fg1)
+        fg2 = FeatureGroup.from_nodes([features["single2"], features["single3"]])
+        o2 = Object.with_features(fg2)
         assert o1 is not o2
 
         # feature common to both objects
