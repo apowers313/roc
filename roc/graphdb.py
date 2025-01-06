@@ -6,9 +6,9 @@ from __future__ import annotations
 
 import functools
 import warnings
-from collections.abc import Iterator, Mapping, MutableSet
+from collections.abc import Collection, Iterable, Iterator, Mapping, MutableSet
 from itertools import islice
-from typing import Any, Callable, Generic, Literal, NewType, TypeVar, cast
+from typing import Any, Callable, Generic, Literal, NewType, TypeGuard, TypeVar, cast
 
 import mgclient
 import networkx as nx
@@ -573,15 +573,12 @@ class EdgeFetchIterator:
         return Edge.get(id)
 
 
-EdgeFilter = Callable[[Edge], bool] | str | EdgeId | None
-
-
 class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     """A list of Edges that is used by Node for keeping track of the connections it has.
     Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())
     """
 
-    def __init__(self, ids: list[EdgeId] | set[EdgeId]):
+    def __init__(self, ids: Iterable[EdgeId]):
         self.__edges: list[EdgeId] = list(ids)
 
     def __iter__(self) -> EdgeFetchIterator:
@@ -614,7 +611,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         self.__edges.append(e_id)
 
     def discard(self, e: Edge | EdgeId) -> None:
-        """Removes an edge to the list"""
+        """Removes an edge from the list"""
         e_id = Edge.to_id(e)
 
         self.__edges.remove(e_id)
@@ -629,22 +626,26 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
             if self.__edges[i] == old_id:
                 self.__edges[i] = new_id
 
-    def count(self, f: EdgeFilter = None) -> int:
-        return len(self.get_edges(f))
+    def select(
+        self,
+        *,
+        filter_fn: EdgeFilterFn | None = None,
+        type: str | None = None,
+        id: EdgeId | None = None,
+    ) -> EdgeList:
+        edge_ids = self.__edges
+        if filter_fn is not None:
+            # TODO: Edge.get_many() would be more efficient here if / when it
+            # gets implemented
+            edge_ids = [e for e in edge_ids if filter_fn(Edge.get(e))]
 
-    def get_edges(self, f: EdgeFilter = None) -> list[Edge]:
-        if not f:
-            return list(self.__iter__())
+        if type is not None:
+            edge_ids = [e for e in edge_ids if Edge.get(e).type == type]
 
-        if isinstance(f, str):
-            s = f
-            f = lambda e: e.type == s
+        if id is not None:
+            edge_ids = [e for e in edge_ids if e == id]
 
-        if isinstance(f, int):
-            n = f
-            f = lambda e: e.id == n
-
-        return list(filter(f, self.__iter__()))
+        return EdgeList(edge_ids)
 
 
 #######
@@ -699,21 +700,21 @@ class Node(BaseModel, extra="allow"):
         return self._src_edges + self._dst_edges
 
     @property
-    def predecessors(self) -> list[Node]:
+    def predecessors(self) -> NodeList:
         """All Nodes connected with an directed Edge that ends with this node.
         Also referred to as an 'in-neighbor'.
         """
-        return [e.src for e in self.dst_edges]
+        return NodeList([e.src.id for e in self.dst_edges])
 
     @property
-    def successors(self) -> list[Node]:
+    def successors(self) -> NodeList:
         """All Nodes connected with an directed Edge that starts with this node.
         Also referred to as an 'out-neighbor'.
         """
-        return [e.dst for e in self.src_edges]
+        return NodeList([e.dst.id for e in self.src_edges])
 
     @property
-    def neighbors(self) -> list[Node]:
+    def neighbors(self) -> NodeList:
         """All adjacent nodes, regardless of edge direction"""
         return self.successors + self.predecessors
 
@@ -963,7 +964,7 @@ class Node(BaseModel, extra="allow"):
     @classmethod
     def get_many(
         cls,
-        node_ids: set[NodeId],
+        node_ids: Collection[NodeId],
         *,
         batch_size: int = 128,
         db: GraphDB | None = None,
@@ -972,6 +973,9 @@ class Node(BaseModel, extra="allow"):
         progress_callback: ProgressFn | None = None,
     ) -> list[Node]:
         db = db or GraphDB.singleton()
+
+        if not isinstance(node_ids, set):
+            node_ids = set(node_ids)
 
         c = Node.get_cache()
         if len(node_ids) > c.maxsize:
@@ -1252,6 +1256,13 @@ class Node(BaseModel, extra="allow"):
         return db_ids.union(cached_ids)
 
     @staticmethod
+    def to_id(n: Node | NodeId) -> NodeId:
+        if isinstance(n, Node):
+            return n.id
+        else:
+            return n
+
+    @staticmethod
     def walk(
         n: Node,
         *,
@@ -1268,7 +1279,7 @@ class Node(BaseModel, extra="allow"):
             return
         _walk_history.add(n.id)
 
-        edge_filter = edge_filter or true_filter
+        edge_filter = edge_filter or cast(EdgeFilterFn, true_filter)
         node_filter = node_filter or true_filter
         # edge_callback = edge_callback or no_callback
         node_callback = node_callback or no_callback
@@ -1306,6 +1317,91 @@ class Node(BaseModel, extra="allow"):
                     )
 
 
+#######
+# Node List
+#######
+class NodeFetchIterator:
+    """The implementation of an iterator for an NodeList. Only intended to be used internally by
+    NodeList.
+    """
+
+    def __init__(self, node_list: list[NodeId]):
+        self._node_list = node_list
+        self.cur = 0
+
+    def __iter__(self) -> NodeFetchIterator:
+        return self
+
+    def __next__(self) -> Node: 
+        if self.cur >= len(self._node_list):
+            raise StopIteration
+
+        id = self._node_list[self.cur]
+        self.cur = self.cur + 1
+        return Node.get(id)
+
+
+class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
+    """A list of Nodes. Implements interfaces for both a MutableSet (i.e. set())
+    and a Mapping (i.e. read-only dict())
+    """
+
+    def __init__(self, ids: Iterable[NodeId]):
+        self._nodes: list[NodeId] = list(ids)
+
+    def __iter__(self) -> NodeFetchIterator:
+        return NodeFetchIterator(self._nodes)
+
+    def __getitem__(self, key: int) -> Node:
+        return Node.get(self._nodes[key])
+
+    def __len__(self) -> int:
+        return len(self._nodes)
+
+    def __contains__(self, n: Any) -> bool:
+        if isinstance(n, Node) or isinstance(n, int):
+            n_id = Node.to_id(n)  # type: ignore
+        else:
+            return False
+
+        return n_id in self._nodes
+
+    def __add__(self, l2: NodeList) -> NodeList:
+        return NodeList(self._nodes + l2._nodes)
+
+    def add(self, n: Node | NodeId) -> None:
+        """Adds a new Node to the list"""
+        n_id = Node.to_id(n)
+
+        if n_id in self._nodes:
+            return
+
+        self._nodes.append(n_id)
+
+    def discard(self, n: Node | NodeId) -> None:
+        """Removes an Node from the list"""
+        n_id = Node.to_id(n)
+
+        self._nodes.remove(n_id)
+
+    def select(
+        self,
+        *,
+        filter_fn: NodeFilterFn | None = None,
+        labels: set[str] | str | None = None,
+    ) -> NodeList:
+        node_ids = self._nodes
+        if filter_fn is not None:
+            Node.get_many(node_ids)
+            node_ids = [n for n in node_ids if filter_fn(Node.get(n))]
+
+        if labels is not None:
+            labels = set(labels) if isinstance(labels, str) else labels
+            node_ids = [n for n in node_ids if Node.get(n).labels == labels]
+
+        return NodeList(node_ids)
+
+
 node_registry: dict[frozenset[str], type] = {}
 
 
@@ -1329,7 +1425,7 @@ def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
 
 WalkMode = Literal["src", "dst", "both"]
 NodeFilterFn = Callable[[Node], bool]
-EdgeFilterFn = Callable[[Edge], bool]
+EdgeFilterFn = Callable[[Edge], TypeGuard[Edge]]
 ProgressFn = Callable[[list[Node]], None]
 NodeCallbackFn = Callable[[Node], None]
 EdgeCallbackFn = Callable[[Edge], None]

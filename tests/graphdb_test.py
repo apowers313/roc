@@ -17,6 +17,7 @@ from roc.graphdb import (
     GraphDB,
     Node,
     NodeId,
+    NodeList,
     NodeNotFound,
     node_registry,
     register_node,
@@ -678,7 +679,7 @@ class TestNode:
             root,
             mode="both",
             node_callback=lambda n: node_list.append(n),
-            edge_filter=lambda e: e.type == "Test",
+            edge_filter=lambda e: e.type == "Test",  # type: ignore
         )
         assert len(node_list) == 5
 
@@ -853,54 +854,31 @@ class TestEdgeList:
         assert e.id in n.src_edges
         assert "bob" not in n.src_edges  # type: ignore
 
-    def test_get_edges(self) -> None:
+    def test_select(self) -> None:
         n = Node.get(cast(NodeId, 2))
-        src_edges = n.src_edges.get_edges()
+        src_edges = n.src_edges.select()
 
-        assert isinstance(src_edges, list)
+        assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 15
 
-    def test_get_edges_by_type(self) -> None:
+    def test_select_by_type(self) -> None:
         n = Node.get(cast(NodeId, 2))
-        src_edges = n.src_edges.get_edges("LOYAL_TO")
+        src_edges = n.src_edges.select(type="LOYAL_TO")
 
-        assert isinstance(src_edges, list)
+        assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 2
 
-    def test_get_edges_by_id(self) -> None:
+    def test_select_by_id(self) -> None:
         n = Node.get(cast(NodeId, 2))
-        src_edges = n.src_edges.get_edges(cast(EdgeId, 2))
+        src_edges = n.src_edges.select(id=EdgeId(2))
 
-        assert isinstance(src_edges, list)
+        assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 1
         assert src_edges[0].type == "LOYAL_TO"
         assert src_edges[0].src_id == 2
         assert src_edges[0].dst_id == 3
 
-    def test_count(self) -> None:
-        n = Node.get(cast(NodeId, 2))
-        src_edge_count = n.src_edges.count()
-        dst_edge_count = n.dst_edges.count()
-
-        assert src_edge_count == 15
-        assert dst_edge_count == 1
-
-    def test_count_filter(self) -> None:
-        n = Node.get(cast(NodeId, 2))
-
-        loyal_count = n.src_edges.count(lambda e: e.type == "LOYAL_TO")
-        assert loyal_count == 2
-
-        killer_count = n.src_edges.count(lambda e: e.type == "KILLER_IN")
-        assert killer_count == 6
-
-        victim_count = n.src_edges.count(lambda e: e.type == "VICTIM_IN")
-        assert victim_count == 1
-
-        killed_count = n.src_edges.count(lambda e: e.type == "KILLED")
-        assert killed_count == 6
-
-    def test_add(self) -> None:
+    def test_concat(self) -> None:
         list1 = EdgeList([EdgeId(1), EdgeId(2)])
         list2 = EdgeList([EdgeId(3), EdgeId(4)])
 
@@ -1180,6 +1158,70 @@ class TestEdge:
     @pytest.mark.skip("pending")
     def test_edge_save(self) -> None:
         pass
+
+
+class TestNodeList:
+    def test_get_node(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        n = node_list[0]
+
+        assert n.id == 2
+        assert n.labels == {"Character"}
+
+    def test_iter(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        n = node_list[0]
+
+        assert n.id == 2
+        assert n.labels == {"Character"}
+
+    # test_add
+    # test_add_duplicate
+    # test_discard
+
+    def test_contains(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        n = node_list[0]
+
+        assert n in node_list
+        assert n.id in node_list
+        assert "bob" not in n.src_edges  # type: ignore
+
+    def test_select(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        ret = node_list.select()
+
+        assert isinstance(ret, NodeList)
+        assert len(ret) == 3
+
+    def test_select_by_labels(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)]).select(labels={"Character"})
+
+        assert isinstance(node_list, NodeList)
+        assert len(node_list) == 2
+        assert node_list[0].id == NodeId(2)
+        assert node_list[1].id == NodeId(0)
+
+    def test_select_by_function(self) -> None:
+        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)]).select(
+            filter_fn=lambda n: n.id == NodeId(1)
+        )
+
+        assert isinstance(node_list, NodeList)
+        assert len(node_list) == 1
+        assert node_list[0].id == NodeId(1)
+
+    def test_concat(self) -> None:
+        list1 = NodeList([NodeId(1), NodeId(2)])
+        list2 = NodeList([NodeId(3), NodeId(4)])
+
+        new_list = list1 + list2
+
+        assert len(new_list) == 4
+        assert NodeId(1) in new_list
+        assert NodeId(2) in new_list
+        assert NodeId(3) in new_list
+        assert NodeId(4) in new_list
 
 
 class TestTypes:
