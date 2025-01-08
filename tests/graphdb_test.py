@@ -19,7 +19,9 @@ from roc.graphdb import (
     NodeId,
     NodeList,
     NodeNotFound,
+    edge_registry,
     node_registry,
+    register_edge,
     register_node,
 )
 
@@ -769,6 +771,20 @@ class TestNode:
         assert k in node_registry
         assert node_registry[k] is Foo
 
+    def test_register_node_duplicate(self) -> None:
+        @register_node("Foo", "TestNode")
+        class Foo(Node):
+            name: str
+
+        with pytest.raises(
+            Exception,
+            match="node_register can't register labels 'Foo, TestNode' because they have already been registered",
+        ):
+
+            @register_node("Foo", "TestNode")
+            class Bar(Node):
+                name: str
+
     def test_resolve_registered_node(self) -> None:
         @register_node("Foo", "TestNode")
         class Foo(Node):
@@ -783,6 +799,23 @@ class TestNode:
         f2 = Node.get(old_id)
 
         assert isinstance(f2, Foo)
+
+    def test_registered_node_sets_labels(self) -> None:
+        @register_node("Foo", "TestNode")
+        class Foo(Node):
+            name: str
+
+        f = Foo(name="bar")
+        Node.save(f)
+        old_id = f.id
+        del f
+        node_cache = Node.get_cache()
+        node_cache.clear()
+        f2 = Node.get(old_id)
+
+        assert isinstance(f2, Foo)
+        assert f2.labels == {"Foo", "TestNode"}
+        assert f2.name == "bar"
 
     def test_predecessors(self) -> None:
         n = Node.get(NodeId(0))
@@ -1158,6 +1191,123 @@ class TestEdge:
     @pytest.mark.skip("pending")
     def test_edge_save(self) -> None:
         pass
+
+    def test_edge_connect(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        f = Edge.connect(n1, n2, "Foo")
+        assert f.type == "Foo"
+
+    def test_edge_connect_no_type(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        with pytest.raises(Exception):
+            Edge.connect(n1, n2)
+
+    def test_edge_type_lookup(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge(edgetype="Foo")
+        class Foo(Edge):
+            name: str
+
+        f = Edge.connect(n1, n2, "Foo", name="bar")
+        assert f.type == "Foo"
+        assert "Foo" in edge_registry
+        assert edge_registry["Foo"] is Foo
+
+    def test_register_edge(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge(edgetype="Foo")
+        class Foo(Edge):
+            name: str
+
+        f = Foo.connect(n1, n2, name="bar")
+        assert f.type == "Foo"
+        assert "Foo" in edge_registry
+        assert edge_registry["Foo"] is Foo
+
+    def test_register_edge_duplicate(self) -> None:
+        @register_edge("Foo")
+        class Foo(Edge):
+            name: str
+
+        with pytest.raises(
+            Exception,
+            match="edge_register can't register type 'Foo' because it has already been registered",
+        ):
+
+            @register_edge("Foo")
+            class Bar(Edge):
+                name: str
+
+    def test_resolve_registered_edge(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge(edgetype="Foo")
+        class Foo(Edge):
+            name: str
+
+        f = Foo.connect(n1, n2, name="bar")
+        Edge.save(f)
+        old_id = f.id
+        del f
+        node_cache = Node.get_cache()
+        node_cache.clear()
+        f2 = Edge.get(old_id)
+
+        assert isinstance(f2, Foo)
+
+    def test_registered_node_sets_type(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge(edgetype="Foo")
+        class Foo(Edge):
+            name: str
+
+        f = Foo.connect(n1, n2, name="bar")
+        Edge.save(f)
+        old_id = f.id
+        del f
+        node_cache = Node.get_cache()
+        node_cache.clear()
+        f2 = Edge.get(old_id)
+
+        assert isinstance(f2, Foo)
+        assert f2.type == "Foo"
+        assert f2.name == "bar"
+
+    def test_connection_allowed(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge("Foo", allowed_connections=[("Node", "Node")])
+        class Foo(Edge):
+            name: str
+
+        f = Foo.connect(n1, n2, name="bar")
+        assert f.type == "Foo"
+
+    def test_connection_not_allowed(self) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge("Foo", allowed_connections=[("Node", "Bar")])
+        class Foo(Edge):
+            name: str
+
+        with pytest.raises(
+            Exception,
+            match="attempting to connect edge 'Foo' from 'Node' to 'Node' not in allowed connections list",
+        ):
+            Foo.connect(n1, n2, name="bar")
 
 
 class TestNodeList:

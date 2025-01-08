@@ -52,6 +52,8 @@ class Config(BaseSettings):
     db_username: str = Field(default="")
     db_password: str = Field(default="")
     db_lazy: bool = Field(default=False)
+    db_strict_edges: bool = Field(default=False)
+    db_strict_edges_warn: bool = Field(default=False)
     # graph config
     node_cache_size: int = Field(default=2**30)
     edge_cache_size: int = Field(default=2**30)

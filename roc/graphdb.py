@@ -8,12 +8,23 @@ import functools
 import warnings
 from collections.abc import Collection, Iterable, Iterator, Mapping, MutableSet
 from itertools import islice
-from typing import Any, Callable, Generic, Literal, NewType, TypeGuard, TypeVar, cast
+from typing import (
+    Any,
+    Callable,
+    Collection,
+    Generic,
+    Iterable,
+    Literal,
+    NewType,
+    TypeGuard,
+    TypeVar,
+    cast,
+)
 
 import mgclient
 import networkx as nx
 from cachetools import LRUCache
-from pydantic import BaseModel, Field, create_model, field_validator
+from pydantic import BaseModel, Field, create_model
 from typing_extensions import Self
 
 from .config import Config
@@ -24,6 +35,7 @@ CacheType = TypeVar("CacheType")
 CacheId = TypeVar("CacheId")
 EdgeId = NewType("EdgeId", int)
 NodeId = NewType("NodeId", int)
+EdgeType = TypeVar("EdgeType", bound="Edge")
 NodeType = TypeVar("NodeType", bound="Node")
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
@@ -69,6 +81,8 @@ class GraphDB:
         self.username = settings.db_username
         self.password = settings.db_password
         self.lazy = settings.db_lazy
+        self.strict_edges = settings.db_strict_edges
+        self.strict_edges_warn = settings.db_strict_edges_warn
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         self.closed = False
@@ -284,22 +298,18 @@ class Edge(BaseModel, extra="allow"):
     a graph database query if they don't already exist in the edge cache.
     """
 
-    id: EdgeId = Field(exclude=True)
-    # XXX: type, src_id, and dst_id used to be pydantic literals, but updating
-    # the pydantic version broke them
+    _id: EdgeId
     type: str = Field(exclude=True)
     src_id: NodeId = Field(exclude=True)
     dst_id: NodeId = Field(exclude=True)
+    allowed_connections: EdgeConnectionsList | None = Field(exclude=True, default=None)
     _no_save = False
     _new = False
     _deleted = False
 
-    @field_validator("id", mode="before")
-    def default_id(cls, id: EdgeId | None) -> EdgeId:
-        if isinstance(id, int):
-            return id
-
-        return get_next_new_edge_id()
+    @property
+    def id(self) -> EdgeId:
+        return self._id
 
     @property
     def src(self) -> Node:
@@ -315,23 +325,15 @@ class Edge(BaseModel, extra="allow"):
 
     def __init__(
         self,
-        src_id: NodeId,
-        dst_id: NodeId,
-        type: str,
-        *,
-        id: EdgeId | None = None,
-        data: dict[Any, Any] | None = None,
+        **kwargs: Any,
     ):
-        data = data or {}
-        super().__init__(
-            src_id=src_id,
-            dst_id=dst_id,
-            type=type,
-            id=id,
-            **data,
-        )
+        super().__init__(**kwargs)
 
-        if self.id < 0:
+        # set passed-in values or their defaults
+        # self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
+        self._id = kwargs["_id"] if "_id" in kwargs else get_next_new_edge_id()
+
+        if self._id < 0:
             self._new = True
             Edge.get_cache()[self.id] = self
 
@@ -393,15 +395,15 @@ class Edge(BaseModel, extra="allow"):
             raise EdgeNotFound(f"Couldn't find edge ID: {id}")
 
         e = edge_list[0]["e"]
-        props = None
+        props = {}
         if hasattr(e, "properties"):
             props = e.properties
         return cls(
-            e.start_id,
-            e.end_id,
-            id=id,
-            data=props,
+            src_id=e.start_id,
+            dst_id=e.end_id,
+            _id=id,
             type=e.type,
+            **props,
         )
 
     @classmethod
@@ -466,7 +468,7 @@ class Edge(BaseModel, extra="allow"):
         if len(ret) != 1:
             raise EdgeCreateFailed("failed to create new edge")
 
-        e.id = ret[0]["e_id"]
+        e._id = ret[0]["e_id"]
         e._new = False
         # update the cache; if being called during __del__ then the cache entry may not exist
         try:
@@ -503,6 +505,56 @@ class Edge(BaseModel, extra="allow"):
 
         return e
 
+    @classmethod
+    def connect(
+        cls,
+        src: Node | NodeId,
+        dst: Node | NodeId,
+        edgetype: str | None = None,
+        db: GraphDB | None = None,
+        **kwargs: Any,
+    ) -> Self:
+        db = db or GraphDB.singleton()
+
+        clstype: str | None = None
+        # lookup class in based on specified type
+        if cls is Edge and edgetype in edge_registry:
+            cls = edge_registry[edgetype]
+
+        # get type from class model
+        if cls is not Edge:
+            clstype = cls.model_fields["type"].get_default(call_default_factory=True)
+
+        # no class found, use edge type instead
+        if clstype is None and edgetype is not None:
+            clstype = edgetype
+
+        # couldn't find any type
+        if clstype is None:
+            raise Exception("no Edge type provided")
+
+        # check allowed_connections
+        allowed_connections = cls.model_fields["allowed_connections"].get_default(
+            call_default_factory=True
+        )
+        if allowed_connections is not None:
+            conn = (src.__class__.__name__, dst.__class__.__name__)
+            if conn not in allowed_connections:
+                raise Exception(
+                    f"attempting to connect edge '{clstype}' from '{conn[0]}' to '{conn[1]}' not in allowed connections list"
+                )
+
+        src_id = Node.to_id(src)
+        dst_id = Node.to_id(dst)
+
+        e = cls(src_id=src_id, dst_id=dst_id, type=clstype, **kwargs)
+        src_node = Node.get(src_id, db=db)
+        dst_node = Node.get(dst_id, db=db)
+        src_node.src_edges.add(e)
+        dst_node.dst_edges.add(e)
+
+        return e
+
     @staticmethod
     def delete(e: Edge, *, db: GraphDB | None = None) -> None:
         """Deletes the specified edge from the database. If the edge has not already been persisted
@@ -532,7 +584,10 @@ class Edge(BaseModel, extra="allow"):
     @staticmethod
     def to_dict(e: Edge, include_type: bool = False) -> dict[str, Any]:
         """Convert a Edge to a Python dictionary"""
-        ret = e.model_dump()
+        # XXX: the excluded fields below shouldn't have been included in the
+        # first place because Pythonic should exclude fields with underscores
+        ret = e.model_dump(exclude={"_id"})
+
         if include_type and hasattr(e, "type"):
             ret["type"] = e.type
         return ret
@@ -547,6 +602,36 @@ class Edge(BaseModel, extra="allow"):
 
 EdgeCache = GraphCache[EdgeId, Edge]
 edge_cache: EdgeCache | None = None
+EdgeConnectionsList = Iterable[tuple[str, str]]
+edge_registry: dict[str, type] = {}
+
+
+def register_edge(
+    edgetype: str,
+    allowed_connections: EdgeConnectionsList | None = None,
+) -> Callable[[type[EdgeType]], type[EdgeType]]:
+    def edge_register_decorator(cls: type[EdgeType]) -> type[EdgeType]:
+        if edgetype in edge_registry:
+            raise Exception(
+                f"edge_register can't register type '{edgetype}' because it has already been registered"
+            )
+
+        WrapperClass = create_model(
+            "WrapperClass",
+            __base__=cls,
+            type=(str, Field(exclude=True, default_factory=lambda: edgetype)),
+            allowed_connections=(
+                EdgeConnectionsList,
+                Field(exclude=True, default_factory=lambda: allowed_connections),
+            ),
+        )
+
+        functools.update_wrapper(WrapperClass, cls, updated=())
+        edge_registry[edgetype] = WrapperClass
+
+        return WrapperClass
+
+    return edge_register_decorator
 
 
 #######
@@ -877,15 +962,15 @@ class Node(BaseModel, extra="allow"):
                         continue
 
                     # create a new edge
-                    props = None
+                    props = {}
                     if hasattr(e, "properties"):
                         props = e.properties
                     new_edge = Edge(
-                        e.start_id,
-                        e.end_id,
-                        id=e.id,
-                        data=props,
+                        src_id=e.start_id,
+                        dst_id=e.end_id,
+                        _id=e.id,
                         type=e.type,
+                        **props,
                     )
                     edge_cache[e.id] = new_edge
             else:
@@ -1162,37 +1247,22 @@ class Node(BaseModel, extra="allow"):
         cls,
         src: NodeId | Self,
         dst: NodeId | Self,
-        type: str,
+        type: str | None,
         *,
         db: GraphDB | None = None,
     ) -> Edge:
         """Connects two nodes (creates an Edge between two nodes)
 
         Args:
-            src (NodeId | Node): _description_
-            dst (NodeId | Node): _description_
-            type (str): _description_
+            src (NodeId | Node): The Node to use at the start of the connection
+            dst (NodeId | Node): The Node to use at the end of the connection
+            type (str): The type of the edge to use for the connection
             db (GraphDB | None): the graph database to use, or None to use the GraphDB singleton
 
         Returns:
-            Edge: _description_
+            Edge: The Edge that was created
         """
-        if isinstance(src, Node):
-            src_id = src.id
-        else:
-            src_id = src
-
-        if isinstance(dst, Node):
-            dst_id = dst.id
-        else:
-            dst_id = dst
-
-        e = Edge(src_id, dst_id, type)
-        src_node = cls.get(src_id, db=db)
-        dst_node = cls.get(dst_id, db=db)
-        src_node.src_edges.add(e)
-        dst_node.dst_edges.add(e)
-        return e
+        return Edge.connect(src, dst, type, db=db)
 
     @staticmethod
     def delete(n: Node, *, db: GraphDB | None = None) -> None:
@@ -1332,7 +1402,7 @@ class NodeFetchIterator:
     def __iter__(self) -> NodeFetchIterator:
         return self
 
-    def __next__(self) -> Node: 
+    def __next__(self) -> Node:
         if self.cur >= len(self._node_list):
             raise StopIteration
 
@@ -1408,6 +1478,13 @@ node_registry: dict[frozenset[str], type] = {}
 def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
     def node_register_decorator(cls: type[NodeType]) -> type[NodeType]:
         lbls = frozenset(args)
+
+        if lbls in node_registry:
+            labels = list(lbls)
+            labels.sort()
+            raise Exception(
+                f"""node_register can't register labels '{", ".join(labels)}' because they have already been registered"""
+            )
 
         WrapperClass = create_model(
             "WrapperClass",

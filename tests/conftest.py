@@ -33,6 +33,24 @@ def clear_cache() -> Generator[None, None, None]:
     Edge.get_cache().clear()
 
 
+@pytest.fixture(autouse=True)
+def restore_registries() -> Generator[None, None, None]:
+    from roc.graphdb import edge_registry, node_registry
+
+    orig_node_registry = node_registry.copy()
+    orig_edge_registry = edge_registry.copy()
+
+    yield
+
+    node_registry.clear()
+    for nk, nv in orig_node_registry.items():
+        node_registry[nk] = nv
+
+    edge_registry.clear()
+    for ek, ev in orig_edge_registry.items():
+        edge_registry[ek] = ev
+
+
 @pytest.fixture
 def new_edge() -> tuple[Edge, Node, Node]:
     src = Node(labels=["TestNode"])
