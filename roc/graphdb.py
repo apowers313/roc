@@ -5,6 +5,7 @@ database-specific features as various classes (GraphDB, Node, Edge, etc)
 from __future__ import annotations
 
 import functools
+import inspect
 import warnings
 from collections.abc import Collection, Iterable, Iterator, Mapping, MutableSet
 from itertools import islice
@@ -25,6 +26,8 @@ import mgclient
 import networkx as nx
 from cachetools import LRUCache
 from pydantic import BaseModel, Field, create_model
+from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 from typing_extensions import Self
 
 from .config import Config
@@ -519,7 +522,7 @@ class Edge(BaseModel, extra="allow"):
         clstype: str | None = None
         # lookup class in based on specified type
         if cls is Edge and edgetype in edge_registry:
-            cls = edge_registry[edgetype]
+            cls = edge_registry[edgetype]  # type: ignore
 
         # get type from class model
         if cls is not Edge:
@@ -603,7 +606,7 @@ class Edge(BaseModel, extra="allow"):
 EdgeCache = GraphCache[EdgeId, Edge]
 edge_cache: EdgeCache | None = None
 EdgeConnectionsList = Iterable[tuple[str, str]]
-edge_registry: dict[str, type] = {}
+edge_registry: dict[str, type[Edge]] = {}
 
 
 def register_edge(
@@ -984,7 +987,8 @@ class Node(BaseModel, extra="allow"):
             else:
                 mkcls = cls
                 cls_lbls = frozenset(n.labels)
-                if cls is Node and cls_lbls in node_registry:
+                if cls is Node:
+                    # TODO: iterate through registry to find labels?
                     mkcls = node_registry[cls_lbls]
                 new_node = mkcls(
                     _id=n.id,
@@ -1472,18 +1476,17 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
         return NodeList(node_ids)
 
 
-node_registry: dict[frozenset[str], type] = {}
+node_registry: dict[str, type[Node]] = {}
 
 
 def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
     def node_register_decorator(cls: type[NodeType]) -> type[NodeType]:
         lbls = frozenset(args)
+        clsname = cls.__name__
 
-        if lbls in node_registry:
-            labels = list(lbls)
-            labels.sort()
+        if clsname in node_registry:
             raise Exception(
-                f"""node_register can't register labels '{", ".join(labels)}' because they have already been registered"""
+                f"""node_register can't register '{clsname}' because that name has already been registered"""
             )
 
         WrapperClass = create_model(
@@ -1493,7 +1496,7 @@ def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
         )
 
         functools.update_wrapper(WrapperClass, cls, updated=())
-        node_registry[lbls] = WrapperClass
+        node_registry[clsname] = WrapperClass
 
         return WrapperClass
 
@@ -1509,3 +1512,195 @@ EdgeCallbackFn = Callable[[Edge], None]
 
 NodeCache = GraphCache[NodeId, Node]
 node_cache: NodeCache | None = None
+
+
+class SchemaValidationError(Exception):
+    def __init__(self, errors: list[str]) -> None:
+        err_str = ""
+        self.errors = errors
+
+        for errno in range(len(errors)):
+            err = errors[errno]
+            err_str += f"\t{errno}: {err}\n"
+
+        super().__init__(f"Error validating schema:\n{err_str}")
+
+
+class Schema:
+    def __init__(self, skip_validation: bool = False) -> None:
+        if not skip_validation:
+            self.validate()
+
+        self.edge_names = set(edge_registry.keys())
+        self.edges = [EdgeDescription(edge_cls) for edge_cls in edge_registry.values()]
+        self.node_names = {n for e in self.edges for n in e.related_nodes}
+        self.nodes = [NodeDescription(node_registry[node_name]) for node_name in self.node_names]
+
+    @classmethod
+    def validate(cls) -> None:
+        errors: list[str] = []
+        for edge_name, edge_cls in edge_registry.items():
+            allowed_connections = edge_cls.model_fields["allowed_connections"].get_default(
+                call_default_factory=True
+            )
+
+            for src, dst in allowed_connections:
+                if src not in node_registry:
+                    errors.append(
+                        f"Edge '{edge_name}' requires src Node '{src}', which is not registered"
+                    )
+
+                if dst not in node_registry:
+                    errors.append(
+                        f"Edge '{edge_name}' requires dst Node '{dst}', which is not registered"
+                    )
+
+        if len(errors) > 0:
+            raise SchemaValidationError(errors)
+
+    def to_mermaid(self, name: str) -> str:
+        ret = "classDiagram\n"
+
+        # nodes
+        for n in self.nodes:
+            ret += n.to_mermaid()
+
+        # edges
+        for e in self.edges:
+            ret += e.to_mermaid()
+
+        return ret
+
+
+def pydantic_get_fields(m: type[BaseModel]) -> set[str]:
+    return set(m.model_fields.keys())
+
+
+def pydantic_get_field(m: type[BaseModel], f: str) -> FieldInfo:
+    return m.model_fields[f]
+
+
+def pydantic_get_default(m: type[BaseModel], f: str) -> Any:
+    return m.model_fields[f].get_default(call_default_factory=True)
+
+
+@functools.cache
+def get_methods(c: type[object]) -> set[str]:
+    print("getting methods for", c.__name__)
+    return {name for name, member in inspect.getmembers(c) if inspect.isfunction(member)}
+
+
+class FieldDescription:
+    def __init__(self, name: str, f: FieldInfo, *, simple_types: bool = True) -> None:
+        assert isinstance(f, FieldInfo)
+        self.field_info = f
+        self.name = name
+        self.default_val = f.get_default(call_default_factory=True)
+
+        # TODO: types could be prettier
+        if simple_types:
+            self.type = f.annotation.__name__ if f.annotation else "<no type>"
+        else:
+            self.type = str(f.annotation) if f.annotation else "<no type>"
+
+        print(self)
+
+    def __str__(self) -> str:
+        return f"Field({self.name}: {self.type} = {self.default_val})"
+
+
+class ModelDescription:
+    def __init__(self, model: type[BaseModel]) -> None:
+        # fields
+        self.fields = [
+            FieldDescription(fieldname, pydantic_get_field(model, fieldname))
+            for fieldname in pydantic_get_fields(model)
+        ]
+
+        # parents
+        self.parent_class_names = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
+        if model.__name__ in self.parent_class_names:
+            self.parent_class_names.remove(model.__name__)
+        if "Node" in self.parent_class_names:
+            self.parent_class_names.remove("Node")
+        self.parents = [
+            NodeDescription(node_registry[node_name]) for node_name in self.parent_class_names
+        ]
+
+        # methods
+        self.methods = (
+            get_methods(model) - get_methods(object) - get_methods(BaseModel) - get_methods(Node)
+        )
+        self.method_sigs = {k: inspect.signature(getattr(model, k)) for k in self.methods}
+
+        # TODO: local vs inherited methods and parents
+
+
+class NodeDescription(ModelDescription):
+    def __init__(self, node_cls: type[Node]) -> None:
+        super().__init__(node_cls)
+
+        # TODO: labels?
+
+        self.name = node_cls.__name__
+
+        print("node:", self.name)
+
+    def __str__(self) -> str:
+        return f"NodeDesc({self.name})"
+
+    def to_mermaid(self, indent: int = 4) -> str:
+        ret = f"""\n{' ':>{indent}}%% Node: {self.name}\n"""
+
+        # add fields
+        for field in self.fields:
+            default_val = (
+                f" = {field.default_val}" if field.default_val is not PydanticUndefined else ""
+            )
+            ret += f"""{' ':>{indent}}{self.name}: +{field.type} {field.name}{default_val}\n"""
+
+        # add methods
+        for method in self.methods:
+            ret += f"""{' ':>{indent}}{self.name}: +{method}{self.method_sigs[method]}\n"""
+
+        return ret
+
+
+class EdgeDescription(ModelDescription):
+    def __init__(self, edge_cls: type[Edge]) -> None:
+        super().__init__(edge_cls)
+
+        self.edge_cls = edge_cls
+        self.name = edge_cls.__name__
+        self.edgetype = pydantic_get_default(edge_cls, "type")
+
+        # allowed connections
+        self.allowed_connections = cast(
+            EdgeConnectionsList, pydantic_get_default(edge_cls, "allowed_connections")
+        )
+        assert self.allowed_connections is not None
+
+        # related nodes
+        self.related_nodes: set[str] = set()
+        for conn in self.allowed_connections:
+            self.related_nodes.add(conn[0])
+            self.related_nodes.add(conn[1])
+
+    def __str__(self) -> str:
+        return f"EdgeDesc({self.name})"
+
+    @property
+    def resolved_name(self) -> str:
+        if self.edgetype == self.name:
+            return self.name
+
+        return f"{self.edgetype} ({self.name})"
+
+    def to_mermaid(self, indent: int = 4) -> str:
+        ret = f"""\n{' ':>{indent}}%% Edge: {self.resolved_name}\n"""
+
+        # add connections
+        for conn in self.allowed_connections:
+            ret += f"""{' ':>{indent}}{conn[0]} --> {conn[1]}: {self.resolved_name}\n"""
+
+        return ret

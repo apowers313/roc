@@ -7,18 +7,22 @@ import pytest
 from cachetools import Cache
 from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from roc.graphdb import (
     Edge,
+    EdgeDescription,
     EdgeId,
     EdgeList,
     EdgeNotFound,
     GraphDB,
     Node,
+    NodeDescription,
     NodeId,
     NodeList,
     NodeNotFound,
+    Schema,
+    SchemaValidationError,
     edge_registry,
     node_registry,
     register_edge,
@@ -1396,3 +1400,146 @@ class TestTypes:
         GotCharacter(name="bob", labels=set())
         GotCharacter(name="bob", id=None)
         GotCharacter(name="bob")
+
+
+class TestSchema:
+    def test_validate(self) -> None:
+        @register_node("Foo")
+        class Foo(Node):
+            pass
+
+        @register_node("Bar")
+        class Bar(Node):
+            pass
+
+        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
+        class Link(Edge):
+            pass
+
+        Schema.validate()
+
+    def test_validate_fails(self) -> None:
+        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
+        class Link(Edge):
+            pass
+
+        expected_error = (
+            "Error validating schema:\n"
+            + "\t0: Edge 'Link' requires src Node 'Foo', which is not registered\n"
+            + "\t1: Edge 'Link' requires dst Node 'Bar', which is not registered\n"
+        )
+
+        with pytest.raises(SchemaValidationError, match=expected_error):
+            Schema.validate()
+
+    def test_create(self) -> None:
+        @register_node("Foo")
+        class Foo(Node):
+            pass
+
+        @register_node("Bar")
+        class Bar(Node):
+            pass
+
+        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
+        class Link(Edge):
+            pass
+
+        schema = Schema()
+        assert schema.edge_names == {"Link"}
+        assert schema.node_names == {"Foo", "Bar"}
+
+    def test_mermaid(self) -> None:
+        @register_node("Bar")
+        class Bar(Node):
+            weight: float
+
+            def print_weight(self) -> None:
+                pass
+
+        @register_node("Foo")
+        class Foo(Bar):
+            name: str = Field(default="Bob")
+
+            def set_name(self, name: str = "Uggo") -> str:
+                self.name = name
+                return self.name
+
+        @register_node("Baz")
+        class Baz(Node):
+            pass
+
+        @register_edge("Link", allowed_connections=[("Foo", "Baz")])
+        class Link(Edge):
+            pass
+
+        schema = Schema()
+        print("schema node names", schema.node_names)
+        print("nodes", schema.nodes)
+        print(schema.to_mermaid("foo"))
+
+
+class TestEdgeDescription:
+    def test_create(self) -> None:
+        @register_node("Foo")
+        class Foo(Node):
+            pass
+
+        @register_node("Bar")
+        class Bar(Node):
+            pass
+
+        @register_edge("Link", allowed_connections=[("Foo", "Bar"), ("Bar", "Foo")])
+        class Link(Edge):
+            name: str = "Bob"
+
+        ed = EdgeDescription(Link)
+        assert ed.edge_cls is Link
+        assert ed.allowed_connections == [("Foo", "Bar"), ("Bar", "Foo")]
+        assert ed.related_nodes == {"Foo", "Bar"}
+
+        for f in ed.fields:
+            print("f", f)
+        # assert len(se.fields) == 1
+        print("edge type", ed.edgetype)
+        print("edge name", ed.edgetype)
+        print("se.nodes", ed.related_nodes)
+        print("se mermaid:", ed.to_mermaid())
+
+
+class TestNodeDescription:
+    def test_create(self) -> None:
+        @register_node("Bar")
+        class Bar(Node):
+            weight: float
+
+            def print_weight(self) -> None:
+                pass
+
+        @register_node("Foo")
+        class Foo(Bar):
+            name: str = Field(default="Bob")
+
+            def set_name(self, name: str = "Uggo") -> str:
+                self.name = name
+                return self.name
+
+        nd = NodeDescription(Foo)
+
+        print("node name", nd.name)
+        print("node fields", nd.fields)
+        print("parent class names", nd.parent_class_names)
+        print("parents", nd.parents)
+        print("parents[0]", nd.parents[0])
+        print("methods", nd.methods)
+        print("method sigs", nd.method_sigs)
+        print("method sigs", nd.method_sigs["set_name"])
+        print("method sigs set_name parameters", nd.method_sigs["set_name"].parameters)
+        print(
+            "method sigs set_name parameters name",
+            nd.method_sigs["set_name"].parameters["name"].default,
+        )
+        print(
+            "method sigs set_name parameters name",
+            nd.method_sigs["set_name"].parameters["name"].annotation.__name__,
+        )
