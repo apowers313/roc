@@ -35,9 +35,10 @@ def clear_cache() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def restore_registries() -> Generator[None, None, None]:
-    from roc.graphdb import edge_registry, node_registry
+    from roc.graphdb import edge_registry, node_label_registry, node_registry
 
     orig_node_registry = node_registry.copy()
+    orig_node_label_registry = node_label_registry.copy()
     orig_edge_registry = edge_registry.copy()
 
     yield
@@ -45,6 +46,10 @@ def restore_registries() -> Generator[None, None, None]:
     node_registry.clear()
     for nk, nv in orig_node_registry.items():
         node_registry[nk] = nv
+
+    node_label_registry.clear()
+    for nlk, nlv in orig_node_label_registry.items():
+        node_label_registry[nlk] = nlv
 
     edge_registry.clear()
     for ek, ev in orig_edge_registry.items():
