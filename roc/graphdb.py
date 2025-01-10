@@ -19,6 +19,7 @@ from typing import (
     NewType,
     TypeGuard,
     TypeVar,
+    _SpecialForm,
     cast,
 )
 
@@ -987,9 +988,8 @@ class Node(BaseModel, extra="allow"):
             else:
                 mkcls = cls
                 cls_lbls = frozenset(n.labels)
-                if cls is Node:
-                    # TODO: iterate through registry to find labels?
-                    mkcls = node_registry[cls_lbls]
+                if cls is Node and cls_lbls in node_label_registry:
+                    mkcls = cast(type[Self], node_label_registry[cls_lbls])
                 new_node = mkcls(
                     _id=n.id,
                     _src_edges=EdgeList(src_edges),
@@ -1477,6 +1477,7 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
 
 
 node_registry: dict[str, type[Node]] = {}
+node_label_registry: dict[frozenset[str], type[Node]] = {}
 
 
 def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
@@ -1489,6 +1490,12 @@ def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
                 f"""node_register can't register '{clsname}' because that name has already been registered"""
             )
 
+        if lbls in node_label_registry:
+            labels = ", ".join(sorted(list(lbls)))
+            raise Exception(
+                f"""node_register can't register labels '{labels}' because they have already been registered"""
+            )
+
         WrapperClass = create_model(
             "WrapperClass",
             __base__=cls,
@@ -1497,6 +1504,7 @@ def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
 
         functools.update_wrapper(WrapperClass, cls, updated=())
         node_registry[clsname] = WrapperClass
+        node_label_registry[lbls] = WrapperClass
 
         return WrapperClass
 
@@ -1531,10 +1539,31 @@ class Schema:
         if not skip_validation:
             self.validate()
 
+        # edges
         self.edge_names = set(edge_registry.keys())
         self.edges = [EdgeDescription(edge_cls) for edge_cls in edge_registry.values()]
-        self.node_names = {n for e in self.edges for n in e.related_nodes}
-        self.nodes = [NodeDescription(node_registry[node_name]) for node_name in self.node_names]
+        self.edges.sort(key=lambda e: e.name)
+
+        # edge nodes
+        self.edge_node_names = {n for e in self.edges for n in e.related_nodes}
+        self.edge_nodes = [
+            NodeDescription(node_registry[node_name]) for node_name in self.edge_node_names
+        ]
+        self.edge_nodes.sort(key=lambda n: n.name)
+
+        # inherited nodes
+        self.inherited_node_names: set[str] = set()
+        for n in self.edge_nodes:
+            self.inherited_node_names |= n.parent_class_names
+        self.inherited_node_names -= self.edge_node_names
+        self.inherited_nodes = [
+            NodeDescription(node_registry[node_name]) for node_name in self.inherited_node_names
+        ]
+        self.inherited_nodes.sort(key=lambda n: n.name)
+
+        # all nodes
+        self.nodes = self.edge_nodes + self.inherited_nodes
+        self.node_names = {n.name for n in self.nodes}
 
     @classmethod
     def validate(cls) -> None:
@@ -1555,10 +1584,12 @@ class Schema:
                         f"Edge '{edge_name}' requires dst Node '{dst}', which is not registered"
                     )
 
+            # TODO: validate parents
+
         if len(errors) > 0:
             raise SchemaValidationError(errors)
 
-    def to_mermaid(self, name: str) -> str:
+    def to_mermaid(self) -> str:
         ret = "classDiagram\n"
 
         # nodes
@@ -1584,38 +1615,89 @@ def pydantic_get_default(m: type[BaseModel], f: str) -> Any:
     return m.model_fields[f].get_default(call_default_factory=True)
 
 
+def is_local(c: type[object], attr: str) -> bool:
+    if attr in c.__dict__:
+        return True
+
+    if hasattr(c, "__wrapped__"):
+        return is_local(c.__wrapped__, attr)
+
+    return False
+
+
+def clean_annotation(annotation: Any) -> str:
+    import typing
+
+    if isinstance(annotation, str):
+        return annotation
+    elif annotation is None:
+        return "None"
+    elif isinstance(annotation, typing._GenericAlias):  # type: ignore
+        # Handle generics like List, Dict, etc.
+        origin = annotation.__origin__
+        args = [clean_annotation(arg) for arg in annotation.__args__]
+        return f"{origin.__name__}[{', '.join(args)}]"
+    elif isinstance(annotation, _SpecialForm):
+        # Handle special forms like Any, Union, etc.
+        return annotation._name  # type: ignore
+    else:
+        return annotation.__name__  # type: ignore
+
+
 @functools.cache
 def get_methods(c: type[object]) -> set[str]:
-    print("getting methods for", c.__name__)
     return {name for name, member in inspect.getmembers(c) if inspect.isfunction(member)}
 
 
 class FieldDescription:
-    def __init__(self, name: str, f: FieldInfo, *, simple_types: bool = True) -> None:
-        assert isinstance(f, FieldInfo)
-        self.field_info = f
-        self.name = name
-        self.default_val = f.get_default(call_default_factory=True)
-
-        # TODO: types could be prettier
-        if simple_types:
-            self.type = f.annotation.__name__ if f.annotation else "<no type>"
-        else:
-            self.type = str(f.annotation) if f.annotation else "<no type>"
-
-        print(self)
+    def __init__(self, model: type[BaseModel], fieldname: str) -> None:
+        self.model = model
+        self.field_info = pydantic_get_field(model, fieldname)
+        self.name = fieldname
+        self.default_val = self.field_info.get_default(call_default_factory=True)
+        self.type = clean_annotation(self.field_info.annotation)
+        self.exclude = self.field_info.exclude
 
     def __str__(self) -> str:
         return f"Field({self.name}: {self.type} = {self.default_val})"
 
 
+class MethodDescription:
+    def __init__(self, model: type[BaseModel], name: str) -> None:
+        self.model = model
+        self.name = name
+        self.signature = inspect.signature(getattr(model, name))
+        self.return_type = clean_annotation(self.signature.return_annotation)
+        self.params = self.signature.parameters
+
+    @property
+    def uml_params(self) -> list[str]:
+        ret: list[str] = []
+
+        for param_name, param in self.params.items():
+            if param_name == "self":
+                continue
+
+            t = (
+                f"{clean_annotation(param.annotation)} "
+                if param.annotation is not inspect._empty
+                else ""
+            )
+            default_val = f" = {param.default}" if param.default is not inspect._empty else ""
+            ret.append(f"{t}{param_name}{default_val}")
+
+        return ret
+
+
 class ModelDescription:
     def __init__(self, model: type[BaseModel]) -> None:
+        self.model = model
+
         # fields
         self.fields = [
-            FieldDescription(fieldname, pydantic_get_field(model, fieldname))
-            for fieldname in pydantic_get_fields(model)
+            FieldDescription(model, fieldname) for fieldname in pydantic_get_fields(model)
         ]
+        self.fields.sort(key=lambda f: f.name)
 
         # parents
         self.parent_class_names = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
@@ -1626,25 +1708,21 @@ class ModelDescription:
         self.parents = [
             NodeDescription(node_registry[node_name]) for node_name in self.parent_class_names
         ]
+        self.parents.sort(key=lambda p: p.name)
 
         # methods
-        self.methods = (
+        self.method_names = (
             get_methods(model) - get_methods(object) - get_methods(BaseModel) - get_methods(Node)
         )
-        self.method_sigs = {k: inspect.signature(getattr(model, k)) for k in self.methods}
-
-        # TODO: local vs inherited methods and parents
+        self.methods = [MethodDescription(model, name) for name in self.method_names]
+        self.methods.sort(key=lambda m: m.name)
 
 
 class NodeDescription(ModelDescription):
     def __init__(self, node_cls: type[Node]) -> None:
         super().__init__(node_cls)
 
-        # TODO: labels?
-
         self.name = node_cls.__name__
-
-        print("node:", self.name)
 
     def __str__(self) -> str:
         return f"NodeDesc({self.name})"
@@ -1654,14 +1732,21 @@ class NodeDescription(ModelDescription):
 
         # add fields
         for field in self.fields:
+            sym = "+" if is_local(self.model, field.name) else "^"
             default_val = (
                 f" = {field.default_val}" if field.default_val is not PydanticUndefined else ""
             )
-            ret += f"""{' ':>{indent}}{self.name}: +{field.type} {field.name}{default_val}\n"""
+            ret += f"""{' ':>{indent}}{self.name}: {sym}{field.type} {field.name}{default_val}\n"""
 
         # add methods
         for method in self.methods:
-            ret += f"""{' ':>{indent}}{self.name}: +{method}{self.method_sigs[method]}\n"""
+            sym = "+" if is_local(self.model, method.name) else "^"
+            params = ", ".join(method.uml_params)
+            ret += f"""{' ':>{indent}}{self.name}: {sym}{method.name}({params}) {method.return_type}\n"""
+
+        # add links to inherited nodes
+        for parent in self.parent_class_names:
+            ret += f"""{' ':>{indent}}{self.name} ..|> {parent}: inherits\n"""
 
         return ret
 

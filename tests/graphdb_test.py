@@ -5,6 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
+from helpers.mermaid import mermaid_schema1
 from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
 from pydantic import Field, ValidationError
@@ -24,6 +25,7 @@ from roc.graphdb import (
     Schema,
     SchemaValidationError,
     edge_registry,
+    node_label_registry,
     node_registry,
     register_edge,
     register_node,
@@ -772,8 +774,10 @@ class TestNode:
         f = Foo(name="bar")
         assert f.labels == {"Foo", "TestNode"}
         k = frozenset(["Foo", "TestNode"])
-        assert k in node_registry
-        assert node_registry[k] is Foo
+        assert k in node_label_registry
+        assert node_label_registry[k] is Foo
+        assert "Foo" in node_registry
+        assert node_registry["Foo"] is Foo
 
     def test_register_node_duplicate(self) -> None:
         @register_node("Foo", "TestNode")
@@ -1474,9 +1478,10 @@ class TestSchema:
             pass
 
         schema = Schema()
-        print("schema node names", schema.node_names)
-        print("nodes", schema.nodes)
-        print(schema.to_mermaid("foo"))
+
+        print(schema.to_mermaid())
+        print("mermaid_schema1", mermaid_schema1)
+        assert schema.to_mermaid() == mermaid_schema1
 
 
 class TestEdgeDescription:
@@ -1497,14 +1502,21 @@ class TestEdgeDescription:
         assert ed.edge_cls is Link
         assert ed.allowed_connections == [("Foo", "Bar"), ("Bar", "Foo")]
         assert ed.related_nodes == {"Foo", "Bar"}
-
-        for f in ed.fields:
-            print("f", f)
-        # assert len(se.fields) == 1
-        print("edge type", ed.edgetype)
-        print("edge name", ed.edgetype)
-        print("se.nodes", ed.related_nodes)
-        print("se mermaid:", ed.to_mermaid())
+        assert ed.name == "Link"
+        assert ed.edgetype == "Link"
+        assert ed.resolved_name == "Link"
+        assert ed.related_nodes == {"Foo", "Bar"}
+        assert str(ed) == "EdgeDesc(Link)"
+        assert len(ed.fields) == 5
+        assert ed.fields[0].name == "allowed_connections"
+        assert ed.fields[1].name == "dst_id"
+        assert ed.fields[2].name == "name"
+        assert ed.fields[3].name == "src_id"
+        assert ed.fields[4].name == "type"
+        assert ed.parent_class_names == set()
+        assert ed.parents == []
+        assert ed.method_names == set()
+        assert ed.methods == []
 
 
 class TestNodeDescription:
@@ -1526,20 +1538,15 @@ class TestNodeDescription:
 
         nd = NodeDescription(Foo)
 
-        print("node name", nd.name)
-        print("node fields", nd.fields)
-        print("parent class names", nd.parent_class_names)
-        print("parents", nd.parents)
-        print("parents[0]", nd.parents[0])
-        print("methods", nd.methods)
-        print("method sigs", nd.method_sigs)
-        print("method sigs", nd.method_sigs["set_name"])
-        print("method sigs set_name parameters", nd.method_sigs["set_name"].parameters)
-        print(
-            "method sigs set_name parameters name",
-            nd.method_sigs["set_name"].parameters["name"].default,
-        )
-        print(
-            "method sigs set_name parameters name",
-            nd.method_sigs["set_name"].parameters["name"].annotation.__name__,
-        )
+        assert nd.name == "Foo"
+        assert len(nd.fields) == 3
+        assert nd.fields[0].name == "labels"
+        assert nd.fields[1].name == "name"
+        assert nd.fields[2].name == "weight"
+        assert nd.parent_class_names == {"Bar"}
+        assert len(nd.parents) == 1
+        assert nd.parents[0].name == "Bar"
+        assert nd.method_names == {"set_name", "print_weight"}
+        assert len(nd.methods) == 2
+        assert nd.methods[0].name == "print_weight"
+        assert nd.methods[1].name == "set_name"
