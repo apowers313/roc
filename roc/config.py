@@ -53,7 +53,7 @@ class Config(BaseSettings):
     db_password: str = Field(default="")
     db_lazy: bool = Field(default=False)
     db_strict_schema: bool = Field(default=False)
-    db_strict_schema_warn: bool = Field(default=False)
+    db_strict_schema_warns: bool = Field(default=False)
     # graph config
     node_cache_size: int = Field(default=2**30)
     edge_cache_size: int = Field(default=2**30)

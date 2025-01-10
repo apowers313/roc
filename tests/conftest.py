@@ -57,6 +57,30 @@ def restore_registries() -> Generator[None, None, None]:
 
 
 @pytest.fixture
+def strict_schema() -> Generator[None, None, None]:
+    settings = Config.get()
+    db = GraphDB.singleton()
+    orig = db.strict_schema
+    settings.db_strict_schema = db.strict_schema = True
+
+    yield
+
+    settings.db_strict_schema = db.strict_schema = orig
+
+
+@pytest.fixture
+def strict_schema_warns() -> Generator[None, None, None]:
+    settings = Config.get()
+    db = GraphDB.singleton()
+    orig = db.strict_schema_warns
+    settings.db_strict_schema_warns = db.strict_schema_warns = True
+
+    yield
+
+    settings.db_strict_schema_warns = db.strict_schema_warns = orig
+
+
+@pytest.fixture
 def new_edge() -> tuple[Edge, Node, Node]:
     src = Node(labels=["TestNode"])
     dst = Node(labels=["TestNode"])

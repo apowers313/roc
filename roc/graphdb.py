@@ -66,6 +66,10 @@ class GraphDBInternalError(Exception):
     """An generic exception for unexpected errors"""
 
 
+class StrictSchemaWarning(Warning):
+    """A warning that strict schema mode is enabled, but there was a violation"""
+
+
 #########
 # GRAPHDB
 #########
@@ -86,7 +90,7 @@ class GraphDB:
         self.password = settings.db_password
         self.lazy = settings.db_lazy
         self.strict_schema = settings.db_strict_schema
-        self.strict_schema_warn = settings.db_strict_schema_warn
+        self.strict_schema_warns = settings.db_strict_schema_warns
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         self.closed = False
@@ -545,6 +549,12 @@ class Edge(BaseModel, extra="allow"):
                 raise Exception(
                     f"attempting to connect edge '{clstype}' from '{conn[0]}' to '{conn[1]}' not in allowed connections list"
                 )
+        elif db.strict_schema:
+            err_msg = f"allowed_connections missing in '{cls.__name__}' and strict_schema is set"
+            if db.strict_schema_warns:
+                warnings.warn(err_msg, StrictSchemaWarning)
+            else:
+                raise Exception(err_msg)
 
         src_id = Node.to_id(src)
         dst_id = Node.to_id(dst)

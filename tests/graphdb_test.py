@@ -24,6 +24,7 @@ from roc.graphdb import (
     NodeNotFound,
     Schema,
     SchemaValidationError,
+    StrictSchemaWarning,
     edge_registry,
     node_label_registry,
     node_registry,
@@ -1314,6 +1315,33 @@ class TestEdge:
         with pytest.raises(
             Exception,
             match="attempting to connect edge 'Foo' from 'Node' to 'Node' not in allowed connections list",
+        ):
+            Foo.connect(n1, n2, name="bar")
+
+    def test_strict_schema(self, strict_schema) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge("Foo")
+        class Foo(Edge):
+            name: str
+
+        with pytest.raises(
+            Exception, match="allowed_connections missing in 'Foo' and strict_schema is set"
+        ):
+            Foo.connect(n1, n2, name="bar")
+
+    def test_strict_schema_warns(self, strict_schema, strict_schema_warns) -> None:
+        n1 = Node()
+        n2 = Node()
+
+        @register_edge("Foo")
+        class Foo(Edge):
+            name: str
+
+        with pytest.warns(
+            StrictSchemaWarning,
+            match="allowed_connections missing in 'Foo' and strict_schema is set",
         ):
             Foo.connect(n1, n2, name="bar")
 
