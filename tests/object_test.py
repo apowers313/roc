@@ -123,8 +123,6 @@ class TestCandidateObjects:
         fn = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))).to_nodes()
         fg = FeatureGroup.from_nodes([fn])
         Node.connect(o, fg, "Features")
-        print("o srcs", len(o.src_edges))
-        print("o dsts", len(o.dst_edges))
         objs = CandidateObjects([fn])
         assert len(objs) == 1
         o2, dist = objs[0]

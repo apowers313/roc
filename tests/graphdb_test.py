@@ -1479,8 +1479,6 @@ class TestSchema:
 
         schema = Schema()
 
-        print(schema.to_mermaid())
-        print("mermaid_schema1", mermaid_schema1)
         assert schema.to_mermaid() == mermaid_schema1
 
 

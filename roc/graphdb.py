@@ -85,8 +85,8 @@ class GraphDB:
         self.username = settings.db_username
         self.password = settings.db_password
         self.lazy = settings.db_lazy
-        self.strict_edges = settings.db_strict_edges
-        self.strict_edges_warn = settings.db_strict_edges_warn
+        self.strict_schema = settings.db_strict_schema
+        self.strict_schema_warn = settings.db_strict_schema_warn
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         self.closed = False
@@ -527,7 +527,7 @@ class Edge(BaseModel, extra="allow"):
 
         # get type from class model
         if cls is not Edge:
-            clstype = cls.model_fields["type"].get_default(call_default_factory=True)
+            clstype = pydantic_get_default(cls, "type")
 
         # no class found, use edge type instead
         if clstype is None and edgetype is not None:
@@ -538,9 +538,7 @@ class Edge(BaseModel, extra="allow"):
             raise Exception("no Edge type provided")
 
         # check allowed_connections
-        allowed_connections = cls.model_fields["allowed_connections"].get_default(
-            call_default_factory=True
-        )
+        allowed_connections = pydantic_get_default(cls, "allowed_connections")
         if allowed_connections is not None:
             conn = (src.__class__.__name__, dst.__class__.__name__)
             if conn not in allowed_connections:
@@ -1569,9 +1567,7 @@ class Schema:
     def validate(cls) -> None:
         errors: list[str] = []
         for edge_name, edge_cls in edge_registry.items():
-            allowed_connections = edge_cls.model_fields["allowed_connections"].get_default(
-                call_default_factory=True
-            )
+            allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
 
             for src, dst in allowed_connections:
                 if src not in node_registry:
