@@ -10,11 +10,17 @@ from pydantic import Field
 from .attention import Attention, AttentionEvent
 from .component import Component, register_component
 from .event import EventBus
-from .graphdb import Node, NodeId, register_node
+from .graphdb import Edge, Node, NodeId, register_edge, register_node
 from .location import XLoc, YLoc
-from .perception import Feature, FeatureNode
+from .perception import Detail, FeatureNode
+from .perception import Feature as PerceptionFeature
 
 ObjectId = NewType("ObjectId", int)
+
+
+@register_edge("Features", allowed_connections=[("Object", "FeatureGroup")])
+class Features(Edge):
+    pass
 
 
 @register_node("Object")
@@ -47,7 +53,7 @@ class Object(Node):
     @staticmethod
     def with_features(fg: FeatureGroup) -> Object:
         o = Object()
-        Node.connect(o, fg, "Features")
+        Features.connect(o, fg)
 
         return o
 
@@ -68,7 +74,7 @@ class Object(Node):
 @register_node("FeatureGroup")
 class FeatureGroup(Node):
     @staticmethod
-    def with_features(features: Collection[Feature[Any]]) -> FeatureGroup:
+    def with_features(features: Collection[PerceptionFeature[Any]]) -> FeatureGroup:
         feature_nodes: set[FeatureNode] = {f.to_nodes() for f in features}
 
         return FeatureGroup.from_nodes(feature_nodes)
@@ -77,13 +83,13 @@ class FeatureGroup(Node):
     def from_nodes(feature_nodes: Collection[FeatureNode]) -> FeatureGroup:
         fg = FeatureGroup()
         for f in feature_nodes:
-            Node.connect(fg, f, "Feature")
+            Detail.connect(fg, f)
 
         return fg
 
     @property
     def feature_nodes(self) -> list[FeatureNode]:
-        return [cast(FeatureNode, e.dst) for e in self.src_edges if e.type == "Feature"]
+        return [cast(FeatureNode, e.dst) for e in self.src_edges if e.type == "Detail"]
 
 
 class CandidateObjects:

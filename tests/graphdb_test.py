@@ -545,7 +545,7 @@ class TestNode:
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
 
-    def test_node_connect(self) -> None:
+    def test_node_connect(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -560,7 +560,7 @@ class TestNode:
         assert e.src_id == n1.id
         assert e.dst_id == n2.id
 
-    def test_node_create_updates_edge_src(self) -> None:
+    def test_node_create_updates_edge_src(self, no_strict_schema) -> None:
         n1 = Node(labels=["TestNode"])
         old_id = n1.id
         n2 = Node(labels=["TestNode"])
@@ -575,7 +575,7 @@ class TestNode:
         # and edge src has been updated
         assert e.src_id == n1.id
 
-    def test_node_create_updates_edge_dst(self) -> None:
+    def test_node_create_updates_edge_dst(self, no_strict_schema) -> None:
         n1 = Node(labels=["TestNode"])
         n2 = Node(labels=["TestNode"])
 
@@ -970,7 +970,7 @@ class TestEdge:
         assert id(e0.dst) == id(n6)
         assert id(e1.dst) == id(n453)
 
-    def test_edge_create(self, mocker, new_edge, clear_cache) -> None:  # type: ignore
+    def test_edge_create(self, no_strict_schema, mocker, new_edge, clear_cache) -> None:  # type: ignore
         e, src, dst = new_edge
         e_id = e.id
         Node.save(src)
@@ -1053,7 +1053,7 @@ class TestEdge:
         assert e.id in src.src_edges
         assert e.id in dst.dst_edges
 
-    def test_edge_create_on_delete(self, mocker) -> None:
+    def test_edge_create_on_delete(self, no_strict_schema, mocker) -> None:
         e = Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test")
         e.foo = "deleting-edge"  # type: ignore
         Edge.create(e)
@@ -1096,7 +1096,7 @@ class TestEdge:
         assert e.type == orig_type
 
     # test_edge_update
-    def test_edge_update(self, mocker) -> None:
+    def test_edge_update(self, no_strict_schema, mocker) -> None:
         e = Edge.create(Node.connect(Node(labels=["TestNode"]), Node(labels=["TestNode"]), "Test"))
         spy: MagicMock = mocker.spy(GraphDB, "raw_execute")
         e.wine = "cab"  # type: ignore
@@ -1201,7 +1201,7 @@ class TestEdge:
     def test_edge_save(self) -> None:
         pass
 
-    def test_edge_connect(self) -> None:
+    def test_edge_connect(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -1215,7 +1215,7 @@ class TestEdge:
         with pytest.raises(Exception):
             Edge.connect(n1, n2)
 
-    def test_edge_type_lookup(self) -> None:
+    def test_edge_type_lookup(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -1228,7 +1228,7 @@ class TestEdge:
         assert "Foo" in edge_registry
         assert edge_registry["Foo"] is Foo
 
-    def test_register_edge(self) -> None:
+    def test_register_edge(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -1255,7 +1255,7 @@ class TestEdge:
             class Bar(Edge):
                 name: str
 
-    def test_resolve_registered_edge(self) -> None:
+    def test_resolve_registered_edge(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -1273,7 +1273,7 @@ class TestEdge:
 
         assert isinstance(f2, Foo)
 
-    def test_registered_node_sets_type(self) -> None:
+    def test_registered_node_sets_type(self, no_strict_schema) -> None:
         n1 = Node()
         n2 = Node()
 
@@ -1303,6 +1303,29 @@ class TestEdge:
 
         f = Foo.connect(n1, n2, name="bar")
         assert f.type == "Foo"
+
+    def test_connection_allowed_to_parent(self) -> None:
+        @register_node("Foo")
+        class Foo(Node):
+            pass
+
+        @register_node("Parent")
+        class Parent(Node):
+            pass
+
+        @register_node("Bar")
+        class Bar(Parent):
+            pass
+
+        n1 = Foo()
+        n2 = Bar()
+
+        @register_edge("Link", allowed_connections=[("Foo", "Parent")])
+        class Link(Edge):
+            name: str
+
+        f = Link.connect(n1, n2, name="bar")
+        assert f.type == "Link"
 
     def test_connection_not_allowed(self) -> None:
         n1 = Node()
@@ -1435,7 +1458,7 @@ class TestTypes:
 
 
 class TestSchema:
-    def test_validate(self) -> None:
+    def test_validate(self, clear_registries) -> None:
         @register_node("Foo")
         class Foo(Node):
             pass
@@ -1450,7 +1473,7 @@ class TestSchema:
 
         Schema.validate()
 
-    def test_validate_fails(self) -> None:
+    def test_validate_fails(self, clear_registries) -> None:
         @register_edge("Link", allowed_connections=[("Foo", "Bar")])
         class Link(Edge):
             pass
@@ -1464,7 +1487,7 @@ class TestSchema:
         with pytest.raises(SchemaValidationError, match=expected_error):
             Schema.validate()
 
-    def test_create(self) -> None:
+    def test_create(self, clear_registries) -> None:
         @register_node("Foo")
         class Foo(Node):
             pass
@@ -1481,7 +1504,7 @@ class TestSchema:
         assert schema.edge_names == {"Link"}
         assert schema.node_names == {"Foo", "Bar"}
 
-    def test_mermaid(self) -> None:
+    def test_mermaid(self, clear_registries) -> None:
         @register_node("Bar")
         class Bar(Node):
             weight: float

@@ -57,11 +57,32 @@ def restore_registries() -> Generator[None, None, None]:
 
 
 @pytest.fixture
+def clear_registries(restore_registries) -> None:
+    from roc.graphdb import edge_registry, node_label_registry, node_registry
+
+    edge_registry.clear()
+    node_registry.clear()
+    node_label_registry.clear()
+
+
+@pytest.fixture
 def strict_schema() -> Generator[None, None, None]:
     settings = Config.get()
     db = GraphDB.singleton()
     orig = db.strict_schema
     settings.db_strict_schema = db.strict_schema = True
+
+    yield
+
+    settings.db_strict_schema = db.strict_schema = orig
+
+
+@pytest.fixture
+def no_strict_schema() -> Generator[None, None, None]:
+    settings = Config.get()
+    db = GraphDB.singleton()
+    orig = db.strict_schema
+    settings.db_strict_schema = db.strict_schema = False
 
     yield
 
@@ -81,7 +102,7 @@ def strict_schema_warns() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def new_edge() -> tuple[Edge, Node, Node]:
+def new_edge(no_strict_schema) -> tuple[Edge, Node, Node]:
     src = Node(labels=["TestNode"])
     dst = Node(labels=["TestNode"])
     e = Node.connect(src, dst, "Test")
@@ -213,7 +234,7 @@ def requires_module(request) -> None:
 
 
 @pytest.fixture
-def test_tree() -> dict[str, Any]:
+def test_tree(no_strict_schema) -> dict[str, Any]:
     root = Node(labels=["TestNode"])
     n1 = Node(labels=["TestNode"])
     n2 = Node(labels=["TestNode"])

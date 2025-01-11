@@ -95,6 +95,9 @@ class GraphDB:
         self.db_conn = self.connect()
         self.closed = False
 
+        if self.strict_schema:
+            Schema.validate()
+
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
@@ -523,6 +526,10 @@ class Edge(BaseModel, extra="allow"):
         **kwargs: Any,
     ) -> Self:
         db = db or GraphDB.singleton()
+        src_id = Node.to_id(src)
+        dst_id = Node.to_id(dst)
+        src_node = Node.get(src_id, db=db)
+        dst_node = Node.get(dst_id, db=db)
 
         clstype: str | None = None
         # lookup class in based on specified type
@@ -542,26 +549,9 @@ class Edge(BaseModel, extra="allow"):
             raise Exception("no Edge type provided")
 
         # check allowed_connections
-        allowed_connections = pydantic_get_default(cls, "allowed_connections")
-        if allowed_connections is not None:
-            conn = (src.__class__.__name__, dst.__class__.__name__)
-            if conn not in allowed_connections:
-                raise Exception(
-                    f"attempting to connect edge '{clstype}' from '{conn[0]}' to '{conn[1]}' not in allowed connections list"
-                )
-        elif db.strict_schema:
-            err_msg = f"allowed_connections missing in '{cls.__name__}' and strict_schema is set"
-            if db.strict_schema_warns:
-                warnings.warn(err_msg, StrictSchemaWarning)
-            else:
-                raise Exception(err_msg)
-
-        src_id = Node.to_id(src)
-        dst_id = Node.to_id(dst)
+        check_schema(cls, clstype, src_node, dst_node, db)
 
         e = cls(src_id=src_id, dst_id=dst_id, type=clstype, **kwargs)
-        src_node = Node.get(src_id, db=db)
-        dst_node = Node.get(dst_id, db=db)
         src_node.src_edges.add(e)
         dst_node.dst_edges.add(e)
 
@@ -644,6 +634,43 @@ def register_edge(
         return WrapperClass
 
     return edge_register_decorator
+
+
+def check_schema(
+    edge_cls: type[Edge],
+    clstype: str,
+    src: Node,
+    dst: Node,
+    db: GraphDB,
+) -> None:
+    allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
+    src_name = src.__class__.__name__
+    src_names = get_node_parent_names(src.__class__)
+    src_names.add(src_name)
+
+    dst_name = dst.__class__.__name__
+    dst_names = get_node_parent_names(dst.__class__)
+    dst_names.add(dst_name)
+
+    # check if the src (or it's parents) are allowed to connect to dst (or it's parents)
+    if allowed_connections is not None:
+        found = False
+        for conn in allowed_connections:
+            if conn[0] in src_names and conn[1] in dst_names:
+                found = True
+                break
+
+        if not found:
+            raise Exception(
+                f"attempting to connect edge '{clstype}' from '{src_name}' to '{dst_name}' not in allowed connections list"
+            )
+    # no allowed_connections set, which is a no-no for strict mode
+    elif db.strict_schema:
+        err_msg = f"allowed_connections missing in '{edge_cls.__name__}' and strict_schema is set"
+        if db.strict_schema_warns:
+            warnings.warn(err_msg, StrictSchemaWarning)
+        else:
+            raise Exception(err_msg)
 
 
 #######
@@ -1631,6 +1658,16 @@ def is_local(c: type[object], attr: str) -> bool:
     return False
 
 
+def get_node_parent_names(model: type[BaseModel]) -> set[str]:
+    ret = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
+    if model.__name__ in ret:
+        ret.remove(model.__name__)
+    if "Node" in ret:
+        ret.remove("Node")
+
+    return ret
+
+
 def clean_annotation(annotation: Any) -> str:
     import typing
 
@@ -1706,11 +1743,7 @@ class ModelDescription:
         self.fields.sort(key=lambda f: f.name)
 
         # parents
-        self.parent_class_names = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
-        if model.__name__ in self.parent_class_names:
-            self.parent_class_names.remove(model.__name__)
-        if "Node" in self.parent_class_names:
-            self.parent_class_names.remove("Node")
+        self.parent_class_names = get_node_parent_names(model)
         self.parents = [
             NodeDescription(node_registry[node_name]) for node_name in self.parent_class_names
         ]
