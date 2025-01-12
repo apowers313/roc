@@ -26,7 +26,7 @@ class TestSingle:
         f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
         n = f.to_nodes()
         assert isinstance(n, SingleNode)
-        assert n.labels == {"Feature", "Single"}
+        assert n.labels == {"FeatureNode", "SingleNode"}
         assert n.type == 3
 
     def test_to_nodes_local_cache(self, mocker) -> None:

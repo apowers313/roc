@@ -16,7 +16,7 @@ import numpy.typing as npt
 
 from .component import Component
 from .event import Event, EventBus
-from .graphdb import Edge, Node, register_edge, register_node
+from .graphdb import Edge, Node, register_edge
 from .location import XLoc, YLoc
 
 FeatureType = TypeVar("FeatureType")
@@ -103,7 +103,6 @@ class Detail(Edge):
     pass
 
 
-@register_node("Feature")
 class FeatureNode(Node):
     def __hash__(self) -> int:
         # XXX: this is dangerous because ID changes when a node is saved
@@ -140,8 +139,8 @@ class Feature(ABC, Generic[FeatureNodeType]):
         if n is None:
             # if node doesn't exist, create it
             n = self._create_nodes()
-            n.labels.add("Feature")
-            n.labels.add(self.feature_name)
+            # n.labels.add("Feature")
+            # n.labels.add(self.feature_name)
 
         cache[h] = n
         return n

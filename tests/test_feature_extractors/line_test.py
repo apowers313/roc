@@ -19,7 +19,7 @@ class TestLine:
         f = LineFeature(origin_id=("foo", "bar"), type=3, size=1, points={(XLoc(1), YLoc(2))})
         n = f.to_nodes()
         assert isinstance(n, LineNode)
-        assert n.labels == {"Feature", "Line"}
+        assert n.labels == {"FeatureNode", "LineNode"}
         assert n.type == 3
         assert n.size == 1
 

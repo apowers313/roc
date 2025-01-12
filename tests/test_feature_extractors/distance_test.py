@@ -24,7 +24,7 @@ class TestDistance:
         )
         n = f.to_nodes()
         assert isinstance(n, DistanceNode)
-        assert n.labels == {"Feature", "Distance"}
+        assert n.labels == {"FeatureNode", "DistanceNode"}
         assert n.size == 7
 
     def test_basic(self, empty_components) -> None:

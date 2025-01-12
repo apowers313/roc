@@ -880,6 +880,38 @@ class Node(BaseModel, extra="allow"):
     def __str__(self) -> str:
         return f"Node({self.id}, labels={self.labels})"
 
+    def __init_subclass__(cls, *args: Any, **kwargs: Any) -> None:
+        super().__init_subclass__(*args, **kwargs)
+        clsname = cls.__name__
+
+        if not hasattr(cls, "labels"):
+            new_lbls = {c.__name__ for c in cls.__mro__ if c not in [Node, BaseModel, object]}
+
+            def default_subclass_fields() -> set[str]:
+                return new_lbls
+
+            cls.labels = Field(default_factory=default_subclass_fields, exclude=True)
+            labels_key = frozenset(new_lbls)
+        else:
+            if isinstance(cls.labels, FieldInfo):
+                labels_key = frozenset(cls.labels.get_default(call_default_factory=True))
+            else:
+                labels_key = frozenset(cls.labels)
+
+        if clsname in node_registry:
+            raise Exception(
+                f"""node_register can't register '{clsname}' because that name has already been registered"""
+            )
+
+        if labels_key in node_label_registry:
+            labels = ", ".join(sorted(list(labels_key)))
+            raise Exception(
+                f"""node_register can't register labels '{labels}' because they have already been registered"""
+            )
+
+        node_registry[clsname] = cls
+        node_label_registry[labels_key] = cls
+
     @classmethod
     def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
         """Loads a node from the database. Use `Node.get` or other methods instead.
@@ -1345,6 +1377,7 @@ class Node(BaseModel, extra="allow"):
         label_str = ":".join(labels_list)
         if len(label_str) > 0:
             label_str = ":" + label_str
+
         return label_str
 
     @staticmethod
@@ -1515,37 +1548,6 @@ node_registry: dict[str, type[Node]] = {}
 node_label_registry: dict[frozenset[str], type[Node]] = {}
 
 
-def register_node(*args: str) -> Callable[[type[NodeType]], type[NodeType]]:
-    def node_register_decorator(cls: type[NodeType]) -> type[NodeType]:
-        lbls = frozenset(args)
-        clsname = cls.__name__
-
-        if clsname in node_registry:
-            raise Exception(
-                f"""node_register can't register '{clsname}' because that name has already been registered"""
-            )
-
-        if lbls in node_label_registry:
-            labels = ", ".join(sorted(list(lbls)))
-            raise Exception(
-                f"""node_register can't register labels '{labels}' because they have already been registered"""
-            )
-
-        WrapperClass = create_model(
-            "WrapperClass",
-            __base__=cls,
-            labels=(set, Field(exclude=True, default_factory=lambda: set(lbls))),
-        )
-
-        functools.update_wrapper(WrapperClass, cls, updated=())
-        node_registry[clsname] = WrapperClass
-        node_label_registry[lbls] = WrapperClass
-
-        return WrapperClass
-
-    return node_register_decorator
-
-
 WalkMode = Literal["src", "dst", "both"]
 NodeFilterFn = Callable[[Node], bool]
 EdgeFilterFn = Callable[[Edge], TypeGuard[Edge]]
@@ -1704,6 +1706,16 @@ class FieldDescription:
     def __str__(self) -> str:
         return f"Field({self.name}: {self.type} = {self.default_val})"
 
+    @property
+    def default_val_str(self) -> str:
+        """Control over a reliable and reproducable default value for printing
+        the schema.
+        """
+        if isinstance(self.default_val, set):
+            return str(sorted(self.default_val))
+
+        return str(self.default_val)
+
 
 class MethodDescription:
     def __init__(self, model: type[BaseModel], name: str) -> None:
@@ -1773,7 +1785,7 @@ class NodeDescription(ModelDescription):
         for field in self.fields:
             sym = "+" if is_local(self.model, field.name) else "^"
             default_val = (
-                f" = {field.default_val}" if field.default_val is not PydanticUndefined else ""
+                f" = {field.default_val_str}" if field.default_val is not PydanticUndefined else ""
             )
             ret += f"""{' ':>{indent}}{self.name}: {sym}{field.type} {field.name}{default_val}\n"""
 

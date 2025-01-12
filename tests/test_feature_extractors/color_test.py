@@ -19,7 +19,7 @@ class TestColor:
         f = ColorFeature(origin_id=("foo", "bar"), type=31337, point=(XLoc(1), YLoc(2)))
         n = f.to_nodes()
         assert isinstance(n, ColorNode)
-        assert n.labels == {"Feature", "Color"}
+        assert n.labels == {"FeatureNode", "ColorNode"}
         assert n.type == 31337
 
     def test_screen0(self, empty_components) -> None:

@@ -29,7 +29,6 @@ from roc.graphdb import (
     node_label_registry,
     node_registry,
     register_edge,
-    register_node,
 )
 
 
@@ -767,35 +766,58 @@ class TestNode:
         assert isinstance(node_set, set)
         assert len(node_set) > 0
 
+    def test_labels(self) -> None:
+        class Foo(Node):
+            labels: set[str] = {"NotFoo"}
+
+        f = Foo()
+
+        assert f.labels == {"NotFoo"}
+
+    def test_labels_from_field(self) -> None:
+        class Foo(Node):
+            labels: set[str] = Field(default_factory=lambda: {"OtherNotFoo"})
+
+        f = Foo()
+
+        assert f.labels == {"OtherNotFoo"}
+
+    def test_default_labels(self) -> None:
+        class Foo(Node):
+            pass
+
+        class Bar(Foo):
+            pass
+
+        f = Foo()
+        b = Bar()
+
+        assert f.labels == {"Foo"}
+        assert b.labels == {"Foo", "Bar"}
+
     def test_register_node(self) -> None:
-        @register_node("Foo", "TestNode")
         class Foo(Node):
             name: str
 
-        f = Foo(name="bar")
-        assert f.labels == {"Foo", "TestNode"}
-        k = frozenset(["Foo", "TestNode"])
+        k = frozenset(["Foo"])
         assert k in node_label_registry
         assert node_label_registry[k] is Foo
         assert "Foo" in node_registry
         assert node_registry["Foo"] is Foo
 
     def test_register_node_duplicate(self) -> None:
-        @register_node("Foo", "TestNode")
         class Foo(Node):
             name: str
 
         with pytest.raises(
             Exception,
-            match="node_register can't register labels 'Foo, TestNode' because they have already been registered",
+            match="node_register can't register labels 'Foo' because they have already been registered",
         ):
 
-            @register_node("Foo", "TestNode")
             class Bar(Node):
-                name: str
+                labels: set[str] = {"Foo"}
 
     def test_resolve_registered_node(self) -> None:
-        @register_node("Foo", "TestNode")
         class Foo(Node):
             name: str
 
@@ -810,7 +832,6 @@ class TestNode:
         assert isinstance(f2, Foo)
 
     def test_registered_node_sets_labels(self) -> None:
-        @register_node("Foo", "TestNode")
         class Foo(Node):
             name: str
 
@@ -823,7 +844,7 @@ class TestNode:
         f2 = Node.get(old_id)
 
         assert isinstance(f2, Foo)
-        assert f2.labels == {"Foo", "TestNode"}
+        assert f2.labels == {"Foo"}
         assert f2.name == "bar"
 
     def test_predecessors(self) -> None:
@@ -1305,15 +1326,12 @@ class TestEdge:
         assert f.type == "Foo"
 
     def test_connection_allowed_to_parent(self) -> None:
-        @register_node("Foo")
         class Foo(Node):
             pass
 
-        @register_node("Parent")
         class Parent(Node):
             pass
 
-        @register_node("Bar")
         class Bar(Parent):
             pass
 
@@ -1459,11 +1477,9 @@ class TestTypes:
 
 class TestSchema:
     def test_validate(self, clear_registries) -> None:
-        @register_node("Foo")
         class Foo(Node):
             pass
 
-        @register_node("Bar")
         class Bar(Node):
             pass
 
@@ -1488,11 +1504,9 @@ class TestSchema:
             Schema.validate()
 
     def test_create(self, clear_registries) -> None:
-        @register_node("Foo")
         class Foo(Node):
             pass
 
-        @register_node("Bar")
         class Bar(Node):
             pass
 
@@ -1505,14 +1519,12 @@ class TestSchema:
         assert schema.node_names == {"Foo", "Bar"}
 
     def test_mermaid(self, clear_registries) -> None:
-        @register_node("Bar")
         class Bar(Node):
             weight: float
 
             def print_weight(self) -> None:
                 pass
 
-        @register_node("Foo")
         class Foo(Bar):
             name: str = Field(default="Bob")
 
@@ -1520,7 +1532,6 @@ class TestSchema:
                 self.name = name
                 return self.name
 
-        @register_node("Baz")
         class Baz(Node):
             pass
 
@@ -1535,11 +1546,9 @@ class TestSchema:
 
 class TestEdgeDescription:
     def test_create(self) -> None:
-        @register_node("Foo")
         class Foo(Node):
             pass
 
-        @register_node("Bar")
         class Bar(Node):
             pass
 
@@ -1570,14 +1579,12 @@ class TestEdgeDescription:
 
 class TestNodeDescription:
     def test_create(self) -> None:
-        @register_node("Bar")
         class Bar(Node):
             weight: float
 
             def print_weight(self) -> None:
                 pass
 
-        @register_node("Foo")
         class Foo(Bar):
             name: str = Field(default="Bob")
 

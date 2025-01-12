@@ -17,7 +17,7 @@ class TestDelta:
         f = DeltaFeature(origin_id=("foo", "bar"), old_val=13, new_val=14, point=(XLoc(1), YLoc(2)))
         n = f.to_nodes()
         assert isinstance(n, DeltaNode)
-        assert n.labels == {"Feature", "Delta"}
+        assert n.labels == {"FeatureNode", "DeltaNode"}
         assert n.old_val == 13
         assert n.new_val == 14
 

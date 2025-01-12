@@ -46,7 +46,7 @@ class TestMotion:
         )
         n = f.to_nodes()
         assert isinstance(n, MotionNode)
-        assert n.labels == {"Feature", "Motion"}
+        assert n.labels == {"FeatureNode", "MotionNode"}
         assert n.type == 8008
         assert n.direction == Direction.down
 

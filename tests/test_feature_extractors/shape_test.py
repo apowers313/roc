@@ -19,7 +19,7 @@ class TestShape:
         f = ShapeFeature(origin_id=("foo", "bar"), type=42, point=(XLoc(1), YLoc(2)))
         n = f.to_nodes()
         assert isinstance(n, ShapeNode)
-        assert n.labels == {"Feature", "Shape"}
+        assert n.labels == {"FeatureNode", "ShapeNode"}
         assert n.type == 42
 
     def test_screen0(self, empty_components) -> None:

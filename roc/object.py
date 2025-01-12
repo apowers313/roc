@@ -10,7 +10,7 @@ from pydantic import Field
 from .attention import Attention, AttentionEvent
 from .component import Component, register_component
 from .event import EventBus
-from .graphdb import Edge, Node, NodeId, register_edge, register_node
+from .graphdb import Edge, Node, NodeId, register_edge
 from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
 from .perception import Feature as PerceptionFeature
@@ -23,7 +23,6 @@ class Features(Edge):
     pass
 
 
-@register_node("Object")
 class Object(Node):
     uuid: ObjectId = Field(default_factory=lambda: ObjectId(uuid4().int))
     annotations: list[str] = Field(default_factory=list)
@@ -63,7 +62,7 @@ class Object(Node):
         # TODO: allowed_attrs is physical attributes, not really great but
         # NetHack doesn't give us much feature-space to work with. in the future
         # we may want to come back and use motion or other features for object recognition
-        allowed_attrs = {"Single", "Color", "Shape"}  # TODO: line? flood?
+        allowed_attrs = {"SingleNode", "ColorNode", "ShapeNode"}  # TODO: line? flood?
         features_strs: set[str] = {str(f) for f in features if f.labels & allowed_attrs}
         obj_features: set[str] = {
             str(f) for f in obj.features if isinstance(f, FeatureNode) and f.labels & allowed_attrs
@@ -71,7 +70,6 @@ class Object(Node):
         return float(len(features_strs ^ obj_features))
 
 
-@register_node("FeatureGroup")
 class FeatureGroup(Node):
     @staticmethod
     def with_features(features: Collection[PerceptionFeature[Any]]) -> FeatureGroup:
