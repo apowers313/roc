@@ -1573,33 +1573,16 @@ class Schema:
         self.edges = [EdgeDescription(edge_cls) for edge_cls in edge_registry.values()]
         self.edges.sort(key=lambda e: e.name)
 
-        # edge nodes
-        self.edge_node_names = {n for e in self.edges for n in e.related_nodes}
-        self.edge_nodes = [
-            NodeDescription(node_registry[node_name]) for node_name in self.edge_node_names
-        ]
-        self.edge_nodes.sort(key=lambda n: n.name)
-
-        # inherited nodes
-        self.inherited_node_names: set[str] = set()
-        for n in self.edge_nodes:
-            self.inherited_node_names |= n.parent_class_names
-        self.inherited_node_names -= self.edge_node_names
-        self.inherited_nodes = [
-            NodeDescription(node_registry[node_name]) for node_name in self.inherited_node_names
-        ]
-        self.inherited_nodes.sort(key=lambda n: n.name)
-
-        # all nodes
-        self.nodes = self.edge_nodes + self.inherited_nodes
-        self.node_names = {n.name for n in self.nodes}
+        # nodes
+        self.node_names = set(node_registry.keys())
+        self.nodes = [NodeDescription(node_cls) for node_cls in node_registry.values()]
+        self.nodes.sort(key=lambda n: n.name)
 
     @classmethod
     def validate(cls) -> None:
         errors: list[str] = []
         for edge_name, edge_cls in edge_registry.items():
             allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
-            print(f"{edge_name} allowed_connections: {allowed_connections}")
 
             if allowed_connections is None:
                 continue
@@ -1630,6 +1613,10 @@ class Schema:
             ret += e.to_mermaid()
 
         return ret
+
+    @classmethod
+    def _repr_markdown_(cls) -> str:
+        return f"``` mermaid\n{Schema().to_mermaid()}\n```\n"
 
 
 def pydantic_get_fields(m: type[BaseModel]) -> set[str]:
