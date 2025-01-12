@@ -26,7 +26,7 @@ from typing import (
 import mgclient
 import networkx as nx
 from cachetools import LRUCache
-from pydantic import BaseModel, Field, create_model
+from pydantic import BaseModel, Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 from typing_extensions import Self
@@ -355,6 +355,26 @@ class Edge(BaseModel, extra="allow"):
     def __repr__(self) -> str:
         return f"Edge({self.id} [{self.src_id}>>{self.dst_id}])"
 
+    def __init_subclass__(cls, *args: Any, **kwargs: Any) -> None:
+        super().__init_subclass__(*args, **kwargs)
+
+        if not hasattr(cls, "type"):
+            cls.type = Field(exclude=True, default_factory=lambda: cls.__name__)
+            edgetype = cls.__name__
+        else:
+            # XXX: not sure why this makes mypy angry here but not in Node.__init_subclass__
+            if isinstance(cls.type, FieldInfo):  # type: ignore
+                edgetype = cls.type.get_default(call_default_factory=True)  # type: ignore
+            else:
+                edgetype = cls.type
+
+        if edgetype in edge_registry:
+            raise Exception(
+                f"edge_register can't register type '{edgetype}' because it has already been registered"
+            )
+
+        edge_registry[edgetype] = cls
+
     @classmethod
     def get_cache(self) -> EdgeCache:
         global edge_cache
@@ -606,34 +626,6 @@ EdgeCache = GraphCache[EdgeId, Edge]
 edge_cache: EdgeCache | None = None
 EdgeConnectionsList = Iterable[tuple[str, str]]
 edge_registry: dict[str, type[Edge]] = {}
-
-
-def register_edge(
-    edgetype: str,
-    allowed_connections: EdgeConnectionsList | None = None,
-) -> Callable[[type[EdgeType]], type[EdgeType]]:
-    def edge_register_decorator(cls: type[EdgeType]) -> type[EdgeType]:
-        if edgetype in edge_registry:
-            raise Exception(
-                f"edge_register can't register type '{edgetype}' because it has already been registered"
-            )
-
-        WrapperClass = create_model(
-            "WrapperClass",
-            __base__=cls,
-            type=(str, Field(exclude=True, default_factory=lambda: edgetype)),
-            allowed_connections=(
-                EdgeConnectionsList,
-                Field(exclude=True, default_factory=lambda: allowed_connections),
-            ),
-        )
-
-        functools.update_wrapper(WrapperClass, cls, updated=())
-        edge_registry[edgetype] = WrapperClass
-
-        return WrapperClass
-
-    return edge_register_decorator
 
 
 def check_schema(
@@ -1318,7 +1310,7 @@ class Node(BaseModel, extra="allow"):
         cls,
         src: NodeId | Self,
         dst: NodeId | Self,
-        type: str | None,
+        type: str | None = None,
         *,
         db: GraphDB | None = None,
     ) -> Edge:
@@ -1607,6 +1599,10 @@ class Schema:
         errors: list[str] = []
         for edge_name, edge_cls in edge_registry.items():
             allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
+            print(f"{edge_name} allowed_connections: {allowed_connections}")
+
+            if allowed_connections is None:
+                continue
 
             for src, dst in allowed_connections:
                 if src not in node_registry:
@@ -1618,8 +1614,6 @@ class Schema:
                     errors.append(
                         f"Edge '{edge_name}' requires dst Node '{dst}', which is not registered"
                     )
-
-            # TODO: validate parents
 
         if len(errors) > 0:
             raise SchemaValidationError(errors)

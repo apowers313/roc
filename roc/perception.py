@@ -16,7 +16,7 @@ import numpy.typing as npt
 
 from .component import Component
 from .event import Event, EventBus
-from .graphdb import Edge, Node, register_edge
+from .graphdb import Edge, EdgeConnectionsList, Node
 from .location import XLoc, YLoc
 
 FeatureType = TypeVar("FeatureType")
@@ -98,9 +98,8 @@ class Direction(str, Enum):
         return self.value
 
 
-@register_edge("Detail", allowed_connections=[("FeatureGroup", "FeatureNode")])
 class Detail(Edge):
-    pass
+    allowed_connections: EdgeConnectionsList = [("FeatureGroup", "FeatureNode")]
 
 
 class FeatureNode(Node):

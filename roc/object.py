@@ -10,7 +10,7 @@ from pydantic import Field
 from .attention import Attention, AttentionEvent
 from .component import Component, register_component
 from .event import EventBus
-from .graphdb import Edge, Node, NodeId, register_edge
+from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
 from .perception import Feature as PerceptionFeature
@@ -18,9 +18,8 @@ from .perception import Feature as PerceptionFeature
 ObjectId = NewType("ObjectId", int)
 
 
-@register_edge("Features", allowed_connections=[("Object", "FeatureGroup")])
 class Features(Edge):
-    pass
+    allowed_connections: EdgeConnectionsList = [("Object", "FeatureGroup")]
 
 
 class Object(Node):

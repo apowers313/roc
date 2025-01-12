@@ -12,6 +12,7 @@ from pydantic import Field, ValidationError
 
 from roc.graphdb import (
     Edge,
+    EdgeConnectionsList,
     EdgeDescription,
     EdgeId,
     EdgeList,
@@ -28,7 +29,6 @@ from roc.graphdb import (
     edge_registry,
     node_label_registry,
     node_registry,
-    register_edge,
 )
 
 
@@ -47,7 +47,6 @@ class TestGraphDB:
         assert len(res) == 3
         print("!!! RES:", res)  # noqa: T201
         print("!!! REPR:", repr(res))  # noqa: T201
-        # assert res != None
         for row in res:
             print("!!! ROW:", repr(row))  # noqa: T201
 
@@ -408,7 +407,6 @@ class TestNode:
         c = Node.get_cache()
         assert c.hits == 0
         assert c.misses == 0
-        # assert c.maxsize == 2048
         assert c.currsize == 0
         assert isinstance(c, Cache)
 
@@ -960,7 +958,6 @@ class TestEdge:
         c.clear()
         assert c.hits == 0
         assert c.misses == 0
-        # assert c.maxsize == 2048
         assert c.currsize == 0
         assert isinstance(c, Cache)
 
@@ -1093,25 +1090,14 @@ class TestEdge:
 
     def test_edge_immutable_properties(self, new_edge) -> None:
         e, _, _ = new_edge
-        # orig_src_id = e.src_id
-        # orig_dst_id = e.dst_id
         orig_src = e.src
         orig_dst = e.dst
         orig_type = e.type
 
-        # e.src_id = -666
-        # e.dst_id = -666
         with pytest.raises(AttributeError):
             e.src = Node()
         with pytest.raises(AttributeError):
             e.dst = Node()
-        # TODO: const doesn't work, frozen doesn't work...
-        # I'll figure this out later
-        # with pytest.raises(AttributeError):
-        #     e.type = "jackedup"
-
-        # assert e.src_id == orig_src_id
-        # assert e.dst_id == orig_dst_id
         assert id(e.src) == id(orig_src)
         assert id(e.dst) == id(orig_dst)
         assert e.type == orig_type
@@ -1229,6 +1215,35 @@ class TestEdge:
         f = Edge.connect(n1, n2, "Foo")
         assert f.type == "Foo"
 
+    def test_type(self, no_strict_schema) -> None:
+        class Foo(Edge):
+            type: str = "NotFoo"
+
+        f = Foo.connect(Node(), Node())
+
+        assert f.type == "NotFoo"
+
+    def test_type_from_field(self, no_strict_schema) -> None:
+        class Foo(Edge):
+            type: str = Field(default_factory=lambda: "OtherNotFoo")
+
+        f = Foo.connect(Node(), Node())
+
+        assert f.type == "OtherNotFoo"
+
+    def test_default_type(self, no_strict_schema) -> None:
+        class Foo(Edge):
+            pass
+
+        class Bar(Foo):
+            pass
+
+        f = Foo.connect(Node(), Node())
+        b = Bar.connect(Node(), Node())
+
+        assert f.type == "Foo"
+        assert b.type == "Bar"
+
     def test_edge_connect_no_type(self) -> None:
         n1 = Node()
         n2 = Node()
@@ -1240,7 +1255,6 @@ class TestEdge:
         n1 = Node()
         n2 = Node()
 
-        @register_edge(edgetype="Foo")
         class Foo(Edge):
             name: str
 
@@ -1250,41 +1264,31 @@ class TestEdge:
         assert edge_registry["Foo"] is Foo
 
     def test_register_edge(self, no_strict_schema) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge(edgetype="Foo")
         class Foo(Edge):
             name: str
 
-        f = Foo.connect(n1, n2, name="bar")
+        f = Foo.connect(Node(), Node(), name="bar")
         assert f.type == "Foo"
         assert "Foo" in edge_registry
         assert edge_registry["Foo"] is Foo
 
     def test_register_edge_duplicate(self) -> None:
-        @register_edge("Foo")
         class Foo(Edge):
-            name: str
+            type: str = "Foo"
 
         with pytest.raises(
             Exception,
             match="edge_register can't register type 'Foo' because it has already been registered",
         ):
 
-            @register_edge("Foo")
             class Bar(Edge):
-                name: str
+                type: str = "Foo"
 
     def test_resolve_registered_edge(self, no_strict_schema) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge(edgetype="Foo")
         class Foo(Edge):
             name: str
 
-        f = Foo.connect(n1, n2, name="bar")
+        f = Foo.connect(Node(), Node(), name="bar")
         Edge.save(f)
         old_id = f.id
         del f
@@ -1298,7 +1302,6 @@ class TestEdge:
         n1 = Node()
         n2 = Node()
 
-        @register_edge(edgetype="Foo")
         class Foo(Edge):
             name: str
 
@@ -1315,14 +1318,11 @@ class TestEdge:
         assert f2.name == "bar"
 
     def test_connection_allowed(self) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge("Foo", allowed_connections=[("Node", "Node")])
         class Foo(Edge):
+            allowed_connections: EdgeConnectionsList = [("Node", "Node")]
             name: str
 
-        f = Foo.connect(n1, n2, name="bar")
+        f = Foo.connect(Node(), Node(), name="bar")
         assert f.type == "Foo"
 
     def test_connection_allowed_to_parent(self) -> None:
@@ -1338,45 +1338,34 @@ class TestEdge:
         n1 = Foo()
         n2 = Bar()
 
-        @register_edge("Link", allowed_connections=[("Foo", "Parent")])
         class Link(Edge):
+            allowed_connections: EdgeConnectionsList = [("Foo", "Parent")]
             name: str
 
         f = Link.connect(n1, n2, name="bar")
         assert f.type == "Link"
 
-    def test_connection_not_allowed(self) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge("Foo", allowed_connections=[("Node", "Bar")])
+    def test_connection_not_allowed(self, no_strict_schema) -> None:
         class Foo(Edge):
+            allowed_connections: EdgeConnectionsList = [("Node", "Bar")]
             name: str
 
         with pytest.raises(
             Exception,
             match="attempting to connect edge 'Foo' from 'Node' to 'Node' not in allowed connections list",
         ):
-            Foo.connect(n1, n2, name="bar")
+            Foo.connect(Node(), Node(), name="bar")
 
     def test_strict_schema(self, strict_schema) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge("Foo")
         class Foo(Edge):
             name: str
 
         with pytest.raises(
             Exception, match="allowed_connections missing in 'Foo' and strict_schema is set"
         ):
-            Foo.connect(n1, n2, name="bar")
+            Foo.connect(Node(), Node(), name="bar")
 
     def test_strict_schema_warns(self, strict_schema, strict_schema_warns) -> None:
-        n1 = Node()
-        n2 = Node()
-
-        @register_edge("Foo")
         class Foo(Edge):
             name: str
 
@@ -1384,7 +1373,7 @@ class TestEdge:
             StrictSchemaWarning,
             match="allowed_connections missing in 'Foo' and strict_schema is set",
         ):
-            Foo.connect(n1, n2, name="bar")
+            Foo.connect(Node(), Node(), name="bar")
 
 
 class TestNodeList:
@@ -1483,16 +1472,14 @@ class TestSchema:
         class Bar(Node):
             pass
 
-        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
         class Link(Edge):
-            pass
+            allowed_connections: EdgeConnectionsList = [("Foo", "Bar")]
 
         Schema.validate()
 
     def test_validate_fails(self, clear_registries) -> None:
-        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
         class Link(Edge):
-            pass
+            allowed_connections: EdgeConnectionsList = [("Foo", "Bar")]
 
         expected_error = (
             "Error validating schema:\n"
@@ -1503,6 +1490,18 @@ class TestSchema:
         with pytest.raises(SchemaValidationError, match=expected_error):
             Schema.validate()
 
+    def test_validate_no_allowed_connections(self, clear_registries) -> None:
+        class Foo(Node):
+            pass
+
+        class Bar(Node):
+            pass
+
+        class Link(Edge):
+            pass
+
+        Schema.validate()
+
     def test_create(self, clear_registries) -> None:
         class Foo(Node):
             pass
@@ -1510,9 +1509,8 @@ class TestSchema:
         class Bar(Node):
             pass
 
-        @register_edge("Link", allowed_connections=[("Foo", "Bar")])
         class Link(Edge):
-            pass
+            allowed_connections: EdgeConnectionsList = [("Foo", "Bar")]
 
         schema = Schema()
         assert schema.edge_names == {"Link"}
@@ -1535,9 +1533,8 @@ class TestSchema:
         class Baz(Node):
             pass
 
-        @register_edge("Link", allowed_connections=[("Foo", "Baz")])
         class Link(Edge):
-            pass
+            allowed_connections: EdgeConnectionsList = [("Foo", "Baz")]
 
         schema = Schema()
 
@@ -1552,8 +1549,8 @@ class TestEdgeDescription:
         class Bar(Node):
             pass
 
-        @register_edge("Link", allowed_connections=[("Foo", "Bar"), ("Bar", "Foo")])
         class Link(Edge):
+            allowed_connections: EdgeConnectionsList = [("Foo", "Bar"), ("Bar", "Foo")]
             name: str = "Bob"
 
         ed = EdgeDescription(Link)
