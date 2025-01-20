@@ -90,7 +90,7 @@ mypy:
 
 .PHONY: check-safety
 check-safety:
-	uv check
+	uv sync
 	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715
 	uv run bandit -ll --recursive roc tests
 
