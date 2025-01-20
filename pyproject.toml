@@ -1,10 +1,3 @@
-[project.urls]
-homepage = "https://github.com/apowers313/roc"
-repository = "https://github.com/apowers313/roc"
-
-[project.scripts]
-play = "roc.script:cli"
-
 [project]
 authors = [{ name = "apowers313", email = "apowers@ato.ms" }]
 license = { text = "MIT" }
@@ -108,6 +101,17 @@ nvidia = [
   "cupy-cuda12x<14.0.0,>=13.3.0",
   "pycuda<2025.0.0,>=2024.1.2",
 ]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[project.urls]
+homepage = "https://github.com/apowers313/roc"
+repository = "https://github.com/apowers313/roc"
+
+[project.scripts]
+play = "roc.script:cli"
 
 [tool.uv]
 default-groups = ["dev"]
@@ -248,6 +252,8 @@ exclude = ["site"]
 # warn_required_dynamic_aliases = true
 
 [tool.pytest.ini_options]
+# pythonpath = [".", "roc"]
+
 # https://docs.pytest.org/en/6.2.x/customize.html#pyproject-toml
 # Directories that are not visited by pytest collector:
 norecursedirs = [
@@ -262,11 +268,13 @@ norecursedirs = [
   "__pycache__",
   "experiments",
 ]
+
 doctest_optionflags = [
   "NUMBER",
   "NORMALIZE_WHITESPACE",
   "IGNORE_EXCEPTION_DETAIL",
 ]
+
 filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
