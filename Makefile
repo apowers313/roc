@@ -10,16 +10,19 @@ VERSION := latest
 # Test the library
 .PHONY: play
 play:
-	poetry run play
+	uv run play
 
 #* Poetry
-.PHONY: poetry-download
-poetry-download:
-	curl -sSL https://install.python-poetry.org | python3 -
+.PHONY: uv-download
+uv-download:
+	curl -LsSf https://astral.sh/uv/install.sh | sh
 
-.PHONY: poetry-remove
-poetry-remove:
-	curl -sSL https://install.python-poetry.org | $(PYTHON) - --uninstall
+.PHONY: uv-remove
+uv-remove:
+	uv cache clean
+	rm -r "$(uv python dir)"
+	rm -r "$(uv tool dir)"
+	rm ~/.local/bin/uv ~/.local/bin/uvx
 
 #* Installation
 .PHONY: setup
@@ -27,20 +30,18 @@ setup: install pre-commit-install
 
 .PHONY: install
 install:
-	poetry config virtualenvs.in-project true
-	poetry lock -n && poetry export --without-hashes > requirements.txt
-	poetry env use 3.11
-	poetry -vv install -n
-	poetry run mypy --install-types --non-interactive ./
+	uv venv --python 3.11
+	uv sync
+	uv run mypy --install-types --non-interactive ./
 
 .PHONY: pre-commit-install
 pre-commit-install:
-	poetry run pre-commit install --hook-type pre-commit --hook-type pre-push
+	uv run pre-commit install --hook-type pre-commit --hook-type pre-push
 
 #* Formatters
 .PHONY: codestyle
 codestyle:
-	poetry run black --config pyproject.toml ./
+	uv run black --config pyproject.toml ./
 
 .PHONY: formatting
 formatting: codestyle
@@ -51,7 +52,7 @@ lint: mypy check-codestyle dep-check
 
 .PHONY: dep-check
 dep-check:
-	poetry run deptry .
+	uv run deptry .
 
 .PHONY: load-data
 load-data:
@@ -59,7 +60,7 @@ load-data:
 
 .PHONY: test
 test:
-	poetry run pytest -c pyproject.toml
+	uv run pytest -c pyproject.toml
 
 .PHONY: profile
 profile:
@@ -67,17 +68,17 @@ profile:
 	# make TEST=tests/flood_test.py profile
 	# or
 	# make TEST="tests/attention_test.py -k test_basic" profile
-	poetry run pytest -c pyproject.toml --profile-svg $(TEST)
+	uv run pytest -c pyproject.toml --profile-svg $(TEST)
 
 .PHONY: check-codestyle
 check-codestyle:
-	poetry run ruff check --config=./pyproject.toml .
-	poetry run black --config pyproject.toml ./
-	poetry run ruff check --config ./pyproject.toml --fix
+	uv run ruff check --config=./pyproject.toml .
+	uv run black --config pyproject.toml ./
+	uv run ruff check --config ./pyproject.toml --fix
 
 .PHONY: mypy
 mypy:
-	poetry run mypy --config-file pyproject.toml ./
+	uv run mypy --config-file pyproject.toml ./
 
 # safety check exceptions:
 # 51457, 70612: Py 1.11.0 Regexp DoS - not processing external data
@@ -89,30 +90,30 @@ mypy:
 
 .PHONY: check-safety
 check-safety:
-	poetry check
-	poetry run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715
-	poetry run bandit -ll --recursive roc tests
+	uv check
+	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715
+	uv run bandit -ll --recursive roc tests
 
 .PHONY: update-dev-deps
 update-dev-deps:
-	poetry add -D bandit@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
-	poetry add -D --allow-prereleases black@latest
+	uv add -D bandit@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
+	uv add -D --allow-prereleases black@latest
 
 # Docs
 .PHONY: docs
 docs:
-	poetry run mkdocs build --clean
+	uv run mkdocs build --clean
 
 .PHONY: edit-docs
 edit-docs:
-	poetry run mkdocs serve -a 0.0.0.0:9000 -w roc
+	uv run mkdocs serve -a 0.0.0.0:9000 -w roc
 
 # Coverage
 .PHONY: coverage
 coverage:
-	poetry run coverage run -m pytest
-	poetry run coverage lcov
-	poetry run coverage report
+	uv run coverage run -m pytest
+	uv run coverage lcov
+	uv run coverage report
 
 .PHONY: coverage-server
 coverage-server:
@@ -120,7 +121,7 @@ coverage-server:
 
 .PHONY: doc-coverage
 doc-coverage:
-	poetry run interrogate -c pyproject.toml -vv roc
+	uv run interrogate -c pyproject.toml -vv roc
 
 #* Docker
 # Example: make docker-build VERSION=latest
