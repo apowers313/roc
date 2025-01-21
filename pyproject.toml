@@ -1,7 +1,7 @@
 [project]
 authors = [{ name = "apowers313", email = "apowers@ato.ms" }]
 license = { text = "MIT" }
-requires-python = "<4.0,>=3.10"
+requires-python = "<4.0,>=3.12"
 name = "roc"
 version = "0.1.0"
 description = "Reinforcement Learning of Concepts"
@@ -14,7 +14,7 @@ classifiers = [
   "Intended Audience :: Developers",
   "License :: OSI Approved :: MIT License",
   "Operating System :: OS Independent",
-  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -28,7 +28,7 @@ dependencies = [
   "loguru<1.0.0,>=0.7.0",
   "networkx<4.0,>=3.3",
   "nle<2.0.0,>=1.1.0",
-  "numpy==1.*",
+  "numpy<3,>2",
   "pandas<3.0.0,>=2.2.2",
   "psutil<7.0.0,>=6.0.0",
   "pydantic-settings<3.0.0,>=2.0.3",
@@ -96,11 +96,11 @@ dev = [
   "types-cachetools<6.0.0.0,>=5.3.0.5",
   "types-tabulate<1.0.0.0,>=0.9.0.20240106",
 ]
-nvidia = [
-  "cuda-python<13.0.0.0,>=12.6.2.post1",
-  "cupy-cuda12x<14.0.0,>=13.3.0",
-  "pycuda<2025.0.0,>=2024.1.2",
-]
+# nvidia = [
+#   "cuda-python<13.0.0.0,>=12.6.2.post1",
+#   "cupy-cuda12x<14.0.0,>=13.3.0",
+#   "pycuda<2025.0.0,>=2024.1.2",
+# ]
 
 [build-system]
 requires = ["pdm-backend"]
@@ -214,7 +214,7 @@ convention = "google"
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
-python_version = "3.12"
+python_version = "3.13"
 pretty = true
 show_traceback = true
 color_output = true

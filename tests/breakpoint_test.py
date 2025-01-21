@@ -24,6 +24,7 @@ class TestBreakpoint:
         assert breakpoints.count == 0
         breakpoints.resume()
         assert not breakpoints.brk
+        sleep(0.0001)  # XXX: fix race condition
 
     @pytest.fixture(scope="class", autouse=True)
     def breakpoint_thread(self):
