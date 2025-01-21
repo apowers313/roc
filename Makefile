@@ -178,3 +178,8 @@ pre-commit:
 
 .PHONY: pre-push
 pre-push: doc-coverage test coverage docs lint
+
+.PHONY: upgrade-python
+upgrade-python:
+	uv run pyupgrade `find roc -name "*.py" -type f`
+	uv run pyupgrade `find tests -name "*.py" -type f`

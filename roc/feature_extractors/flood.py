@@ -112,7 +112,7 @@ class Flood(FeatureExtractor[TypedPointCollection]):
             val = data.get_val(p.x, p.y)
             point_list = recursive_flood_check(val, p.x, p.y, [])
             if len(point_list) >= MIN_FLOOD_SIZE:
-                point_set = set([(p.x, p.y) for p in point_list])
+                point_set = {(p.x, p.y) for p in point_list}
                 self.pb_conn.send(
                     FloodFeature(
                         origin_id=self.id,

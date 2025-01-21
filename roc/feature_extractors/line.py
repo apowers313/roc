@@ -56,7 +56,7 @@ class Line(FeatureExtractor[TypedPointCollection]):
             nonlocal points
 
             if len(points) >= MIN_LINE_COUNT:
-                point_set = set([(p.x, p.y) for p in points])
+                point_set = {(p.x, p.y) for p in points}
                 ln.pb_conn.send(
                     LineFeature(
                         origin_id=self.id,

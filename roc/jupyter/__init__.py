@@ -1,6 +1,5 @@
 """Jupyter magics for flow control and debugging"""
 
-from __future__ import print_function
 
 import functools
 import traceback
