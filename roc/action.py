@@ -3,9 +3,10 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .component import Component, register_component
-from .event import Event, EventBus
-from .expmod import DefaultActionExpMod
+from roc.component import Component, register_component
+from roc.event import Event, EventBus
+from roc.expmod import DefaultActionExpMod
+from roc.graphdb import Node
 
 
 @dataclass
@@ -13,8 +14,7 @@ class ActionRequest:
     """Communicates that the Gym is waiting for the agent to take an action."""
 
 
-@dataclass
-class TakeAction:
+class TakeAction(Node):
     """Communicates back to the Gym which cation to take."""
 
     action: Any
@@ -40,7 +40,7 @@ class Action(Component):
 
     def action_request(self, e: ActionEvent) -> None:
         action = DefaultActionExpMod.get(default="pass").get_action()
-        actevt = TakeAction(action)
+        actevt = TakeAction(action=action)
         self.action_bus_conn.send(actevt)
 
 
