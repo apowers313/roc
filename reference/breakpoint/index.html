@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -1506,7 +1506,12 @@
 <a id="breakpoint"></a>
     <div class="doc doc-contents first">
 
-      <p>Execution control for ROC, primarily used in Jupyter notebooks</p>
+        <p>Execution control for ROC, primarily used in Jupyter notebooks</p>
+
+
+
+
+
 
 
 
@@ -1523,7 +1528,7 @@
 
 
 <h2 id="breakpoint.ConditionFn" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ConditionFn</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">ConditionFn</span> <span class="o">=</span> <span class="n">Callable</span><span class="p">[[],</span> <span class="nb">bool</span><span class="p">]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -1571,8 +1576,13 @@
     <div class="doc doc-contents ">
 
 
-      <p>Controls the state of breakpoints and program execution. This should
+        <p>Controls the state of breakpoints and program execution. This should
 probably be renamed to <code>BreakpointControl</code>. :)</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/breakpoint.py</code></summary>
@@ -1773,30 +1783,30 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 <span class="normal">221</span>
 <span class="normal">222</span>
 <span class="normal">223</span>
-<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Breakpoint</span><span class="p">:</span>
+<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Breakpoint</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Controls the state of breakpoints and program execution. This should</span>
 <span class="sd">    probably be renamed to `BreakpointControl`. :)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">brk</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">_breakpoints_dict</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
         <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_breakpoints_dict</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
-        <span class="k">def</span> <span class="nf">mkrow</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span><span class="p">]:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">mkrow</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span><span class="p">]:</span>
             <span class="n">fn</span> <span class="o">=</span> <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">fn</span>
             <span class="n">src</span> <span class="o">=</span> <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">src</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">src</span><span class="p">:</span>
@@ -1820,7 +1830,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
         <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">hdr</span><span class="si">}{</span><span class="n">tbl</span><span class="si">}</span><span class="s2">&quot;</span>
 
-    <span class="k">def</span> <span class="nf">add</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">fn</span><span class="p">:</span> <span class="n">ConditionFn</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
@@ -1864,7 +1874,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
         <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">BreakpointInfo</span><span class="p">(</span><span class="n">fn</span><span class="o">=</span><span class="n">fn</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="n">src</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Removes the breakpoint with the specified name</span>
 
 <span class="sd">        Args:</span>
@@ -1880,27 +1890,27 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
         <span class="k">del</span> <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Removes all breakpoints&quot;&quot;&quot;</span>
         <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
         <span class="n">_breakpoints_dict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">count</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The number of breakpoints that have been added.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;The state of execution, either &#39;stopped&#39; or &#39;running&#39;&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="s2">&quot;stopped&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">brk</span> <span class="k">else</span> <span class="s2">&quot;running&quot;</span>
 
-    <span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Prints all current breakpoints and the state of execution&quot;&quot;&quot;</span>
         <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># noqa: T201</span>
 
-    <span class="k">def</span> <span class="nf">resume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;If execution is currently stopped, this will resume execution. If not</span>
 <span class="sd">        stopped, this does nothing.</span>
 
@@ -1918,7 +1928,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">quiet</span><span class="p">:</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;resuming&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">do_break</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">do_break</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">trigger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&lt;user request&gt;&quot;</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Sets the state of execution to &#39;stopped&#39; and blocks further execution</span>
@@ -1943,7 +1953,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Checks whether any breakpoints are currently triggered by calling the</span>
 <span class="sd">        functions that were submitted by `add`. If / when the first function</span>
 <span class="sd">        returns True, program execution stops and will only resume when `resume`</span>
@@ -2008,7 +2018,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
 
 <h3 id="breakpoint.Breakpoint.count" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">count</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">count</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -2019,7 +2029,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
     <div class="doc doc-contents ">
 
-      <p>The number of breakpoints that have been added.</p>
+        <p>The number of breakpoints that have been added.</p>
     </div>
 
 </div>
@@ -2048,7 +2058,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
 
 <h3 id="breakpoint.Breakpoint.state" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">state</span><span class="p">:</span> <span class="nb">str</span></code>
+            <code class="highlight language-python"><span class="n">state</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -2059,7 +2069,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
     <div class="doc doc-contents ">
 
-      <p>The state of execution, either 'stopped' or 'running'</p>
+        <p>The state of execution, either 'stopped' or 'running'</p>
     </div>
 
 </div>
@@ -2069,7 +2079,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
 
 <h3 id="breakpoint.Breakpoint.trigger" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">trigger</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></code>
+            <code class="highlight language-python"><span class="n">trigger</span> <span class="o">=</span> <span class="kc">None</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -2101,7 +2111,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">42</span>
 <span class="normal">43</span>
 <span class="normal">44</span>
-<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">45</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
     <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">_breakpoints_dict</span>
@@ -2127,7 +2137,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span>
-<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">35</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">brk</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">trigger</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">lock</span> <span class="o">=</span> <span class="n">Lock</span><span class="p">()</span>
@@ -2153,7 +2163,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">37</span>
 <span class="normal">38</span>
 <span class="normal">39</span>
-<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">40</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="n">_breakpoints_dict</span><span class="p">)</span>
@@ -2201,10 +2211,10 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 <span class="normal">69</span>
 <span class="normal">70</span>
 <span class="normal">71</span>
-<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">72</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
-    <span class="k">def</span> <span class="nf">mkrow</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">mkrow</span><span class="p">(</span><span class="n">k</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span> <span class="o">|</span> <span class="nb">bool</span><span class="p">]:</span>
         <span class="n">fn</span> <span class="o">=</span> <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">fn</span>
         <span class="n">src</span> <span class="o">=</span> <span class="n">_breakpoints_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">src</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">src</span><span class="p">:</span>
@@ -2244,7 +2254,7 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
 
     <div class="doc doc-contents ">
 
-      <p>Adds a new breakpoint</p>
+        <p>Adds a new breakpoint</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2259,7 +2269,9 @@ probably be renamed to <code>BreakpointControl</code>. :)</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>fn</code></td>
+            <td>
+                <code>fn</code>
+            </td>
             <td>
                   <code><a class="autorefs autorefs-internal" title="breakpoint.ConditionFn" href="#breakpoint.ConditionFn">ConditionFn</a></code>
             </td>
@@ -2274,7 +2286,9 @@ execution should stop</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>name</code></td>
+            <td>
+                <code>name</code>
+            </td>
             <td>
                   <code>str | None</code>
             </td>
@@ -2290,7 +2304,9 @@ isn't specified and <strong>name</strong> doesn't exist.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>overwrite</code></td>
+            <td>
+                <code>overwrite</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -2305,7 +2321,9 @@ breakpoints with the same name. Defaults to False.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>src</code></td>
+            <td>
+                <code>src</code>
+            </td>
             <td>
                   <code>str | None</code>
             </td>
@@ -2393,7 +2411,7 @@ tempfile isn't especially helpful.</p>
 <span class="normal">113</span>
 <span class="normal">114</span>
 <span class="normal">115</span>
-<span class="normal">116</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">add</span><span class="p">(</span>
+<span class="normal">116</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">add</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span>
     <span class="n">fn</span><span class="p">:</span> <span class="n">ConditionFn</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
@@ -2453,7 +2471,7 @@ tempfile isn't especially helpful.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Checks whether any breakpoints are currently triggered by calling the
+        <p>Checks whether any breakpoints are currently triggered by calling the
 functions that were submitted by <code>add</code>. If / when the first function
 returns True, program execution stops and will only resume when <code>resume</code>
 is called.</p>
@@ -2489,7 +2507,7 @@ place you want to check for breakpoints before continuing to execute code.</p>
 <span class="normal">221</span>
 <span class="normal">222</span>
 <span class="normal">223</span>
-<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">224</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Checks whether any breakpoints are currently triggered by calling the</span>
 <span class="sd">    functions that were submitted by `add`. If / when the first function</span>
 <span class="sd">    returns True, program execution stops and will only resume when `resume`</span>
@@ -2534,7 +2552,7 @@ place you want to check for breakpoints before continuing to execute code.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Removes all breakpoints</p>
+        <p>Removes all breakpoints</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/breakpoint.py</code></summary>
@@ -2542,7 +2560,7 @@ place you want to check for breakpoints before continuing to execute code.</p>
 <span class="normal">135</span>
 <span class="normal">136</span>
 <span class="normal">137</span>
-<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">138</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">clear</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Removes all breakpoints&quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">_breakpoints_dict</span>
 
@@ -2564,7 +2582,7 @@ place you want to check for breakpoints before continuing to execute code.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Sets the state of execution to 'stopped' and blocks further execution
+        <p>Sets the state of execution to 'stopped' and blocks further execution
 until <code>resume</code> is called. This is typically called by <code>check</code> inside the
 program, but may be called directly (e.g. by a Jupyter magic command) to
 manually stop execution.</p>
@@ -2582,7 +2600,9 @@ manually stop execution.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>trigger</code></td>
+            <td>
+                <code>trigger</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -2597,7 +2617,9 @@ break. Defaults to "<user request>".</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>quiet</code></td>
+            <td>
+                <code>quiet</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -2639,7 +2661,7 @@ messages about resuming. Defaults to False.</p>
 <span class="normal">192</span>
 <span class="normal">193</span>
 <span class="normal">194</span>
-<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">do_break</span><span class="p">(</span>
+<span class="normal">195</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">do_break</span><span class="p">(</span>
     <span class="bp">self</span><span class="p">,</span> <span class="n">trigger</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;&lt;user request&gt;&quot;</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Sets the state of execution to &#39;stopped&#39; and blocks further execution</span>
@@ -2680,13 +2702,13 @@ messages about resuming. Defaults to False.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Prints all current breakpoints and the state of execution</p>
+        <p>Prints all current breakpoints and the state of execution</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/breakpoint.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">150</span>
 <span class="normal">151</span>
-<span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">list</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Prints all current breakpoints and the state of execution&quot;&quot;&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>  <span class="c1"># noqa: T201</span>
 </code></pre></div></td></tr></table></div>
@@ -2706,7 +2728,7 @@ messages about resuming. Defaults to False.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Removes the breakpoint with the specified name</p>
+        <p>Removes the breakpoint with the specified name</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2721,7 +2743,9 @@ messages about resuming. Defaults to False.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>name</code></td>
+            <td>
+                <code>name</code>
+            </td>
             <td>
                   <code>str</code>
             </td>
@@ -2776,7 +2800,7 @@ messages about resuming. Defaults to False.</p>
 <span class="normal">129</span>
 <span class="normal">130</span>
 <span class="normal">131</span>
-<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">132</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">remove</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Removes the breakpoint with the specified name</span>
 
 <span class="sd">    Args:</span>
@@ -2808,7 +2832,7 @@ messages about resuming. Defaults to False.</p>
 
     <div class="doc doc-contents ">
 
-      <p>If execution is currently stopped, this will resume execution. If not
+        <p>If execution is currently stopped, this will resume execution. If not
 stopped, this does nothing.</p>
 
 
@@ -2824,7 +2848,9 @@ stopped, this does nothing.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>quiet</code></td>
+            <td>
+                <code>quiet</code>
+            </td>
             <td>
                   <code>bool</code>
             </td>
@@ -2859,7 +2885,7 @@ messages about resuming. Defaults to False.</p>
 <span class="normal">167</span>
 <span class="normal">168</span>
 <span class="normal">169</span>
-<span class="normal">170</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">resume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">170</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">resume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">quiet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;If execution is currently stopped, this will resume execution. If not</span>
 <span class="sd">    stopped, this does nothing.</span>
 
@@ -2908,7 +2934,12 @@ messages about resuming. Defaults to False.</p>
     <div class="doc doc-contents ">
 
 
-      <p>Information about a specific breakpoint</p>
+        <p>Information about a specific breakpoint</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/breakpoint.py</code></summary>
@@ -2918,7 +2949,7 @@ messages about resuming. Defaults to False.</p>
 <span class="normal">19</span>
 <span class="normal">20</span>
 <span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">BreakpointInfo</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">BreakpointInfo</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Information about a specific breakpoint&quot;&quot;&quot;</span>
 
     <span class="n">fn</span><span class="p">:</span> <span class="n">ConditionFn</span>
@@ -2941,7 +2972,7 @@ messages about resuming. Defaults to False.</p>
 
 
 <h3 id="breakpoint.BreakpointInfo.fn" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">fn</span><span class="p">:</span> <span class="n">ConditionFn</span></code>
+            <code class="highlight language-python"><span class="n">fn</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -2960,7 +2991,7 @@ messages about resuming. Defaults to False.</p>
 
 
 <h3 id="breakpoint.BreakpointInfo.src" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">src</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span></code>
+            <code class="highlight language-python"><span class="n">src</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3053,10 +3084,10 @@ messages about resuming. Defaults to False.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>

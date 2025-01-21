@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -3000,8 +3000,13 @@
 <a id="gymnasium"></a>
     <div class="doc doc-contents first">
 
-      <p>This module is a wrapper around the Gym / Gymnasium interfaces and drives all
+        <p>This module is a wrapper around the Gym / Gymnasium interfaces and drives all
 the interactions between the agent and the system, including the main event loop.</p>
+
+
+
+
+
 
 
 
@@ -3037,7 +3042,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h2 id="gymnasium.dump_env_file" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dump_env_file</span><span class="p">:</span> <span class="n">Any</span> <span class="o">=</span> <span class="kc">None</span></code>
+            <code class="highlight language-python"><span class="n">dump_env_file</span> <span class="o">=</span> <span class="kc">None</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
@@ -3068,7 +3073,12 @@ the interactions between the agent and the system, including the main event loop
               Bases: <code><span title="pydantic.BaseModel">BaseModel</span></code></p>
 
 
-      <p>A Pydantic model representing the Nethack bottom line statistics.</p>
+        <p>A Pydantic model representing the Nethack bottom line statistics.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
@@ -3114,7 +3124,7 @@ the interactions between the agent and the system, including the main event loop
 <span class="normal">207</span>
 <span class="normal">208</span>
 <span class="normal">209</span>
-<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">BottomlineStats</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+<span class="normal">210</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">BottomlineStats</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic model representing the Nethack bottom line statistics.&quot;&quot;&quot;</span>
 
     <span class="n">x</span><span class="p">:</span> <span class="nb">int</span>
@@ -3175,7 +3185,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.ac" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ac</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">ac</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3194,7 +3204,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.align" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">align</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">align</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3213,7 +3223,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.blind" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">blind</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">blind</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3232,7 +3242,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.cap" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">cap</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">cap</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3251,7 +3261,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.cha" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">cha</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">cha</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3270,7 +3280,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.con" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">con</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">con</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3289,7 +3299,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.condition" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">condition</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">condition</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3308,7 +3318,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.conf" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">conf</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">conf</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3327,7 +3337,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.deaf" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">deaf</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">deaf</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3346,7 +3356,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.depth" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">depth</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">depth</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3365,7 +3375,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.dex" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dex</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">dex</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3384,7 +3394,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.dlevel" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dlevel</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">dlevel</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3403,7 +3413,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.dnum" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dnum</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">dnum</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3422,7 +3432,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.ene" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ene</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">ene</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3441,7 +3451,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.enemax" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">enemax</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">enemax</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3460,7 +3470,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.exp" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">exp</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">exp</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3479,7 +3489,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.fly" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">fly</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">fly</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3498,7 +3508,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.foodpois" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">foodpois</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">foodpois</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3517,7 +3527,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.gold" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">gold</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">gold</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3536,7 +3546,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.hallu" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">hallu</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">hallu</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3555,7 +3565,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.hd" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">hd</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">hd</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3574,7 +3584,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.hp" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">hp</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">hp</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3593,7 +3603,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.hpmax" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">hpmax</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">hpmax</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3612,7 +3622,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.hunger" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">hunger</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">hunger</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3631,7 +3641,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.intel" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">intel</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">alias</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">intel</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">alias</span><span class="o">=</span><span class="s1">&#39;int&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -3651,7 +3661,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.lev" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">lev</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">lev</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3670,7 +3680,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.ride" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">ride</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">ride</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3689,7 +3699,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.score" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">score</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">score</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3708,7 +3718,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.slime" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">slime</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">slime</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3727,7 +3737,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.stone" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">stone</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">stone</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3746,7 +3756,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.str125" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">str125</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">str125</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3765,7 +3775,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.str25" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">str25</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">str25</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3784,7 +3794,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.stringl" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">stringl</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">stringl</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3803,7 +3813,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.stun" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">stun</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">stun</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3822,7 +3832,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.termill" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">termill</span><span class="p">:</span> <span class="nb">bool</span></code>
+            <code class="highlight language-python"><span class="n">termill</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3841,7 +3851,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.time" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">time</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">time</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3860,7 +3870,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.wis" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">wis</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">wis</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3879,7 +3889,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.x" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">x</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">x</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3898,7 +3908,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.xp" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">xp</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">xp</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3917,7 +3927,7 @@ the interactions between the agent and the system, including the main event loop
 
 
 <h3 id="gymnasium.BottomlineStats.y" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">y</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">y</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -3957,8 +3967,13 @@ the interactions between the agent and the system, including the main event loop
               Bases: <code><span title="gymnasium.component.Component">Component</span></code>, <code><span title="abc.ABC">ABC</span></code></p>
 
 
-      <p>A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
+        <p>A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
 loop and interfaces to the ROC agent.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
@@ -4042,12 +4057,12 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">104</span>
 <span class="normal">105</span>
 <span class="normal">106</span>
-<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Gym</span><span class="p">(</span><span class="n">Component</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
+<span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Gym</span><span class="p">(</span><span class="n">Component</span><span class="p">,</span> <span class="n">ABC</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event</span>
 <span class="sd">    loop and interfaces to the ROC agent.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Gym options: </span><span class="si">{</span><span class="n">gym_opts</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -4065,16 +4080,16 @@ loop and interfaces to the ROC agent.</p>
         <span class="c1"># setup which features detectors to use on each bus</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 
     <span class="nd">@abstractmethod</span>
-    <span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="o">...</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="o">...</span>
 
     <span class="nd">@logger</span><span class="o">.</span><span class="n">catch</span>
-    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">obs</span><span class="p">,</span> <span class="n">reset_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
@@ -4239,7 +4254,7 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">41</span>
 <span class="normal">42</span>
 <span class="normal">43</span>
-<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">44</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gym_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Gym options: </span><span class="si">{</span><span class="n">gym_opts</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -4277,7 +4292,7 @@ loop and interfaces to the ROC agent.</p>
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">52</span>
 <span class="normal">53</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
-<span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4303,7 +4318,7 @@ loop and interfaces to the ROC agent.</p>
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">55</span>
 <span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
-<span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="o">...</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4329,7 +4344,7 @@ loop and interfaces to the ROC agent.</p>
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
 <span class="normal">50</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@abstractmethod</span>
-<span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span> <span class="o">...</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>
@@ -4399,7 +4414,7 @@ loop and interfaces to the ROC agent.</p>
 <span class="normal">105</span>
 <span class="normal">106</span>
 <span class="normal">107</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@logger</span><span class="o">.</span><span class="n">catch</span>
-<span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">obs</span><span class="p">,</span> <span class="n">reset_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
 
@@ -4478,8 +4493,13 @@ loop and interfaces to the ROC agent.</p>
               Bases: <code><a class="autorefs autorefs-internal" title="gymnasium.Gym" href="#gymnasium.Gym">Gym</a></code></p>
 
 
-      <p>Wrapper around the Gym class for driving the Nethack interface to the ROC
+        <p>Wrapper around the Gym class for driving the Nethack interface to the ROC
 agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
@@ -4548,12 +4568,12 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">275</span>
 <span class="normal">276</span>
 <span class="normal">277</span>
-<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">NethackGym</span><span class="p">(</span><span class="n">Gym</span><span class="p">):</span>
+<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">NethackGym</span><span class="p">(</span><span class="n">Gym</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Wrapper around the Gym class for driving the Nethack interface to the ROC</span>
 <span class="sd">    agent. Decodes Nethack specific data and sends it to the agent as Events.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
         <span class="n">gym_opts</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nle</span><span class="o">.</span><span class="n">nethack</span><span class="o">.</span><span class="n">NETHACKOPTIONS</span><span class="p">)</span> <span class="o">+</span> <span class="n">settings</span><span class="o">.</span><span class="n">nethack_extra_options</span>
@@ -4568,7 +4588,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
         <span class="c1"># &quot;NetHackScore&quot; and &quot;NetHackChallenge&quot; also appear to be interesting</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="s2">&quot;NetHack-v0&quot;</span><span class="p">,</span> <span class="n">gym_opts</span><span class="o">=</span><span class="n">gym_opts</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">,</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
@@ -4576,12 +4596,12 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
         <span class="n">settings</span><span class="o">.</span><span class="n">gym_actions</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">unwrapped</span><span class="o">.</span><span class="n">actions</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
         <span class="n">settings</span><span class="o">.</span><span class="n">observation_shape</span> <span class="o">=</span> <span class="n">nle</span><span class="o">.</span><span class="n">nethack</span><span class="o">.</span><span class="n">DUNGEON_SHAPE</span>
 
-    <span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">send_vision</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">send_intrinsics</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">send_auditory</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">action_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ActionRequest</span><span class="p">())</span>
 
         <span class="c1"># get result using cache</span>
@@ -4592,19 +4612,19 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 
         <span class="k">return</span> <span class="n">a</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">action</span>
 
-    <span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">vd</span> <span class="o">=</span> <span class="n">VisionData</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">vd</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># msg = &quot;&quot;.join(chr(ch) for ch in obs[&quot;message&quot;])</span>
         <span class="c1"># print(&quot;message&quot;, msg)</span>
         <span class="k">pass</span>
 
-    <span class="k">def</span> <span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">pass</span>
 
-    <span class="k">def</span> <span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">blstats</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;blstats&quot;</span><span class="p">]</span>
         <span class="n">blstats_vals</span> <span class="o">=</span> <span class="p">{</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">blstats</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">blstat_offsets</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">bit</span> <span class="ow">in</span> <span class="n">condition_bits</span><span class="p">:</span>
@@ -4655,7 +4675,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">228</span>
 <span class="normal">229</span>
 <span class="normal">230</span>
-<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">231</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="p">,</span> <span class="n">gym_opts</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">gym_opts</span> <span class="o">=</span> <span class="n">gym_opts</span> <span class="ow">or</span> <span class="p">{}</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="n">gym_opts</span><span class="p">[</span><span class="s2">&quot;options&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">nle</span><span class="o">.</span><span class="n">nethack</span><span class="o">.</span><span class="n">NETHACKOPTIONS</span><span class="p">)</span> <span class="o">+</span> <span class="n">settings</span><span class="o">.</span><span class="n">nethack_extra_options</span>
@@ -4694,7 +4714,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">236</span>
 <span class="normal">237</span>
 <span class="normal">238</span>
-<span class="normal">239</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">239</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">env</span><span class="p">:</span> <span class="n">gym</span><span class="o">.</span><span class="n">core</span><span class="o">.</span><span class="n">Env</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">settings</span> <span class="o">=</span> <span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="p">,</span> <span class="n">gym</span><span class="o">.</span><span class="n">spaces</span><span class="o">.</span><span class="n">Discrete</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_count</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">env</span><span class="o">.</span><span class="n">action_space</span><span class="o">.</span><span class="n">n</span><span class="p">)</span>
@@ -4729,7 +4749,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">252</span>
 <span class="normal">253</span>
 <span class="normal">254</span>
-<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="normal">255</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_action</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">action_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">ActionRequest</span><span class="p">())</span>
 
     <span class="c1"># get result using cache</span>
@@ -4761,7 +4781,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">261</span>
 <span class="normal">262</span>
 <span class="normal">263</span>
-<span class="normal">264</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">264</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">send_auditory</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># msg = &quot;&quot;.join(chr(ch) for ch in obs[&quot;message&quot;])</span>
     <span class="c1"># print(&quot;message&quot;, msg)</span>
     <span class="k">pass</span>
@@ -4793,7 +4813,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
 <span class="normal">275</span>
 <span class="normal">276</span>
 <span class="normal">277</span>
-<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">278</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">send_intrinsics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">blstats</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="s2">&quot;blstats&quot;</span><span class="p">]</span>
     <span class="n">blstats_vals</span> <span class="o">=</span> <span class="p">{</span><span class="n">e</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span> <span class="n">blstats</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">value</span><span class="p">]</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">blstat_offsets</span><span class="p">}</span>
     <span class="k">for</span> <span class="n">bit</span> <span class="ow">in</span> <span class="n">condition_bits</span><span class="p">:</span>
@@ -4825,7 +4845,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">241</span>
 <span class="normal">242</span>
 <span class="normal">243</span>
-<span class="normal">244</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">244</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">send_obs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">send_vision</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">send_intrinsics</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">send_auditory</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
@@ -4849,7 +4869,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
             <details class="quote">
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">266</span>
-<span class="normal">267</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">267</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">send_proprioceptive</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="k">pass</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -4872,7 +4892,7 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
               <summary>Source code in <code>roc/gymnasium.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">257</span>
 <span class="normal">258</span>
-<span class="normal">259</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">259</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">send_vision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obs</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">vd</span> <span class="o">=</span> <span class="n">VisionData</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">env_bus_conn</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">vd</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
@@ -4905,8 +4925,13 @@ agent. Decodes Nethack specific data and sends it to the agent as Events.</p>
               Bases: <code><span title="enum.IntEnum">IntEnum</span></code></p>
 
 
-      <p>An enumeration of Nethack bottom line statistics (intelligence, strength,
+        <p>An enumeration of Nethack bottom line statistics (intelligence, strength,
 charisma, position, hit points, etc.)</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
@@ -4942,7 +4967,7 @@ charisma, position, hit points, etc.)</p>
 <span class="normal">139</span>
 <span class="normal">140</span>
 <span class="normal">141</span>
-<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">blstat_offsets</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="normal">142</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">blstat_offsets</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An enumeration of Nethack bottom line statistics (intelligence, strength,</span>
 <span class="sd">    charisma, position, hit points, etc.)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -5554,8 +5579,13 @@ charisma, position, hit points, etc.)</p>
               Bases: <code><span title="enum.IntEnum">IntEnum</span></code></p>
 
 
-      <p>Bits for decoding the <code>CONDITION</code> bottomline stat to determin if the
+        <p>Bits for decoding the <code>CONDITION</code> bottomline stat to determin if the
 player is flying, deaf, food poisoned, etc.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/gymnasium.py</code></summary>
@@ -5577,7 +5607,7 @@ player is flying, deaf, food poisoned, etc.</p>
 <span class="normal">161</span>
 <span class="normal">162</span>
 <span class="normal">163</span>
-<span class="normal">164</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">condition_bits</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
+<span class="normal">164</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">condition_bits</span><span class="p">(</span><span class="n">IntEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Bits for decoding the `CONDITION` bottomline stat to determin if the</span>
 <span class="sd">    player is flying, deaf, food poisoned, etc.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -5933,10 +5963,10 @@ player is flying, deaf, food poisoned, etc.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>

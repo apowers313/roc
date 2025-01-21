@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -1412,8 +1412,13 @@
 <a id="feature_extractors.distance"></a>
     <div class="doc doc-contents first">
 
-      <p>Calculates distance between Singles. Note: this is probably post-attention in
+        <p>Calculates distance between Singles. Note: this is probably post-attention in
 humans, only calculated for a subset of features, and based on the saccades of the eyes.</p>
+
+
+
+
+
 
 
 
@@ -1440,6 +1445,11 @@ humans, only calculated for a subset of features, and based on the saccades of t
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
               Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<a class="autorefs autorefs-internal" title="feature_extractors.distance.DistanceFeature" href="#feature_extractors.distance.DistanceFeature">DistanceFeature</a>]</code></p>
+
+
+
+
+
 
 
               <details class="quote">
@@ -1483,18 +1493,18 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">81</span>
 <span class="normal">82</span>
 <span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;distance&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">Distance</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">DistanceFeature</span><span class="p">]):</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Distance</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">DistanceFeature</span><span class="p">]):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
-    <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="c1"># only listen to single:perception events</span>
         <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;single&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">return</span> <span class="kc">False</span>
 
-    <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
@@ -1539,7 +1549,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.Distance.prev_features" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></code>
+            <code class="highlight language-python"><span class="n">prev_features</span> <span class="o">=</span> <span class="p">[]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1570,7 +1580,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
               <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">47</span>
 <span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">prev_features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">SingleFeature</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 </code></pre></div></td></tr></table></div>
@@ -1596,7 +1606,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">52</span>
 <span class="normal">53</span>
 <span class="normal">54</span>
-<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">55</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="c1"># only listen to single:perception events</span>
     <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;single&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;perception&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="kc">True</span>
@@ -1646,7 +1656,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">80</span>
 <span class="normal">81</span>
 <span class="normal">82</span>
-<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">83</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="n">data</span> <span class="o">=</span> <span class="n">e</span><span class="o">.</span><span class="n">data</span>
 
     <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Settled</span><span class="p">):</span>
@@ -1707,7 +1717,12 @@ humans, only calculated for a subset of features, and based on the saccades of t
               Bases: <code><span title="feature_extractors.perception.Feature">Feature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.distance.DistanceNode" href="#feature_extractors.distance.DistanceNode">DistanceNode</a>]</code></p>
 
 
-      <p>The distance between two features</p>
+        <p>The distance between two features</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
@@ -1731,7 +1746,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">40</span>
 <span class="normal">41</span>
 <span class="normal">42</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span><span class="p">(</span><span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">DistanceFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">[</span><span class="n">DistanceNode</span><span class="p">]):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DistanceFeature</span><span class="p">(</span><span class="n">Feature</span><span class="p">[</span><span class="n">DistanceNode</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The distance between two features&quot;&quot;&quot;</span>
 
     <span class="n">feature_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Distance&quot;</span>
@@ -1739,16 +1754,16 @@ humans, only calculated for a subset of features, and based on the saccades of t
     <span class="n">end_point</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]</span>
     <span class="n">size</span><span class="p">:</span> <span class="nb">int</span>
 
-    <span class="k">def</span> <span class="nf">get_points</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_points</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]]:</span>
         <span class="k">return</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_point</span><span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">node_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">node_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_create_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DistanceNode</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DistanceNode</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">DistanceNode</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_dbfetch_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DistanceNode</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dbfetch_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DistanceNode</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">DistanceNode</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">&quot;src.size = $size&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">})</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1768,7 +1783,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceFeature.end_point" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">end_point</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">end_point</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1787,7 +1802,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceFeature.feature_name" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">feature_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;Distance&#39;</span></code>
+            <code class="highlight language-python"><span class="n">feature_name</span> <span class="o">=</span> <span class="s1">&#39;Distance&#39;</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -1807,7 +1822,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceFeature.size" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">size</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">size</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1826,7 +1841,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceFeature.start_point" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">start_point</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">start_point</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1871,7 +1886,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">32</span>
-<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_points</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]]:</span>
+<span class="normal">33</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_points</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">]]:</span>
     <span class="k">return</span> <span class="p">{</span><span class="bp">self</span><span class="o">.</span><span class="n">start_point</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_point</span><span class="p">}</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1893,7 +1908,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
             <details class="quote">
               <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">35</span>
-<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">node_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">36</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">node_hash</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">hash</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1925,6 +1940,11 @@ humans, only calculated for a subset of features, and based on the saccades of t
               Bases: <code><span title="feature_extractors.perception.FeatureNode">FeatureNode</span></code></p>
 
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/distance.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">15</span>
@@ -1932,11 +1952,11 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">17</span>
 <span class="normal">18</span>
 <span class="normal">19</span>
-<span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">DistanceNode</span><span class="p">(</span><span class="n">FeatureNode</span><span class="p">):</span>
+<span class="normal">20</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DistanceNode</span><span class="p">(</span><span class="n">FeatureNode</span><span class="p">):</span>
     <span class="n">size</span><span class="p">:</span> <span class="nb">int</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">attr_strs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attr_strs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">)]</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1956,7 +1976,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceNode.attr_strs" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">attr_strs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">attr_strs</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -1975,7 +1995,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 
 
 <h3 id="feature_extractors.distance.DistanceNode.size" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">size</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="n">size</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -2020,7 +2040,7 @@ humans, only calculated for a subset of features, and based on the saccades of t
 <span class="normal">90</span>
 <span class="normal">91</span>
 <span class="normal">92</span>
-<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">],</span> <span class="n">p2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">93</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">chebyshev_distance</span><span class="p">(</span><span class="n">p1</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">],</span> <span class="n">p2</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">XLoc</span><span class="p">,</span> <span class="n">YLoc</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="n">x1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">x2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
     <span class="n">y1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -2087,10 +2107,10 @@ humans, only calculated for a subset of features, and based on the saccades of t
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>

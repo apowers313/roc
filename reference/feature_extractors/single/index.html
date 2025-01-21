@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -1286,7 +1286,12 @@
 <a id="feature_extractors.single"></a>
     <div class="doc doc-contents first">
 
-      <p>Generates Features for things that aren't like their neighbors</p>
+        <p>Generates Features for things that aren't like their neighbors</p>
+
+
+
+
+
 
 
 
@@ -1315,7 +1320,12 @@
               Bases: <code><span title="feature_extractors.perception.FeatureExtractor">FeatureExtractor</span>[<span title="feature_extractors.location.Point">Point</span>]</code></p>
 
 
-      <p>A component for identifying single, isolated visual features</p>
+        <p>A component for identifying single, isolated visual features</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/single.py</code></summary>
@@ -1360,10 +1370,10 @@
 <span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;single&quot;</span><span class="p">,</span> <span class="s2">&quot;perception&quot;</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">Single</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">Point</span><span class="p">]):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Single</span><span class="p">(</span><span class="n">FeatureExtractor</span><span class="p">[</span><span class="n">Point</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A component for identifying single, isolated visual features&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Filters out non-VisionData</span>
 
 <span class="sd">        Args:</span>
@@ -1375,7 +1385,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">e</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">VisionData</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Emits the shape features.</span>
 
 <span class="sd">        Args:</span>
@@ -1426,7 +1436,7 @@
 
     <div class="doc doc-contents ">
 
-      <p>Filters out non-VisionData</p>
+        <p>Filters out non-VisionData</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1441,7 +1451,9 @@
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>e</code></td>
+            <td>
+                <code>e</code>
+            </td>
             <td>
                   <code><span title="feature_extractors.perception.PerceptionEvent">PerceptionEvent</span></code>
             </td>
@@ -1502,7 +1514,7 @@
 <span class="normal">48</span>
 <span class="normal">49</span>
 <span class="normal">50</span>
-<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Filters out non-VisionData</span>
 
 <span class="sd">    Args:</span>
@@ -1530,7 +1542,7 @@
 
     <div class="doc doc-contents ">
 
-      <p>Emits the shape features.</p>
+        <p>Emits the shape features.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -1545,7 +1557,9 @@
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>e</code></td>
+            <td>
+                <code>e</code>
+            </td>
             <td>
                   <code><span title="feature_extractors.perception.PerceptionEvent">PerceptionEvent</span></code>
             </td>
@@ -1610,7 +1624,7 @@
 <span class="normal">74</span>
 <span class="normal">75</span>
 <span class="normal">76</span>
-<span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_feature</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">PerceptionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Emits the shape features.</span>
 
 <span class="sd">    Args:</span>
@@ -1669,7 +1683,12 @@
               Bases: <code><span title="feature_extractors.perception.PointFeature">PointFeature</span>[<a class="autorefs autorefs-internal" title="feature_extractors.single.SingleNode" href="#feature_extractors.single.SingleNode">SingleNode</a>]</code></p>
 
 
-      <p>A single isolated feature with no similar features around it.</p>
+        <p>A single isolated feature with no similar features around it.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/single.py</code></summary>
@@ -1684,15 +1703,15 @@
 <span class="normal">32</span>
 <span class="normal">33</span>
 <span class="normal">34</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@dataclass</span><span class="p">(</span><span class="n">kw_only</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">SingleFeature</span><span class="p">(</span><span class="n">PointFeature</span><span class="p">[</span><span class="n">SingleNode</span><span class="p">]):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SingleFeature</span><span class="p">(</span><span class="n">PointFeature</span><span class="p">[</span><span class="n">SingleNode</span><span class="p">]):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A single isolated feature with no similar features around it.&quot;&quot;&quot;</span>
 
     <span class="n">feature_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Single&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_create_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingleNode</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_create_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingleNode</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">SingleNode</span><span class="p">(</span><span class="nb">type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_dbfetch_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingleNode</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_dbfetch_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SingleNode</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">SingleNode</span><span class="o">.</span><span class="n">find_one</span><span class="p">(</span><span class="s2">&quot;src.type = $type&quot;</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">})</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1712,7 +1731,7 @@
 
 
 <h3 id="feature_extractors.single.SingleFeature.feature_name" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">feature_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;Single&#39;</span></code>
+            <code class="highlight language-python"><span class="n">feature_name</span> <span class="o">=</span> <span class="s1">&#39;Single&#39;</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -1768,6 +1787,11 @@
               Bases: <code><span title="feature_extractors.perception.FeatureNode">FeatureNode</span></code></p>
 
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>roc/feature_extractors/single.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">16</span>
@@ -1775,11 +1799,11 @@
 <span class="normal">18</span>
 <span class="normal">19</span>
 <span class="normal">20</span>
-<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">SingleNode</span><span class="p">(</span><span class="n">FeatureNode</span><span class="p">):</span>
+<span class="normal">21</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">SingleNode</span><span class="p">(</span><span class="n">FeatureNode</span><span class="p">):</span>
     <span class="nb">type</span><span class="p">:</span> <span class="nb">int</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">attr_strs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attr_strs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">type</span><span class="p">)]</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1799,7 +1823,7 @@
 
 
 <h3 id="feature_extractors.single.SingleNode.attr_strs" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">attr_strs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">attr_strs</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -1818,7 +1842,7 @@
 
 
 <h3 id="feature_extractors.single.SingleNode.type" class="doc doc-heading">
-            <code class="highlight language-python"><span class="nb">type</span><span class="p">:</span> <span class="nb">int</span></code>
+            <code class="highlight language-python"><span class="nb">type</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1854,7 +1878,7 @@
 
     <div class="doc doc-contents ">
 
-      <p>Helper function to determine if a point in a matrix has the same value as
+        <p>Helper function to determine if a point in a matrix has the same value as
 any points around it.</p>
 
 
@@ -1870,7 +1894,9 @@ any points around it.</p>
       </thead>
       <tbody>
           <tr class="doc-section-item">
-            <td><code>data</code></td>
+            <td>
+                <code>data</code>
+            </td>
             <td>
                   <code><span title="feature_extractors.perception.VisionData">VisionData</span></code>
             </td>
@@ -1884,7 +1910,9 @@ any points around it.</p>
             </td>
           </tr>
           <tr class="doc-section-item">
-            <td><code>point</code></td>
+            <td>
+                <code>point</code>
+            </td>
             <td>
                   <code><span title="feature_extractors.location.Point">Point</span></code>
             </td>
@@ -1977,7 +2005,7 @@ any points around it.</p>
 <span class="normal">119</span>
 <span class="normal">120</span>
 <span class="normal">121</span>
-<span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">is_unique_from_neighbors</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">IntGrid</span><span class="p">,</span> <span class="n">point</span><span class="p">:</span> <span class="n">Point</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">122</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">is_unique_from_neighbors</span><span class="p">(</span><span class="n">data</span><span class="p">:</span> <span class="n">IntGrid</span><span class="p">,</span> <span class="n">point</span><span class="p">:</span> <span class="n">Point</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Helper function to determine if a point in a matrix has the same value as</span>
 <span class="sd">    any points around it.</span>
 
@@ -2079,10 +2107,10 @@ any points around it.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>

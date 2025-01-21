@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -1764,7 +1764,12 @@
 <a id="config"></a>
     <div class="doc doc-contents first">
 
-      <p>This module contains all the settings for the system.</p>
+        <p>This module contains all the settings for the system.</p>
+
+
+
+
+
 
 
 
@@ -1812,7 +1817,12 @@
               Bases: <code><span title="pydantic_settings.BaseSettings">BaseSettings</span></code></p>
 
 
-      <p>A Pydantic settings model for configuration of the agent.</p>
+        <p>A Pydantic settings model for configuration of the agent.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/config.py</code></summary>
@@ -1930,7 +1940,7 @@
 <span class="normal">149</span>
 <span class="normal">150</span>
 <span class="normal">151</span>
-<span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Config</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Pydantic settings model for configuration of the agent.&quot;&quot;&quot;</span>
 
     <span class="k">global</span> <span class="n">config_settings</span>
@@ -1990,7 +2000,7 @@
         <span class="p">]</span>
     <span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">ret</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
@@ -1999,11 +2009,11 @@
         <span class="k">return</span> <span class="n">ret</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">print</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">print</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>  <span class="c1"># noqa: T201</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Returns the config singleton, which is strongly typed and can be used to</span>
 <span class="sd">        get or set configuration settings.</span>
 
@@ -2021,7 +2031,7 @@
         <span class="k">return</span> <span class="n">_config_singleton</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">init</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">init</span><span class="p">(</span>
         <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -2041,7 +2051,7 @@
         <span class="n">_config_singleton</span> <span class="o">=</span> <span class="n">Config</span><span class="p">(</span><span class="o">**</span><span class="n">passed_conf</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Reset the configuration. Mostly used for testing.&quot;&quot;&quot;</span>
         <span class="k">global</span> <span class="n">_config_singleton</span>
         <span class="n">_config_singleton</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2063,7 +2073,7 @@
 
 
 <h3 id="config.Config.allow_unknown_intrinsic" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">allow_unknown_intrinsic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">allow_unknown_intrinsic</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2083,7 +2093,7 @@
 
 
 <h3 id="config.Config.data_dir" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">data_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;/home/apowers/data&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">data_dir</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;/home/apowers/data&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2103,7 +2113,7 @@
 
 
 <h3 id="config.Config.db_conn_encrypted" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_conn_encrypted</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_conn_encrypted</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2123,7 +2133,7 @@
 
 
 <h3 id="config.Config.db_host" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_host</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;127.0.0.1&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2143,7 +2153,7 @@
 
 
 <h3 id="config.Config.db_lazy" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_lazy</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_lazy</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2163,7 +2173,7 @@
 
 
 <h3 id="config.Config.db_password" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_password</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_password</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2183,7 +2193,7 @@
 
 
 <h3 id="config.Config.db_port" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">7687</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_port</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">7687</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2203,7 +2213,7 @@
 
 
 <h3 id="config.Config.db_strict_schema" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_strict_schema</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_strict_schema</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2223,7 +2233,7 @@
 
 
 <h3 id="config.Config.db_strict_schema_warns" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_strict_schema_warns</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_strict_schema_warns</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2243,7 +2253,7 @@
 
 
 <h3 id="config.Config.db_username" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">db_username</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">db_username</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2263,7 +2273,7 @@
 
 
 <h3 id="config.Config.dump_file" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">dump_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;env_dump-</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y.%m.</span><span class="si">%d</span><span class="s1">-%H.%M.%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s1">.py&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">dump_file</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="sa">f</span><span class="s1">&#39;env_dump-</span><span class="si">{</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s1">&#39;%Y.%m.</span><span class="si">%d</span><span class="s1">-%H.%M.%S&#39;</span><span class="p">)</span><span class="si">}</span><span class="s1">.py&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2283,7 +2293,7 @@
 
 
 <h3 id="config.Config.edge_cache_size" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">edge_cache_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">30</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">edge_cache_size</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">30</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2303,7 +2313,7 @@
 
 
 <h3 id="config.Config.enable_gym_dump_env" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">enable_gym_dump_env</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">enable_gym_dump_env</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2323,7 +2333,7 @@
 
 
 <h3 id="config.Config.experiment_dir" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">experiment_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;/home/apowers/experiment&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">experiment_dir</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;/home/apowers/experiment&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2343,7 +2353,7 @@
 
 
 <h3 id="config.Config.expmod_dirs" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">expmod_dirs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;experiments/modules&#39;</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">expmod_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;experiments/modules&#39;</span><span class="p">]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2363,7 +2373,7 @@
 
 
 <h3 id="config.Config.expmods" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">expmods</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span></code>
+            <code class="highlight language-python"><span class="n">expmods</span> <span class="o">=</span> <span class="p">[]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2383,7 +2393,7 @@
 
 
 <h3 id="config.Config.expmods_use" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">expmods_use</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;action:weighted&#39;</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">expmods_use</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;action:weighted&#39;</span><span class="p">]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2403,7 +2413,7 @@
 
 
 <h3 id="config.Config.gym_actions" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">gym_actions</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">gym_actions</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2423,7 +2433,7 @@
 
 
 <h3 id="config.Config.log_enable" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">log_enable</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">log_enable</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2443,7 +2453,7 @@
 
 
 <h3 id="config.Config.log_level" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">log_level</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;INFO&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">log_level</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;INFO&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2463,7 +2473,7 @@
 
 
 <h3 id="config.Config.log_modules" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">log_modules</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">log_modules</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2483,7 +2493,7 @@
 
 
 <h3 id="config.Config.max_dump_frames" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_dump_frames</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_dump_frames</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2523,7 +2533,7 @@
 
 
 <h3 id="config.Config.nethack_extra_options" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">nethack_extra_options</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;autoopen&#39;</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">nethack_extra_options</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;autoopen&#39;</span><span class="p">]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2543,7 +2553,7 @@
 
 
 <h3 id="config.Config.nethack_max_turns" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">nethack_max_turns</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">nethack_max_turns</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">100000</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2563,7 +2573,7 @@
 
 
 <h3 id="config.Config.node_cache_size" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">node_cache_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">30</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">node_cache_size</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">2</span> <span class="o">**</span> <span class="mi">30</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2583,7 +2593,7 @@
 
 
 <h3 id="config.Config.num_games" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">num_games</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">num_games</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">5</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2603,7 +2613,7 @@
 
 
 <h3 id="config.Config.observation_shape" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">observation_shape</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">observation_shape</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2623,7 +2633,7 @@
 
 
 <h3 id="config.Config.perception_components" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">perception_components</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;delta:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;distance:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;flood:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;motion:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;single:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;line:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;color:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;shape:perception&#39;</span><span class="p">])</span></code>
+            <code class="highlight language-python"><span class="n">perception_components</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;delta:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;distance:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;flood:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;motion:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;single:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;line:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;color:perception&#39;</span><span class="p">,</span> <span class="s1">&#39;shape:perception&#39;</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2643,7 +2653,7 @@
 
 
 <h3 id="config.Config.status_update" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">status_update</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">status_update</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2679,7 +2689,7 @@
 <span class="normal">101</span>
 <span class="normal">102</span>
 <span class="normal">103</span>
-<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">104</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">ret</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
     <span class="n">d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dict</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">d</span><span class="p">:</span>
@@ -2707,7 +2717,7 @@
 
     <div class="doc doc-contents ">
 
-      <p>Returns the config singleton, which is strongly typed and can be used to
+        <p>Returns the config singleton, which is strongly typed and can be used to
 get or set configuration settings.</p>
 
 
@@ -2752,7 +2762,7 @@ get or set configuration settings.</p>
 <span class="normal">124</span>
 <span class="normal">125</span>
 <span class="normal">126</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">get</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Config</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Returns the config singleton, which is strongly typed and can be used to</span>
 <span class="sd">    get or set configuration settings.</span>
 
@@ -2789,7 +2799,7 @@ get or set configuration settings.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Initializes the settings by reading the configuration files and environment variables</p>
+        <p>Initializes the settings by reading the configuration files and environment variables</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
@@ -2812,7 +2822,7 @@ get or set configuration settings.</p>
 <span class="normal">144</span>
 <span class="normal">145</span>
 <span class="normal">146</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">init</span><span class="p">(</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">init</span><span class="p">(</span>
     <span class="n">config</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">force</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -2856,7 +2866,7 @@ get or set configuration settings.</p>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">106</span>
 <span class="normal">107</span>
 <span class="normal">108</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">print</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">print</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">Config</span><span class="o">.</span><span class="n">get</span><span class="p">())</span>  <span class="c1"># noqa: T201</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2879,7 +2889,7 @@ get or set configuration settings.</p>
 
     <div class="doc doc-contents ">
 
-      <p>Reset the configuration. Mostly used for testing.</p>
+        <p>Reset the configuration. Mostly used for testing.</p>
 
             <details class="quote">
               <summary>Source code in <code>roc/config.py</code></summary>
@@ -2888,7 +2898,7 @@ get or set configuration settings.</p>
 <span class="normal">150</span>
 <span class="normal">151</span>
 <span class="normal">152</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">reset</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Reset the configuration. Mostly used for testing.&quot;&quot;&quot;</span>
     <span class="k">global</span> <span class="n">_config_singleton</span>
     <span class="n">_config_singleton</span> <span class="o">=</span> <span class="kc">None</span>
@@ -2922,12 +2932,17 @@ get or set configuration settings.</p>
               Bases: <code>Warning</code></p>
 
 
-      <p>A Warning for when attempting to access config before it has been initialized.</p>
+        <p>A Warning for when attempting to access config before it has been initialized.</p>
+
+
+
+
+
 
               <details class="quote">
                 <summary>Source code in <code>roc/config.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">14</span>
-<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">ConfigInitWarning</span><span class="p">(</span><span class="ne">Warning</span><span class="p">):</span>
+<span class="normal">15</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">ConfigInitWarning</span><span class="p">(</span><span class="ne">Warning</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A Warning for when attempting to access config before it has been initialized.&quot;&quot;&quot;</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -2990,10 +3005,10 @@ get or set configuration settings.</p>
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>

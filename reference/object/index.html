@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.48">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.50">
     
     
       
@@ -24,7 +24,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.6f8fc17f.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.a40c8224.min.css">
       
       
 
@@ -1634,6 +1634,11 @@
 
 
 
+
+
+
+
+
   <div class="doc doc-children">
 
 
@@ -1676,6 +1681,11 @@
     <div class="doc doc-contents ">
 
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>roc/object.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 92</span>
@@ -1703,8 +1713,8 @@
 <span class="normal">114</span>
 <span class="normal">115</span>
 <span class="normal">116</span>
-<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">CandidateObjects</span><span class="p">:</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CandidateObjects</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># TODO: this currently only uses features, not context, for resolution</span>
         <span class="c1"># the other objects in the current context should influence resolution</span>
         <span class="n">distance_idx</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">NodeId</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
@@ -1723,11 +1733,11 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span> <span class="o">=</span> <span class="n">distance_idx</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">NodeId</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">[</span><span class="n">k</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Object</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Object</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
         <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">Object</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
         <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1766,7 +1776,7 @@
 
 
 <h3 id="object.CandidateObjects.order" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">order</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">NodeId</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">[</span><span class="n">k</span><span class="p">])</span></code>
+            <code class="highlight language-python"><span class="n">order</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">[</span><span class="n">k</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -1797,7 +1807,7 @@
               <summary>Source code in <code>roc/object.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">112</span>
 <span class="normal">113</span>
-<span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Object</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+<span class="normal">114</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">Object</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
     <span class="n">n</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">Object</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">n</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">distance_idx</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
 </code></pre></div></td></tr></table></div>
@@ -1836,7 +1846,7 @@
 <span class="normal">107</span>
 <span class="normal">108</span>
 <span class="normal">109</span>
-<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># TODO: this currently only uses features, not context, for resolution</span>
     <span class="c1"># the other objects in the current context should influence resolution</span>
     <span class="n">distance_idx</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="n">NodeId</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
@@ -1874,7 +1884,7 @@
             <details class="quote">
               <summary>Source code in <code>roc/object.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">116</span>
-<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="normal">117</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">order</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -1906,6 +1916,11 @@
               Bases: <code><span title="object.graphdb.Node">Node</span></code></p>
 
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>roc/object.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">72</span>
@@ -1925,15 +1940,15 @@
 <span class="normal">86</span>
 <span class="normal">87</span>
 <span class="normal">88</span>
-<span class="normal">89</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">FeatureGroup</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+<span class="normal">89</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">FeatureGroup</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">with_features</span><span class="p">(</span><span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">PerceptionFeature</span><span class="p">[</span><span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">with_features</span><span class="p">(</span><span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">PerceptionFeature</span><span class="p">[</span><span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
         <span class="n">feature_nodes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">to_nodes</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">features</span><span class="p">}</span>
 
         <span class="k">return</span> <span class="n">FeatureGroup</span><span class="o">.</span><span class="n">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
         <span class="n">fg</span> <span class="o">=</span> <span class="n">FeatureGroup</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">feature_nodes</span><span class="p">:</span>
             <span class="n">Detail</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">fg</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -1941,7 +1956,7 @@
         <span class="k">return</span> <span class="n">fg</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">feature_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">feature_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">cast</span><span class="p">(</span><span class="n">FeatureNode</span><span class="p">,</span> <span class="n">e</span><span class="o">.</span><span class="n">dst</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_edges</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;Detail&quot;</span><span class="p">]</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -1961,7 +1976,7 @@
 
 
 <h3 id="object.FeatureGroup.feature_nodes" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">feature_nodes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">feature_nodes</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -2001,7 +2016,7 @@
 <span class="normal">83</span>
 <span class="normal">84</span>
 <span class="normal">85</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
     <span class="n">fg</span> <span class="o">=</span> <span class="n">FeatureGroup</span><span class="p">()</span>
     <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">feature_nodes</span><span class="p">:</span>
         <span class="n">Detail</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">fg</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
@@ -2035,7 +2050,7 @@
 <span class="normal">75</span>
 <span class="normal">76</span>
 <span class="normal">77</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">with_features</span><span class="p">(</span><span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">PerceptionFeature</span><span class="p">[</span><span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">with_features</span><span class="p">(</span><span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">PerceptionFeature</span><span class="p">[</span><span class="n">Any</span><span class="p">]])</span> <span class="o">-&gt;</span> <span class="n">FeatureGroup</span><span class="p">:</span>
     <span class="n">feature_nodes</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">f</span><span class="o">.</span><span class="n">to_nodes</span><span class="p">()</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">features</span><span class="p">}</span>
 
     <span class="k">return</span> <span class="n">FeatureGroup</span><span class="o">.</span><span class="n">from_nodes</span><span class="p">(</span><span class="n">feature_nodes</span><span class="p">)</span>
@@ -2069,10 +2084,15 @@
               Bases: <code><span title="object.graphdb.Edge">Edge</span></code></p>
 
 
+
+
+
+
+
               <details class="quote">
                 <summary>Source code in <code>roc/object.py</code></summary>
                 <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
-<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Features</span><span class="p">(</span><span class="n">Edge</span><span class="p">):</span>
+<span class="normal">22</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Features</span><span class="p">(</span><span class="n">Edge</span><span class="p">):</span>
     <span class="n">allowed_connections</span><span class="p">:</span> <span class="n">EdgeConnectionsList</span> <span class="o">=</span> <span class="p">[(</span><span class="s2">&quot;Object&quot;</span><span class="p">,</span> <span class="s2">&quot;FeatureGroup&quot;</span><span class="p">)]</span>
 </code></pre></div></td></tr></table></div>
               </details>
@@ -2092,7 +2112,7 @@
 
 
 <h3 id="object.Features.allowed_connections" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">allowed_connections</span><span class="p">:</span> <span class="n">EdgeConnectionsList</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;Object&#39;</span><span class="p">,</span> <span class="s1">&#39;FeatureGroup&#39;</span><span class="p">)]</span></code>
+            <code class="highlight language-python"><span class="n">allowed_connections</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;Object&#39;</span><span class="p">,</span> <span class="s1">&#39;FeatureGroup&#39;</span><span class="p">)]</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2131,6 +2151,11 @@
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
               Bases: <code><span title="object.graphdb.Node">Node</span></code></p>
+
+
+
+
+
 
 
               <details class="quote">
@@ -2179,13 +2204,13 @@
 <span class="normal">66</span>
 <span class="normal">67</span>
 <span class="normal">68</span>
-<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span> <span class="nc">Object</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
+<span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Object</span><span class="p">(</span><span class="n">Node</span><span class="p">):</span>
     <span class="n">uuid</span><span class="p">:</span> <span class="n">ObjectId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">))</span>
     <span class="n">annotations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
     <span class="n">resolve_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
 
     <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">features</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]:</span>
         <span class="n">feature_groups</span> <span class="o">=</span> <span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">dst</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">src_edges</span> <span class="k">if</span> <span class="n">e</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;Features&quot;</span><span class="p">]</span>
         <span class="n">feature_nodes</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">fg</span> <span class="ow">in</span> <span class="n">feature_groups</span><span class="p">:</span>
@@ -2194,7 +2219,7 @@
 
         <span class="k">return</span> <span class="n">feature_nodes</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">fhh</span> <span class="o">=</span> <span class="n">FlexiHumanHash</span><span class="p">(</span>
             <span class="s2">&quot;{{adj}}-{{noun}}-named-{{firstname|lower}}-{{lastname|lower}}-{{hex(6)}}&quot;</span>
         <span class="p">)</span>
@@ -2206,14 +2231,14 @@
         <span class="k">return</span> <span class="n">ret</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">with_features</span><span class="p">(</span><span class="n">fg</span><span class="p">:</span> <span class="n">FeatureGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Object</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">with_features</span><span class="p">(</span><span class="n">fg</span><span class="p">:</span> <span class="n">FeatureGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Object</span><span class="p">:</span>
         <span class="n">o</span> <span class="o">=</span> <span class="n">Object</span><span class="p">()</span>
         <span class="n">Features</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">fg</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="n">o</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">distance</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Object</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">distance</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Object</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
         <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Object</span><span class="p">)</span>
         <span class="c1"># TODO: allowed_attrs is physical attributes, not really great but</span>
         <span class="c1"># NetHack doesn&#39;t give us much feature-space to work with. in the future</span>
@@ -2242,7 +2267,7 @@
 
 
 <h3 id="object.Object.annotations" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">annotations</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">annotations</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2262,7 +2287,7 @@
 
 
 <h3 id="object.Object.features" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">features</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">]</span></code>
+            <code class="highlight language-python"><span class="n">features</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-property"><code>property</code></small>
@@ -2281,7 +2306,7 @@
 
 
 <h3 id="object.Object.resolve_count" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">resolve_count</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">resolve_count</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2301,7 +2326,7 @@
 
 
 <h3 id="object.Object.uuid" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">uuid</span><span class="p">:</span> <span class="n">ObjectId</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">))</span></code>
+            <code class="highlight language-python"><span class="n">uuid</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="n">ObjectId</span><span class="p">(</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">int</span><span class="p">))</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-class-attribute"><code>class-attribute</code></small>
@@ -2340,7 +2365,7 @@
 <span class="normal">46</span>
 <span class="normal">47</span>
 <span class="normal">48</span>
-<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="normal">49</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
     <span class="n">fhh</span> <span class="o">=</span> <span class="n">FlexiHumanHash</span><span class="p">(</span>
         <span class="s2">&quot;{{adj}}-{{noun}}-named-{{firstname|lower}}-{{lastname|lower}}-{{hex(6)}}&quot;</span>
     <span class="p">)</span>
@@ -2385,7 +2410,7 @@
 <span class="normal">67</span>
 <span class="normal">68</span>
 <span class="normal">69</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">distance</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Object</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">distance</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Object</span><span class="p">,</span> <span class="n">features</span><span class="p">:</span> <span class="n">Collection</span><span class="p">[</span><span class="n">FeatureNode</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
     <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">Object</span><span class="p">)</span>
     <span class="c1"># TODO: allowed_attrs is physical attributes, not really great but</span>
     <span class="c1"># NetHack doesn&#39;t give us much feature-space to work with. in the future</span>
@@ -2425,7 +2450,7 @@
 <span class="normal">54</span>
 <span class="normal">55</span>
 <span class="normal">56</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
-<span class="k">def</span> <span class="nf">with_features</span><span class="p">(</span><span class="n">fg</span><span class="p">:</span> <span class="n">FeatureGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Object</span><span class="p">:</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">with_features</span><span class="p">(</span><span class="n">fg</span><span class="p">:</span> <span class="n">FeatureGroup</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Object</span><span class="p">:</span>
     <span class="n">o</span> <span class="o">=</span> <span class="n">Object</span><span class="p">()</span>
     <span class="n">Features</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">fg</span><span class="p">)</span>
 
@@ -2458,6 +2483,11 @@
     <div class="doc doc-contents ">
             <p class="doc doc-class-bases">
               Bases: <code><span title="object.component.Component">Component</span></code></p>
+
+
+
+
+
 
 
               <details class="quote">
@@ -2499,19 +2529,19 @@
 <span class="normal">154</span>
 <span class="normal">155</span>
 <span class="normal">156</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@register_component</span><span class="p">(</span><span class="s2">&quot;resolver&quot;</span><span class="p">,</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="k">class</span> <span class="nc">ObjectResolver</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ObjectResolver</span><span class="p">(</span><span class="n">Component</span><span class="p">):</span>
     <span class="n">bus</span> <span class="o">=</span> <span class="n">EventBus</span><span class="p">[</span><span class="n">Object</span><span class="p">](</span><span class="s2">&quot;object&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">att_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">Attention</span><span class="o">.</span><span class="n">bus</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">att_conn</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">do_object_resolution</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">obj_res_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">ObjectResolver</span><span class="o">.</span><span class="n">bus</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;vision&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;attention&quot;</span>
 
-    <span class="k">def</span> <span class="nf">do_object_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">do_object_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="c1"># TODO: instead of just taking the first focus_point (highest saliency</span>
         <span class="c1"># strength) we probably want to adjust the strength for known objects /</span>
         <span class="c1"># novel objects</span>
@@ -2625,7 +2655,7 @@
 <span class="normal">125</span>
 <span class="normal">126</span>
 <span class="normal">127</span>
-<span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">128</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">att_conn</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">connect_bus</span><span class="p">(</span><span class="n">Attention</span><span class="o">.</span><span class="n">bus</span><span class="p">)</span>
     <span class="bp">self</span><span class="o">.</span><span class="n">att_conn</span><span class="o">.</span><span class="n">listen</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">do_object_resolution</span><span class="p">)</span>
@@ -2672,7 +2702,7 @@
 <span class="normal">153</span>
 <span class="normal">154</span>
 <span class="normal">155</span>
-<span class="normal">156</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">do_object_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="normal">156</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">do_object_resolution</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
     <span class="c1"># TODO: instead of just taking the first focus_point (highest saliency</span>
     <span class="c1"># strength) we probably want to adjust the strength for known objects /</span>
     <span class="c1"># novel objects</span>
@@ -2716,7 +2746,7 @@
             <details class="quote">
               <summary>Source code in <code>roc/object.py</code></summary>
               <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">130</span>
-<span class="normal">131</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span> <span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="normal">131</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">event_filter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span> <span class="n">AttentionEvent</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
     <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;vision&quot;</span> <span class="ow">and</span> <span class="n">e</span><span class="o">.</span><span class="n">src_id</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s2">&quot;attention&quot;</span>
 </code></pre></div></td></tr></table></div>
             </details>
@@ -2786,10 +2816,10 @@
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.f8cc74c7.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../assets/javascripts/bundle.60a45f97.min.js"></script>
       
     
   </body>
