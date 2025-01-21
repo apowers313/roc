@@ -139,11 +139,13 @@ class Grid(npt.NDArray[Any], Generic[GridType]):
 
     @property
     def width(self) -> int:
-        return self.shape[1]
+        # XXX: shape is a tuple of ints, not sure why this is being grumpy
+        # https://numpy.org/doc/2.1/reference/generated/numpy.shape.html
+        return self.shape[1]  # type: ignore
 
     @property
     def height(self) -> int:
-        return self.shape[0]
+        return self.shape[0]  # type: ignore
 
 
 class IntGrid(Grid[int]):
@@ -293,7 +295,7 @@ class DebugGrid(Grid[GridStyle]):
                 s = self.get_val(x, y)
                 fr, fg, fb = self.get_front_rgb(x, y)
                 br, bg, bb = self.get_back_rgb(x, y)
-                ret += f"{Fore.rgb(fr,fg,fb)}{Back.rgb(br,bg,bb)}{s.val}{Style.reset}"
+                ret += f"{Fore.rgb(fr, fg, fb)}{Back.rgb(br, bg, bb)}{s.val}{Style.reset}"
             ret += "\n"
         return ret
 

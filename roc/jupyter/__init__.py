@@ -1,6 +1,5 @@
 """Jupyter magics for flow control and debugging"""
 
-
 import functools
 import traceback
 from typing import Any
