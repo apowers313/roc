@@ -399,7 +399,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2813 SET n:Bob, n = $props",
             spy.call_args[0][1],
-            [("2813", "\d+")],
+            [("2813", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar"}}
 
@@ -479,7 +479,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 SET n:TestNode, n = $props ",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"beer": "yum", "number": 42}}
 
@@ -494,7 +494,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props ",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
 
     def test_node_update_remove_label(self, mocker) -> None:
@@ -508,7 +508,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 SET n = $props REMOVE n:TestNode",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
 
     def test_node_update_add_and_remove_label(self, mocker) -> None:
@@ -523,7 +523,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 SET n:Foo, n = $props REMOVE n:TestNode",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
 
     def test_node_update_properties(self, mocker) -> None:
@@ -538,7 +538,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 SET n = $props ",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "bar", "baz": "bat"}}
 
@@ -632,7 +632,7 @@ class TestNode:
         assert_similar(
             "MATCH (n) WHERE id(n) = 2746 DELETE n",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
 
     def test_node_walk_src(self, test_tree) -> None:
@@ -1009,7 +1009,7 @@ class TestEdge:
         assert_similar(
             "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",
             normalize_whitespace(spy.call_args[0][1]),
-            [("3102", "\d+"), ("3103", "\d+")],
+            [("3102", r"\d+"), ("3103", r"\d+")],
         )
 
     def test_edge_create_with_data(self, mocker, new_edge) -> None:
@@ -1032,7 +1032,7 @@ class TestEdge:
         assert_similar(
             "MATCH (src), (dst) WHERE id(src) = 3102 AND id(dst) = 3103 CREATE (src)-[e:Test $props]->(dst) RETURN id",
             normalize_whitespace(spy.call_args[0][1]),
-            [("3102", "\d+"), ("3103", "\d+")],
+            [("3102", r"\d+"), ("3103", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"name": "bob", "fun": False}}
 
@@ -1084,7 +1084,7 @@ class TestEdge:
         assert_similar(
             "MATCH ()-[e]->() WHERE id(e) = 11928 SET e = $props",
             spy.call_args[0][1],
-            [("11928", "\d+")],
+            [("11928", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"foo": "deleting-edge"}}
 
@@ -1114,7 +1114,7 @@ class TestEdge:
         assert_similar(
             "MATCH ()-[e]->() WHERE id(e) = 2746 SET e = $props",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
         assert spy.call_args[1]["params"] == {"props": {"wine": "cab", "more": True}}
 
@@ -1166,7 +1166,7 @@ class TestEdge:
         assert_similar(
             "MATCH ()-[e]->() WHERE id(e) = 2746 DELETE e",
             spy.call_args[0][1],
-            [("2746", "\d+")],
+            [("2746", r"\d+")],
         )
 
     def test_to_dict(self, new_edge) -> None:

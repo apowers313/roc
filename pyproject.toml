@@ -88,7 +88,7 @@ dev = [
   "pytest-profiling<2.0.0,>=1.7.0",
   "pytest<9.0.0,>=8.2.2",
   "pyttsx3<3.0,>=2.98",
-  "pyupgrade<4.0.0,>=3.8.0",
+  "pyupgrade>=3.8.0,<4.0.0",
   "ruff<1.0.0,>=0.8.3",
   "safety>=3.2.4",
   "sphinx-autobuild<2022.0.0,>=2021.3.14",
@@ -214,7 +214,7 @@ convention = "google"
 
 [tool.mypy]
 # https://mypy.readthedocs.io/en/latest/config_file.html#using-a-pyproject-toml-file
-python_version = "3.11"
+python_version = "3.12"
 pretty = true
 show_traceback = true
 color_output = true

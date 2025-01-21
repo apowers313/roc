@@ -30,7 +30,7 @@ setup: install pre-commit-install
 
 .PHONY: install
 install:
-	uv venv --python 3.11
+	uv venv --python 3.12
 	uv sync
 	uv run mypy --install-types --non-interactive ./
 
