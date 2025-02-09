@@ -42,6 +42,9 @@ dependencies = [
   "strictly-typed-pandas<1.0.0,>=0.3.4",
   "tabulate<1.0.0,>=0.9.0",
   "tqdm<5.0.0,>=4.66.5",
+  "opentelemetry-api>=1.30.0",
+  "opentelemetry-sdk>=1.30.0",
+  "opentelemetry-exporter-otlp-proto-grpc>=1.30.0",
 ]
 
 [dependency-groups]
@@ -218,6 +221,7 @@ python_version = "3.13"
 pretty = true
 show_traceback = true
 color_output = true
+namespace_packages = true
 
 allow_redefinition = false
 check_untyped_defs = true
@@ -240,7 +244,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 follow_imports = "silent"
 plugins = ["pydantic.mypy", "numpy.typing.mypy_plugin"]
-exclude = ["site"]
+exclude = ["site", ".fttemplates"]
 
 # [[tool.mypy.overrides]]
 # module = "*_test.py"
@@ -267,6 +271,7 @@ norecursedirs = [
   ".git",
   "__pycache__",
   "experiments",
+  ".fttemplates",
 ]
 
 doctest_optionflags = [
