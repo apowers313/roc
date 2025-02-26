@@ -19,10 +19,10 @@ from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
 from .intrinsic import Intrinsic
-from .jupyter.state import print_state, states
 from .logger import logger
-from .reporting.observability import Observability
 from .perception import Perception, VisionData
+from .reporting.observability import Observability
+from .reporting.state import print_state, states
 
 
 class Gym(Component, ABC):
