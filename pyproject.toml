@@ -45,6 +45,8 @@ dependencies = [
   "opentelemetry-api>=1.30.0",
   "opentelemetry-sdk>=1.30.0",
   "opentelemetry-exporter-otlp-proto-grpc>=1.30.0",
+  "opentelemetry-instrumentation-system-metrics>=0.51b0",
+  "pyroscope-io>=0.8.8",
 ]
 
 [dependency-groups]
@@ -289,6 +291,7 @@ filterwarnings = [
 
 markers = [
   "slow: tests that take a long time to run",
+  "requires_observability: tests that require a connection to an OpenTelemetry collection server",
   #  "pending: tests that haven't been written yet"
 ]
 
@@ -308,6 +311,7 @@ addopts = [
   #"-rA",
   "-s",
   "-m not slow",
+  "-m not requires_observability",
   # "not slow",
 ]
 

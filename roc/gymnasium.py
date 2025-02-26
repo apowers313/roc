@@ -21,6 +21,7 @@ from .config import Config
 from .intrinsic import Intrinsic
 from .jupyter.state import print_state, states
 from .logger import logger
+from .reporting.observability import Observability
 from .perception import Perception, VisionData
 
 
@@ -56,7 +57,9 @@ class Gym(Component, ABC):
     def get_action(self) -> Any: ...
 
     @logger.catch
+    @Observability.get_tracer().start_as_current_span("start")
     def start(self) -> None:
+        logger.info("Starting NLE loop...")
         obs, reset_info = self.env.reset()
         settings = Config.get()
 
@@ -64,44 +67,55 @@ class Gym(Component, ABC):
         truncated = False
         _dump_env_start()
 
-        logger.info("Starting NLE loop...")
         loop_num = 0
         game_num = 0
+        game_counter = Observability.get_meter().create_counter(
+            "roc.game_total", unit="games", description="total number of games completed"
+        )
+        observation_counter = Observability.get_meter().create_counter(
+            "roc.obs_total", unit="observations", description="total number of observations"
+        )
+        game_counter.add(1)
 
         # main environment loop
         while game_num < settings.num_games:
-            logger.trace(f"Sending observation: {obs}")
-            breakpoints.check()
+            with Observability.get_tracer().start_as_current_span("observation"):
+                logger.trace(f"Sending observation: {obs}")
+                breakpoints.check()
 
-            # save the current screen
-            screen = nle.nethack.tty_render(obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"])
-            states.screen.set(screen)
+                # save the current screen
+                screen = nle.nethack.tty_render(
+                    obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"]
+                )
+                states.screen.set(screen)
 
-            # do all the real work
-            self.send_obs(obs)
+                # do all the real work
+                self.send_obs(obs)
 
-            # get an action
-            action = self.get_action()
-            logger.trace(f"Doing action: {action}")
+                # get an action
+                action = self.get_action()
+                logger.trace(f"Doing action: {action}")
 
-            # perform the action and get the next observation
-            obs, reward, done, truncated, info = self.env.step(action)
+                # perform the action and get the next observation
+                obs, reward, done, truncated, info = self.env.step(action)
 
-            # optionally save the screen to file
-            _dump_env_record(obs, loop_num)
+                # optionally save the screen to file
+                _dump_env_record(obs, loop_num)
 
-            logger.trace(f"Main loop done: {done}, {truncated}")
+                logger.trace(f"Main loop done: {done}, {truncated}")
 
-            # set and save the loop number
-            loop_num += 1
-            states.loop.set(loop_num)
-            if (loop_num % settings.status_update) == 0:
-                print_state()
+                # set and save the loop number
+                observation_counter.add(1)
+                loop_num += 1
+                states.loop.set(loop_num)
+                if (loop_num % settings.status_update) == 0:
+                    print_state()
 
-            if done or truncated:
-                logger.info(f"Game {game_num} completed, starting next game")
-                self.env.reset()
-                game_num += 1
+                if done or truncated:
+                    logger.info(f"Game {game_num} completed, starting next game")
+                    self.env.reset()
+                    game_counter.add(1)
+                    game_num += 1
 
         logger.info("NLE loop done, exiting.")
         _dump_env_end()
@@ -326,10 +340,10 @@ def _dump_env_record(obs: Any, loop_num: int) -> None:
 
     _print_screen(obs["tty_chars"])
     dump_env_file.write("{ # screen" + str(loop_num) + "\n# fmt: off\n")
-    dump_env_file.write(f"        \"chars\": {obs['chars'].tolist()},\n")
-    dump_env_file.write(f"        \"colors\": {obs['colors'].tolist()},\n")
-    dump_env_file.write(f"        \"glyphs\": {obs['glyphs'].tolist()},\n")
-    dump_env_file.write(f"        \"blstats\": {obs['blstats'].tolist()},\n")
+    dump_env_file.write(f'        "chars": {obs["chars"].tolist()},\n')
+    dump_env_file.write(f'        "colors": {obs["colors"].tolist()},\n')
+    dump_env_file.write(f'        "glyphs": {obs["glyphs"].tolist()},\n')
+    dump_env_file.write(f'        "blstats": {obs["blstats"].tolist()},\n')
     dump_env_file.write("# fmt: on\n},\n")
 
 

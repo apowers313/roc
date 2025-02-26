@@ -15,8 +15,9 @@ from .config import Config
 from .expmod import ExpMod
 from .gymnasium import NethackGym
 from .jupyter import RocJupyterMagics, is_jupyter
-from .jupyter.state import init_state
 from .perception import Perception, PerceptionData
+from .reporting.observability import Observability
+from .reporting.state import init_state
 
 __all__ = [
     # Component Exports
@@ -41,6 +42,7 @@ def init(config: dict[str, Any] | None = None) -> None:
     """Initializes the agent before starting the agent."""
     Config.init(config)
     roc_logger.init()
+    Observability.init()
     global ng
     ng = NethackGym()
     Component.init()

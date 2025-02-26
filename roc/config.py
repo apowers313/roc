@@ -59,8 +59,17 @@ class Config(BaseSettings):
     edge_cache_size: int = Field(default=2**30)
     # log config
     log_enable: bool = Field(default=True)
-    log_level: str = Field(default="INFO")
+    log_level: str = Field(default="DEBUG")
     log_modules: str = Field(default="")
+    # observability config
+    observability_logging: bool = Field(default=True)
+    observability_logging_level: str = Field(default="DEBUG")
+    observability_metrics: bool = Field(default=True)
+    observability_metrics_interval: int = Field(default=5000)
+    observability_tracing: bool = Field(default=True)
+    observability_profiling: bool = Field(default=True)
+    observability_host: str = Field(default="http://hal.ato.ms:4317")
+    observability_profiling_host: str = Field(default="http://hal.ato.ms:4040")
     # agent config
     gym_actions: tuple[int, ...] | None = Field(default=None)  # configured by the gym
     observation_shape: tuple[int, ...] | None = Field(default=None)  # configured by the gym
