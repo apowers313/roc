@@ -310,8 +310,7 @@ addopts = [
   # "--emoji",
   #"-rA",
   "-s",
-  "-m not slow",
-  "-m not requires_observability",
+  "-m not slow and not requires_observability",
   # "not slow",
 ]
 
