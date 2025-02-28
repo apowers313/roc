@@ -59,7 +59,7 @@ class Config(BaseSettings):
     edge_cache_size: int = Field(default=2**30)
     # log config
     log_enable: bool = Field(default=True)
-    log_level: str = Field(default="DEBUG")
+    log_level: str = Field(default="INFO")
     log_modules: str = Field(default="")
     # observability config
     observability_logging: bool = Field(default=True)
@@ -159,3 +159,6 @@ class Config(BaseSettings):
         """Reset the configuration. Mostly used for testing."""
         global _config_singleton
         _config_singleton = None
+
+
+Config.init()
