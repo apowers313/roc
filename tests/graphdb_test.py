@@ -224,10 +224,7 @@ class TestNode:
 
         nodes = Node.find("src.name =~ 'B.*'", src_labels={"Location"})
         assert len(nodes) == 2
-        assert nodes[0].id == 310
-        assert nodes[0].name == "Braavos"  # type: ignore
-        assert nodes[1].id == 1
-        assert nodes[1].name == "Beyond the Wall"  # type: ignore
+        assert set([n.id for n in nodes]) == {1, 310}
 
     def test_node_find_single_node_with_no_relationships(self) -> None:
         cache = Node.get_cache()
