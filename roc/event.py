@@ -14,8 +14,13 @@ from reactivex.abc.disposable import DisposableBase as Disposable
 from rich.pretty import pretty_repr
 
 from .component import Component, ComponentId
+from .reporting.observability import Observability
 
 EventData = TypeVar("EventData")
+
+event_counter = Observability.meter.create_counter(
+    "roc.event", unit="event", description="total number of events"
+)
 
 
 class Event(ABC, Generic[EventData]):
@@ -34,6 +39,7 @@ class Event(ABC, Generic[EventData]):
             src_id (ComponentId): The name and type of the Component sending the event
             bus (EventBus): The EventBus that the event is being sent over
         """
+        event_counter.add(1, attributes={"type": self.__class__.__name__, "bus": bus.name})
         self.data = data
         self.src_id = src_id
         self.bus = bus
@@ -78,7 +84,7 @@ class BusConnection(Generic[EventData]):
             data (EventData): The data type of the data to be sent
         """
         e = Event[EventData](data, self.attached_component.id, self.attached_bus)
-        logger.trace(f">>> Sending {e}")
+        logger.trace(">>> Sending {evt}", evt=lambda: str(e))
         self.attached_bus.subject.on_next(e)
 
     def listen(

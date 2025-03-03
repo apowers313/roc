@@ -16,6 +16,7 @@ from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
 from roc.logger import init as logger_init
 from roc.perception import Perception, PerceptionData
+from roc.reporting.observability import Observability
 
 
 @pytest.fixture(autouse=True)
@@ -118,6 +119,7 @@ def eb_reset() -> None:
 def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
+    Observability.init()
     settings = Config.get()
     settings.observation_shape = (21, 79)
     settings.gym_actions = (
@@ -272,7 +274,7 @@ def memory_profile() -> Generator[None, None, None]:
         return mem_info.rss
 
     start_mem = process_memory()
-    print(f"Starting memory: {start_mem/1000000:1.3f} MB")  # noqa: T201
+    print(f"Starting memory: {start_mem / 1000000:1.3f} MB")  # noqa: T201
     print("Node Cache:", Node.get_cache())  # noqa: T201
     print("Edge Cache:", Edge.get_cache())  # noqa: T201
 
@@ -280,7 +282,7 @@ def memory_profile() -> Generator[None, None, None]:
 
     end_mem = process_memory()
     print(  # noqa: T201
-        f"Ending memory: {end_mem/1000000:1.3f} MB  [{(end_mem - start_mem)/1000000:1.3f} MB]"
+        f"Ending memory: {end_mem / 1000000:1.3f} MB  [{(end_mem - start_mem) / 1000000:1.3f} MB]"
     )
     print("Node Cache:", Node.get_cache())  # noqa: T201
     print("Edge Cache:", Edge.get_cache())  # noqa: T201

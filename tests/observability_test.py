@@ -8,10 +8,6 @@ from roc.reporting.observability import Observability, _lg_to_otel_severity, roc
 
 @pytest.mark.requires_observability
 class TestObservability:
-    @pytest.fixture(scope="function", autouse=True)
-    def obs_init(self) -> None:
-        Observability.init()
-
     def test_exists(self) -> None:
         Observability()
 
@@ -75,8 +71,7 @@ class TestObservability:
 
         # logger.info(f"{Back.yellow}{Fore.red}sending test event{Style.reset}")
         # logger.info("""<div style="background-color:powderblue;">this is a log message</div>""")
-        event_logger = Observability.get_event_logger()
-        event_logger.emit(TestEvent())
+        Observability.event(TestEvent())
 
     def test_logger_severity_translation(self) -> None:
         res = [_lg_to_otel_severity(sev) for sev in range(60)]

@@ -4,6 +4,7 @@ import importlib
 import math
 import os
 import traceback
+from datetime import datetime
 from time import time_ns
 from typing import Any
 
@@ -13,7 +14,7 @@ from opentelemetry import _events as otel_events
 from opentelemetry import _logs as otel_logs
 from opentelemetry import metrics as otel_metrics
 from opentelemetry import trace as otel_trace
-from opentelemetry._events import EventLogger
+from opentelemetry._events import Event, EventLogger, NoOpEventLogger
 from opentelemetry._logs import NoOpLogger, SeverityNumber
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -63,9 +64,9 @@ system_metrics_config = {
 }
 
 roc_version = importlib.metadata.version("roc")
-instance_id = str(
-    FlexiHumanHash("{{adj|lower}}-{{firstname|lower}}-{{lastname|lower}}-{{decimal(4)}}").rand()
-)
+t = datetime.now().strftime("%Y%m%d%H%M%S")
+format_str = t + "-{{adj|lower}}-{{firstname|lower}}-{{lastname|lower}}"
+instance_id = str(FlexiHumanHash(format_str).rand())
 
 resource = Resource.create(
     {
@@ -75,9 +76,20 @@ resource = Resource.create(
 )
 
 roc_common_attributes = {
-    "roc.version": roc_version,
+    # "roc.version": roc_version,
     "roc.instance.id": instance_id,
 }
+
+
+class ObservabilityEvent(Event):
+    def __init__(
+        self,
+        name: str,
+        body: Any | None = None,
+        attributes: dict[str, int | float | str] = dict(),
+    ):
+        merged_attrs = attributes | roc_common_attributes
+        super().__init__(name, body=body, attributes=merged_attrs)
 
 
 class ObservabilityBase(type):
@@ -88,10 +100,14 @@ class ObservabilityBase(type):
             cls._instances[cls] = super().__call__(*args, **kwargs)
         return cls._instances[cls]
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        self.meter: Meter
+        self.tracer: Tracer
+        self.event_logger: EventLogger
+
 
 class Observability(metaclass=ObservabilityBase):
-    @staticmethod
-    def init() -> None:
+    def __init__(self) -> None:
         settings = Config.get()
 
         if settings.observability_logging:
@@ -107,18 +123,23 @@ class Observability(metaclass=ObservabilityBase):
                 format="<level>{message}</level>",
                 level=settings.observability_logging_level,
             )
-
             # events init
             event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
-            event_logger_provider.get_event_logger(
-                "roc",
-                version=roc_version,
-                attributes=roc_common_attributes,
+
+            self.set_event_logger(
+                event_logger_provider.get_event_logger(
+                    "roc",
+                    version=roc_version,
+                    attributes=roc_common_attributes,
+                )
             )
             otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
-            logger.debug("OpenTelemetry log initialized.")
+            logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
+        else:
+            self.set_event_logger(NoOpEventLogger("roc"))
 
         if settings.observability_metrics:
+            logger.debug("initializing OpenTelemetry metrics...")
             # metrics init
             otlp_metrics_exporter = OTLPMetricExporter(
                 endpoint=settings.observability_host, insecure=True
@@ -133,6 +154,15 @@ class Observability(metaclass=ObservabilityBase):
                 labels=roc_common_attributes,
                 config=system_metrics_config,
             ).instrument()
+        # NOTE: this will be a NoOpMeterProvider if the block of code above wasn't executed
+        mp = otel_metrics.get_meter_provider()
+        self.set_meter(
+            mp.get_meter(
+                "roc",
+                version=roc_version,
+                attributes=roc_common_attributes,
+            )
+        )
 
         if settings.observability_tracing:
             # trace init
@@ -140,10 +170,19 @@ class Observability(metaclass=ObservabilityBase):
             otlp_trace_exporter = OTLPSpanExporter(
                 endpoint=settings.observability_host, insecure=True
             )
-            trace_provider = TracerProvider(resource=resource)
+            tracer_provider = TracerProvider(resource=resource)
             span_processor = BatchSpanProcessor(otlp_trace_exporter)
-            trace_provider.add_span_processor(span_processor)
-            otel_trace.set_tracer_provider(trace_provider)
+            tracer_provider.add_span_processor(span_processor)
+            otel_trace.set_tracer_provider(tracer_provider)
+        # NOTE: this will be a NoOpTracerProvider if the block of code above wasn't executed
+        tp = otel_trace.get_tracer_provider()
+        self.set_tracer(
+            tp.get_tracer(
+                "roc",
+                instrumenting_library_version=roc_version,
+                attributes=roc_common_attributes,
+            )
+        )
 
         if settings.observability_profiling:
             # profiling init
@@ -153,36 +192,31 @@ class Observability(metaclass=ObservabilityBase):
                 # TODO: profiling in otel is current unstable, switch this to
                 # otel when it stabilizes
                 server_address=settings.observability_profiling_host,
+                sample_rate=100,  # default is 100
                 # detect_subprocesses=True,
-                oncpu=False,
+                oncpu=False,  # report cpu time only; default is True
                 tags=roc_common_attributes,
             )
 
     @staticmethod
-    def get_meter() -> Meter:
-        meter_provider = otel_metrics.get_meter_provider()
-        return meter_provider.get_meter(
-            "roc",
-            version=roc_version,
-            attributes=roc_common_attributes,
-        )
+    def init() -> None:
+        Observability()
 
-    @staticmethod
-    def get_tracer() -> Tracer:
-        return otel_trace.get_tracer(
-            "roc",
-            instrumenting_library_version=roc_version,
-            attributes=roc_common_attributes,
-        )
+    @classmethod
+    def event(cls, evt: Event) -> None:
+        Observability.event_logger.emit(evt)
 
-    @staticmethod
-    def get_event_logger() -> EventLogger:
-        event_logger_provider = otel_events.get_event_logger_provider()
-        return event_logger_provider.get_event_logger(
-            "roc",
-            version=roc_version,
-            attributes=roc_common_attributes,
-        )
+    @classmethod
+    def set_event_logger(cls, event_logger: EventLogger) -> None:
+        cls.event_logger = event_logger
+
+    @classmethod
+    def set_tracer(cls, tracer: Tracer) -> None:
+        cls.tracer = tracer
+
+    @classmethod
+    def set_meter(cls, meter: Meter) -> None:
+        cls.meter = meter
 
 
 # skip natural LogRecord attributes
@@ -315,3 +349,8 @@ def loguru_to_otel(msg: str) -> None:
     )
     if not isinstance(otel_logger, NoOpLogger):
         otel_logger.emit(log_record)
+
+
+# NOTE: Observability.trace gets called as a decorator, which requires
+# initializing here
+Observability.init()

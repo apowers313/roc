@@ -220,31 +220,33 @@ class DebugGrid(Grid[GridStyle]):
         if obj is None:
             return
 
-    # def __init__(self, grid: Grid[Any]) -> None:
-    #     width = grid.width
-    #     height = grid.height
-    #     map: list[list[GridStyle]] = [
-    #         [
-    #             GridStyle(
-    #                 front_hue=0,
-    #                 front_saturation=0,
-    #                 front_brightness=1,
-    #                 back_hue=0,
-    #                 back_saturation=1,
-    #                 back_brightness=0,
-    #                 val=" ",
-    #                 style="none",
-    #             )
-    #             for col in range(width)
-    #         ]
-    #         for row in range(height)
-    #     ]
-    #     super().__init__(map)
+    def to_html_vals(self) -> dict[str, list[list[int | str]]]:
+        ret: dict[str, list[list[int | str]]] = {
+            "chars": [],
+            "fg": [],
+            "bg": [],
+        }
 
-    #     # copy over all the values from the grid
-    #     for p in grid.points():
-    #         s = self.get_val(p.x, p.y)
-    #         s.val = chr(p.val)
+        for y in range(self.height):
+            val_row: list[int | str] = []
+            ret["chars"].append(val_row)
+
+            fg_row: list[int | str] = []
+            ret["fg"].append(fg_row)
+
+            bg_row: list[int | str] = []
+            ret["bg"].append(bg_row)
+
+            for x in range(self.width):
+                val_row.append(ord(self.get_val(x, y).val))
+
+                fr, fg, fb = self.get_front_rgb(x, y)
+                fg_row.append(f"{fr:02x}{fg:02x}{fb:02x}")
+
+                br, bg, bb = self.get_back_rgb(x, y)
+                bg_row.append(f"{br:02x}{bg:02x}{bb:02x}")
+
+        return ret
 
     def set_style(self, x: int, y: int, *, style: str | None = None, **kwargs: float) -> None:
         s = self.get_val(x, y)

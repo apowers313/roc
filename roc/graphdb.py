@@ -33,6 +33,7 @@ from typing_extensions import Self
 
 from .config import Config
 from .logger import logger
+from .reporting.observability import Observability
 
 RecordFn = Callable[[str, Iterator[Any]], None]
 CacheType = TypeVar("CacheType")
@@ -94,10 +95,16 @@ class GraphDB:
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         self.closed = False
+        self.query_counter = Observability.meter.create_counter(
+            "roc.graphdb.query",
+            unit="query",
+            description="the total number of queries database",
+        )
 
         if self.strict_schema:
             Schema.validate()
 
+    @Observability.tracer.start_as_current_span("graphdb.fetch")
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
     ) -> Iterator[dict[str, Any]]:
@@ -112,6 +119,7 @@ class GraphDB:
         Yields:
             Iterator[dict[str, Any]]: An iterator of the results from the database.
         """
+        self.query_counter.add(1, attributes={"type": "fetch"})
         params = params or {}
         logger.trace(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
@@ -123,6 +131,7 @@ class GraphDB:
                 break
             yield {dsc.name: row[index] for index, dsc in enumerate(cursor.description)}
 
+    @Observability.tracer.start_as_current_span("graphdb.execute")
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
         """Executes a query with no return value. Used for 'SET', 'DELETE' or
         other queries without a 'RETURN' clause.
@@ -132,6 +141,7 @@ class GraphDB:
             params (dict[str, Any] | None, optional): Any parameters to pass to
                 the query. Defaults to None. See also: https://memgraph.com/docs/querying/expressions#parameters
         """
+        self.query_counter.add(1, attributes={"type": "execute"})
         params = params or {}
         logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
 
@@ -244,7 +254,7 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         self.misses = 0
 
     def __str__(self) -> str:
-        return f"Size: {self.currsize}/{self.maxsize} ({self.currsize/self.maxsize*100:1.2f}%), Hits: {self.hits}, Misses: {self.misses}"
+        return f"Size: {self.currsize}/{self.maxsize} ({self.currsize / self.maxsize * 100:1.2f}%), Hits: {self.hits}, Misses: {self.misses}"
 
     def get(  # type: ignore [override]
         self,
@@ -1760,7 +1770,7 @@ class NodeDescription(ModelDescription):
         return f"NodeDesc({self.name})"
 
     def to_mermaid(self, indent: int = 4) -> str:
-        ret = f"""\n{' ':>{indent}}%% Node: {self.name}\n"""
+        ret = f"""\n{" ":>{indent}}%% Node: {self.name}\n"""
 
         # add fields
         for field in self.fields:
@@ -1768,17 +1778,17 @@ class NodeDescription(ModelDescription):
             default_val = (
                 f" = {field.default_val_str}" if field.default_val is not PydanticUndefined else ""
             )
-            ret += f"""{' ':>{indent}}{self.name}: {sym}{field.type} {field.name}{default_val}\n"""
+            ret += f"""{" ":>{indent}}{self.name}: {sym}{field.type} {field.name}{default_val}\n"""
 
         # add methods
         for method in self.methods:
             sym = "+" if is_local(self.model, method.name) else "^"
             params = ", ".join(method.uml_params)
-            ret += f"""{' ':>{indent}}{self.name}: {sym}{method.name}({params}) {method.return_type}\n"""
+            ret += f"""{" ":>{indent}}{self.name}: {sym}{method.name}({params}) {method.return_type}\n"""
 
         # add links to inherited nodes
         for parent in self.parent_class_names:
-            ret += f"""{' ':>{indent}}{self.name} ..|> {parent}: inherits\n"""
+            ret += f"""{" ":>{indent}}{self.name} ..|> {parent}: inherits\n"""
 
         return ret
 
@@ -1814,10 +1824,10 @@ class EdgeDescription(ModelDescription):
         return f"{self.edgetype} ({self.name})"
 
     def to_mermaid(self, indent: int = 4) -> str:
-        ret = f"""\n{' ':>{indent}}%% Edge: {self.resolved_name}\n"""
+        ret = f"""\n{" ":>{indent}}%% Edge: {self.resolved_name}\n"""
 
         # add connections
         for conn in self.allowed_connections:
-            ret += f"""{' ':>{indent}}{conn[0]} --> {conn[1]}: {self.resolved_name}\n"""
+            ret += f"""{" ":>{indent}}{conn[0]} --> {conn[1]}: {self.resolved_name}\n"""
 
         return ret

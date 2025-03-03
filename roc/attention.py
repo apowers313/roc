@@ -28,6 +28,12 @@ from .perception import (
     Settled,
     VisionData,
 )
+from .reporting.observability import Observability, ObservabilityEvent
+
+
+class SaliencyEvent(ObservabilityEvent):
+    def __init__(self, sm: SaliencyMap) -> None:
+        super().__init__("roc.attention.saliency", body=sm.to_html_vals())
 
 
 class VisionAttentionSchema:
@@ -77,6 +83,9 @@ class SaliencyMap(Grid[list[Feature[Any]]]):
         return obj
 
     def __str__(self) -> str:
+        return str(self.to_debug_grid())
+
+    def to_debug_grid(self) -> DebugGrid:
         assert self.grid is not None
         dg = DebugGrid(self.grid)
         max_str = self.get_max_strength()
@@ -89,7 +98,12 @@ class SaliencyMap(Grid[list[Feature[Any]]]):
             rel_strength = self.get_strength(p.x, p.y) / max_str
             color = DebugGrid.blue_to_red_hue(rel_strength)
             dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
-        return str(dg)
+
+        return dg
+
+    def to_html_vals(self) -> dict[str, list[list[str | int]]]:
+        dg = self.to_debug_grid()
+        return dg.to_html_vals()
 
     def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
         if obj is None:
@@ -261,6 +275,7 @@ class VisionAttention(Attention):
                         saliency_map=self.saliency_map,
                     )
                 )
+                Observability.event(SaliencyEvent(self.saliency_map))
 
                 # reset
                 self.settled.clear()

@@ -12,6 +12,7 @@ from typing import Any
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
 import gymnasium as gym
 import nle
+import numpy as np
 from pydantic import BaseModel, Field
 
 from .action import Action, ActionRequest, TakeAction
@@ -21,8 +22,18 @@ from .config import Config
 from .intrinsic import Intrinsic
 from .logger import logger
 from .perception import Perception, VisionData
-from .reporting.observability import Observability
+from .reporting.observability import Observability, ObservabilityEvent
 from .reporting.state import print_state, states
+
+
+class ScreenEvent(ObservabilityEvent):
+    def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
+        screen = ""
+        for row in tty_chars:
+            for ch in row:
+                screen += chr(ch)
+            screen += "\n"
+        super().__init__("roc.screen", body=screen)
 
 
 class Gym(Component, ABC):
@@ -57,7 +68,7 @@ class Gym(Component, ABC):
     def get_action(self) -> Any: ...
 
     @logger.catch
-    @Observability.get_tracer().start_as_current_span("start")
+    @Observability.tracer.start_as_current_span("start")
     def start(self) -> None:
         logger.info("Starting NLE loop...")
         obs, reset_info = self.env.reset()
@@ -69,17 +80,17 @@ class Gym(Component, ABC):
 
         loop_num = 0
         game_num = 0
-        game_counter = Observability.get_meter().create_counter(
+        game_counter = Observability.meter.create_counter(
             "roc.game_total", unit="games", description="total number of games completed"
         )
-        observation_counter = Observability.get_meter().create_counter(
+        observation_counter = Observability.meter.create_counter(
             "roc.obs_total", unit="observations", description="total number of observations"
         )
         game_counter.add(1)
 
         # main environment loop
         while game_num < settings.num_games:
-            with Observability.get_tracer().start_as_current_span("observation"):
+            with Observability.tracer.start_as_current_span("observation"):
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
 
@@ -87,6 +98,7 @@ class Gym(Component, ABC):
                 screen = nle.nethack.tty_render(
                     obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"]
                 )
+                Observability.event(ScreenEvent(obs["tty_chars"]))
                 states.screen.set(screen)
 
                 # do all the real work
