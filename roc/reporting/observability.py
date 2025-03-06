@@ -20,7 +20,7 @@ from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-from opentelemetry.metrics import Meter
+from opentelemetry.metrics import Meter, Observation
 from opentelemetry.sdk._events import EventLoggerProvider
 from opentelemetry.sdk._logs import LoggerProvider, LogRecord
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
@@ -34,6 +34,11 @@ from opentelemetry.trace import Tracer
 
 from ..config import Config
 from ..logger import logger
+
+__all__ = [
+    "Observability",
+    "Observation",
+]
 
 # TODO: replace with metrics config
 os.environ["OTEL_METRIC_EXPORT_INTERVAL"] = "5000"  # so we don't have to wait 60s for metrics

@@ -4,7 +4,7 @@ import time
 from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Generic, TypeVar, cast
+from typing import Any, Generic, Iterable, TypeVar, cast
 
 import psutil
 
@@ -13,6 +13,7 @@ from roc.component import Component
 from roc.event import Event
 from roc.graphdb import Edge, Node
 from roc.object import Object, ObjectResolver
+from roc.reporting.observability import Observability, Observation
 
 StateType = TypeVar("StateType")
 
@@ -333,3 +334,17 @@ def bytes2human(n: int) -> str:
             value = float(n) / prefix[s]
             return "{:.1f}{}B".format(value, s)
     return "%sB" % n
+
+
+def node_cache_gague(*args: Any) -> Iterable[Observation]:
+    c = Node.get_cache()
+    yield Observation(c.currsize, attributes={"max": c.maxsize})
+
+
+def edge_cache_gague(*args: Any) -> Iterable[Observation]:
+    c = Edge.get_cache()
+    yield Observation(c.currsize, attributes={"max": c.maxsize})
+
+
+Observability.meter.create_observable_gauge("roc.node_cache", callbacks=[node_cache_gague])
+Observability.meter.create_observable_gauge("roc.edge_cache", callbacks=[edge_cache_gague])
