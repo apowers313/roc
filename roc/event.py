@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import multiprocessing
 from abc import ABC
 from collections import deque
 from typing import Any, Callable, Generic, TypeVar
@@ -11,6 +12,7 @@ from loguru import logger
 from reactivex import Observable
 from reactivex import operators as op
 from reactivex.abc.disposable import DisposableBase as Disposable
+from reactivex.scheduler import ThreadPoolScheduler
 from rich.pretty import pretty_repr
 
 from .component import Component, ComponentId
@@ -21,6 +23,9 @@ EventData = TypeVar("EventData")
 event_counter = Observability.meter.create_counter(
     "roc.event", unit="event", description="total number of events"
 )
+
+thread_count = multiprocessing.cpu_count() * 2
+pool_scheduler = ThreadPoolScheduler(thread_count)
 
 
 class Event(ABC, Generic[EventData]):
@@ -39,7 +44,7 @@ class Event(ABC, Generic[EventData]):
             src_id (ComponentId): The name and type of the Component sending the event
             bus (EventBus): The EventBus that the event is being sent over
         """
-        event_counter.add(1, attributes={"type": self.__class__.__name__, "bus": bus.name})
+        event_counter.add(1, attributes={"source": src_id, "bus": bus.name})
         self.data = data
         self.src_id = src_id
         self.bus = bus
@@ -101,7 +106,7 @@ class BusConnection(Generic[EventData]):
         if filter is not None:
             pipe_args.append(op.filter(filter))
 
-        sub = self.subject.pipe(*pipe_args).subscribe(listener)
+        sub = self.subject.pipe(*pipe_args).subscribe(listener, scheduler=pool_scheduler)
         self.subscribers.append(sub)
 
     def close(self) -> None:
