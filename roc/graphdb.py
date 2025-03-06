@@ -100,6 +100,16 @@ class GraphDB:
             unit="query",
             description="the total number of queries database",
         )
+        self.node_counter = Observability.meter.create_counter(
+            "roc.graphdb.nodes",
+            unit="nodes",
+            description="the total number of nodes",
+        )
+        self.edge_counter = Observability.meter.create_counter(
+            "roc.graphdb.edges",
+            unit="edges",
+            description="the total number of edges",
+        )
 
         if self.strict_schema:
             Schema.validate()
@@ -353,10 +363,13 @@ class Edge(BaseModel, extra="allow"):
         # set passed-in values or their defaults
         # self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
         self._id = kwargs["_id"] if "_id" in kwargs else get_next_new_edge_id()
+        self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
 
         if self._id < 0:
             self._new = True
             Edge.get_cache()[self.id] = self
+
+        self._db.edge_counter.add(1, attributes={"new": self._new, "type": self.type})
 
     def __del__(self) -> None:
         # print("Edge.__del__:", self)
@@ -866,6 +879,7 @@ class Node(BaseModel, extra="allow"):
             Node.get_cache()[self.id] = self
 
         self._orig_labels = self.labels.copy()
+        self._db.node_counter.add(1, attributes={"new": self._new, "labels": ":".join(self.labels)})
 
     def __del__(self) -> None:
         # print("Node.__del__:", self)
