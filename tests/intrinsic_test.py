@@ -3,8 +3,13 @@
 from helpers.nethack_blstats import blstat0 as test_blstat
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.intrinsic import Intrinsic, IntrinsicBoolOp, IntrinsicIntOp
+from roc.intrinsic import (
+    Intrinsic,
+    IntrinsicBoolOp,
+    IntrinsicData,
+    IntrinsicIntOp,
+    config_intrinsics,
+)
 
 
 class TestIntrinsicInt:
@@ -48,6 +53,23 @@ class TestIntrinsic:
             output_bus=intrinsic.int_conn.attached_bus,
         )
 
-        s.input_conn.send(test_blstat)
+        s.input_conn.send(IntrinsicData(test_blstat))
 
         # assert s.output.call_count == 3
+
+    def test_config_int(self) -> None:
+        ret = config_intrinsics([("hp", "int:-3:7")])
+
+        assert len(ret) == 1
+        assert isinstance(ret["hp"], IntrinsicIntOp)
+        assert ret["hp"].name == "hp"
+        assert ret["hp"].min == -3
+        assert ret["hp"].max == 7
+        assert ret["hp"].range == 10
+
+    def test_config_bool(self) -> None:
+        ret = config_intrinsics([("foo", "bool")])
+
+        assert len(ret) == 1
+        assert isinstance(ret["foo"], IntrinsicBoolOp)
+        assert ret["foo"].name == "foo"

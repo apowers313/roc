@@ -103,6 +103,12 @@ class Config(BaseSettings):
             "shape:perception",
         ]
     )
+    # intrinsic config
+    intrinsics: list[tuple[str, str]] = Field(
+        default=[
+            ("hp", "int:0:100"),
+        ]
+    )
 
     def __str__(self) -> str:
         ret = ""

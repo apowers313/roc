@@ -19,14 +19,14 @@ from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
-from .intrinsic import Intrinsic
+from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
 from .perception import Perception, VisionData
 from .reporting.observability import Observability, ObservabilityEvent
 from .reporting.state import print_state, states
 
 
-class ScreenEvent(ObservabilityEvent):
+class ScreenObsEvent(ObservabilityEvent):
     def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
         screen = ""
         for row in tty_chars:
@@ -34,6 +34,11 @@ class ScreenEvent(ObservabilityEvent):
                 screen += chr(ch)
             screen += "\n"
         super().__init__("roc.screen", body=screen)
+
+
+class IntrinsicObsEvent(ObservabilityEvent):
+    def __init__(self, bl: dict[str, Any]) -> None:
+        super().__init__("roc.intrinsics", body=bl)
 
 
 class Gym(Component, ABC):
@@ -88,6 +93,9 @@ class Gym(Component, ABC):
         )
         game_counter.add(1)
 
+        component_str = "\t" + "\n\t".join(Component.get_loaded_components())
+        logger.info(f"{Component.get_component_count()} components loaded:\n{component_str}")
+
         # main environment loop
         while game_num < settings.num_games:
             with Observability.tracer.start_as_current_span("observation"):
@@ -98,7 +106,7 @@ class Gym(Component, ABC):
                 screen = nle.nethack.tty_render(
                     obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"]
                 )
-                Observability.event(ScreenEvent(obs["tty_chars"]))
+                Observability.event(ScreenObsEvent(obs["tty_chars"]))
                 states.screen.set(screen)
 
                 # do all the real work
@@ -300,8 +308,10 @@ class NethackGym(Gym):
                 True if blstats_vals["condition"] & bit.value else False
             )
 
+        # TODO: remove BottomlineStats?
         bl = BottomlineStats(**blstats_vals)
-        self.intrinsic_bus_conn.send(bl.dict())
+        Observability.event(IntrinsicObsEvent(bl.dict()))
+        self.intrinsic_bus_conn.send(IntrinsicData(bl.dict()))
 
 
 dump_env_file: Any = None
