@@ -1,0 +1,37 @@
+{
+	// Place your roc workspace snippets here. Each snippet is defined under a snippet name and has a scope, prefix, body and 
+	// description. Add comma separated ids of the languages where the snippet is applicable in the scope field. If scope 
+	// is left empty or omitted, the snippet gets applied to all languages. The prefix is what is 
+	// used to trigger the snippet and the body will be expanded and inserted. Possible variables are: 
+	// $1, $2 for tab stops, $0 for the final cursor position, and ${1:label}, ${2:another} for placeholders. 
+	// Placeholders with the same ids are connected.
+	// Example:
+	"Component test": {
+		"scope": "python",
+		"prefix": "comptest",
+		"body": [
+			"# mypy: disable-error-code=\"no-untyped-def\"",
+			"",
+			"from helpers.nethack_screens2 import screens",
+			"from helpers.util import StubComponent",
+			"from roc.component import Component",
+			"from roc.${1:module} import ${3:upper_name}",
+			"from roc.perception import VisionData",
+			"class Test${3:upper_name}:",
+			"    def test_exists(self, empty_components) -> None:",
+			"        ${3:upper_name}()",
+			"    def test_basic(self, empty_components) -> None:",
+			"        ${2:name} = Component.get(\"${2:name}\", \"${2:name}\")",
+			"        assert isinstance(${2:name}, ${3:upper_name})",
+			"        s = StubComponent(",
+			"            input_bus=${2:name}.${2:name}_conn.attached_bus,",
+			"            output_bus=${2:name}.${2:name}_conn.attached_bus,",
+			"        )",
+			"",
+			"        s.input_conn.send(VisionData.from_dict(screens[0]))",
+			"",
+			"        assert s.output.call_count == 31337",
+		],
+		"description": "Boilerplate for testing a component"
+	}
+}
