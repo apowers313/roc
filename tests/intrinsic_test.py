@@ -3,6 +3,7 @@
 from helpers.nethack_blstats import blstat0 as test_blstat
 from helpers.util import StubComponent
 
+from roc.component import Component
 from roc.intrinsic import (
     Intrinsic,
     IntrinsicBoolOp,
