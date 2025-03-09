@@ -15,6 +15,7 @@
 			"from helpers.nethack_screens2 import screens",
 			"from helpers.util import StubComponent",
 			"from roc.component import Component",
+			"from roc.event import Event",
 			"from roc.${1:module} import ${3:upper_name}",
 			"from roc.perception import VisionData",
 			"class Test${3:upper_name}:",
@@ -31,6 +32,11 @@
 			"        s.input_conn.send(VisionData.from_dict(screens[0]))",
 			"",
 			"        assert s.output.call_count == 31337",
+			"",
+			"        # first event",
+			"        e = s.output.call_args_list[0].args[0]",
+			"        assert isinstance(e, Event)",
+			"        assert isinstance(e.data, ${3:upper_name}Data)"
 		],
 		"description": "Boilerplate for testing a component"
 	}
