@@ -84,7 +84,7 @@ class IntrinsicBoolOp(IntrinsicOp[bool]):
         return 0.0
 
 
-class IntrinsicData:
+class RawIntrinsicData:
     def __init__(self, intrinsics: dict[str, Any]) -> None:
         self.intrinsics = intrinsics
 
@@ -96,6 +96,19 @@ class IntrinsicData:
         return ret
 
 
+class NormalizedIntrinsicData:
+    def __init__(self, intrinsics: dict[str, float]) -> None:
+        self.intrinsics = intrinsics
+
+    def __repr__(self) -> str:
+        ret = ""
+        for k in self.intrinsics.keys():
+            ret += f"{k}: {self.intrinsics[k]}\n"
+
+        return ret
+
+
+IntrinsicData = RawIntrinsicData | NormalizedIntrinsicData
 IntrinsicEvent = Event[IntrinsicData]
 
 
@@ -112,7 +125,7 @@ class Intrinsic(Component):
         self.intrinsic_spec = config_intrinsics(settings.intrinsics)
 
     def event_filter(self, e: Event[Any]) -> bool:
-        return isinstance(e.data, IntrinsicData)
+        return isinstance(e.data, RawIntrinsicData)
 
     def do_intrinsic(self, e: IntrinsicEvent) -> None:
         normalized_intrinsics: dict[str, float] = {}
@@ -124,8 +137,7 @@ class Intrinsic(Component):
                 spec.validate(received_intrinsics[name])
                 normalized_intrinsics[name] = spec.normalize(received_intrinsics[name])
 
-        print("normalized_intrinsics", normalized_intrinsics)
-        # TODO: emit normalized_intrinsics
+        self.int_conn.send(NormalizedIntrinsicData(normalized_intrinsics))
 
 
 def config_intrinsics(intrinsics_desc: Iterable[tuple[str, str]]) -> dict[str, IntrinsicOp[Any]]:
