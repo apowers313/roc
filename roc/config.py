@@ -109,6 +109,12 @@ class Config(BaseSettings):
             ("hp", "int:0:100"),
         ]
     )
+    # significance config
+    significance_weights: dict[str, float] = Field(
+        default={
+            "hp": 10.0,
+        }
+    )
 
     def __str__(self) -> str:
         ret = ""
