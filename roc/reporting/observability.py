@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib
 import math
 import os
+import sys
 import traceback
 from datetime import datetime
 from time import time_ns
@@ -39,6 +40,8 @@ __all__ = [
     "Observability",
     "Observation",
 ]
+
+_disable_for_pytest_scanning = "pytest" in sys.modules and "PYTEST_VERSION" in os.environ
 
 # TODO: replace with metrics config
 os.environ["OTEL_METRIC_EXPORT_INTERVAL"] = "5000"  # so we don't have to wait 60s for metrics
@@ -114,8 +117,9 @@ class ObservabilityBase(type):
 class Observability(metaclass=ObservabilityBase):
     def __init__(self) -> None:
         settings = Config.get()
+        global _disable_for_pytest_scanning
 
-        if settings.observability_logging:
+        if settings.observability_logging and not _disable_for_pytest_scanning:
             # log init
             logger_provider = LoggerProvider(resource=resource)
             otlp_log_exporter = OTLPLogExporter(endpoint=settings.observability_host, insecure=True)
@@ -143,7 +147,7 @@ class Observability(metaclass=ObservabilityBase):
         else:
             self.set_event_logger(NoOpEventLogger("roc"))
 
-        if settings.observability_metrics:
+        if settings.observability_metrics and not _disable_for_pytest_scanning:
             logger.debug("initializing OpenTelemetry metrics...")
             # metrics init
             otlp_metrics_exporter = OTLPMetricExporter(
@@ -169,7 +173,7 @@ class Observability(metaclass=ObservabilityBase):
             )
         )
 
-        if settings.observability_tracing:
+        if settings.observability_tracing and not _disable_for_pytest_scanning:
             # trace init
             logger.debug("initializing OpenTelemetry trace...")
             otlp_trace_exporter = OTLPSpanExporter(
@@ -189,7 +193,7 @@ class Observability(metaclass=ObservabilityBase):
             )
         )
 
-        if settings.observability_profiling:
+        if settings.observability_profiling and not _disable_for_pytest_scanning:
             # profiling init
             logger.debug("initializing Pyroscope profiling...")
             pyroscope.configure(
