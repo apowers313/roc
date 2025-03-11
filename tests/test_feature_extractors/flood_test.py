@@ -66,7 +66,7 @@ class TestFlood:
         }
 
         # event 2
-        e = s.output.call_args_list[1].args[0]
+        e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.size == 5
@@ -74,7 +74,7 @@ class TestFlood:
         assert e.data.points == {(2, 0), (2, 1), (2, 2), (2, 3), (2, 4)}
 
         # event 3
-        e = s.output.call_args_list[2].args[0]
+        e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.size == 10
@@ -139,7 +139,7 @@ class TestFlood:
         }
 
         # event 2
-        e = s.output.call_args_list[1].args[0]
+        e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.size == 5
@@ -147,7 +147,7 @@ class TestFlood:
         assert e.data.points == {(0, 2), (1, 2), (2, 2), (3, 2), (4, 2)}
 
         # event 3
-        e = s.output.call_args_list[2].args[0]
+        e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.size == 10
@@ -193,7 +193,7 @@ class TestFlood:
         assert s.output.call_count == 3
 
         # event 1
-        e = s.output.call_args_list[0].args[0]
+        e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.feature_name == "Flood"
@@ -202,7 +202,7 @@ class TestFlood:
         assert e.data.points == {(0, 0), (1, 1), (2, 2), (3, 3), (4, 4)}
 
         # event 2
-        e = s.output.call_args_list[1].args[0]
+        e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, FloodFeature)
         assert e.data.size == 20
@@ -344,7 +344,7 @@ class TestFlood:
         s.input_conn.send(VisionData.from_dict(screens[0]))
         s.input_conn.send(VisionData.from_dict(screens[1]))
 
-        assert s.output.call_count == 5
+        assert s.output.call_count == 6
 
         # event 1
         e = s.output.call_args_list[0].args[0]
@@ -363,5 +363,25 @@ class TestFlood:
 
         # event 3
         e = s.output.call_args_list[2].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, Settled)
+
+        # # event 4
+        e = s.output.call_args_list[3].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        assert e.data.size == 1629
+        assert e.data.type == 2359  # ' '
+
+        # # event 5
+        e = s.output.call_args_list[4].args[0]
+        assert isinstance(e, Event)
+        assert isinstance(e.data, FloodFeature)
+        assert e.data.size == 5
+        assert e.data.type == 2378  # .
+        assert e.data.points == {(16, 7), (17, 7), (18, 7), (16, 6), (18, 6)}
+
+        # event 6
+        e = s.output.call_args_list[5].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, Settled)
