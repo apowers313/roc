@@ -17,7 +17,7 @@ from .gymnasium import NethackGym
 from .jupyter import RocJupyterMagics, is_jupyter
 from .perception import Perception, PerceptionData
 from .reporting.observability import Observability
-from .reporting.state import init_state
+from .reporting.state import State
 
 __all__ = [
     # Component Exports
@@ -48,7 +48,7 @@ def init(config: dict[str, Any] | None = None) -> None:
     Component.init()
     ExpMod.init()
     RocJupyterMagics.init()
-    init_state()
+    State.init()
 
 
 def start() -> None:

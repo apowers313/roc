@@ -28,12 +28,6 @@ from .perception import (
     Settled,
     VisionData,
 )
-from .reporting.observability import Observability, ObservabilityEvent
-
-
-class SaliencyEvent(ObservabilityEvent):
-    def __init__(self, sm: SaliencyMap) -> None:
-        super().__init__("roc.attention.saliency", body=sm.to_html_vals())
 
 
 class VisionAttentionSchema:
@@ -275,7 +269,6 @@ class VisionAttention(Attention):
                         saliency_map=self.saliency_map,
                     )
                 )
-                Observability.event(SaliencyEvent(self.saliency_map))
 
                 # reset
                 self.settled.clear()

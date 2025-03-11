@@ -12,33 +12,17 @@ from typing import Any
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
 import gymnasium as gym
 import nle
-import numpy as np
 from pydantic import BaseModel, Field
 
 from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
-from .intrinsic import Intrinsic, IntrinsicData
+from .intrinsic import Intrinsic, RawIntrinsicData
 from .logger import logger
 from .perception import Perception, VisionData
-from .reporting.observability import Observability, ObservabilityEvent
-from .reporting.state import print_state, states
-
-
-class ScreenObsEvent(ObservabilityEvent):
-    def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
-        screen = ""
-        for row in tty_chars:
-            for ch in row:
-                screen += chr(ch)
-            screen += "\n"
-        super().__init__("roc.screen", body=screen)
-
-
-class IntrinsicObsEvent(ObservabilityEvent):
-    def __init__(self, bl: dict[str, Any]) -> None:
-        super().__init__("roc.intrinsics", body=bl)
+from .reporting.observability import Observability
+from .reporting.state import State, states
 
 
 class Gym(Component, ABC):
@@ -102,12 +86,13 @@ class Gym(Component, ABC):
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
 
-                # save the current screen
-                screen = nle.nethack.tty_render(
-                    obs["tty_chars"], obs["tty_colors"], obs["tty_cursor"]
+                states.screen.set(
+                    {
+                        "chars": obs["tty_chars"],
+                        "colors": obs["tty_colors"],
+                        "cursor": obs["tty_cursor"],
+                    }
                 )
-                Observability.event(ScreenObsEvent(obs["tty_chars"]))
-                states.screen.set(screen)
 
                 # do all the real work
                 self.send_obs(obs)
@@ -129,7 +114,7 @@ class Gym(Component, ABC):
                 loop_num += 1
                 states.loop.set(loop_num)
                 if (loop_num % settings.status_update) == 0:
-                    print_state()
+                    State.print()
 
                 if done or truncated:
                     logger.info(f"Game {game_num} completed, starting next game")
@@ -310,8 +295,8 @@ class NethackGym(Gym):
 
         # TODO: remove BottomlineStats?
         bl = BottomlineStats(**blstats_vals)
-        Observability.event(IntrinsicObsEvent(bl.dict()))
-        self.intrinsic_bus_conn.send(IntrinsicData(bl.dict()))
+        # Observability.event(IntrinsicObsEvent(bl.dict()))
+        self.intrinsic_bus_conn.send(RawIntrinsicData(bl.dict()))
 
 
 dump_env_file: Any = None

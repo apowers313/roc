@@ -1,21 +1,28 @@
+from __future__ import annotations
+
 import dataclasses
-import os
-import time
 from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Generic, Iterable, TypeVar, cast
+from typing import Any, Generic, Iterable, TypeVar
 
-import psutil
+import nle
+import numpy as np
 
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
 from roc.event import Event
 from roc.graphdb import Edge, Node
+from roc.logger import logger
 from roc.object import Object, ObjectResolver
-from roc.reporting.observability import Observability, Observation
+from roc.reporting.observability import Observability, ObservabilityEvent, Observation
 
 StateType = TypeVar("StateType")
+_state_init_done = False
+
+
+class StateComponent(Component):
+    pass
 
 
 class State(ABC, Generic[StateType]):
@@ -36,97 +43,78 @@ class State(ABC, Generic[StateType]):
     def set(self, v: StateType) -> None:
         self.val = v
 
+    @staticmethod
+    def get_states() -> "StateList":
+        return states
 
-class SystemCpuState(State[int]):
-    def __init__(self) -> None:
-        super().__init__("cpu", display_name="CPU Usage")
-        self.val = self.get()
+    @staticmethod
+    def get_state_names() -> list[str]:
+        return [field.name for field in dataclasses.fields(StateList)]
 
-    def get(self) -> int:
-        psutil.cpu_times()
-        return 1
+    @staticmethod
+    def init() -> None:
+        global _state_init_done
+        if _state_init_done:
+            return
 
+        # attention
+        att_conn = Attention.bus.connect(StateComponent())
 
-class ProcessMemoryState(State[int]):
-    def __init__(self) -> None:
-        super().__init__("memory")
-        self.val = self.get()
+        def att_evt_handler(e: Event[VisionAttentionData]) -> None:
+            assert isinstance(e.data, VisionAttentionData)
+            states.salency.set(deepcopy(e.data.saliency_map))
+            states.attention.set(deepcopy(e.data))
 
-    def __str__(self) -> str:
-        mem = self.get()
-        return f"Process Memory Usage: {bytes2human(mem)}"
+        att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
 
-    def get(self) -> int:
-        process = psutil.Process(os.getpid())
-        mem_info = process.memory_info()
-        return cast(int, mem_info.rss)
+        # object
+        obj_conn = ObjectResolver.bus.connect(StateComponent())
 
+        def obj_evt_handler(e: Event[Object]) -> None:
+            states.object.set(e.data)
 
-class AvailableMemoryState(State[int]):
-    def __init__(self) -> None:
-        super().__init__("sysmem")
-        self.val = self.get()
+        obj_conn.listen(obj_evt_handler, filter=lambda e: isinstance(e.data, Object))
 
-    def __str__(self) -> str:
-        vm = self.get()
-        return f"Available System Memory: {bytes2human(vm)}"
+        State.print_startup_info()
 
-    def get(self) -> int:
-        vm = psutil.virtual_memory()
-        return cast(int, vm.available)
+        _state_init_done = True
 
+    @staticmethod
+    def print_startup_info() -> None:
+        logger.info("Starting ROC")
 
-class CpuLoadState(State[list[float]]):
-    def __init__(self) -> None:
-        super().__init__("cpuload")
-        self.val = self.get()
+    @staticmethod
+    def send_events() -> None:
+        states = State.get_states()
 
-    def __str__(self) -> str:
-        load = self.get()
-        return f"CPU Load: {load[0]:1.1f}% / {load[1]:1.1f}% / {load[2]:1.1f}% (1m / 5m / 15m)"
+        if states.screen.val is not None:
+            screen = states.screen.val["chars"]
+            Observability.event(ScreenObsEvent(screen))
 
-    def get(self) -> list[float]:
-        return [x / psutil.cpu_count() * 100 for x in psutil.getloadavg()]
+        if states.salency.val is not None:
+            saliency = states.salency.val
+            Observability.event(SaliencyEvent(saliency))
 
+    @staticmethod
+    def print() -> None:
+        State.init()
 
-class DiskIoState(State[dict[str, float]]):
-    def __init__(self) -> None:
-        super().__init__("diskio")
-        self.last_time = time.time_ns()
-        ioc = psutil.disk_io_counters()
-        self.last_read_io = ioc.read_count
-        self.last_write_io = ioc.write_count
-        self.last_read_bytes = ioc.read_bytes
-        self.last_write_bytes = ioc.write_bytes
+        def header(s: str) -> None:
+            print(f"\n=== {s.upper()} ===")  # noqa: T201
 
-    def __str__(self) -> str:
-        disk_io = self.get()
-        read_io = disk_io["read_io"]
-        write_io = disk_io["write_io"]
-        read_bytes = int(disk_io["read_bytes"])
-        write_bytes = int(disk_io["write_bytes"])
-        return f"Disk Read I/O: {read_io:1.1f}/s ({bytes2human(read_bytes)}/s), Write I/O {write_io:1.1f}/s ({bytes2human(write_bytes)}/s)"
+        header("Environment")
+        print(states.loop)  # noqa: T201
+        print(states.screen)  # noqa: T201
+        # TODO: blstats
 
-    def get(self) -> dict[str, float]:
-        ioc = psutil.disk_io_counters()
-        now = time.time_ns()
-        delta_sec = (now - self.last_time) / 10e8
-        read_io_per_sec = (ioc.read_count - self.last_read_io) / delta_sec
-        write_io_per_sec = (ioc.write_count - self.last_write_io) / delta_sec
-        read_bytes_per_sec = (ioc.read_bytes - self.last_read_bytes) / delta_sec
-        write_bytes_per_sec = (ioc.write_bytes - self.last_write_bytes) / delta_sec
-        self.last_read_io = ioc.read_count
-        self.last_write_io = ioc.write_count
-        self.last_read_bytes = ioc.read_bytes
-        self.last_write_bytes = ioc.write_bytes
-        self.last_time = now
+        header("Graph DB")
+        print(states.node_cache)  # noqa: T201
+        print(states.edge_cache)  # noqa: T201
 
-        return {
-            "read_io": read_io_per_sec,
-            "write_io": write_io_per_sec,
-            "read_bytes": read_bytes_per_sec,
-            "write_bytes": write_bytes_per_sec,
-        }
+        header("Agent")
+        print(states.salency)  # noqa: T201
+        print(states.attention)  # noqa: T201
+        print(states.object)  # noqa: T201
 
 
 class LoopState(State[int]):
@@ -166,16 +154,21 @@ class EdgeCacheState(State[float]):
         return f"Edge Cache: {c.currsize} / {c.maxsize} ({self.get():1.1f}%)"
 
 
-class CurrentScreenState(State[str]):
+class CurrentScreenState(State[dict[str, Any]]):
     def __init__(self) -> None:
         super().__init__("curr-screen", display_name="Current Screen")
 
-    def set(self, screen: str) -> None:
+    def set(self, screen: dict[str, Any]) -> None:
         self.val = screen
 
     def __str__(self) -> str:
+        # save the current screen
+
         if self.val is not None:
-            return f"Current Screen:\n-------------\n{self.val}\n-------------"
+            screen = nle.nethack.tty_render(
+                self.val["chars"], self.val["colors"], self.val["cursor"]
+            )
+            return f"Current Screen:\n-------------\n{screen}\n-------------"
         else:
             return "Current Screen: None"
 
@@ -242,13 +235,13 @@ class ComponentsState(State[list[str]]):
         return f"{Component.get_component_count()} components loaded:\n{component_str}"
 
 
+class BlstatsState(State[list[tuple[str, str]]]):
+    pass
+
+
 @dataclass
 class StateList:
-    memory: ProcessMemoryState = ProcessMemoryState()
-    sysmem: AvailableMemoryState = AvailableMemoryState()
     loop: LoopState = LoopState()
-    cpuload: CpuLoadState = CpuLoadState()
-    diskio: DiskIoState = DiskIoState()
     node_cache: NodeCacheState = NodeCacheState()
     edge_cache: EdgeCacheState = EdgeCacheState()
     screen: CurrentScreenState = CurrentScreenState()
@@ -259,68 +252,6 @@ class StateList:
 
 
 states = StateList()
-all_states = [field.name for field in dataclasses.fields(StateList)]
-
-
-class StateComponent(Component):
-    pass
-
-
-_state_init_done = False
-
-
-def init_state() -> None:
-    global _state_init_done
-    if _state_init_done:
-        return
-
-    # attention
-    att_conn = Attention.bus.connect(StateComponent())
-
-    def att_evt_handler(e: Event[VisionAttentionData]) -> None:
-        assert isinstance(e.data, VisionAttentionData)
-        states.salency.set(deepcopy(e.data.saliency_map))
-        states.attention.set(deepcopy(e.data))
-
-    att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
-
-    # object
-    obj_conn = ObjectResolver.bus.connect(StateComponent())
-
-    def obj_evt_handler(e: Event[Object]) -> None:
-        states.object.set(e.data)
-
-    obj_conn.listen(obj_evt_handler, filter=lambda e: isinstance(e.data, Object))
-
-    _state_init_done = True
-
-
-def print_state() -> None:
-    init_state()
-
-    def header(s: str) -> None:
-        print(f"\n=== {s.upper()} ===")  # noqa: T201
-
-    header("System Health")
-    print(states.cpuload)  # noqa: T201
-    print(states.diskio)  # noqa: T201
-    print(states.memory)  # noqa: T201
-    print(states.sysmem)  # noqa: T201
-
-    header("Environment")
-    print(states.loop)  # noqa: T201
-    print(states.screen)  # noqa: T201
-    # TODO: blstats
-
-    header("Graph DB")
-    print(states.node_cache)  # noqa: T201
-    print(states.edge_cache)  # noqa: T201
-
-    header("Agent")
-    print(states.components)  # noqa: T201
-    print(states.salency)  # noqa: T201
-    print(states.attention)  # noqa: T201
-    print(states.object)  # noqa: T201
 
 
 def bytes2human(n: int) -> str:
@@ -336,7 +267,31 @@ def bytes2human(n: int) -> str:
     return "%sB" % n
 
 
+class SaliencyEvent(ObservabilityEvent):
+    def __init__(self, sm: SaliencyMap) -> None:
+        super().__init__("roc.attention.saliency", body=sm.to_html_vals())
+
+
+class ScreenObsEvent(ObservabilityEvent):
+    def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
+        screen = ""
+        for row in tty_chars:
+            for ch in row:
+                screen += chr(ch)
+            screen += "\n"
+        super().__init__("roc.screen", body=screen)
+
+
+class IntrinsicObsEvent(ObservabilityEvent):
+    def __init__(self, bl: dict[str, Any]) -> None:
+        super().__init__("roc.intrinsics", body=bl)
+
+
 def node_cache_gague(*args: Any) -> Iterable[Observation]:
+    # NOTE: need send state events every time metrics are recorded, just
+    # sticking this here because it needs to be somewhere
+    State.send_events()
+
     c = Node.get_cache()
     yield Observation(c.currsize, attributes={"max": c.maxsize})
 
