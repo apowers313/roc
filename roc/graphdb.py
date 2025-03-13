@@ -6,8 +6,11 @@ from __future__ import annotations
 
 import functools
 import inspect
+import json
+import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, Mapping, MutableSet
+from datetime import datetime, timedelta
 from itertools import islice
 from typing import (
     Any,
@@ -25,10 +28,13 @@ from typing import (
 
 import mgclient
 import networkx as nx
+import scipy as sp
 from cachetools import LRUCache
+from networkx.drawing.nx_pydot import write_dot
 from pydantic import BaseModel, Field
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
+from tqdm import tqdm
 from typing_extensions import Self
 
 from .config import Config
@@ -182,6 +188,87 @@ class GraphDB:
         """Closes the connection to the database"""
         self.db_conn.close()
         self.closed = True
+
+    @staticmethod
+    def export(format: str = "gml", filename: str = "graph", timestamp: bool = True) -> None:
+        """Saves the graph database to a file in the selected format
+
+        Args:
+            format (str, optional): The graph format to use which is passed
+                along to networkx. Options include "gexf", "gml", "dot",
+                "graphml", "json-node-link", "json-adj", "cytoscape", "pajek",
+                "matrix-market", "adj-list", "multi-adj-list", "edge-list".
+                Defaults to "gml".
+            filename (str, optional): The filename to write the graph to. Defaults to "graph".
+            timestamp (bool, optional): Whether or not to append a timestamp to
+                the end of the file name. Defaults to True.
+        """
+        ids = Node.all_ids()
+        logger.info(f"Saving {len(ids)} nodes...")
+        start_time = time.time()
+
+        # tqdm options: https://github.com/tqdm/tqdm?tab=readme-ov-file#parameters
+        with tqdm(total=len(ids), desc="Nodes", unit="node", ncols=80, colour="blue") as pbar:
+
+            def progress_update(n: Node) -> bool:
+                pbar.update(1)
+                return True
+
+            G = GraphDB.to_networkx(node_ids=ids, filter=progress_update)
+
+        # format timestamp
+        if timestamp:
+            # time format: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
+            timestr = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
+            filename = f"{filename}-{timestr}"
+
+        logger.info(f"Writing graph to '{filename}'...")
+        match format:
+            case "gexf":
+                nx.write_gexf(G, f"{filename}.gexf")
+            case "gml":
+                nx.write_gml(G, f"{filename}.gml")
+            case "dot":
+                # XXX: pydot uses the 'name' attribute internally, so rename ours if it exists
+                for n in G.nodes(data=True):
+                    if "name" in n[1]:
+                        n[1]["nme"] = n[1]["name"]
+                        del n[1]["name"]
+                write_dot(G, f"{filename}.dot")
+            case "graphml":
+                nx.write_graphml(G, f"{filename}.graphml")
+            # case "json-tree":
+            #     with open(f"{filename}.tree.json", "w", encoding="utf8") as f:
+            #         json.dump(nx.tree_data(G), f)
+            case "json-node-link":
+                with open(f"{filename}.node-link.json", "w", encoding="utf8") as f:
+                    json.dump(nx.node_link_data(G), f)
+            case "json-adj":
+                with open(f"{filename}.adj.json", "w", encoding="utf8") as f:
+                    json.dump(nx.adjacency_data(G), f)
+            case "cytoscape":
+                with open(f"{filename}.cytoscape.json", "w", encoding="utf8") as f:
+                    json.dump(nx.cytoscape_data(G), f)
+            case "pajek":
+                nx.write_pajek(G, f"{filename}.pajek")
+            case "matrix-market":
+                np_graph = nx.to_numpy_array(G)
+                sp.io.mmwrite(f"{filename}.mm", np_graph)
+            case "adj-list":
+                nx.write_adjlist(G, f"{filename}.adjlist")
+            case "multi-adj-list":
+                nx.write_multiline_adjlist(G, f"{filename}.madjlist")
+            case "edge-list":
+                nx.write_edgelist(G, f"{filename}.edges")
+
+        end_time = time.time()
+
+        nc = Node.get_cache()
+        ec = Edge.get_cache()
+        assert len(nc) == len(ids)
+        logger.info(
+            f"Saved {len(ids)} nodes and {len(ec)} edges. Elapsed time: {timedelta(seconds=(end_time - start_time))}"
+        )
 
     @classmethod
     def singleton(cls) -> GraphDB:
@@ -629,9 +716,9 @@ class Edge(BaseModel, extra="allow"):
     @staticmethod
     def to_dict(e: Edge, include_type: bool = False) -> dict[str, Any]:
         """Convert a Edge to a Python dictionary"""
-        # XXX: the excluded fields below shouldn't have been included in the
+        # XXX: the _id field below shouldn't have been included in the
         # first place because Pythonic should exclude fields with underscores
-        ret = e.model_dump(exclude={"_id"})
+        ret = e.model_dump(exclude={"_id", "allowed_connections"})
 
         if include_type and hasattr(e, "type"):
             ret["type"] = e.type

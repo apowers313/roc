@@ -1197,6 +1197,21 @@ class TestEdge:
         assert d["foo"] == "blah"
         assert "type" not in d.keys()
 
+    def test_to_dict_exclude_allowed_connections(self) -> None:
+        class NewEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("Testy", "Testy")]
+
+        class Testy(Node):
+            pass
+
+        n1 = Testy()
+        n2 = Testy()
+        e = NewEdge.connect(n1, n2)
+
+        res = Edge.to_dict(e)
+
+        assert res == {}
+
     @pytest.mark.skip("pending")
     def test_edge_cache(self) -> None:
         pass
