@@ -107,7 +107,7 @@ class Component(ABC):
         """
         settings = Config.get()
         component_list = default_components
-        logger.debug("perception components from settings", settings.perception_components)
+        logger.debug(f"perception components from settings: {settings.perception_components}")
         component_list = component_list.union(settings.perception_components, default_components)
         logger.debug(f"Component.init: default components: {component_list}")
 
