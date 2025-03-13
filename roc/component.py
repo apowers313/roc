@@ -214,7 +214,7 @@ class register_component:
         global register_component
         global component_registry
 
-        logger.trace(f"Registering component: {self.name}:{self.type} (auto={self.auto})")
+        logger.debug(f"Registering component: {self.name}:{self.type} (auto={self.auto})")
 
         reg_str = _component_registry_key(self.name, self.type)
         if reg_str in component_registry:
