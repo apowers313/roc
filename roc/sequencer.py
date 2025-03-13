@@ -6,13 +6,17 @@ from roc.action import Action, TakeAction
 from roc.component import Component, register_component
 from roc.event import Event
 from roc.graphdb import Edge, EdgeConnectionsList, Node
-from roc.object import FeatureGroup, ObjectResolver
+from roc.intrinsic import Intrinsic, IntrinsicData
+from roc.object import Object, ObjectResolver
 
 tick = 0
 
 
 def get_next_tick() -> int:
+    global tick
+
     tick += 1
+
     return tick
 
 
@@ -22,8 +26,9 @@ class Frame(Node):
 
 class FrameAttributes(Edge):
     allowed_connections: EdgeConnectionsList = [
-        ("Frame", "FeatureGroup"),
+        ("Frame", "Object"),
         ("Frame", "TakeAction"),
+        ("Frame", "IntrinsicNode"),
     ]
 
 
@@ -39,15 +44,29 @@ class Sequencer(Component):
         self.obj_res_conn.listen(self.event_collector)
         self.action_conn = self.connect_bus(Action.bus)
         self.action_conn.listen(self.event_collector)
+        self.intrinsic_conn = self.connect_bus(Intrinsic.bus)
+        self.intrinsic_conn.listen(self.event_collector)
         self.last_frame: Frame | None = None
-        # TODO: listen to intrinsics bus
+        self.current_frame: Frame = Frame()
 
     def event_filter(self, e: Event[Any]) -> bool:
-        return isinstance(e, FeatureGroup) or isinstance(e, TakeAction)
+        return (
+            isinstance(e.data, Object)
+            or isinstance(e.data, TakeAction)
+            or isinstance(e.data, IntrinsicData)
+        )
 
     def event_collector(self, e: Event[Any]) -> None:
-        this_frame = Frame()
-        if self.last_frame is not None:
-            NextFrame.connect(self.last_frame, this_frame)
+        # start new frame on action
+        if isinstance(e.data, TakeAction):
+            if self.last_frame is not None:
+                NextFrame.connect(self.last_frame, self.current_frame)
 
-        self.last_frame = this_frame
+            self.last_frame = self.current_frame
+            self.current_frame = Frame()
+            FrameAttributes.connect(self.current_frame, e.data)
+        elif isinstance(e.data, Object):
+            FrameAttributes.connect(self.current_frame, e.data)
+        elif isinstance(e.data, IntrinsicData):
+            for intrinsic_node in e.data.to_nodes():
+                FrameAttributes.connect(self.current_frame, intrinsic_node)
