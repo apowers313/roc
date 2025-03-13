@@ -25,9 +25,9 @@ class DebugModuleLevel(BaseModel):
     @field_validator("module_name", mode="before")
     @classmethod
     def validate_module_name(cls, name: str) -> str:
-        assert (
-            name in module_names
-        ), f"Module name '{name}' not a valid module name. Must be one of {module_names}"
+        assert name in module_names, (
+            f"Module name '{name}' not a valid module name. Must be one of {module_names}"
+        )
 
         return name
 
@@ -91,16 +91,23 @@ class LogFilter:
 
 
 default_log_filter = None
+_initialized = False
 
 
 def init() -> None:
     """Initializes the logging module. Installs the filter, fetches the
     settings, etc.
     """
-    global default_log_filter
+    global default_log_filter, _initialized
+    if _initialized:
+        # TODO: raise a re-initialization warning?
+        return
+
     default_log_filter = LogFilter()
 
     logger.remove()
     settings = Config.get()
     if settings.log_enable:
         logger.add(sys.stderr, level=0, filter=default_log_filter)
+
+    _initialized = True
