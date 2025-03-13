@@ -16,8 +16,9 @@ from pydantic import BaseModel, Field
 
 from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
-from .component import Component
+from .component import Component, register_component
 from .config import Config
+from .graphdb import GraphDB
 from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
 from .perception import Perception, VisionData
@@ -25,6 +26,7 @@ from .reporting.observability import Observability
 from .reporting.state import State
 
 
+@register_component("gym", "game")
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
     loop and interfaces to the ROC agent.
@@ -116,6 +118,7 @@ class Gym(Component, ABC):
 
                 if done or truncated:
                     logger.info(f"Game {game_num} completed, starting next game")
+                    GraphDB.export()
                     self.env.reset()
                     game_counter.add(1)
                     game_num += 1
