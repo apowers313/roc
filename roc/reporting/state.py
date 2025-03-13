@@ -10,9 +10,10 @@ import nle
 import numpy as np
 
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
-from roc.component import Component
+from roc.component import Component, register_component
 from roc.event import Event
 from roc.graphdb import Edge, Node
+from roc.location import DebugGrid
 from roc.logger import logger
 from roc.object import Object, ObjectResolver
 from roc.reporting.observability import Observability, ObservabilityEvent, Observation
@@ -22,6 +23,7 @@ StateType = TypeVar("StateType")
 _state_init_done = False
 
 
+@register_component("state", "reporting")
 class StateComponent(Component):
     pass
 
@@ -94,7 +96,15 @@ class State(ABC, Generic[StateType]):
 
         if states.salency.val is not None:
             saliency = states.salency.val
-            Observability.event(SaliencyEvent(saliency))
+            Observability.event(SaliencyObsEvent(saliency))
+            Observability.event(FeatureObsEvent(states.salency))
+
+        if states.object.val is not None:
+            Observability.event(ObjectObsEvent(states.object))
+
+        if states.attention.val is not None:
+            Observability.event(AttentionObsEvent(states.attention.val))
+            Observability.event(FocusObsEvent(states.attention.val))
 
     @staticmethod
     def print() -> None:
@@ -268,9 +278,46 @@ def bytes2human(n: int) -> str:
     return "%sB" % n
 
 
-class SaliencyEvent(ObservabilityEvent):
+class SaliencyObsEvent(ObservabilityEvent):
     def __init__(self, sm: SaliencyMap) -> None:
         super().__init__("roc.attention.saliency", body=sm.to_html_vals())
+
+
+class ObjectObsEvent(ObservabilityEvent):
+    def __init__(self, o: CurrentObjectState) -> None:
+        super().__init__("roc.attention.object", body=str(o))
+
+
+class FeatureObsEvent(ObservabilityEvent):
+    def __init__(self, sm: CurrentSaliencyMapState) -> None:
+        s = ""
+        if sm.val is not None:
+            features = sm.val.feature_report()
+            for feat_name in features:
+                s += f"\t\t{feat_name}: {features[feat_name]}\n"
+        else:
+            s = "No features."
+
+        super().__init__("roc.attention.features", body=s)
+
+
+class AttentionObsEvent(ObservabilityEvent):
+    def __init__(self, vd: VisionAttentionData) -> None:
+        sm = vd.saliency_map
+        assert sm.grid is not None
+        dg = DebugGrid(sm.grid)
+
+        for idx, row in vd.focus_points.iterrows():
+            x = int(row["x"])
+            y = int(row["y"])
+            dg.set_style(x, y, back_brightness=row["strength"], back_hue=1)
+
+        super().__init__("roc.attention.grid", body=str(dg.to_html_vals()))
+
+
+class FocusObsEvent(ObservabilityEvent):
+    def __init__(self, vd: VisionAttentionData) -> None:
+        super().__init__("roc.attention.focus_points", body=str(vd.focus_points))
 
 
 class ScreenObsEvent(ObservabilityEvent):
