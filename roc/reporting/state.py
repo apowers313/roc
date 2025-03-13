@@ -16,6 +16,7 @@ from roc.graphdb import Edge, Node
 from roc.logger import logger
 from roc.object import Object, ObjectResolver
 from roc.reporting.observability import Observability, ObservabilityEvent, Observation
+from roc.sequencer import Sequencer  # noqa: F401
 
 StateType = TypeVar("StateType")
 _state_init_done = False
@@ -288,9 +289,10 @@ class IntrinsicObsEvent(ObservabilityEvent):
 
 
 def node_cache_gague(*args: Any) -> Iterable[Observation]:
-    # NOTE: need send state events every time metrics are recorded, just
+    # NOTE: need send and print state events every time metrics are recorded, just
     # sticking this here because it needs to be somewhere
     State.send_events()
+    State.print()
 
     c = Node.get_cache()
     yield Observation(c.currsize, attributes={"max": c.maxsize})
