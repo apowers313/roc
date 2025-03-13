@@ -33,8 +33,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import Tracer
 
-from ..config import Config
-from ..logger import logger
+import roc.logger as roc_logging
+from roc.config import Config
 
 __all__ = [
     "Observability",
@@ -117,6 +117,7 @@ class ObservabilityBase(type):
 class Observability(metaclass=ObservabilityBase):
     def __init__(self) -> None:
         settings = Config.get()
+        roc_logging.init()
         global _disable_for_pytest_scanning
 
         if settings.observability_logging and not _disable_for_pytest_scanning:
@@ -127,7 +128,7 @@ class Observability(metaclass=ObservabilityBase):
             otel_logs.set_logger_provider(logger_provider=logger_provider)
 
             # connect logs to loguru
-            logger.add(
+            roc_logging.logger.add(
                 loguru_to_otel,
                 format="<level>{message}</level>",
                 level=settings.observability_logging_level,
@@ -143,12 +144,12 @@ class Observability(metaclass=ObservabilityBase):
                 )
             )
             otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
-            logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
+            roc_logging.logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
         else:
             self.set_event_logger(NoOpEventLogger("roc"))
 
         if settings.observability_metrics and not _disable_for_pytest_scanning:
-            logger.debug("initializing OpenTelemetry metrics...")
+            roc_logging.logger.debug("initializing OpenTelemetry metrics...")
             # metrics init
             otlp_metrics_exporter = OTLPMetricExporter(
                 endpoint=settings.observability_host, insecure=True
@@ -175,7 +176,7 @@ class Observability(metaclass=ObservabilityBase):
 
         if settings.observability_tracing and not _disable_for_pytest_scanning:
             # trace init
-            logger.debug("initializing OpenTelemetry trace...")
+            roc_logging.logger.debug("initializing OpenTelemetry trace...")
             otlp_trace_exporter = OTLPSpanExporter(
                 endpoint=settings.observability_host, insecure=True
             )
@@ -195,7 +196,7 @@ class Observability(metaclass=ObservabilityBase):
 
         if settings.observability_profiling and not _disable_for_pytest_scanning:
             # profiling init
-            logger.debug("initializing Pyroscope profiling...")
+            roc_logging.logger.debug("initializing Pyroscope profiling...")
             pyroscope.configure(
                 application_name="roc",
                 # TODO: profiling in otel is current unstable, switch this to
