@@ -18,11 +18,11 @@ from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
 from .config import Config
-from .intrinsic import Intrinsic, RawIntrinsicData
+from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
 from .perception import Perception, VisionData
 from .reporting.observability import Observability
-from .reporting.state import State, states
+from .reporting.state import State
 
 
 class Gym(Component, ABC):
@@ -86,7 +86,7 @@ class Gym(Component, ABC):
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
 
-                states.screen.set(
+                State.get_states().screen.set(
                     {
                         "chars": obs["tty_chars"],
                         "colors": obs["tty_colors"],
@@ -112,9 +112,7 @@ class Gym(Component, ABC):
                 # set and save the loop number
                 observation_counter.add(1)
                 loop_num += 1
-                states.loop.set(loop_num)
-                if (loop_num % settings.status_update) == 0:
-                    State.print()
+                State.get_states().loop.set(loop_num)
 
                 if done or truncated:
                     logger.info(f"Game {game_num} completed, starting next game")
@@ -295,8 +293,7 @@ class NethackGym(Gym):
 
         # TODO: remove BottomlineStats?
         bl = BottomlineStats(**blstats_vals)
-        # Observability.event(IntrinsicObsEvent(bl.dict()))
-        self.intrinsic_bus_conn.send(RawIntrinsicData(bl.dict()))
+        self.intrinsic_bus_conn.send(IntrinsicData(bl.dict()))
 
 
 dump_env_file: Any = None

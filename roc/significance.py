@@ -3,7 +3,7 @@ from typing import Any
 from .component import Component, register_component
 from .config import Config
 from .event import Event, EventBus
-from .intrinsic import Intrinsic, IntrinsicEvent, NormalizedIntrinsicData
+from .intrinsic import Intrinsic, IntrinsicData, IntrinsicEvent
 
 
 class SignificanceData:
@@ -25,14 +25,14 @@ class Significance(Component):
         self.intrinsic_conn.listen(self.do_significance)
 
     def event_filter(self, e: Event[Any]) -> bool:
-        return isinstance(e.data, NormalizedIntrinsicData)
+        return isinstance(e.data, IntrinsicData)
 
     def do_significance(self, e: IntrinsicEvent) -> None:
         significance = 0.0
         settings = Config.get()
-        assert isinstance(e.data, NormalizedIntrinsicData)
+        assert isinstance(e.data, IntrinsicData)
 
-        normalized_intrinsics = e.data.intrinsics
+        normalized_intrinsics = e.data.normalized_intrinsics
         for name, val in normalized_intrinsics.items():
             weight = (
                 settings.significance_weights[name]

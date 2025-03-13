@@ -7,7 +7,7 @@ from helpers.util import StubComponent
 
 from roc.component import Component
 from roc.event import Event
-from roc.intrinsic import Intrinsic, RawIntrinsicData
+from roc.intrinsic import Intrinsic, IntrinsicData
 from roc.significance import Significance, SignificanceData
 
 
@@ -15,7 +15,7 @@ class TestSignificance:
     def test_exists(self, empty_components) -> None:
         Significance()
 
-    def test_basic(self, empty_components) -> None:
+    def test_basic_intrinsic_data(self, empty_components) -> None:
         significance = Component.get("significance", "significance")
         assert isinstance(significance, Significance)
         intrinsic = Component.get("intrinsic", "intrinsic")
@@ -25,7 +25,7 @@ class TestSignificance:
             output_bus=significance.significance_conn.attached_bus,
         )
 
-        s.input_conn.send(RawIntrinsicData(test_blstat))
+        s.input_conn.send(IntrinsicData(test_blstat))
 
         assert s.output.call_count == 1
 

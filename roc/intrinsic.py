@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import math
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Iterable, TypeVar
 
 from .component import Component, register_component
 from .config import Config
 from .event import Event, EventBus
+from .graphdb import Node
 
 # intrinsic_op_list
 
@@ -84,9 +88,24 @@ class IntrinsicBoolOp(IntrinsicOp[bool]):
         return 0.0
 
 
-class RawIntrinsicData:
-    def __init__(self, intrinsics: dict[str, Any]) -> None:
-        self.intrinsics = intrinsics
+class IntrinsicNode(Node):
+    name: str
+    raw_value: Any
+    normalized_value: float
+
+
+class IntrinsicData:
+    def __init__(self, received_intrinsics: dict[str, Any]) -> None:
+        self.intrinsics = received_intrinsics
+        normalized_intrinsics: dict[str, float] = {}
+
+        for spec in Intrinsic.intrinsic_spec.values():
+            name = spec.name
+            if name in received_intrinsics:
+                spec.validate(received_intrinsics[name])
+                normalized_intrinsics[name] = spec.normalize(received_intrinsics[name])
+
+        self.normalized_intrinsics = normalized_intrinsics
 
     def __repr__(self) -> str:
         ret = ""
@@ -95,20 +114,22 @@ class RawIntrinsicData:
 
         return ret
 
+    def to_nodes(self) -> list[Node]:
+        ret: list[Node] = []
 
-class NormalizedIntrinsicData:
-    def __init__(self, intrinsics: dict[str, float]) -> None:
-        self.intrinsics = intrinsics
-
-    def __repr__(self) -> str:
-        ret = ""
-        for k in self.intrinsics.keys():
-            ret += f"{k}: {self.intrinsics[k]}\n"
+        for key in self.intrinsics:
+            n = IntrinsicNode(
+                name=key,
+                raw_value=self.intrinsics[key],
+                normalized_value=self.normalized_intrinsics[key]
+                if key in self.normalized_intrinsics
+                else math.nan,
+            )
+            ret.append(n)
 
         return ret
 
 
-IntrinsicData = RawIntrinsicData | NormalizedIntrinsicData
 IntrinsicEvent = Event[IntrinsicData]
 
 
@@ -116,28 +137,15 @@ IntrinsicEvent = Event[IntrinsicData]
 class Intrinsic(Component):
     bus = EventBus[IntrinsicData]("intrinsic")
 
+    def __new__(cls, *args: Any, **kwargs: Any) -> Intrinsic:
+        settings = Config.get()
+        cls.intrinsic_spec = config_intrinsics(settings.intrinsics)
+
+        return super().__new__(cls, *args, **kwargs)
+
     def __init__(self) -> None:
         super().__init__()
         self.int_conn = self.connect_bus(Intrinsic.bus)
-        self.int_conn.listen(self.do_intrinsic)
-
-        settings = Config.get()
-        self.intrinsic_spec = config_intrinsics(settings.intrinsics)
-
-    def event_filter(self, e: Event[Any]) -> bool:
-        return isinstance(e.data, RawIntrinsicData)
-
-    def do_intrinsic(self, e: IntrinsicEvent) -> None:
-        normalized_intrinsics: dict[str, float] = {}
-
-        for spec in self.intrinsic_spec.values():
-            name = spec.name
-            received_intrinsics = e.data.intrinsics
-            if name in received_intrinsics:
-                spec.validate(received_intrinsics[name])
-                normalized_intrinsics[name] = spec.normalize(received_intrinsics[name])
-
-        self.int_conn.send(NormalizedIntrinsicData(normalized_intrinsics))
 
 
 def config_intrinsics(intrinsics_desc: Iterable[tuple[str, str]]) -> dict[str, IntrinsicOp[Any]]:
