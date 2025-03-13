@@ -28,6 +28,7 @@ from .perception import (
     Settled,
     VisionData,
 )
+from .reporting.observability import Observability
 
 
 class VisionAttentionSchema:
@@ -248,6 +249,7 @@ class VisionAttention(Attention):
         )
         return allow
 
+    @Observability.tracer.start_as_current_span("do_attention")
     def do_attention(self, e: PerceptionEvent) -> None:
         # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
