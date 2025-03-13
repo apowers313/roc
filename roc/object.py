@@ -14,6 +14,7 @@ from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
 from .perception import Feature as PerceptionFeature
+from .reporting.observability import Observability
 
 ObjectId = NewType("ObjectId", int)
 
@@ -90,6 +91,7 @@ class FeatureGroup(Node):
 
 
 class CandidateObjects:
+    @Observability.tracer.start_as_current_span("create_candidate_object")
     def __init__(self, feature_nodes: Collection[FeatureNode]) -> None:
         # TODO: this currently only uses features, not context, for resolution
         # the other objects in the current context should influence resolution
@@ -126,10 +128,21 @@ class ObjectResolver(Component):
         self.att_conn = self.connect_bus(Attention.bus)
         self.att_conn.listen(self.do_object_resolution)
         self.obj_res_conn = self.connect_bus(ObjectResolver.bus)
+        self.candidate_object_counter = Observability.meter.create_counter(
+            "roc.candidate_objects",
+            unit="object",
+            description="total number of objects scanned for object recognition",
+        )
+        self.resolved_object_counter = Observability.meter.create_counter(
+            "roc.objects_resolved",
+            unit="object",
+            description="total number of objects resolved",
+        )
 
     def event_filter(self, e: AttentionEvent) -> bool:
         return e.src_id.name == "vision" and e.src_id.type == "attention"
 
+    @Observability.tracer.start_as_current_span("do_object_resolution")
     def do_object_resolution(self, e: AttentionEvent) -> None:
         # TODO: instead of just taking the first focus_point (highest saliency
         # strength) we probably want to adjust the strength for known objects /
@@ -141,16 +154,19 @@ class ObjectResolver(Component):
         fg = FeatureGroup.with_features(features)
         # Argument 1 to "with_features" of "FeatureGroup" has incompatible type "list[Feature[Any]]"; expected "FeatureGroup"
         objs = CandidateObjects(fg.feature_nodes)
+        self.candidate_object_counter.add(len(objs))
 
         o: Object | None = None
         if len(objs) > 0:
             o, dist = objs[0]
+            self.resolved_object_counter.add(1, attributes={"new": False})
             o.resolve_count += 1
 
         # TODO: "> 1" as a cutoff for matching is pretty arbitrary
         # should it be a % of features?
         # or the cutoff for matching be determined by how well the prediction is works?
         if o is None or dist > 1:
+            self.resolved_object_counter.add(1, attributes={"new": True})
             o = Object.with_features(fg)
 
         self.obj_res_conn.send(o)
