@@ -12,7 +12,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class ConfigInitWarning(Warning):
-    """A Warning for when attempting to access config before it has been initialized."""
+    """A Warning for when attempting to access config before it has been
+    initialized or attempting to init after init has already been performed.
+    """
 
 
 _config_singleton: Config | None = None
