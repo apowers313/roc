@@ -17,7 +17,7 @@
 			"from roc.component import Component",
 			"from roc.event import Event",
 			"from roc.${1:module} import ${3:upper_name}",
-			"from roc.perception import VisionData",
+			"from roc.perception import VisionData, ${3:upper_name}Data",
 			"class Test${3:upper_name}:",
 			"    def test_exists(self, empty_components) -> None:",
 			"        ${3:upper_name}()",
