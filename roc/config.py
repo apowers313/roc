@@ -103,6 +103,7 @@ class Config(BaseSettings):
             "line:perception",
             "color:perception",
             "shape:perception",
+            "phoneme:perception",
         ]
     )
     # intrinsic config

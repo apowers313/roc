@@ -21,7 +21,7 @@ from .config import Config
 from .graphdb import GraphDB
 from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
-from .perception import Perception, VisionData
+from .perception import AuditoryData, Perception, VisionData
 from .reporting.observability import Observability
 from .reporting.state import State
 
@@ -118,6 +118,7 @@ class Gym(Component, ABC):
 
                 if done or truncated:
                     logger.info(f"Game {game_num} completed, starting next game")
+                    GraphDB.flush()
                     GraphDB.export()
                     self.env.reset()
                     game_counter.add(1)
@@ -262,6 +263,8 @@ class NethackGym(Gym):
         self.send_vision(obs)
         self.send_intrinsics(obs)
         self.send_auditory(obs)
+        # TODO:
+        # self.send_proprioceptive(obs)
 
     def get_action(self) -> Any:
         self.action_bus_conn.send(ActionRequest())
@@ -279,9 +282,10 @@ class NethackGym(Gym):
         self.env_bus_conn.send(vd)
 
     def send_auditory(self, obs: Any) -> None:
-        # msg = "".join(chr(ch) for ch in obs["message"])
-        # print("message", msg)
-        pass
+        msg = "".join(chr(ch) for ch in obs["message"])
+        logger.debug(f"message: {msg}")
+        ad = AuditoryData(msg)
+        self.env_bus_conn.send(ad)
 
     def send_proprioceptive(self) -> None:
         pass

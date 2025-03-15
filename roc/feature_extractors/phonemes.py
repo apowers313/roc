@@ -1,0 +1,74 @@
+"""Generates Features for things that aren't like their neighbors"""
+
+from dataclasses import dataclass
+
+from gruut import sentences
+
+from ..component import register_component
+from ..location import Point
+from ..logger import logger
+from ..perception import (
+    AuditoryData,
+    Feature,
+    FeatureExtractor,
+    FeatureNode,
+    PerceptionEvent,
+)
+
+
+class PhonemeNode(FeatureNode):
+    type: int
+
+    @property
+    def attr_strs(self) -> list[str]:
+        return [str(self.type)]
+
+
+@dataclass(kw_only=True)
+class PhonemeFeature(Feature[PhonemeNode]):
+    """A collection of phoneme nodes."""
+
+    feature_name: str = "Phonemes"
+
+    def _create_nodes(self) -> PhonemeNode:
+        return PhonemeNode(type=42)  # XXX TODO type
+
+    def _dbfetch_nodes(self) -> PhonemeNode | None:
+        return PhonemeNode.find_one("src.type = $type", params={"type": 42})  # XXX TODO type
+
+
+@register_component("phoneme", "perception")
+class Single(FeatureExtractor[Point]):
+    """A component for creating phonemes from auditory events"""
+
+    def event_filter(self, e: PerceptionEvent) -> bool:
+        """Filters out non-AuditoryData
+
+        Args:
+            e (PerceptionEvent): Any event on the perception bus
+
+        Returns:
+            bool: Returns True if the event is AuditoryData to keep processing it,
+            False otherwise.
+        """
+        return isinstance(e.data, AuditoryData)
+
+    def get_feature(self, e: PerceptionEvent) -> None:
+        """Emits phonemes of an auditory event.
+
+        Args:
+            e (PerceptionEvent): The AuditoryData
+
+        Returns:
+            Feature | None: None
+        """
+        ad = e.data
+        assert isinstance(ad, AuditoryData)
+
+        logger.debug(f"got auditory data: {ad.msg}")
+        for sent in sentences(ad.msg, lang="en-us"):
+            for word in sent:
+                if word.phonemes:
+                    logger.debug(f"{word.text}, {','.join(word.phonemes)}")
+
+        self.settled()
