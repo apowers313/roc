@@ -114,10 +114,16 @@ class IntrinsicData:
 
         return ret
 
-    def to_nodes(self) -> list[Node]:
-        ret: list[Node] = []
+    def to_nodes(self) -> list[IntrinsicNode]:
+        ret: list[IntrinsicNode] = []
 
-        for key in self.intrinsics:
+        node_intrinsics = [
+            k
+            for k, v in self.normalized_intrinsics.items()
+            if self.normalized_intrinsics[k] != math.nan
+        ]
+
+        for key in node_intrinsics:
             n = IntrinsicNode(
                 name=key,
                 raw_value=self.intrinsics[key],

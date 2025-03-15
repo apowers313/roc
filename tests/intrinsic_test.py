@@ -68,6 +68,14 @@ class TestIntrinsic:
         assert ret["hp"].max == 7
         assert ret["hp"].range == 10
 
+    def test_to_nodes(self) -> None:
+        Component.get("intrinsic", "intrinsic")
+        id = IntrinsicData(test_blstat)
+        assert id.normalized_intrinsics["hp"] == 0.14
+
+        nodes = id.to_nodes()
+        assert len(nodes) == 1
+
     def test_config_bool(self) -> None:
         ret = config_intrinsics([("foo", "bool")])
 
