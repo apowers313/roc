@@ -103,7 +103,7 @@ class State(ABC, Generic[StateType]):
             Observability.event(ObjectObsEvent(states.object))
 
         if states.attention.val is not None:
-            Observability.event(AttentionObsEvent(states.attention.val))
+            #     Observability.event(AttentionObsEvent(states.attention.val))
             Observability.event(FocusObsEvent(states.attention.val))
 
     @staticmethod
