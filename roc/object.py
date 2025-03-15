@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from typing import Any, Collection, NewType, cast
-from uuid import uuid4
 
 from flexihumanhash import FlexiHumanHash
 from pydantic import Field
@@ -24,7 +24,9 @@ class Features(Edge):
 
 
 class Object(Node):
-    uuid: ObjectId = Field(default_factory=lambda: ObjectId(uuid4().int))
+    # XXX: this was originally a UUIDv4, but Memgraph can't store Integers that
+    # large right now
+    uuid: ObjectId = Field(default_factory=lambda: ObjectId(random.randint(0, 2**63)))
     annotations: list[str] = Field(default_factory=list)
     resolve_count: int = Field(default=0)
 
