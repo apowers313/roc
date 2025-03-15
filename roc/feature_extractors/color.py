@@ -125,9 +125,6 @@ class Color(FeatureExtractor[Point]):
 
         Args:
             e (PerceptionEvent): The VisionData or SingleFeature
-
-        Returns:
-            Feature | None: None
         """
         if isinstance(e.data, SingleFeature):
             self.queue.append(e.data)

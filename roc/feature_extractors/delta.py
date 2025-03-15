@@ -7,11 +7,11 @@ from dataclasses import dataclass
 from ..component import register_component
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
-    Feature,
     FeatureExtractor,
     FeatureNode,
     PerceptionEvent,
     VisionData,
+    VisualFeature,
 )
 
 
@@ -25,7 +25,7 @@ class DeltaNode(FeatureNode):
 
 
 @dataclass(kw_only=True)
-class DeltaFeature(Feature[DeltaNode]):
+class DeltaFeature(VisualFeature[DeltaNode]):
     """A Feature that describes changes in vision"""
 
     feature_name: str = "Delta"
@@ -50,23 +50,6 @@ class DeltaFeature(Feature[DeltaNode]):
             "src.old_val = $old_val AND src.new_val = $new_val",
             params={"old_val": self.old_val, "new_val": self.new_val},
         )
-
-    # def add_to_feature(self, n: Feature) -> None:
-    #     """Adds a set of Diff nodes to a Feature"""
-    #     n.add_type(self.new_val)
-    #     n.add_point(self.x, self.y)
-    #     ol = OldLocation(n.origin, self.x, self.y, self.old_val)
-    #     n.add_feature("Past", ol)
-
-    # @classmethod
-    # def from_feature(self, n: Feature) -> Diff:
-    #     """Creates a Diff from a Feature that has all the right Nodes"""
-    #     x, y = n.get_point()
-    #     new_val = n.get_type()
-    #     old = n.get_feature("Past")
-    #     assert isinstance(old, Feature)
-    #     old_val = old.get_type()
-    #     return Diff(x=x, y=y, old_val=old_val, new_val=new_val)
 
 
 @register_component("delta", "perception")

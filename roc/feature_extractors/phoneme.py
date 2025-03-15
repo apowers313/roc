@@ -25,10 +25,11 @@ class PhonemeNode(FeatureNode):
 
 
 @dataclass(kw_only=True)
-class PhonemeFeature(Feature[PhonemeNode]):
+class PhonemeFeature(Feature):
     """A collection of phoneme nodes."""
 
     feature_name: str = "Phonemes"
+    phonemes: list[list[str]]
 
     def _create_nodes(self) -> PhonemeNode:
         return PhonemeNode(type=42)  # XXX TODO type
@@ -38,7 +39,7 @@ class PhonemeFeature(Feature[PhonemeNode]):
 
 
 @register_component("phoneme", "perception")
-class Single(FeatureExtractor[Point]):
+class Phoneme(FeatureExtractor[Point]):
     """A component for creating phonemes from auditory events"""
 
     def event_filter(self, e: PerceptionEvent) -> bool:
@@ -58,17 +59,16 @@ class Single(FeatureExtractor[Point]):
 
         Args:
             e (PerceptionEvent): The AuditoryData
-
-        Returns:
-            Feature | None: None
         """
         ad = e.data
         assert isinstance(ad, AuditoryData)
 
-        logger.debug(f"got auditory data: {ad.msg}")
+        phonemes: list[list[str]] = []
         for sent in sentences(ad.msg, lang="en-us"):
             for word in sent:
                 if word.phonemes:
+                    phonemes.append(word.phonemes)
                     logger.debug(f"{word.text}, {','.join(word.phonemes)}")
 
+        self.pb_conn.send(PhonemeFeature(origin_id=self.id, phonemes=phonemes))
         self.settled()

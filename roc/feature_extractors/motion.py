@@ -8,11 +8,11 @@ from ..component import register_component
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
-    Feature,
     FeatureExtractor,
     FeatureNode,
     PerceptionEvent,
     Settled,
+    VisualFeature,
 )
 from .delta import DeltaFeature
 
@@ -27,7 +27,7 @@ class MotionNode(FeatureNode):
 
 
 @dataclass(kw_only=True)
-class MotionFeature(Feature[MotionNode]):
+class MotionFeature(VisualFeature[MotionNode]):
     """A vector describing a motion, including the start point, end point,
     direction and value of the thing moving
     """
@@ -54,38 +54,7 @@ class MotionFeature(Feature[MotionNode]):
         return MotionNode.find_one(
             "src.type = $type AND src.direction = $direction",
             params={"type": self.type, "direction": self.direction},
-            # params_to_str=False,
         )
-
-    # def add_to_feature(self, n: Feature) -> None:
-    #     """Adds nodes and edges to describe the motion"""
-    #     n.add_type(self.val)
-    #     n.add_point(self.end_x, self.end_y)
-    #     n.add_orientation(self.direction)
-    #     ol = OldLocation(n.origin, self.start_x, self.start_y, self.val)
-    #     n.add_feature("Origin", ol)
-
-    # @classmethod
-    # def from_feature(self, n: Feature) -> MotionVector:
-    #     """Converts nodes and edges back into a dataclass that describes the motion"""
-    #     orig = n.get_feature("Origin")
-    #     assert isinstance(orig, Feature)
-    #     start_loc = orig.get_feature("Location")
-    #     assert isinstance(start_loc, ElementPoint)
-    #     val = n.get_feature("Type")
-    #     assert isinstance(val, ElementType)
-    #     end_loc = n.get_feature("Location")
-    #     assert isinstance(end_loc, ElementPoint)
-    #     dir = n.get_feature("Direction")
-    #     assert isinstance(dir, ElementOrientation)
-    #     return MotionVector(
-    #         direction=dir.orientation,
-    #         start_x=start_loc.x,
-    #         start_y=start_loc.y,
-    #         end_x=end_loc.x,
-    #         end_y=end_loc.y,
-    #         val=val.type,
-    #     )
 
 
 DeltaList = list[DeltaFeature]

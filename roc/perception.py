@@ -129,10 +129,13 @@ FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
 
 
 @dataclass(kw_only=True)
-class Feature(ABC, Generic[FeatureNodeType]):
+class Feature:
     feature_name: str
     origin_id: tuple[str, str]
 
+
+@dataclass(kw_only=True)
+class VisualFeature(Feature, ABC, Generic[FeatureNodeType]):
     def to_nodes(self) -> FeatureNodeType:
         # check local cache
         cache = cache_registry[self.feature_name]
@@ -146,8 +149,6 @@ class Feature(ABC, Generic[FeatureNodeType]):
         if n is None:
             # if node doesn't exist, create it
             n = self._create_nodes()
-            # n.labels.add("Feature")
-            # n.labels.add(self.feature_name)
 
         cache[h] = n
         return n
@@ -166,7 +167,7 @@ class Feature(ABC, Generic[FeatureNodeType]):
 
 
 @dataclass(kw_only=True)
-class AreaFeature(Feature[FeatureNodeType]):
+class AreaFeature(VisualFeature[FeatureNodeType]):
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
@@ -179,7 +180,7 @@ class AreaFeature(Feature[FeatureNodeType]):
 
 
 @dataclass(kw_only=True)
-class PointFeature(Feature[FeatureNodeType]):
+class PointFeature(VisualFeature[FeatureNodeType]):
     type: int
     point: tuple[XLoc, YLoc]
 
@@ -190,7 +191,7 @@ class PointFeature(Feature[FeatureNodeType]):
         return self.type
 
 
-PerceptionData = VisionData | AuditoryData | Settled | Feature[Any]
+PerceptionData = VisionData | AuditoryData | Settled | Feature
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -229,7 +230,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature[Any] | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
 
     @classmethod
     def list(cls) -> list[str]:

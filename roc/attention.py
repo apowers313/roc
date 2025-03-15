@@ -21,12 +21,12 @@ from .config import Config
 from .event import Event, EventBus
 from .location import DebugGrid, Grid, IntGrid
 from .perception import (
-    Feature,
     FeatureExtractor,
     Perception,
     PerceptionEvent,
     Settled,
     VisionData,
+    VisualFeature,
 )
 from .reporting.observability import Observability
 
@@ -63,7 +63,7 @@ class Attention(Component, ABC):
     bus = EventBus[AttentionData]("attention")
 
 
-class SaliencyMap(Grid[list[Feature[Any]]]):
+class SaliencyMap(Grid[list[VisualFeature[Any]]]):
     grid: IntGrid | None
 
     def __new__(cls, grid: IntGrid | None = None) -> Self:
@@ -124,7 +124,7 @@ class SaliencyMap(Grid[list[Feature[Any]]]):
 
         return sz
 
-    def add_val(self, x: int, y: int, val: Feature[Any]) -> None:
+    def add_val(self, x: int, y: int, val: VisualFeature[Any]) -> None:
         feature_list = self.get_val(x, y)
         feature_list.append(val)
 
@@ -143,7 +143,7 @@ class SaliencyMap(Grid[list[Feature[Any]]]):
         # TODO: not really sure that the strength should depend on the number of features
         ret = len(feature_list)
 
-        def add_strength(f: Feature[Any]) -> None:
+        def add_strength(f: VisualFeature[Any]) -> None:
             nonlocal ret
 
             # TODO: this is pretty arbitrary and might be biased based on my
@@ -243,7 +243,7 @@ class VisionAttention(Attention):
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         allow = (
-            isinstance(e.data, Feature)
+            isinstance(e.data, VisualFeature)
             or isinstance(e.data, Settled)
             or isinstance(e.data, VisionData)
         )
@@ -279,7 +279,7 @@ class VisionAttention(Attention):
             return
 
         # register each location in the saliency map
-        assert isinstance(e.data, Feature)
+        assert isinstance(e.data, VisualFeature)
         f = e.data
 
         # create saliency map

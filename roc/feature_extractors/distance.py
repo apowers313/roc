@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 from ..component import register_component
 from ..location import XLoc, YLoc
-from ..perception import Feature, FeatureExtractor, FeatureNode, PerceptionEvent, Settled
+from ..perception import FeatureExtractor, FeatureNode, PerceptionEvent, Settled, VisualFeature
 from .single import SingleFeature
 
 
@@ -21,7 +21,7 @@ class DistanceNode(FeatureNode):
 
 
 @dataclass(kw_only=True)
-class DistanceFeature(Feature[DistanceNode]):
+class DistanceFeature(VisualFeature[DistanceNode]):
     """The distance between two features"""
 
     feature_name: str = "Distance"

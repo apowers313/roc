@@ -55,9 +55,6 @@ class Single(FeatureExtractor[Point]):
 
         Args:
             e (PerceptionEvent): The VisionData
-
-        Returns:
-            Feature | None: None
         """
         vd = e.data
         assert isinstance(vd, VisionData)
