@@ -190,7 +190,18 @@ class GraphDB:
         self.closed = True
 
     @staticmethod
-    def export(format: str = "gml", filename: str = "graph", timestamp: bool = True) -> None:
+    def flush(db: GraphDB | None = None) -> None:
+        """Saves any cached nodes and edges back to the graph database"""
+        Node.get_cache().flush()
+        Edge.get_cache().flush()
+
+    @staticmethod
+    def export(
+        format: str = "gml",
+        filename: str = "graph",
+        timestamp: bool = True,
+        db: GraphDB | None = None,
+    ) -> None:
         """Saves the graph database to a file in the selected format
 
         Args:
@@ -203,6 +214,7 @@ class GraphDB:
             timestamp (bool, optional): Whether or not to append a timestamp to
                 the end of the file name. Defaults to True.
         """
+        db = db or GraphDB.singleton()
         ids = Node.all_ids()
         logger.info(f"Saving {len(ids)} nodes...")
         start_time = time.time()
@@ -214,7 +226,7 @@ class GraphDB:
                 pbar.update(1)
                 return True
 
-            G = GraphDB.to_networkx(node_ids=ids, filter=progress_update)
+            G = GraphDB.to_networkx(node_ids=ids, filter=progress_update, db=db)
 
         # format timestamp
         if timestamp:
@@ -387,6 +399,16 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         super().clear()
         self.hits = 0
         self.misses = 0
+
+    def flush(self) -> None:
+        node_ids = {n_id for n_id in self}
+        while len(node_ids) > 0:
+            cache_id = node_ids.pop()
+            cache_item = self[cache_id]
+            if isinstance(cache_item, Node):
+                cache_item.__class__.save(cache_item)
+            elif isinstance(cache_item, Edge):
+                cache_item.__class__.save(cache_item)
 
 
 #######
