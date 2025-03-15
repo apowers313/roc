@@ -76,7 +76,15 @@ class VisionData:
         return VisionData(a.copy(), a.copy(), a.copy())
 
 
-# TODO: sound input
+class AuditoryData:
+    """Auditory information (or scene descriptions) received from the
+    environment
+    """
+
+    def __init__(self, msg: str) -> None:
+        self.msg = msg
+
+
 # TODO: other input
 
 
@@ -182,7 +190,7 @@ class PointFeature(Feature[FeatureNodeType]):
         return self.type
 
 
-PerceptionData = VisionData | Settled | Feature[Any]
+PerceptionData = VisionData | AuditoryData | Settled | Feature[Any]
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -200,11 +208,6 @@ class Perception(Component, ABC):
 
     @abstractmethod
     def do_perception(self, e: PerceptionEvent) -> None: ...
-
-    @classmethod
-    def init(cls) -> None:
-        global perception_bus
-        cls.bus = EventBus[PerceptionData]("perception")
 
 
 fe_list: list[ReferenceType[FeatureExtractor[Any]]] = []
@@ -238,7 +241,3 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
             ret.append(str(fe.id))
 
         return ret
-
-
-class HashingNoneFeature(Exception):
-    pass
