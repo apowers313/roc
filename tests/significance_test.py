@@ -34,4 +34,4 @@ class TestSignificance:
         assert isinstance(e, Event)
         assert isinstance(e.data, SignificanceData)
         sig = e.data
-        assert math.isclose(sig.significance, 1.4)
+        assert math.isclose(sig.significance, 10 + 1 + 1 / 6)
