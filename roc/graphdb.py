@@ -213,6 +213,7 @@ class GraphDB:
             filename (str, optional): The filename to write the graph to. Defaults to "graph".
             timestamp (bool, optional): Whether or not to append a timestamp to
                 the end of the file name. Defaults to True.
+            db (GraphDB, optional): The GraphDB to export from.
         """
         db = db or GraphDB.singleton()
         ids = Node.all_ids()
@@ -249,9 +250,6 @@ class GraphDB:
                 write_dot(G, f"{filename}.dot")
             case "graphml":
                 nx.write_graphml(G, f"{filename}.graphml")
-            # case "json-tree":
-            #     with open(f"{filename}.tree.json", "w", encoding="utf8") as f:
-            #         json.dump(nx.tree_data(G), f)
             case "json-node-link":
                 with open(f"{filename}.node-link.json", "w", encoding="utf8") as f:
                     json.dump(nx.node_link_data(G), f)
@@ -401,6 +399,7 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
         self.misses = 0
 
     def flush(self) -> None:
+        """Flushes the cache by saving every Node and Edge"""
         node_ids = {n_id for n_id in self}
         while len(node_ids) > 0:
             cache_id = node_ids.pop()
@@ -415,14 +414,16 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
 # EDGE
 #######
 class EdgeNotFound(Exception):
-    pass
+    """Error raised when attempting to look up a specific Edge and no result
+    is returned
+    """
 
 
 class EdgeCreateFailed(Exception):
-    pass
+    """Error raised when creating a new Edge fails"""
 
 
-def get_next_new_edge_id() -> EdgeId:
+def _get_next_new_edge_id() -> EdgeId:
     global next_new_edge
     id = next_new_edge
     next_new_edge = cast(EdgeId, next_new_edge - 1)
@@ -449,18 +450,22 @@ class Edge(BaseModel, extra="allow"):
 
     @property
     def id(self) -> EdgeId:
+        """The unique identfier for the Edge, as defined by the underlying graph database."""
         return self._id
 
     @property
     def src(self) -> Node:
+        """The ID for the Node at the source side of the Edge."""
         return Node.get(self.src_id)
 
     @property
     def dst(self) -> Node:
+        """The ID for the Node at the destination side of the Edge."""
         return Node.get(self.dst_id)
 
     @property
     def new(self) -> bool:
+        """Whether this Edge is new, or has been previously saved."""
         return self._new
 
     def __init__(
@@ -470,8 +475,7 @@ class Edge(BaseModel, extra="allow"):
         super().__init__(**kwargs)
 
         # set passed-in values or their defaults
-        # self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
-        self._id = kwargs["_id"] if "_id" in kwargs else get_next_new_edge_id()
+        self._id = kwargs["_id"] if "_id" in kwargs else _get_next_new_edge_id()
         self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
 
         if self._id < 0:
@@ -481,7 +485,7 @@ class Edge(BaseModel, extra="allow"):
         self._db.edge_counter.add(1, attributes={"new": self._new, "type": self.type})
 
     def __del__(self) -> None:
-        # print("Edge.__del__:", self)
+        logger.trace(f"Edge.__del__: {self}")
         Edge.save(self)
 
     def __repr__(self) -> str:
@@ -509,6 +513,11 @@ class Edge(BaseModel, extra="allow"):
 
     @classmethod
     def get_cache(self) -> EdgeCache:
+        """Gets the edge cache
+
+        Returns:
+            EdgeCache: the global edge cache
+        """
         global edge_cache
         if edge_cache is None:
             settings = Config.get()
@@ -677,6 +686,26 @@ class Edge(BaseModel, extra="allow"):
         db: GraphDB | None = None,
         **kwargs: Any,
     ) -> Self:
+        """Connects two nodes using this Edge type
+
+        Args:
+            src (Node | NodeId): The Node to use as the starting point of the Edge
+            dst (Node | NodeId): The Node to use as the ending point of the Edge
+            edgetype (str | None, optional): The type of the edge. If this is
+                being called from the base Edge class, the edgetype is looked up to
+                determine what class to use to create the edge.
+            db (GraphDB | None, optional): The GraphDB where the Edge will be
+                created. Defaults to None, which indicates using the singleton
+                GraphDB.
+            **kwargs (Any): Any data to be stored on the Edge. Will be validated
+                by the specific Pydantic model of the Edge subclass.
+
+        Raises:
+            Exception: raised if it can't determine what type of Edge to use
+
+        Returns:
+            Self: the newly created Edge
+        """
         db = db or GraphDB.singleton()
         src_id = Node.to_id(src)
         dst_id = Node.to_id(dst)
@@ -690,7 +719,7 @@ class Edge(BaseModel, extra="allow"):
 
         # get type from class model
         if cls is not Edge:
-            clstype = pydantic_get_default(cls, "type")
+            clstype = _pydantic_get_default(cls, "type")
 
         # no class found, use edge type instead
         if clstype is None and edgetype is not None:
@@ -701,7 +730,7 @@ class Edge(BaseModel, extra="allow"):
             raise Exception("no Edge type provided")
 
         # check allowed_connections
-        check_schema(cls, clstype, src_node, dst_node, db)
+        _check_schema(cls, clstype, src_node, dst_node, db)
 
         e = cls(src_id=src_id, dst_id=dst_id, type=clstype, **kwargs)
         src_node.src_edges.add(e)
@@ -748,6 +777,14 @@ class Edge(BaseModel, extra="allow"):
 
     @staticmethod
     def to_id(e: Edge | EdgeId) -> EdgeId:
+        """Convenience method to convert an Edge or EdgeID to an EdgeId
+
+        Args:
+            e (Edge | EdgeId): The Edge or EdgeId to be converted
+
+        Returns:
+            EdgeId: The resulting EdgeId
+        """
         if isinstance(e, Edge):
             return e.id
         else:
@@ -760,20 +797,20 @@ EdgeConnectionsList = Iterable[tuple[str, str]]
 edge_registry: dict[str, type[Edge]] = {}
 
 
-def check_schema(
+def _check_schema(
     edge_cls: type[Edge],
     clstype: str,
     src: Node,
     dst: Node,
     db: GraphDB,
 ) -> None:
-    allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
+    allowed_connections = _pydantic_get_default(edge_cls, "allowed_connections")
     src_name = src.__class__.__name__
-    src_names = get_node_parent_names(src.__class__)
+    src_names = _get_node_parent_names(src.__class__)
     src_names.add(src_name)
 
     dst_name = dst.__class__.__name__
-    dst_names = get_node_parent_names(dst.__class__)
+    dst_names = _get_node_parent_names(dst.__class__)
     dst_names.add(dst_name)
 
     # check if the src (or it's parents) are allowed to connect to dst (or it's parents)
@@ -881,6 +918,21 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         type: str | None = None,
         id: EdgeId | None = None,
     ) -> EdgeList:
+        """Returns a list of Edges that meet the specified criteria. If multiple
+        criteria are specified, all of them are applied.
+
+        Args:
+            filter_fn (EdgeFilterFn | None, optional): A function applied to
+                each Edge. If it returns True, the result is included in the return
+                results. Defaults to None.
+            type (str | None, optional): If the Edge type matches this type, it
+                is included in the return results. Defaults to None.
+            id (EdgeId | None, optional): If the EdgeId matches this id it is
+                included in the results. Defaults to None.
+
+        Returns:
+            EdgeList: An EdgeList of the matching Edges.
+        """
         edge_ids = self.__edges
         if filter_fn is not None:
             # TODO: Edge.get_many() would be more efficient here if / when it
@@ -907,7 +959,7 @@ class NodeCreationFailed(Exception):
     """An exception raised when trying to create a Node in the graph database fails"""
 
 
-def get_next_new_node_id() -> NodeId:
+def _get_next_new_node_id() -> NodeId:
     global next_new_node
     id = next_new_node
     next_new_node = cast(NodeId, next_new_node - 1)
@@ -979,7 +1031,7 @@ class Node(BaseModel, extra="allow"):
 
         # set passed-in private values or their defaults
         self._db = kwargs["_db"] if "_db" in kwargs else GraphDB.singleton()
-        self._id = kwargs["_id"] if "_id" in kwargs else get_next_new_node_id()
+        self._id = kwargs["_id"] if "_id" in kwargs else _get_next_new_node_id()
         self._src_edges = kwargs["_src_edges"] if "_src_edges" in kwargs else EdgeList([])
         self._dst_edges = kwargs["_dst_edges"] if "_dst_edges" in kwargs else EdgeList([])
 
@@ -991,12 +1043,11 @@ class Node(BaseModel, extra="allow"):
         self._db.node_counter.add(1, attributes={"new": self._new, "labels": ":".join(self.labels)})
 
     def __del__(self) -> None:
-        # print("Node.__del__:", self)
+        logger.trace(f"Node.__del__: {self}")
         try:
             self.__class__.save(self, db=self._db)
         except Exception as e:
             err_msg = f"error saving during del: {e}"
-            # logger.warning(err_msg)
             warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
     def __repr__(self) -> str:
@@ -1054,7 +1105,7 @@ class Node(BaseModel, extra="allow"):
         """
         res = cls.load_many({id}, db=db)
 
-        # print("RES", res)
+        logger.trace(f"Node load result: {res}")
 
         if len(res) < 1:
             raise NodeNotFound(f"Couldn't find node ID: {id}")
@@ -1073,6 +1124,24 @@ class Node(BaseModel, extra="allow"):
         db: GraphDB | None = None,
         load_edges: bool = False,
     ) -> list[Self]:
+        """Returns all the specified Nodes from the GraphDB. This allows for
+        optimizing database queries and enhances performance.
+
+        Args:
+            node_set (set[NodeId]): The Set of NodeIDs to be returned.
+            db (GraphDB | None, optional): The database to load the Nodes from.
+                Defaults to None, meaning the singleton database will be used.
+            load_edges (bool, optional): If True, the Edges related to each node
+                (source or destination) will also be loaded into the EdgeCache.
+                Defaults to False.
+
+        Raises:
+            NodeNotFound: If any Node in the node_set is not found, this
+                exception will be raised.
+
+        Returns:
+            list[Self]: A list of all the Nodes that were retreived.
+        """
         db = db or GraphDB.singleton()
         node_ids = ",".join(map(str, node_set))
 
@@ -1208,17 +1277,16 @@ class Node(BaseModel, extra="allow"):
         params_to_str: bool = True,
         exactly_one: bool = False,
     ) -> Self | None:
-        """Finds a single Node.find results down to a single node. Raises an
-        exception of the list contains more than one node.
-
-        Args:
-            nodes (Sequence[NodeType]): The list of nodes returned by Node.find
+        """Calls Node.find and expects to return exactly one Node. Raises an
+        exception of the list contains more than one Node or no Nodes. All
+        arguments are the same as Node.find.
 
         Raises:
-            Exception: Raised if there is more than 1 node in the list
+            Exception: Raised if there is more than one node in the results
+            Exception: Raised if there are no nodes in the results
 
         Returns:
-            NodeType | None: Returns None if the list is empty, or the node in the list.
+            Self | None: Returns None if the list is empty, or the node in the list.
         """
         nodes = cls.find(
             where=where,
@@ -1283,9 +1351,6 @@ class Node(BaseModel, extra="allow"):
                 progress_callback(res)
 
             ret_list.extend(res)
-            # import pprint
-            # pprint.pp(list(res))
-            # print(f"got {len(list(res))} nodes")
 
             start = curr
             curr += batch_size
@@ -1295,6 +1360,11 @@ class Node(BaseModel, extra="allow"):
 
     @classmethod
     def get_cache(cls) -> NodeCache:
+        """Returns the NodeCache
+
+        Returns:
+            NodeCache: The cache of all currently loaded Nodes.
+        """
         global node_cache
         if node_cache is None:
             settings = Config.get()
@@ -1462,6 +1532,14 @@ class Node(BaseModel, extra="allow"):
 
     @staticmethod
     def delete(n: Node, *, db: GraphDB | None = None) -> None:
+        """Deletes the specified Node and its Edges from the underlying database
+        and the NodeCache
+
+        Args:
+            n (Node): The Node to be deleted
+            db (GraphDB | None, optional): The GraphDb to delete from. Defaults
+                to None, which means the singleton database will be used.
+        """
         db = db or GraphDB.singleton()
 
         # remove edges
@@ -1524,6 +1602,14 @@ class Node(BaseModel, extra="allow"):
 
     @staticmethod
     def to_id(n: Node | NodeId) -> NodeId:
+        """Convenience method to convert an Node or NodeId to an NodeId
+
+        Args:
+            n (Node | NodeId): The Node or NodeId to be converted
+
+        Returns:
+            NodeId: The resulting NodeId
+        """
         if isinstance(n, Node):
             return n.id
         else:
@@ -1535,11 +1621,30 @@ class Node(BaseModel, extra="allow"):
         *,
         mode: WalkMode = "both",
         edge_filter: EdgeFilterFn | None = None,
-        # edge_callback: EdgeCallbackFn | None = None,
         node_filter: NodeFilterFn | None = None,
         node_callback: NodeCallbackFn | None = None,
         _walk_history: set[int] | None = None,
     ) -> None:
+        """Performs a depth-first search (DFS) of the graph starting from the
+        specified node.
+
+        Args:
+            n (Node): The Node to start the search from
+            mode (WalkMode, optional): The type of walk to perform. Options
+                include .... Defaults to "both".
+            edge_filter (EdgeFilterFn | None, optional): A function to be called
+                on each Edge. If it turns true, the Edge will be included in the
+                walk, otherwise the Edge and attached Node will be skipped. Defaults
+                to None which results in all Edges being included.
+            node_filter (NodeFilterFn | None, optional): A function to be called
+                on each node. If it turns true, the Node will be included in the
+                walk, otherwise the Node and attached Edges will be skipped. Defaults
+                to None which results in all Nodes being included.
+            node_callback (NodeCallbackFn | None, optional): Called on each
+                included Node. Defaults to None.
+            _walk_history (set[int] | None, optional): For internal recurision
+                use only.
+        """
         # if we have walked this node before, just return
         _walk_history = _walk_history or set()
         if n.id in _walk_history:
@@ -1548,7 +1653,6 @@ class Node(BaseModel, extra="allow"):
 
         edge_filter = edge_filter or cast(EdgeFilterFn, true_filter)
         node_filter = node_filter or true_filter
-        # edge_callback = edge_callback or no_callback
         node_callback = node_callback or no_callback
 
         # callback for this node, if not filtered
@@ -1564,7 +1668,6 @@ class Node(BaseModel, extra="allow"):
                         e.dst,
                         mode=mode,
                         edge_filter=edge_filter,
-                        # edge_callback=edge_callback,
                         node_filter=node_filter,
                         node_callback=node_callback,
                         _walk_history=_walk_history,
@@ -1577,7 +1680,6 @@ class Node(BaseModel, extra="allow"):
                         e.src,
                         mode=mode,
                         edge_filter=edge_filter,
-                        # edge_callback=edge_callback,
                         node_filter=node_filter,
                         node_callback=node_callback,
                         _walk_history=_walk_history,
@@ -1657,6 +1759,21 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
         filter_fn: NodeFilterFn | None = None,
         labels: set[str] | str | None = None,
     ) -> NodeList:
+        """Returns a list of Nodes that meet the specified criteria. If multiple
+        criteria are specified, all of them are applied.
+
+        Args:
+            filter_fn (NodeFilterFn | None, optional): A function applied to
+                each Node. If it returns True, the result is included in the return
+                results. Defaults to None.
+            labels (str | None, optional): If the Node lables exactly matches
+                this set, it is included in the return results. Defaults to None.
+            id (NodeId | None, optional): If the NodeId matches this id it is
+                included in the results. Defaults to None.
+
+        Returns:
+            NodeList: An NodeList of the matching Nodes.
+        """
         node_ids = self._nodes
         if filter_fn is not None:
             Node.get_many(node_ids)
@@ -1685,6 +1802,8 @@ node_cache: NodeCache | None = None
 
 
 class SchemaValidationError(Exception):
+    """An error raised when the GraphDB schema isn't valid"""
+
     def __init__(self, errors: list[str]) -> None:
         err_str = ""
         self.errors = errors
@@ -1697,25 +1816,33 @@ class SchemaValidationError(Exception):
 
 
 class Schema:
+    """The automatically generated GraphDB schema."""
+
     def __init__(self, skip_validation: bool = False) -> None:
         if not skip_validation:
             self.validate()
 
         # edges
         self.edge_names = set(edge_registry.keys())
-        self.edges = [EdgeDescription(edge_cls) for edge_cls in edge_registry.values()]
+        self.edges = [_EdgeDescription(edge_cls) for edge_cls in edge_registry.values()]
         self.edges.sort(key=lambda e: e.name)
 
         # nodes
         self.node_names = set(node_registry.keys())
-        self.nodes = [NodeDescription(node_cls) for node_cls in node_registry.values()]
+        self.nodes = [_NodeDescription(node_cls) for node_cls in node_registry.values()]
         self.nodes.sort(key=lambda n: n.name)
 
     @classmethod
     def validate(cls) -> None:
+        """Ensures that the GraphDB schema is valid by checking that all the
+        Edge relationships refer to Nodes types that exist.
+
+        Raises:
+            SchemaValidationError: If validation fails this error will be raised.
+        """
         errors: list[str] = []
         for edge_name, edge_cls in edge_registry.items():
-            allowed_connections = pydantic_get_default(edge_cls, "allowed_connections")
+            allowed_connections = _pydantic_get_default(edge_cls, "allowed_connections")
 
             if allowed_connections is None:
                 continue
@@ -1735,6 +1862,12 @@ class Schema:
             raise SchemaValidationError(errors)
 
     def to_mermaid(self) -> str:
+        """Converts a schema to a Mermaid diagram
+
+        Returns:
+            str: The text of the Mermaid diagram. Can be passed to a Mermaid
+            interpreter to convert to a digram.
+        """
         ret = "classDiagram\n"
 
         # nodes
@@ -1752,29 +1885,29 @@ class Schema:
         return f"``` mermaid\n{Schema().to_mermaid()}\n```\n"
 
 
-def pydantic_get_fields(m: type[BaseModel]) -> set[str]:
+def _pydantic_get_fields(m: type[BaseModel]) -> set[str]:
     return set(m.model_fields.keys())
 
 
-def pydantic_get_field(m: type[BaseModel], f: str) -> FieldInfo:
+def _pydantic_get_field(m: type[BaseModel], f: str) -> FieldInfo:
     return m.model_fields[f]
 
 
-def pydantic_get_default(m: type[BaseModel], f: str) -> Any:
+def _pydantic_get_default(m: type[BaseModel], f: str) -> Any:
     return m.model_fields[f].get_default(call_default_factory=True)
 
 
-def is_local(c: type[object], attr: str) -> bool:
+def _is_local(c: type[object], attr: str) -> bool:
     if attr in c.__dict__:
         return True
 
     if hasattr(c, "__wrapped__"):
-        return is_local(c.__wrapped__, attr)
+        return _is_local(c.__wrapped__, attr)
 
     return False
 
 
-def get_node_parent_names(model: type[BaseModel]) -> set[str]:
+def _get_node_parent_names(model: type[BaseModel]) -> set[str]:
     ret = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
     if model.__name__ in ret:
         ret.remove(model.__name__)
@@ -1784,7 +1917,7 @@ def get_node_parent_names(model: type[BaseModel]) -> set[str]:
     return ret
 
 
-def clean_annotation(annotation: Any) -> str:
+def _clean_annotation(annotation: Any) -> str:
     import typing
 
     if isinstance(annotation, str):
@@ -1794,7 +1927,7 @@ def clean_annotation(annotation: Any) -> str:
     elif isinstance(annotation, typing._GenericAlias):  # type: ignore
         # Handle generics like List, Dict, etc.
         origin = annotation.__origin__
-        args = [clean_annotation(arg) for arg in annotation.__args__]
+        args = [_clean_annotation(arg) for arg in annotation.__args__]
         return f"{origin.__name__}[{', '.join(args)}]"
     elif isinstance(annotation, _SpecialForm):
         # Handle special forms like Any, Union, etc.
@@ -1804,17 +1937,17 @@ def clean_annotation(annotation: Any) -> str:
 
 
 @functools.cache
-def get_methods(c: type[object]) -> set[str]:
+def _get_methods(c: type[object]) -> set[str]:
     return {name for name, member in inspect.getmembers(c) if inspect.isfunction(member)}
 
 
-class FieldDescription:
+class _FieldDescription:
     def __init__(self, model: type[BaseModel], fieldname: str) -> None:
         self.model = model
-        self.field_info = pydantic_get_field(model, fieldname)
+        self.field_info = _pydantic_get_field(model, fieldname)
         self.name = fieldname
         self.default_val = self.field_info.get_default(call_default_factory=True)
-        self.type = clean_annotation(self.field_info.annotation)
+        self.type = _clean_annotation(self.field_info.annotation)
         self.exclude = self.field_info.exclude
 
     def __str__(self) -> str:
@@ -1831,12 +1964,12 @@ class FieldDescription:
         return str(self.default_val)
 
 
-class MethodDescription:
+class _MethodDescription:
     def __init__(self, model: type[BaseModel], name: str) -> None:
         self.model = model
         self.name = name
         self.signature = inspect.signature(getattr(model, name))
-        self.return_type = clean_annotation(self.signature.return_annotation)
+        self.return_type = _clean_annotation(self.signature.return_annotation)
         self.params = self.signature.parameters
 
     @property
@@ -1848,7 +1981,7 @@ class MethodDescription:
                 continue
 
             t = (
-                f"{clean_annotation(param.annotation)} "
+                f"{_clean_annotation(param.annotation)} "
                 if param.annotation is not inspect._empty
                 else ""
             )
@@ -1858,32 +1991,35 @@ class MethodDescription:
         return ret
 
 
-class ModelDescription:
+class _ModelDescription:
     def __init__(self, model: type[BaseModel]) -> None:
         self.model = model
 
         # fields
         self.fields = [
-            FieldDescription(model, fieldname) for fieldname in pydantic_get_fields(model)
+            _FieldDescription(model, fieldname) for fieldname in _pydantic_get_fields(model)
         ]
         self.fields.sort(key=lambda f: f.name)
 
         # parents
-        self.parent_class_names = get_node_parent_names(model)
+        self.parent_class_names = _get_node_parent_names(model)
         self.parents = [
-            NodeDescription(node_registry[node_name]) for node_name in self.parent_class_names
+            _NodeDescription(node_registry[node_name]) for node_name in self.parent_class_names
         ]
         self.parents.sort(key=lambda p: p.name)
 
         # methods
         self.method_names = (
-            get_methods(model) - get_methods(object) - get_methods(BaseModel) - get_methods(Node)
+            _get_methods(model)
+            - _get_methods(object)
+            - _get_methods(BaseModel)
+            - _get_methods(Node)
         )
-        self.methods = [MethodDescription(model, name) for name in self.method_names]
+        self.methods = [_MethodDescription(model, name) for name in self.method_names]
         self.methods.sort(key=lambda m: m.name)
 
 
-class NodeDescription(ModelDescription):
+class _NodeDescription(_ModelDescription):
     def __init__(self, node_cls: type[Node]) -> None:
         super().__init__(node_cls)
 
@@ -1897,7 +2033,7 @@ class NodeDescription(ModelDescription):
 
         # add fields
         for field in self.fields:
-            sym = "+" if is_local(self.model, field.name) else "^"
+            sym = "+" if _is_local(self.model, field.name) else "^"
             default_val = (
                 f" = {field.default_val_str}" if field.default_val is not PydanticUndefined else ""
             )
@@ -1905,7 +2041,7 @@ class NodeDescription(ModelDescription):
 
         # add methods
         for method in self.methods:
-            sym = "+" if is_local(self.model, method.name) else "^"
+            sym = "+" if _is_local(self.model, method.name) else "^"
             params = ", ".join(method.uml_params)
             ret += f"""{" ":>{indent}}{self.name}: {sym}{method.name}({params}) {method.return_type}\n"""
 
@@ -1916,17 +2052,17 @@ class NodeDescription(ModelDescription):
         return ret
 
 
-class EdgeDescription(ModelDescription):
+class _EdgeDescription(_ModelDescription):
     def __init__(self, edge_cls: type[Edge]) -> None:
         super().__init__(edge_cls)
 
         self.edge_cls = edge_cls
         self.name = edge_cls.__name__
-        self.edgetype = pydantic_get_default(edge_cls, "type")
+        self.edgetype = _pydantic_get_default(edge_cls, "type")
 
         # allowed connections
         self.allowed_connections = cast(
-            EdgeConnectionsList, pydantic_get_default(edge_cls, "allowed_connections")
+            EdgeConnectionsList, _pydantic_get_default(edge_cls, "allowed_connections")
         )
         assert self.allowed_connections is not None
 
