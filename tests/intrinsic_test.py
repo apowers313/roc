@@ -1,5 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
+import math
+
 from helpers.nethack_blstats import blstat0 as test_blstat
 from helpers.util import StubComponent
 
@@ -9,8 +11,10 @@ from roc.intrinsic import (
     IntrinsicBoolOp,
     IntrinsicData,
     IntrinsicIntOp,
+    IntrinsicPercentOp,
     config_intrinsics,
 )
+
 
 
 class TestIntrinsicInt:
@@ -56,7 +60,10 @@ class TestIntrinsic:
 
         id = IntrinsicData(test_blstat)
 
-        assert id.normalized_intrinsics["hp"] == 0.14
+        assert len(id.normalized_intrinsics.keys()) == 3
+        assert id.normalized_intrinsics["hp"] == 1.0
+        assert id.normalized_intrinsics["ene"] == 1.0
+        assert math.isclose(id.normalized_intrinsics["hunger"], 1 / 6)
 
     def test_config_int(self) -> None:
         ret = config_intrinsics([("hp", "int:-3:7")])
@@ -67,6 +74,14 @@ class TestIntrinsic:
         assert ret["hp"].min == -3
         assert ret["hp"].max == 7
         assert ret["hp"].range == 10
+
+    def test_config_percent(self) -> None:
+        ret = config_intrinsics([("hp", "percent:hpmax")])
+
+        assert len(ret) == 1
+        assert isinstance(ret["hp"], IntrinsicPercentOp)
+        assert ret["hp"].name == "hp"
+        assert ret["hp"].base == "hpmax"
 
     def test_to_nodes(self) -> None:
         Component.get("intrinsic", "intrinsic")

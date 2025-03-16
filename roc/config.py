@@ -109,7 +109,22 @@ class Config(BaseSettings):
     # intrinsic config
     intrinsics: list[tuple[str, str]] = Field(
         default=[
-            ("hp", "int:0:100"),
+            ("hp", "percent:hpmax"),
+            ("ene", "percent:enemax"),
+            # SATIATED   = 0,
+            # NOT_HUNGRY = 1,
+            # HUNGRY     = 2,
+            # WEAK       = 3,
+            # FAINTING   = 4,
+            # FAINTED    = 5,
+            # STARVED    = 6
+            ("hunger", "int:0:6"),
+            # char
+            # wis
+            # intel
+            # con
+            # dex
+            # str
         ]
     )
     # significance config

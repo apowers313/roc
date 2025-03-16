@@ -37,7 +37,7 @@ class IntrinsicOp(ABC, Generic[IntrinsicType]):
     def validate(self, val: IntrinsicType) -> bool: ...
 
     @abstractmethod
-    def normalize(self, val: IntrinsicType) -> float: ...
+    def normalize(self, val: IntrinsicType, *, raw_intrinsics: dict[str, Any]) -> float: ...
 
     # register
 
@@ -71,8 +71,22 @@ class IntrinsicIntOp(IntrinsicOp[int]):
 
         return True
 
-    def normalize(self, val: int) -> float:
+    def normalize(self, val: int, **kwargs: Any) -> float:
         return (val + abs(self.min)) / self.range
+
+
+class IntrinsicPercentOp(IntrinsicOp[int]):
+    intrinsic_type = "percent"
+
+    def __init__(self, name: str, base: str) -> None:
+        super().__init__(name)
+        self.base = base
+
+    def validate(self, val: int) -> bool:
+        return isinstance(val, int) and val > 0
+
+    def normalize(self, val: int, raw_intrinsics: dict[str, Any]) -> float:
+        return float(val / raw_intrinsics[self.base])
 
 
 class IntrinsicBoolOp(IntrinsicOp[bool]):
@@ -81,7 +95,7 @@ class IntrinsicBoolOp(IntrinsicOp[bool]):
     def validate(self, val: bool) -> bool:
         return True
 
-    def normalize(self, val: bool) -> float:
+    def normalize(self, val: bool, **kwargs: Any) -> float:
         if val:
             return 1.0
 
@@ -103,7 +117,10 @@ class IntrinsicData:
             name = spec.name
             if name in received_intrinsics:
                 spec.validate(received_intrinsics[name])
-                normalized_intrinsics[name] = spec.normalize(received_intrinsics[name])
+                normalized_intrinsics[name] = spec.normalize(
+                    received_intrinsics[name],
+                    raw_intrinsics=received_intrinsics,
+                )
 
         self.normalized_intrinsics = normalized_intrinsics
 
