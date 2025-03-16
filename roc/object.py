@@ -13,7 +13,7 @@ from .event import EventBus
 from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
-from .perception import Feature as PerceptionFeature
+from .perception import VisualFeature as PerceptionFeature
 from .reporting.observability import Observability
 
 ObjectId = NewType("ObjectId", int)
