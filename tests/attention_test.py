@@ -22,7 +22,7 @@ from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
 from roc.location import IntGrid, XLoc, YLoc
-from roc.perception import Feature, FeatureNode, VisionData
+from roc.perception import FeatureNode, VisionData, VisualFeature
 
 
 class TestSaliencyMap:
@@ -34,7 +34,7 @@ class TestSaliencyMap:
                 return []
 
         @dataclass(kw_only=True)
-        class FeatureForTest(Feature[FeatureNode]):
+        class FeatureForTest(VisualFeature[FeatureNode]):
             origin_id: tuple[str, str] = ("foo", "bar")
             feature_name: str = "Test"
 
@@ -250,7 +250,7 @@ class TestSaliencyMap:
         sm = e.data.saliency_map
         d = sm.feature_report()
         assert len(d.keys()) == 8
-        assert d["Flood"] == 1
+        assert d["Flood"] == 2
         assert d["Line"] == 106
         assert d["Single"] == 13
         assert d["Distance"] == 78
@@ -422,7 +422,7 @@ class TestVisionAttention:
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.5967741935483871,
+                    1: 0.6129032258064516,
                     2: 0.4032258064516129,
                     3: 0.4032258064516129,
                     4: 0.4032258064516129,
@@ -597,7 +597,7 @@ class TestVisionAttention:
                 },
                 "strength": {
                     0: 1.0,
-                    1: 0.5967741935483871,
+                    1: 0.6129032258064516,
                     2: 0.4032258064516129,
                     3: 0.4032258064516129,
                     4: 0.4032258064516129,
