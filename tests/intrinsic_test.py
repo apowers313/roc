@@ -16,7 +16,6 @@ from roc.intrinsic import (
 )
 
 
-
 class TestIntrinsicInt:
     def test_validate(self) -> None:
         op = IntrinsicIntOp("test", -2, 8)
@@ -86,10 +85,12 @@ class TestIntrinsic:
     def test_to_nodes(self) -> None:
         Component.get("intrinsic", "intrinsic")
         id = IntrinsicData(test_blstat)
-        assert id.normalized_intrinsics["hp"] == 0.14
+        assert id.normalized_intrinsics["hp"] == 1.0
 
         nodes = id.to_nodes()
-        assert len(nodes) == 1
+        assert len(nodes) == 3
+        node_names = {n.name for n in nodes}
+        assert node_names == {"hp", "ene", "hunger"}
 
     def test_config_bool(self) -> None:
         ret = config_intrinsics([("foo", "bool")])
