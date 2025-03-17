@@ -485,7 +485,7 @@ class Edge(BaseModel, extra="allow"):
         self._db.edge_counter.add(1, attributes={"new": self._new, "type": self.type})
 
     def __del__(self) -> None:
-        logger.trace(f"Edge.__del__: {self}")
+        # logger.trace(f"Edge.__del__: {self}")
         Edge.save(self)
 
     def __repr__(self) -> str:
@@ -1043,7 +1043,7 @@ class Node(BaseModel, extra="allow"):
         self._db.node_counter.add(1, attributes={"new": self._new, "labels": ":".join(self.labels)})
 
     def __del__(self) -> None:
-        logger.trace(f"Node.__del__: {self}")
+        # logger.trace(f"Node.__del__: {self}")
         try:
             self.__class__.save(self, db=self._db)
         except Exception as e:
