@@ -13,19 +13,19 @@ from pydantic import Field, ValidationError
 from roc.graphdb import (
     Edge,
     EdgeConnectionsList,
-    EdgeDescription,
     EdgeId,
     EdgeList,
     EdgeNotFound,
     GraphDB,
     Node,
-    NodeDescription,
     NodeId,
     NodeList,
     NodeNotFound,
     Schema,
     SchemaValidationError,
     StrictSchemaWarning,
+    _EdgeDescription,
+    _NodeDescription,
     edge_registry,
     node_label_registry,
     node_registry,
@@ -1565,7 +1565,7 @@ class TestEdgeDescription:
             allowed_connections: EdgeConnectionsList = [("Foo", "Bar"), ("Bar", "Foo")]
             name: str = "Bob"
 
-        ed = EdgeDescription(Link)
+        ed = _EdgeDescription(Link)
         assert ed.edge_cls is Link
         assert ed.allowed_connections == [("Foo", "Bar"), ("Bar", "Foo")]
         assert ed.related_nodes == {"Foo", "Bar"}
@@ -1601,7 +1601,7 @@ class TestNodeDescription:
                 self.name = name
                 return self.name
 
-        nd = NodeDescription(Foo)
+        nd = _NodeDescription(Foo)
 
         assert nd.name == "Foo"
         assert len(nd.fields) == 3
