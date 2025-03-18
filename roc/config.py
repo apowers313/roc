@@ -118,7 +118,7 @@ class Config(BaseSettings):
             # FAINTING   = 4,
             # FAINTED    = 5,
             # STARVED    = 6
-            ("hunger", "int:0:6"),
+            ("hunger", "map:0,0.5:1,1:2,0.75:3,0.5:4,0.25:5,0.1:6,0"),
             # char
             # wis
             # intel

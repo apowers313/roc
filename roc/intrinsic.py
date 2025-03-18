@@ -8,6 +8,7 @@ from .component import Component, register_component
 from .config import Config
 from .event import Event, EventBus
 from .graphdb import Node
+from .transformable import Transform, Transformable
 
 # intrinsic_op_list
 
@@ -89,6 +90,29 @@ class IntrinsicPercentOp(IntrinsicOp[int]):
         return float(val / raw_intrinsics[self.base])
 
 
+class IntrinsicMapOp(IntrinsicOp[int]):
+    intrinsic_type = "map"
+
+    def __init__(self, name: str, map: dict[int, float]) -> None:
+        super().__init__(name)
+        self.map = map
+
+    @staticmethod
+    def convert_args(args: Iterable[Any]) -> list[dict[int, float]]:
+        ret: dict[int, float] = {}
+        for arg in args:
+            k, v = arg.split(",")
+            ret[int(k)] = float(v)
+
+        return [ret]
+
+    def validate(self, val: int) -> bool:
+        return val in self.map
+
+    def normalize(self, val: int, **kwargs: Any) -> float:
+        return self.map[val]
+
+
 class IntrinsicBoolOp(IntrinsicOp[bool]):
     intrinsic_type = "bool"
 
@@ -102,10 +126,29 @@ class IntrinsicBoolOp(IntrinsicOp[bool]):
         return 0.0
 
 
-class IntrinsicNode(Node):
+class IntrinsicNode(Node, Transformable):
     name: str
     raw_value: Any
     normalized_value: float
+
+    def same_transform_type(self, other: Any) -> bool:
+        return isinstance(other, IntrinsicNode) and other.name == self.name
+
+    def create_transform(self, other: Any) -> Transform | None:
+        if math.isclose(self.normalized_value, other.normalized_value):
+            return None
+
+        # TODO: create transform for raw values using IntrinsicOps?
+        return IntrinsicTransform(normalized_change=self.normalized_value - other.normalized_value)
+
+    def apply_transform(self, t: Transform) -> IntrinsicNode:
+        assert isinstance(t, IntrinsicTransform)
+        new_val = t.normalized_change + self.normalized_value
+        return IntrinsicNode(name=self.name, raw_value=None, normalized_value=new_val)
+
+
+class IntrinsicTransform(Transform):
+    normalized_change: float
 
 
 class IntrinsicData:
@@ -162,7 +205,7 @@ class Intrinsic(Component):
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Intrinsic:
         settings = Config.get()
-        cls.intrinsic_spec = config_intrinsics(settings.intrinsics)
+        cls.intrinsic_spec = _config_intrinsics(settings.intrinsics)
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -171,7 +214,7 @@ class Intrinsic(Component):
         self.int_conn = self.connect_bus(Intrinsic.bus)
 
 
-def config_intrinsics(intrinsics_desc: Iterable[tuple[str, str]]) -> dict[str, IntrinsicOp[Any]]:
+def _config_intrinsics(intrinsics_desc: Iterable[tuple[str, str]]) -> dict[str, IntrinsicOp[Any]]:
     ret: dict[str, IntrinsicOp[Any]] = {}
 
     for known_intrinsic in intrinsics_desc:
