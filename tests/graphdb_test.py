@@ -919,7 +919,7 @@ class TestEdgeList:
         assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 15
 
-    def test_select_by_type(self) -> None:
+    def test_select_by_type(self, no_strict_schema) -> None:
         n = Node.get(cast(NodeId, 2))
         src_edges = n.src_edges.select(type="LOYAL_TO")
 
@@ -927,6 +927,7 @@ class TestEdgeList:
         assert len(src_edges) == 2
 
     def test_select_by_id(self) -> None:
+        GraphDB.singleton().strict_schema = False
         n = Node.get(cast(NodeId, 2))
         src_edges = n.src_edges.select(id=EdgeId(2))
 

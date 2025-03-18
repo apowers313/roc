@@ -925,6 +925,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         filter_fn: EdgeFilterFn | None = None,
         type: str | None = None,
         id: EdgeId | None = None,
+        db: GraphDB | None = None,
     ) -> EdgeList:
         """Returns a list of Edges that meet the specified criteria. If multiple
         criteria are specified, all of them are applied.
@@ -941,6 +942,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
         Returns:
             EdgeList: An EdgeList of the matching Edges.
         """
+        self.db = db or GraphDB.singleton()
         edge_ids = self.__edges
         if filter_fn is not None:
             # TODO: Edge.get_many() would be more efficient here if / when it
@@ -948,7 +950,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
             edge_ids = [e for e in edge_ids if filter_fn(Edge.get(e))]
 
         if type is not None:
-            if type not in edge_registry:
+            if self.db.strict_schema and type not in edge_registry:
                 raise Exception(f"Edge type '{type}' not a known Edge type")
             edge_ids = [e for e in edge_ids if Edge.get(e).type == type]
 
