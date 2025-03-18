@@ -886,6 +886,14 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     def __add__(self, l2: EdgeList) -> EdgeList:
         return EdgeList(self.__edges + l2.__edges)
 
+    def __str__(self) -> str:
+        ret = f"EdgeList({id(self)}):\n"
+
+        for e in self:
+            ret += f"\t{e}\n"
+
+        return ret
+
     def add(self, e: Edge | EdgeId) -> None:
         """Adds a new Edge to the list"""
         e_id = Edge.to_id(e)
@@ -940,6 +948,8 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
             edge_ids = [e for e in edge_ids if filter_fn(Edge.get(e))]
 
         if type is not None:
+            if type not in edge_registry:
+                raise Exception(f"Edge type '{type}' not a known Edge type")
             edge_ids = [e for e in edge_ids if Edge.get(e).type == type]
 
         if id is not None:
@@ -1012,6 +1022,16 @@ class Node(BaseModel, extra="allow"):
         Also referred to as an 'out-neighbor'.
         """
         return NodeList([e.dst.id for e in self.src_edges])
+
+    @property
+    def src_nodes(self) -> NodeList:
+        """An alias for Node.predecessors"""
+        return self.predecessors
+
+    @property
+    def dst_nodes(self) -> NodeList:
+        """An alias for Node.successors"""
+        return self.successors
 
     @property
     def neighbors(self) -> NodeList:
@@ -1737,6 +1757,14 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
 
     def __add__(self, l2: NodeList) -> NodeList:
         return NodeList(self._nodes + l2._nodes)
+
+    def __str__(self) -> str:
+        ret = f"NodeList({id(self)}):\n"
+
+        for n in self:
+            ret += f"\t{n}\n"
+
+        return ret
 
     def add(self, n: Node | NodeId) -> None:
         """Adds a new Node to the list"""
