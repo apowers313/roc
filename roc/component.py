@@ -37,6 +37,7 @@ class Component(ABC):
 
     name: str = "<name unassigned>"
     type: str = "<type unassigned>"
+    auto: bool = False
 
     def __init__(self) -> None:
         global component_set
@@ -44,6 +45,39 @@ class Component(ABC):
         self.bus_conns: dict[str, BusConnection[Any]] = {}
         logger.trace(f"++ incrementing component count: {self.name}:{self.type} {self}")
         # traceback.print_stack()
+
+    def __init_subclass__(cls) -> None:
+        if ABC in cls.__bases__:
+            super().__init_subclass__()
+            return
+
+        global register_component
+        global component_registry
+
+        component_name = cls.name
+        component_type = cls.type
+        auto_load = cls.auto
+
+        if component_name is Component.name:
+            print("cls", cls.__name__)
+            raise Exception(f"Component name is unspecified in class {cls.__name__}")
+
+        if component_type is Component.type:
+            raise Exception(f"Component type is unspecified in class {cls.__name__}")
+
+        logger.debug(f"Registering component: {component_name}:{component_type} (auto={auto_load})")
+
+        reg_str = _component_registry_key(component_name, component_type)
+        if reg_str in component_registry:
+            raise ValueError(
+                f"{cls.__name__} attempting to register duplicate component name: '{component_name}', previously registered by {component_registry[reg_str].__name__}"
+            )
+
+        if auto_load:
+            global default_components
+            default_components.add(reg_str)
+
+        component_registry[reg_str] = cls
 
     def __del__(self) -> None:
         global component_set
@@ -200,32 +234,3 @@ default_components: set[str] = set()
 
 def _component_registry_key(name: str, type: str) -> str:
     return f"{name}:{type}"
-
-
-class register_component:
-    """A decorator to register a new component."""
-
-    def __init__(self, name: str, type: str, *, auto: bool = False) -> None:
-        self.name = name
-        self.type = type
-        self.auto = auto
-
-    def __call__(self, cls: type[Component]) -> type[Component]:  # noqa: D102
-        global register_component
-        global component_registry
-
-        logger.debug(f"Registering component: {self.name}:{self.type} (auto={self.auto})")
-
-        reg_str = _component_registry_key(self.name, self.type)
-        if reg_str in component_registry:
-            raise ValueError(f"Registering duplicate component name: '{self.name}'")
-
-        if self.auto:
-            global default_components
-            default_components.add(reg_str)
-
-        component_registry[reg_str] = cls
-        cls.name = self.name
-        cls.type = self.type
-
-        return cls

@@ -4,7 +4,7 @@ import math
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Iterable, TypeVar
 
-from .component import Component, register_component
+from .component import Component
 from .config import Config
 from .event import Event, EventBus
 from .graphdb import Node
@@ -199,8 +199,10 @@ class IntrinsicData:
 IntrinsicEvent = Event[IntrinsicData]
 
 
-@register_component("intrinsic", "intrinsic", auto=True)
 class Intrinsic(Component):
+    name: str = "intrinsic"
+    type: str = "intrinsic"
+    auto: bool = True
     bus = EventBus[IntrinsicData]("intrinsic")
 
     def __new__(cls, *args: Any, **kwargs: Any) -> Intrinsic:

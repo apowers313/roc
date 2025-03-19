@@ -8,7 +8,7 @@ from flexihumanhash import FlexiHumanHash
 from pydantic import Field
 
 from .attention import Attention, AttentionEvent
-from .component import Component, register_component
+from .component import Component
 from .event import EventBus
 from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
@@ -121,8 +121,10 @@ class CandidateObjects:
         return len(self.order)
 
 
-@register_component("resolver", "object", auto=True)
 class ObjectResolver(Component):
+    name: str = "resolver"
+    type: str = "object"
+    auto: bool = True
     bus = EventBus[Object]("object")
 
     def __init__(self) -> None:

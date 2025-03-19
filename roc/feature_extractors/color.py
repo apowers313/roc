@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -96,11 +95,13 @@ class ColorFeature(PointFeature[ColorNode]):
         return ColorNode.find_one("src.type = $type", params={"type": self.type})
 
 
-@register_component("color", "perception")
 class Color(FeatureExtractor[Point]):
     """A component for simulating the color of features based on the character
     value.
     """
+
+    name: str = "color"
+    type: str = "perception"
 
     def __init__(self) -> None:
         super().__init__()

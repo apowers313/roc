@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import IntGrid, Point
 from ..perception import (
     FeatureExtractor,
@@ -34,9 +33,11 @@ class SingleFeature(PointFeature[SingleNode]):
         return SingleNode.find_one("src.type = $type", params={"type": self.type})
 
 
-@register_component("single", "perception")
 class Single(FeatureExtractor[Point]):
     """A component for identifying single, isolated visual features"""
+
+    name: str = "single"
+    type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         """Filters out non-VisionData

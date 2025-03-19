@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.ndimage import label
 
-from ..component import register_component
 from ..location import IntGrid, Point, TypedPointCollection
 from ..perception import (
     AreaFeature,
@@ -62,11 +61,13 @@ class CheckMap:
         return self.grid.get_val(x, y) == 1
 
 
-@register_component("flood", "perception")
 class Flood(FeatureExtractor[TypedPointCollection]):
     """A component for creating Flood features -- collections of adjacent points
     that all have the same value
     """
+
+    name: str = "flood"
+    type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)

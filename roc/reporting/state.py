@@ -10,7 +10,7 @@ import nle
 import numpy as np
 
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
-from roc.component import Component, register_component
+from roc.component import Component
 from roc.event import Event
 from roc.graphdb import Edge, Node
 from roc.location import DebugGrid
@@ -23,9 +23,9 @@ StateType = TypeVar("StateType")
 _state_init_done = False
 
 
-@register_component("state", "reporting")
 class StateComponent(Component):
-    pass
+    name: str = "state"
+    type: str = "reporting"
 
 
 class State(ABC, Generic[StateType]):

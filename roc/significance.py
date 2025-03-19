@@ -1,6 +1,6 @@
 from typing import Any
 
-from .component import Component, register_component
+from .component import Component
 from .config import Config
 from .event import Event, EventBus
 from .intrinsic import Intrinsic, IntrinsicData, IntrinsicEvent
@@ -14,8 +14,10 @@ class SignificanceData:
 SignificanceEvent = Event[SignificanceData]
 
 
-@register_component("significance", "significance", auto=True)
 class Significance(Component):
+    name: str = "significance"
+    type: str = "significance"
+    auto: bool = True
     bus = EventBus[SignificanceData]("significance")
 
     def __init__(self) -> None:

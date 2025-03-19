@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from gruut import sentences
 
-from ..component import register_component
 from ..location import Point
 from ..logger import logger
 from ..perception import (
@@ -38,9 +37,11 @@ class PhonemeFeature(Feature):
         return PhonemeNode.find_one("src.type = $type", params={"type": 42})  # XXX TODO type
 
 
-@register_component("phoneme", "perception")
 class Phoneme(FeatureExtractor[Point]):
     """A component for creating phonemes from auditory events"""
+
+    name: str = "phoneme"
+    type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         """Filters out non-AuditoryData

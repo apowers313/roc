@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import XLoc, YLoc
 from ..perception import FeatureExtractor, FeatureNode, PerceptionEvent, Settled, VisualFeature
 from .single import SingleFeature
@@ -42,8 +41,10 @@ class DistanceFeature(VisualFeature[DistanceNode]):
         return DistanceNode.find_one("src.size = $size", params={"size": self.size})
 
 
-@register_component("distance", "perception")
 class Distance(FeatureExtractor[DistanceFeature]):
+    name: str = "distance"
+    type: str = "perception"
+
     def __init__(self) -> None:
         super().__init__()
         self.prev_features: list[SingleFeature] = []

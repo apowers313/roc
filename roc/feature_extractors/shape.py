@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -36,11 +35,13 @@ class ShapeFeature(PointFeature[ShapeNode]):
         return ShapeNode.find_one("src.type = $type", params={"type": self.type})
 
 
-@register_component("shape", "perception")
 class Shape(FeatureExtractor[Point]):
     """A component for simulating the shape of features based on the character
     value.
     """
+
+    name: str = "shape"
+    type: str = "perception"
 
     def __init__(self) -> None:
         super().__init__()

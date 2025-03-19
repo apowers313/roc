@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
-from .component import Component, register_component
+from .component import Component
 from .config import Config
 from .graphdb import GraphDB
 from .intrinsic import Intrinsic, IntrinsicData
@@ -26,11 +26,13 @@ from .reporting.observability import Observability
 from .reporting.state import State
 
 
-@register_component("gym", "game")
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
     loop and interfaces to the ROC agent.
     """
+
+    name: str = "gym"
+    type: str = "game"
 
     def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
         super().__init__()
@@ -263,8 +265,7 @@ class NethackGym(Gym):
         self.send_vision(obs)
         self.send_intrinsics(obs)
         self.send_auditory(obs)
-        # TODO:
-        # self.send_proprioceptive(obs)
+        self.send_proprioceptive(obs)
 
     def get_action(self) -> Any:
         self.action_bus_conn.send(ActionRequest())
@@ -287,7 +288,14 @@ class NethackGym(Gym):
         ad = AuditoryData(msg)
         self.env_bus_conn.send(ad)
 
-    def send_proprioceptive(self) -> None:
+    def send_proprioceptive(self, obs: Any) -> None:
+        # print("inv_glyphs", obs["inv_glyphs"])
+        # print("inv_strs", obs["inv_strs"])
+        # print("inv_letters", obs["inv_letters"])
+        # print("inv_oclasses", obs["inv_oclasses"])
+        # for inv in obs["inv_strs"]:
+        #     invline = "".join(chr(ch) for ch in inv)
+        #     print(invline)
         pass
 
     def send_intrinsics(self, obs: Any) -> None:

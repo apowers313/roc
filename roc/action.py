@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from roc.component import Component, register_component
+from roc.component import Component
 from roc.event import Event, EventBus
 from roc.expmod import ExpMod
 from roc.graphdb import Node
@@ -25,9 +25,12 @@ ActionData = ActionRequest | TakeAction
 ActionEvent = Event[ActionData]
 
 
-@register_component("action", "action", auto=True)
 class Action(Component):
     """Component for determining which action to take."""
+
+    name: str = "action"
+    type: str = "action"
+    auto: bool = True
 
     bus = EventBus[ActionData]("action", cache_depth=10)
 

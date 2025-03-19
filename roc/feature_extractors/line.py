@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
 from ..perception import (
     AreaFeature,
@@ -37,11 +36,13 @@ class LineFeature(AreaFeature[LineNode]):
         )
 
 
-@register_component("line", "perception")
 class Line(FeatureExtractor[TypedPointCollection]):
     """A component for identifying similar values located along a vertical or
     horizontal line
     """
+
+    name: str = "line"
+    type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         return isinstance(e.data, VisionData)

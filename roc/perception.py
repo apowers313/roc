@@ -85,7 +85,8 @@ class AuditoryData:
         self.msg = msg
 
 
-# TODO: other input
+class ProprioceptiveData:
+    pass
 
 
 class Settled:

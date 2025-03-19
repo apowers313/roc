@@ -16,7 +16,7 @@ from scipy.ndimage import label
 from skimage.morphology import reconstruction
 from strictly_typed_pandas import DataSet
 
-from .component import Component, register_component
+from .component import Component
 from .config import Config
 from .event import Event, EventBus
 from .location import DebugGrid, Grid, IntGrid
@@ -229,8 +229,10 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return DataSet[VisionAttentionSchema](df)
 
 
-@register_component("vision", "attention", auto=True)
 class VisionAttention(Attention):
+    name: str = "vision"
+    type: str = "attention"
+    auto: bool = True
     saliency_map: SaliencyMap
 
     def __init__(self) -> None:
@@ -291,6 +293,8 @@ class VisionAttention(Attention):
 
 
 class CrossModalAttention(Attention):
+    name: str = "cross-modal"
+    type: str = "attention"
+    auto: bool = True
     # TODO: listen for attention events
     # TODO: select and emit a single event
-    pass

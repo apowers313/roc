@@ -10,7 +10,7 @@ import pytest
 from helpers.util import FakeData
 
 from roc.action import Action, ActionData
-from roc.component import Component, component_set, register_component
+from roc.component import Component, component_set
 from roc.config import Config
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
@@ -164,9 +164,11 @@ def registered_test_component() -> Generator[tuple[str, str], None, None]:
     n = "foo"
     t = "bar"
 
-    @register_component(n, t)
     class Bar(Component):
         """This is a Bar doc"""
+
+        name: str = n
+        type: str = t
 
         def shutdown(self) -> None:
             pass

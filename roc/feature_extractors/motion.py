@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
@@ -60,9 +59,11 @@ class MotionFeature(VisualFeature[MotionNode]):
 DeltaList = list[DeltaFeature]
 
 
-@register_component("motion", "perception")
 class Motion(FeatureExtractor[MotionFeature]):
     """Component that consumes Delta events and produces Motion events"""
+
+    name: str = "motion"
+    type: str = "perception"
 
     def __init__(self) -> None:
         super().__init__()

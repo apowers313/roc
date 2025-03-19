@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..component import register_component
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
     FeatureExtractor,
@@ -52,9 +51,11 @@ class DeltaFeature(VisualFeature[DeltaNode]):
         )
 
 
-@register_component("delta", "perception")
 class Delta(FeatureExtractor[DeltaFeature]):
     """A component for detecting changes in vision."""
+
+    name: str = "delta"
+    type: str = "perception"
 
     def __init__(self) -> None:
         super().__init__()

@@ -3,7 +3,7 @@ from typing import Any
 from pydantic import Field
 
 from roc.action import Action, TakeAction
-from roc.component import Component, register_component
+from roc.component import Component
 from roc.event import Event, EventBus
 from roc.graphdb import Edge, EdgeConnectionsList, Node
 from roc.intrinsic import Intrinsic, IntrinsicData
@@ -37,8 +37,10 @@ class NextFrame(Edge):
     allowed_connections: EdgeConnectionsList = [("Frame", "Frame")]
 
 
-@register_component("sequencer", "sequencer", auto=True)
 class Sequencer(Component):
+    name: str = "sequencer"
+    type: str = "sequencer"
+    auto: bool = True
     bus = EventBus[Frame]("sequencer")
 
     def __init__(self) -> None:

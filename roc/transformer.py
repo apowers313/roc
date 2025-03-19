@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .component import Component, register_component
+from .component import Component
 from .event import Event, EventBus
 from .graphdb import Edge, EdgeConnectionsList
 from .sequencer import Frame, Sequencer
@@ -19,8 +19,10 @@ class Change(Edge):
     ]
 
 
-@register_component("transformer", "transformer", auto=True)
 class Transformer(Component):
+    name: str = "transformer"
+    type: str = "transformer"
+    auto: bool = True
     bus = EventBus[Transform]("transformer")
 
     def __init__(self) -> None:
