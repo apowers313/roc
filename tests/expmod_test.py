@@ -35,9 +35,9 @@ class TestExpMod:
 
     @pytest.fixture
     def MyTestExpMod(self) -> Any:
-        @ExpMod.register("foo")
         class MyTestExpMod(ExpMod):
             modtype = "test"
+            name = "foo"
 
         return MyTestExpMod
 

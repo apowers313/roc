@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import importlib.util
 import sys
-from abc import abstractmethod
 from collections import Counter, defaultdict
 from pathlib import Path
 from types import ModuleType
-from typing import Callable, Self, cast
+from typing import Self, cast
 
 from roc.config import Config
 
@@ -16,24 +15,37 @@ expmod_loaded: dict[str, ModuleType] = {}
 
 
 class ExpMod:
-    modtype: str
+    modtype: str = str()
+    name: str = str()
 
     def __init_subclass__(cls) -> None:
-        if not hasattr(cls, "modtype"):
-            raise NotImplementedError(f"{cls} must implement class attribute 'modtype'")
+        if cls.modtype is ExpMod.modtype:
+            raise NotImplementedError(f"{cls.__name__} must implement class attribute 'modtype'")
 
-    @staticmethod
-    def register(name: str) -> Callable[[type[ExpMod]], type[ExpMod]]:
-        def register_decorator(cls: type[ExpMod]) -> type[ExpMod]:
-            if name in expmod_registry[cls.modtype]:
-                raise Exception(
-                    f"ExpMod.register attempting to register duplicate name '{name}' for module '{cls.modtype}'"
-                )
-            expmod_registry[cls.modtype][name] = cls()
+        if cls.name is ExpMod.name and ExpMod not in cls.__bases__:
+            print("bases:", cls.__bases__)
+            raise NotImplementedError(f"{cls.__name__} must implement class attribute 'name'")
+            # TODO: warning? check to see if ExpMod is a direct predecessor?
+            # return
 
-            return cls
+        if cls.name in expmod_registry[cls.modtype]:
+            raise Exception(
+                f"ExpMod.register attempting to register duplicate name '{cls.name}' for module '{cls.modtype}'"
+            )
+        expmod_registry[cls.modtype][cls.name] = cls()
 
-        return register_decorator
+    # @staticmethod
+    # def register(name: str) -> Callable[[type[ExpMod]], type[ExpMod]]:
+    #     def register_decorator(cls: type[ExpMod]) -> type[ExpMod]:
+    #         if name in expmod_registry[cls.modtype]:
+    #             raise Exception(
+    #                 f"ExpMod.register attempting to register duplicate name '{name}' for module '{cls.modtype}'"
+    #             )
+    #         expmod_registry[cls.modtype][name] = cls()
+
+    #         return cls
+
+    #     return register_decorator
 
     @classmethod
     def get(cls, default: str | None = None) -> Self:
@@ -112,10 +124,3 @@ class ExpMod:
         for mod_tn in use_mods:
             t, n = mod_tn
             ExpMod.set(name=n, modtype=t)
-
-
-class DefaultActionExpMod(ExpMod):
-    modtype = "action"
-
-    @abstractmethod
-    def get_action(self) -> int: ...

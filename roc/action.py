@@ -1,11 +1,12 @@
 """The action module decides what action the agent should perform."""
 
+from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
 from roc.component import Component, register_component
 from roc.event import Event, EventBus
-from roc.expmod import DefaultActionExpMod
+from roc.expmod import ExpMod
 from roc.graphdb import Node
 
 
@@ -44,8 +45,17 @@ class Action(Component):
         self.action_bus_conn.send(actevt)
 
 
-@DefaultActionExpMod.register("pass")
+class DefaultActionExpMod(ExpMod):
+    modtype = "action"
+
+    @abstractmethod
+    def get_action(self) -> int: ...
+
+
+# @DefaultActionExpMod.register("pass")
 class DefaultActionPass(DefaultActionExpMod):
+    name = "pass"
+
     def get_action(self) -> int:
         """Default action for Nethack that passes (the `.` character in the game)"""
         return 19

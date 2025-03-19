@@ -2,8 +2,8 @@ import functools
 from collections import Counter
 from random import randrange
 
+from roc.action import DefaultActionExpMod
 from roc.config import Config
-from roc.expmod import DefaultActionExpMod
 
 # LEGEND:
 # settings.gym_actions (
@@ -96,8 +96,10 @@ from roc.expmod import DefaultActionExpMod
 # )
 
 
-@DefaultActionExpMod.register("random")
+# @DefaultActionExpMod.register("random")
 class DefaultActionRandom(DefaultActionExpMod):
+    name = "random"
+
     def get_action(self) -> int:
         """A default action for taking random Nethack actions."""
         settings = Config.get()
@@ -109,8 +111,10 @@ class DefaultActionRandom(DefaultActionExpMod):
         return ret
 
 
-@DefaultActionExpMod.register("weighted")
+# @DefaultActionExpMod.register("weighted")
 class WeightedAction(DefaultActionExpMod):
+    name = "weighted"
+
     @functools.cache
     def actions(self, actions: tuple[int]) -> list[int]:
         weighted_map = {
