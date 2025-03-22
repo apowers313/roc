@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Self
+from typing import Any
 
 from .graphdb import Node
 
@@ -27,7 +27,7 @@ class Transformable(ABC):
         """
 
     @abstractmethod
-    def apply_transform(self, t: Transform) -> Self:
+    def apply_transform(self, t: Transform) -> Node:
         """Applys a transform to a thing to convert it to the new thing"""
 
 
