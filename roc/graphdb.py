@@ -349,7 +349,6 @@ class GraphDB:
 #######
 CacheKey = TypeVar("CacheKey")
 CacheValue = TypeVar("CacheValue")
-CacheDefault = TypeVar("CacheDefault")
 
 
 class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
@@ -837,7 +836,7 @@ def _check_schema(
 #######
 # EDGE LIST
 #######
-class EdgeFetchIterator:
+class EdgeFetchIterator(Iterable[Edge]):
     """The implementation of an iterator for an EdgeList. Only intended to be used internally by
     EdgeList.
     """
@@ -1711,7 +1710,7 @@ class Node(BaseModel, extra="allow"):
 #######
 # Node List
 #######
-class NodeFetchIterator:
+class NodeFetchIterator(Iterable[Node]):
     """The implementation of an iterator for an NodeList. Only intended to be used internally by
     NodeList.
     """
