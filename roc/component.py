@@ -7,10 +7,8 @@ from __future__ import annotations
 
 # import traceback
 from abc import ABC
-from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, NewType, Self, TypeVar, cast
 from weakref import WeakSet
-
-from typing_extensions import Self
 
 from .config import Config
 from .logger import logger
@@ -18,7 +16,11 @@ from .logger import logger
 if TYPE_CHECKING:
     from .event import BusConnection, Event, EventBus
 
-loaded_components: dict[str, Component] = {}
+
+ComponentName = NewType("ComponentName", str)
+ComponentType = NewType("ComponentType", str)
+
+loaded_components: dict[tuple[ComponentName, ComponentType], Component] = {}
 component_set: WeakSet[Component] = WeakSet()
 
 T = TypeVar("T")
@@ -59,7 +61,6 @@ class Component(ABC):
         auto_load = cls.auto
 
         if component_name is Component.name:
-            print("cls", cls.__name__)
             raise Exception(f"Component name is unspecified in class {cls.__name__}")
 
         if component_type is Component.type:
@@ -140,17 +141,16 @@ class Component(ABC):
         in the `perception_components` config field.
         """
         settings = Config.get()
-        component_list = default_components
         logger.debug(f"perception components from settings: {settings.perception_components}")
-        component_list = component_list.union(settings.perception_components, default_components)
+        component_list = settings.perception_components
         logger.debug(f"Component.init: default components: {component_list}")
 
         # TODO: shutdown previously loaded components
 
         for reg_str in component_list:
             logger.trace(f"Loading component: {reg_str} ...")
-            (name, type) = reg_str.split(":")
-            loaded_components[reg_str] = Component.get(name, type)
+            name, type = reg_str
+            loaded_components[ComponentName(name), ComponentType(type)] = Component.get(name, type)
 
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
@@ -197,7 +197,7 @@ class Component(ABC):
             list[str]: A list of the names and types of components, as strings.
         """
         global loaded_components
-        return [s for s in loaded_components.keys()]
+        return [f"{name}:{type}" for name, type in loaded_components.keys()]
 
     @staticmethod
     def deregister(name: str, type: str) -> None:

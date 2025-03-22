@@ -93,17 +93,17 @@ class Config(BaseSettings):
     expmods: list[str] = []
     expmods_use: list[str] = ["action:weighted"]
     # component config
-    perception_components: list[str] = Field(
+    perception_components: list[tuple[str, str]] = Field(
         default=[
-            "delta:perception",
-            "distance:perception",
-            "flood:perception",
-            "motion:perception",
-            "single:perception",
-            "line:perception",
-            "color:perception",
-            "shape:perception",
-            "phoneme:perception",
+            ("delta", "perception"),
+            ("distance", "perception"),
+            ("flood", "perception"),
+            ("motion", "perception"),
+            ("single", "perception"),
+            ("line", "perception"),
+            ("color", "perception"),
+            ("shape", "perception"),
+            ("phoneme", "perception"),
         ]
     )
     # intrinsic config
