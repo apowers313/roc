@@ -114,13 +114,12 @@ class ExpMod:
             raise FileNotFoundError(f"could not load experiment modules: {mods}")
 
         # set modules
-        use_mods = [m.split(":") for m in settings.expmods_use]
-        mod_name_count = Counter([m[0] for m in use_mods])
+        mod_name_count = Counter([m[0] for m in settings.expmods_use])
         duplicate_names = {k: v for k, v in mod_name_count.items() if v > 1}
         if len(duplicate_names) > 0:
             dupes = ", ".join(duplicate_names.keys())
             raise Exception(f"ExpMod.init found multiple attempts to set the same modules: {dupes}")
 
-        for mod_tn in use_mods:
+        for mod_tn in settings.expmods_use:
             t, n = mod_tn
             ExpMod.set(name=n, modtype=t)

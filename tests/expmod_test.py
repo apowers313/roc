@@ -92,7 +92,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
-        settings.expmods_use = ["test:testy"]
+        settings.expmods_use = [("test", "testy")]
 
         ExpMod.init()
 
@@ -108,7 +108,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
-        settings.expmods_use = ["test:testy"]
+        settings.expmods_use = [("test", "testy")]
         assert len(expmod_modtype_current) == 0
 
         ExpMod.init()
@@ -123,7 +123,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
-        settings.expmods_use = ["test:testy", "test:testy"]
+        settings.expmods_use = [("test", "testy"), ("test", "testy")]
         assert len(expmod_modtype_current) == 0
 
         with pytest.raises(
@@ -136,7 +136,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
-        settings.expmods_use = ["foo:bar"]
+        settings.expmods_use = [("foo", "bar")]
         assert len(expmod_modtype_current) == 0
 
         with pytest.raises(Exception, match="ExpMod.set can't find module for type: 'foo'"):
@@ -147,7 +147,7 @@ class TestExpMod:
         settings = Config.get()
         settings.expmod_dirs = ["tests/helpers"]
         settings.expmods = ["testmod2"]
-        settings.expmods_use = ["test:foo"]
+        settings.expmods_use = [("test", "foo")]
         assert len(expmod_modtype_current) == 0
 
         with pytest.raises(

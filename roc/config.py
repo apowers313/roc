@@ -124,7 +124,9 @@ class Config(BaseSettings):
     # experiment modules
     expmod_dirs: list[str] = ["experiments/modules"]
     expmods: list[str] = []
-    expmods_use: list[str] = ["action:weighted"]
+    expmods_use: list[tuple[str, str]] = [
+        ("action", "weighted"),
+    ]
     # component config
     perception_components: list[tuple[str, str]] = Field(
         default=[
