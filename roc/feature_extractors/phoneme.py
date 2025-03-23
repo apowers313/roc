@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from gruut import sentences
 
 from ..location import Point
-from ..logger import logger
 from ..perception import (
     AuditoryData,
     Feature,
@@ -69,7 +68,6 @@ class Phoneme(FeatureExtractor[Point]):
             for word in sent:
                 if word.phonemes:
                     phonemes.append(word.phonemes)
-                    logger.debug(f"{word.text}, {','.join(word.phonemes)}")
 
         self.pb_conn.send(PhonemeFeature(origin_id=self.id, phonemes=phonemes))
         self.settled()
