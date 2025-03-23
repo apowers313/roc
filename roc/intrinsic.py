@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Iterable, TypeVar
+from typing import Any, Generic, TypeVar
 
 from .component import Component
-from .config import Config
+from .config import Config, ConfigIntrinsicType
 from .event import Event, EventBus
 from .graphdb import Node
 from .transformable import Transform, Transformable
@@ -16,13 +16,13 @@ IntrinsicType = TypeVar("IntrinsicType")
 
 
 class IntrinsicOp(ABC, Generic[IntrinsicType]):
-    intrinsic_type = "unknown"
+    intrinsic_type = str()
 
-    def __init__(self, name: str) -> None:
+    def __init__(self, name: str, **kwargs: Any) -> None:
         self.name = name
 
     def __init_subclass__(cls) -> None:
-        if cls.intrinsic_type == "unknown":
+        if cls.intrinsic_type == IntrinsicOp.intrinsic_type:
             raise TypeError("must set intrinsic_type in subclass of IntrinsicOp")
 
         if cls.intrinsic_type in intrinsic_op_registry:
@@ -30,21 +30,11 @@ class IntrinsicOp(ABC, Generic[IntrinsicType]):
 
         intrinsic_op_registry[cls.intrinsic_type] = cls
 
-    @staticmethod
-    def convert_args(args: Iterable[str]) -> Iterable[Any]:
-        return args
-
     @abstractmethod
     def validate(self, val: IntrinsicType) -> bool: ...
 
     @abstractmethod
     def normalize(self, val: IntrinsicType, *, raw_intrinsics: dict[str, Any]) -> float: ...
-
-    # register
-
-    # deregister
-
-    # clear
 
 
 intrinsic_op_registry: dict[str, type[IntrinsicOp[Any]]] = {}
@@ -53,18 +43,13 @@ intrinsic_op_registry: dict[str, type[IntrinsicOp[Any]]] = {}
 class IntrinsicIntOp(IntrinsicOp[int]):
     intrinsic_type = "int"
 
-    def __init__(self, name: str, min: int, max: int) -> None:
+    def __init__(self, name: str, config: tuple[int, int]) -> None:
         super().__init__(name)
+        min = config[0]
+        max = config[1]
         self.min = min
         self.max = max
         self.range = abs(min) + abs(max)
-
-    @staticmethod
-    def convert_args(args: Iterable[Any]) -> list[int]:
-        ret = []
-        for arg in args:
-            ret.append(int(arg))
-        return ret
 
     def validate(self, val: int) -> bool:
         if (val < self.min) or (val > self.max):
@@ -79,9 +64,9 @@ class IntrinsicIntOp(IntrinsicOp[int]):
 class IntrinsicPercentOp(IntrinsicOp[int]):
     intrinsic_type = "percent"
 
-    def __init__(self, name: str, base: str) -> None:
+    def __init__(self, name: str, config: str) -> None:
         super().__init__(name)
-        self.base = base
+        self.base = config
 
     def validate(self, val: int) -> bool:
         return isinstance(val, int) and val > 0
@@ -93,18 +78,9 @@ class IntrinsicPercentOp(IntrinsicOp[int]):
 class IntrinsicMapOp(IntrinsicOp[int]):
     intrinsic_type = "map"
 
-    def __init__(self, name: str, map: dict[int, float]) -> None:
+    def __init__(self, name: str, config: dict[int, float]) -> None:
         super().__init__(name)
-        self.map = map
-
-    @staticmethod
-    def convert_args(args: Iterable[Any]) -> list[dict[int, float]]:
-        ret: dict[int, float] = {}
-        for arg in args:
-            k, v = arg.split(",")
-            ret[int(k)] = float(v)
-
-        return [ret]
+        self.map = config
 
     def validate(self, val: int) -> bool:
         return val in self.map
@@ -216,16 +192,16 @@ class Intrinsic(Component):
         self.int_conn = self.connect_bus(Intrinsic.bus)
 
 
-def _config_intrinsics(intrinsics_desc: Iterable[tuple[str, str]]) -> dict[str, IntrinsicOp[Any]]:
+def _config_intrinsics(intrinsics_desc: list[ConfigIntrinsicType]) -> dict[str, IntrinsicOp[Any]]:
     ret: dict[str, IntrinsicOp[Any]] = {}
 
     for known_intrinsic in intrinsics_desc:
-        name, desc = known_intrinsic
-        args = desc.split(":")
-        intrinsic_type = args.pop(0)
+        name = known_intrinsic.name
+        type = known_intrinsic.type
+        config = known_intrinsic.model_dump(exclude={"name", "type"})
 
-        cls = intrinsic_op_registry[intrinsic_type]
+        cls = intrinsic_op_registry[type]
 
-        ret[name] = cls(name, *cls.convert_args(args))
+        ret[name] = cls(name, **config)
 
     return ret

@@ -5,9 +5,9 @@ from __future__ import annotations
 import sys
 import warnings
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,6 +35,39 @@ if "pytest" in sys.modules:
     config_settings["env_file"] = (
         "somereallyweirdrandomstringsothattestingdoesntpickupextraneousstuff"
     )
+
+
+# intrinsics configs
+class ConfigIntrinsicBase(BaseModel):
+    type: str
+    name: str
+    config: Any
+
+
+class ConfigPercentIntrinsic(ConfigIntrinsicBase):
+    type: Literal["percent"] = "percent"
+    config: str
+
+
+class ConfigMapIntrinsic(ConfigIntrinsicBase):
+    type: Literal["map"] = "map"
+    config: dict[int, float]
+
+
+class ConfigIntIntrinsic(ConfigIntrinsicBase):
+    type: Literal["int"] = "int"
+    config: tuple[int, int]
+
+
+class ConfigBoolIntrinsic(ConfigIntrinsicBase):
+    type: Literal["bool"] = "bool"
+    config: None = None
+
+
+ConfigIntrinsicType = Annotated[
+    ConfigPercentIntrinsic | ConfigMapIntrinsic | ConfigIntIntrinsic | ConfigBoolIntrinsic,
+    Field(discriminator="type"),
+]
 
 
 class Config(BaseSettings):
@@ -107,25 +140,29 @@ class Config(BaseSettings):
         ]
     )
     # intrinsic config
-    intrinsics: list[tuple[str, str]] = Field(
+    intrinsics: list[ConfigIntrinsicType] = Field(
         default=[
-            ("hp", "percent:hpmax"),
-            ("ene", "percent:enemax"),
-            # SATIATED   = 0,
-            # NOT_HUNGRY = 1,
-            # HUNGRY     = 2,
-            # WEAK       = 3,
-            # FAINTING   = 4,
-            # FAINTED    = 5,
-            # STARVED    = 6
-            ("hunger", "map:0,0.5:1,1:2,0.75:3,0.5:4,0.25:5,0.1:6,0"),
+            ConfigPercentIntrinsic(name="hp", config="hpmax"),
+            ConfigPercentIntrinsic(name="ene", config="enemax"),
+            ConfigMapIntrinsic(
+                name="hunger",
+                config={
+                    0: 0.5,  # SATIATED = 0
+                    1: 1.0,  # NOT_HUNGRY = 1
+                    2: 0.75,  # HUNGRY = 2
+                    3: 0.5,  # WEAK = 3
+                    4: 0.25,  # FAINTING = 4
+                    5: 0.1,  # FAINTED = 5
+                    6: 0.0,  # STARVED = 6
+                },
+            ),
             # char
             # wis
             # intel
             # con
             # dex
             # str
-        ]
+        ],
     )
     # significance config
     significance_weights: dict[str, float] = Field(
