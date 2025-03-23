@@ -291,7 +291,6 @@ class NethackGym(Gym):
 
     def send_auditory(self, obs: Any) -> None:
         msg = "".join(chr(ch) for ch in obs["message"])
-        logger.debug(f"message: {msg}")
         ad = AuditoryData(msg)
         self.env_bus_conn.send(ad)
 
