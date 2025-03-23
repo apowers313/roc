@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 ComponentName = NewType("ComponentName", str)
 ComponentType = NewType("ComponentType", str)
+ComponentKey = NewType("ComponentKey", tuple[ComponentName, ComponentType])
 
 loaded_components: dict[tuple[ComponentName, ComponentType], Component] = {}
 component_set: WeakSet[Component] = WeakSet()
@@ -142,7 +143,7 @@ class Component(ABC):
         """
         settings = Config.get()
         logger.debug(f"perception components from settings: {settings.perception_components}")
-        component_list = settings.perception_components
+        component_list = [*default_components, *settings.perception_components]
         logger.debug(f"Component.init: default components: {component_list}")
 
         # TODO: shutdown previously loaded components
@@ -228,9 +229,9 @@ class Component(ABC):
 
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)
-component_registry: dict[str, type[Component]] = {}
-default_components: set[str] = set()
+component_registry: dict[ComponentKey, type[Component]] = {}
+default_components: set[ComponentKey] = set()
 
 
-def _component_registry_key(name: str, type: str) -> str:
-    return f"{name}:{type}"
+def _component_registry_key(name: str, type: str) -> ComponentKey:
+    return ComponentKey((ComponentName(name), ComponentType(type)))
