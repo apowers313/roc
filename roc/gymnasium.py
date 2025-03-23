@@ -35,9 +35,10 @@ class Gym(Component, ABC):
     type: str = "game"
 
     def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
+        logger.debug(f"Initializing Gym...")
         super().__init__()
         gym_opts = gym_opts or {}
-        logger.info(f"Gym options: {gym_opts}")
+        logger.debug(f"Gym options: {gym_opts}")
         self.env = gym.make(gym_id, **gym_opts)
 
         # setup communications
@@ -63,7 +64,7 @@ class Gym(Component, ABC):
     @logger.catch
     @Observability.tracer.start_as_current_span("start")
     def start(self) -> None:
-        logger.info("Starting NLE loop...")
+        logger.debug("Starting NLE loop...")
         obs, reset_info = self.env.reset()
         settings = Config.get()
 
@@ -72,7 +73,7 @@ class Gym(Component, ABC):
         _dump_env_start()
 
         loop_num = 0
-        game_num = 0
+        game_num = 1
         game_counter = Observability.meter.create_counter(
             "roc.game_total", unit="games", description="total number of games completed"
         )
@@ -81,11 +82,8 @@ class Gym(Component, ABC):
         )
         game_counter.add(1)
 
-        component_str = "\t" + "\n\t".join(Component.get_loaded_components())
-        logger.info(f"{Component.get_component_count()} components loaded:\n{component_str}")
-
         # main environment loop
-        while game_num < settings.num_games:
+        while game_num <= settings.num_games:
             with Observability.tracer.start_as_current_span("observation"):
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
@@ -119,9 +117,18 @@ class Gym(Component, ABC):
                 State.get_states().loop.set(loop_num)
 
                 if done or truncated:
+                    # log game over info
+                    screen = ""
+                    for row in obs["tty_chars"]:
+                        for ch in row:
+                            screen += chr(ch)
+                        screen += "\n"
+                    logger.info(screen, {"death": True, "game_num": game_num})
                     logger.info(f"Game {game_num} completed, starting next game")
+                    # flush cache to graphdb
                     GraphDB.flush()
                     GraphDB.export()
+                    # restart and prepare to go again
                     self.env.reset()
                     game_counter.add(1)
                     game_num += 1
