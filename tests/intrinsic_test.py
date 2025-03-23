@@ -5,6 +5,12 @@ from helpers.nethack_blstats import blstat0 as test_blstat
 from helpers.util import StubComponent
 
 from roc.component import Component
+from roc.config import (
+    ConfigBoolIntrinsic,
+    ConfigIntIntrinsic,
+    ConfigMapIntrinsic,
+    ConfigPercentIntrinsic,
+)
 from roc.intrinsic import (
     Intrinsic,
     IntrinsicBoolOp,
@@ -18,7 +24,7 @@ from roc.intrinsic import (
 
 class TestIntrinsicInt:
     def test_validate(self) -> None:
-        op = IntrinsicIntOp("test", -2, 8)
+        op = IntrinsicIntOp("test", (-2, 8))
         assert not op.validate(-3)
         assert op.validate(-2)
         assert op.validate(3)
@@ -26,7 +32,7 @@ class TestIntrinsicInt:
         assert not op.validate(9)
 
     def test_normalize(self) -> None:
-        op = IntrinsicIntOp("test", -2, 8)
+        op = IntrinsicIntOp("test", (-2, 8))
         assert op.range == 10
         assert op.normalize(-2) == 0
         assert op.normalize(3) == 0.5
@@ -77,7 +83,7 @@ class TestIntrinsic:
         assert id.normalized_intrinsics["hunger"] == 1
 
     def test_config_int(self) -> None:
-        ret = _config_intrinsics([("hp", "int:-3:7")])
+        ret = _config_intrinsics([ConfigIntIntrinsic(name="hp", type="int", config=(-3, 7))])
 
         assert len(ret) == 1
         assert isinstance(ret["hp"], IntrinsicIntOp)
@@ -87,7 +93,7 @@ class TestIntrinsic:
         assert ret["hp"].range == 10
 
     def test_config_percent(self) -> None:
-        ret = _config_intrinsics([("hp", "percent:hpmax")])
+        ret = _config_intrinsics([ConfigPercentIntrinsic(name="hp", config="hpmax")])
 
         assert len(ret) == 1
         assert isinstance(ret["hp"], IntrinsicPercentOp)
@@ -105,14 +111,20 @@ class TestIntrinsic:
         assert node_names == {"hp", "ene", "hunger"}
 
     def test_config_bool(self) -> None:
-        ret = _config_intrinsics([("foo", "bool")])
+        ret = _config_intrinsics([ConfigBoolIntrinsic(name="foo")])
 
         assert len(ret) == 1
         assert isinstance(ret["foo"], IntrinsicBoolOp)
         assert ret["foo"].name == "foo"
 
     def test_config_map(self) -> None:
-        ret = _config_intrinsics([("hunger", "map:0,0.5:1,1:2,0.75:3,0.5:4,0.25:5,0.1:6,0")])
+        ret = _config_intrinsics(
+            [
+                ConfigMapIntrinsic(
+                    name="hunger", config={0: 0.5, 1: 1, 2: 0.75, 3: 0.5, 4: 0.25, 5: 0.1, 6: 0}
+                )
+            ]
+        )
         assert "hunger" in ret
         assert isinstance(ret["hunger"], IntrinsicMapOp)
         assert ret["hunger"].map[0] == 0.5
