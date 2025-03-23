@@ -46,19 +46,9 @@ class VisionData:
         Returns:
             VisionData: The newly created vision data.
         """
-
-        def to_numpy(d: dict[str, Any], k: str) -> np.ndarray[Any, Any]:
-            if not k in d:
-                raise Exception(f"Expected '{k}' to exist in dict for VisionData.from_dict()")
-
-            v = d[k]
-            if not isinstance(v, np.ndarray):
-                return np.array(v)
-            return v
-
-        glyphs = to_numpy(d, "glyphs")
-        chars = to_numpy(d, "chars")
-        colors = to_numpy(d, "colors")
+        glyphs = _to_numpy(d, "glyphs")
+        chars = _to_numpy(d, "chars")
+        colors = _to_numpy(d, "colors")
         return VisionData(glyphs, chars, colors)
 
     @staticmethod
@@ -77,8 +67,8 @@ class VisionData:
 
 
 class AuditoryData:
-    """Auditory information (or scene descriptions) received from the
-    environment
+    """Information about the audio (or scene descriptions) received from the
+    environment.
     """
 
     def __init__(self, msg: str) -> None:
@@ -86,7 +76,27 @@ class AuditoryData:
 
 
 class ProprioceptiveData:
-    pass
+    """Information about the state of the agent body."""
+
+    def __init__(
+        self,
+        inv_strs: npt.NDArray[Any],
+        inv_letters: npt.NDArray[Any],
+        inv_glyphs: npt.NDArray[Any],
+        inv_oclasses: npt.NDArray[Any],
+    ) -> None:
+        self.inv_strs = inv_strs
+        self.inv_letters = inv_letters
+        self.inv_glyphs = inv_glyphs
+        self.inv_oclasses = inv_oclasses
+
+    @staticmethod
+    def from_dict(d: dict[str, Any]) -> ProprioceptiveData:
+        inv_strs = _to_numpy(d, "inv_strs")
+        inv_letters = _to_numpy(d, "inv_letters")
+        inv_glyphs = _to_numpy(d, "inv_glyphs")
+        inv_oclasses = _to_numpy(d, "inv_oclasses")
+        return ProprioceptiveData(inv_strs, inv_letters, inv_glyphs, inv_oclasses)
 
 
 class Settled:
@@ -192,7 +202,7 @@ class PointFeature(VisualFeature[FeatureNodeType]):
         return self.type
 
 
-PerceptionData = VisionData | AuditoryData | Settled | Feature
+PerceptionData = VisionData | AuditoryData | ProprioceptiveData | Feature | Settled
 PerceptionEvent = Event[PerceptionData]
 
 
@@ -243,3 +253,13 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
             ret.append(str(fe.id))
 
         return ret
+
+
+def _to_numpy(d: dict[str, Any], k: str) -> np.ndarray[Any, Any]:
+    if not k in d:
+        raise Exception(f"Expected '{k}' to exist in dict for .from_dict()")
+
+    v = d[k]
+    if not isinstance(v, np.ndarray):
+        return np.array(v)
+    return v

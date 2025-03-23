@@ -21,7 +21,7 @@ from .config import Config
 from .graphdb import GraphDB
 from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
-from .perception import AuditoryData, Perception, VisionData
+from .perception import AuditoryData, Perception, ProprioceptiveData, VisionData
 from .reporting.observability import Observability
 from .reporting.state import State
 
@@ -296,7 +296,8 @@ class NethackGym(Gym):
         # for inv in obs["inv_strs"]:
         #     invline = "".join(chr(ch) for ch in inv)
         #     print(invline)
-        pass
+        pd = ProprioceptiveData.from_dict(obs)
+        self.env_bus_conn.send(pd)
 
     def send_intrinsics(self, obs: Any) -> None:
         blstats = obs["blstats"]
