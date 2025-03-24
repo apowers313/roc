@@ -123,7 +123,7 @@ class Gym(Component, ABC):
                         for ch in row:
                             screen += chr(ch)
                         screen += "\n"
-                    logger.info(screen, {"death": True, "game_num": game_num})
+                    logger.info(screen, death=True, game_num=game_num)
                     logger.info(f"Game {game_num} completed, starting next game")
                     # flush cache to graphdb
                     GraphDB.flush()
