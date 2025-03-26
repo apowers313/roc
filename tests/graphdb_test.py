@@ -1431,6 +1431,46 @@ class TestNodeList:
         assert node_list[0].id == NodeId(2)
         assert node_list[1].id == NodeId(0)
 
+    def test_select_by_exact_labels(self) -> None:
+        n1 = Node(labels={"TestNode", "Foo", "Bar"})
+        n2 = Node(labels={"TestNode", "Foo"})
+        n3 = Node(labels={"TestNode", "Foo"})
+        nl = NodeList([n1.id, n2.id, n3.id])
+        node_list = nl.select(labels={"TestNode", "Foo", "Bar"})
+        assert len(node_list) == 1
+        assert n1.id in node_list
+        assert n2.id not in node_list
+        assert n3.id not in node_list
+
+        node_list = nl.select(labels={"TestNode", "Foo"})
+        assert len(node_list) == 2
+        assert n1.id not in node_list
+        assert n2.id in node_list
+        assert n3.id in node_list
+
+    def test_select_by_partial_labels(self) -> None:
+        n1 = Node(labels={"TestNode", "Foo", "Bar"})
+        n2 = Node(labels={"TestNode", "Foo"})
+        n3 = Node(labels={"TestNode", "Baz"})
+        nl = NodeList([n1.id, n2.id, n3.id])
+        node_list = nl.select(partial_labels={"Foo"})
+        assert len(node_list) == 2
+        assert n1.id in node_list
+        assert n2.id in node_list
+        assert n3.id not in node_list
+
+        node_list = nl.select(partial_labels={"Baz"})
+        assert len(node_list) == 1
+        assert n1.id not in node_list
+        assert n2.id not in node_list
+        assert n3.id in node_list
+
+        node_list = nl.select(partial_labels={"TestNode"})
+        assert len(node_list) == 3
+        assert n1.id in node_list
+        assert n2.id in node_list
+        assert n3.id in node_list
+
     def test_select_by_function(self) -> None:
         node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)]).select(
             filter_fn=lambda n: n.id == NodeId(1)

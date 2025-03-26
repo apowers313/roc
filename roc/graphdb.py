@@ -9,7 +9,7 @@ import inspect
 import json
 import time
 import warnings
-from collections.abc import Collection, Iterable, Iterator, Mapping, MutableSet
+from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
 from datetime import datetime, timedelta
 from itertools import islice
 from typing import (
@@ -24,6 +24,7 @@ from typing import (
     TypeVar,
     _SpecialForm,
     cast,
+    overload,
 )
 
 import mgclient
@@ -857,9 +858,9 @@ class EdgeFetchIterator(Iterable[Edge]):
         return Edge.get(id)
 
 
-class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
+class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
     """A list of Edges that is used by Node for keeping track of the connections it has.
-    Implements interfaces for both a MutableSet (i.e. set()) and a Mapping (i.e. read-only list())
+    Implements interfaces for both a MutableSet (i.e. set()) and a Sequence (i.e. read-only list())
     """
 
     def __init__(self, ids: Iterable[EdgeId]):
@@ -868,8 +869,16 @@ class EdgeList(MutableSet[Edge | EdgeId], Mapping[int, Edge]):
     def __iter__(self) -> EdgeFetchIterator:
         return EdgeFetchIterator(self.__edges)
 
-    def __getitem__(self, key: int) -> Edge:
-        return Edge.get(self.__edges[key])
+    @overload
+    def __getitem__(self, idx: int, /) -> Edge: ...
+    @overload
+    def __getitem__(self, idx: slice[Any, Any, Any], /) -> EdgeList: ...
+
+    def __getitem__(self, idx: slice[Any, Any, Any] | int, /) -> Edge | EdgeList:
+        if isinstance(idx, slice):
+            return EdgeList(self.__edges[idx])
+        else:
+            return Edge.get(self.__edges[idx])
 
     def __len__(self) -> int:
         return len(self.__edges)
@@ -1731,9 +1740,9 @@ class NodeFetchIterator(Iterable[Node]):
         return Node.get(id)
 
 
-class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
+class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
     """A list of Nodes. Implements interfaces for both a MutableSet (i.e. set())
-    and a Mapping (i.e. read-only dict())
+    and a Sequence (i.e. read-only dict())
     """
 
     def __init__(self, ids: Iterable[NodeId]):
@@ -1742,8 +1751,16 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
     def __iter__(self) -> NodeFetchIterator:
         return NodeFetchIterator(self._nodes)
 
-    def __getitem__(self, key: int) -> Node:
-        return Node.get(self._nodes[key])
+    @overload
+    def __getitem__(self, idx: int, /) -> Node: ...
+    @overload
+    def __getitem__(self, idx: slice[Any, Any, Any], /) -> NodeList: ...
+
+    def __getitem__(self, idx: slice[Any, Any, Any] | int, /) -> Node | NodeList:
+        if isinstance(idx, slice):
+            return NodeList(self._nodes[idx])
+        else:
+            return Node.get(self._nodes[idx])
 
     def __len__(self) -> int:
         return len(self._nodes)
@@ -1787,6 +1804,7 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
         *,
         filter_fn: NodeFilterFn | None = None,
         labels: set[str] | str | None = None,
+        partial_labels: set[str] | None = None,
     ) -> NodeList:
         """Returns a list of Nodes that meet the specified criteria. If multiple
         criteria are specified, all of them are applied.
@@ -1795,8 +1813,11 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
             filter_fn (NodeFilterFn | None, optional): A function applied to
                 each Node. If it returns True, the result is included in the return
                 results. Defaults to None.
-            labels (str | None, optional): If the Node lables exactly matches
+            labels (set[str] | str | None, optional): If the Node labels exactly matches
                 this set, it is included in the return results. Defaults to None.
+            partial_labels (set[str] | None): If the Node labels contain all the
+                labels in partial_labels (and potentially additional lebels) it is
+                included in the results. Defaults to None
             id (NodeId | None, optional): If the NodeId matches this id it is
                 included in the results. Defaults to None.
 
@@ -1811,6 +1832,9 @@ class NodeList(MutableSet[Node | NodeId], Mapping[int, Node]):
         if labels is not None:
             labels = set(labels) if isinstance(labels, str) else labels
             node_ids = [n for n in node_ids if Node.get(n).labels == labels]
+
+        if partial_labels is not None:
+            node_ids = [n for n in node_ids if Node.get(n).labels.issuperset(partial_labels)]
 
         return NodeList(node_ids)
 
