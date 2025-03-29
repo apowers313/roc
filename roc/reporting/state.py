@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import subprocess
 from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
@@ -11,12 +12,13 @@ import numpy as np
 
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
+from roc.config import Config
 from roc.event import Event
-from roc.graphdb import Edge, Node
+from roc.graphdb import Edge, Node, Schema
 from roc.location import DebugGrid
 from roc.logger import logger
 from roc.object import Object, ObjectResolver
-from roc.reporting.observability import Observability, ObservabilityEvent, Observation
+from roc.reporting.observability import Observability, ObservabilityEvent, Observation, instance_id
 from roc.sequencer import Sequencer  # noqa: F401
 
 StateType = TypeVar("StateType")
@@ -84,7 +86,49 @@ class State(ABC, Generic[StateType]):
 
     @staticmethod
     def print_startup_info() -> None:
-        logger.info("Starting ROC")
+        logger.info(f"Starting ROC, instance id: {instance_id}")
+
+        def log_cmd(
+            msg: str,
+            cmd: list[str],
+            *,
+            out: str = "stdout",
+            multiline: bool = False,
+        ) -> None:
+            ret = subprocess.run(cmd, capture_output=True)
+            if out == "stderr":
+                output_bytes = ret.stderr
+            else:
+                output_bytes = ret.stdout
+
+            if multiline:
+                logger_fn = logger.debug
+                separator = "\n"
+            else:
+                logger_fn = logger.info
+                separator = ": "
+
+            output = output_bytes.decode("utf-8").rstrip()
+            logger_fn(f"{msg}{separator}{output}")
+
+        log_cmd("git hash", ["git", "show", "--no-patch", '--pretty=format:"%H"'])
+        log_cmd("git status", ["git", "status"], multiline=True)
+        log_cmd("python location", ["which", "python"])
+        log_cmd("python version", ["python", "--version"])
+        log_cmd("uv version", ["uv", "--version"])
+        log_cmd("python packages", ["uv", "pip", "list"], multiline=True)
+        log_cmd("system info", ["uname", "-a"])
+        log_cmd("cpu info", ["lscpu"], multiline=True)
+        log_cmd("memory info", ["lsmem"], multiline=True)
+
+        component_str = "\t" + "\n\t".join(Component.get_loaded_components())
+        logger.debug(f"{Component.get_component_count()} components loaded\n{component_str}")
+
+        settings = Config.get()
+        logger.debug(f"config\n{settings}")
+
+        schema = Schema()
+        logger.debug(f"schema\n{schema.to_mermaid()}")
 
     @staticmethod
     def send_events() -> None:

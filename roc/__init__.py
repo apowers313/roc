@@ -50,10 +50,6 @@ def init(config: dict[str, Any] | None = None) -> None:
     RocJupyterMagics.init()
     State.init()
 
-    # TODO: print config info
-    component_str = "\t" + "\n\t".join(Component.get_loaded_components())
-    roc_logger.logger.info(f"{Component.get_component_count()} components loaded:\n{component_str}")
-
 
 def start() -> None:
     """Starts the agent."""
