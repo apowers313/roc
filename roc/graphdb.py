@@ -1091,7 +1091,7 @@ class Node(BaseModel, extra="allow"):
         clsname = cls.__name__
 
         if not hasattr(cls, "labels"):
-            new_lbls = {c.__name__ for c in cls.__mro__ if c not in [Node, BaseModel, object]}
+            new_lbls = {c.__name__ for c in cls.__mro__ if issubclass(c, Node) and not c is Node}
 
             def default_subclass_fields() -> set[str]:
                 return new_lbls

@@ -1,5 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 
+from abc import ABC, abstractmethod
 from typing import cast
 from unittest.mock import MagicMock
 
@@ -789,6 +790,19 @@ class TestNode:
 
         assert f.labels == {"Foo"}
         assert b.labels == {"Foo", "Bar"}
+
+    def test_default_labels_with_mixin(self) -> None:
+        class Mixin(ABC):
+            @abstractmethod
+            def bar(self) -> None: ...
+
+        class Foo(Node, Mixin):
+            def bar(self) -> None:
+                pass
+
+        f = Foo()
+
+        assert f.labels == {"Foo"}
 
     def test_register_node(self) -> None:
         class Foo(Node):
