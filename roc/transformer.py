@@ -46,10 +46,10 @@ class Transformer(Component):
 
         # get all transformable attributes
         current_edges = current_frame.src_edges.select(
-            filter_fn=lambda e: e.type == "FrameAttributes" and isinstance(e.dst, Transformable)  # type: ignore
+            filter_fn=lambda e: e.type == "FrameAttribute" and isinstance(e.dst, Transformable)  # type: ignore
         )
         previous_edges = previous_frame.src_edges.select(
-            filter_fn=lambda e: e.type == "FrameAttributes" and isinstance(e.dst, Transformable)  # type: ignore
+            filter_fn=lambda e: e.type == "FrameAttribute" and isinstance(e.dst, Transformable)  # type: ignore
         )
 
         # find all changes between previous frame and this frame

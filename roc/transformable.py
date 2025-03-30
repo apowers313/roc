@@ -8,16 +8,14 @@ from .graphdb import Node
 
 class Transformable(ABC):
     @abstractmethod
-    def same_transform_type(self, other: Any) -> bool:
-        """Says if two things are the same. e.g. Object(type="foo") and Object(type="bar")
+    def same_transform_type(self, other: Transformable) -> bool:
+        """Indicates if two things are the same. e.g. Object(type="foo") and Object(type="bar")
         are the same Python class but different instance types
         """
 
-    # def same_transform_value(self, other: Any) -> bool:
-    #     """Says if there is any difference between two things. e.g.
-    #     Object(type="foo", val=1) and Object(type="foo", val=2) are the same
-    #     transform type but have different values.
-    #     """
+    @abstractmethod
+    def compatible_transform(self, t: Transform) -> bool:
+        """Indicates if the specified transform can be applied to this transformable type"""
 
     @abstractmethod
     def create_transform(self, other: Any) -> Transform | None:
