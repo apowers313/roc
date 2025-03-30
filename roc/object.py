@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
-from typing import Any, Collection, NewType, cast
+from typing import TYPE_CHECKING, Any, Collection, NewType, cast
 
+from cachetools import LRUCache
 from flexihumanhash import FlexiHumanHash
 from pydantic import Field
 
@@ -15,6 +16,9 @@ from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
 from .perception import VisualFeature as PerceptionFeature
 from .reporting.observability import Observability
+
+if TYPE_CHECKING:
+    from .sequencer import Frame
 
 ObjectId = NewType("ObjectId", int)
 
@@ -31,10 +35,21 @@ class Object(Node):
     resolve_count: int = Field(default=0)
 
     @property
+    def feature_groups(self) -> list[FeatureGroup]:
+        feature_groups: list[FeatureGroup] = []
+
+        for e in self.src_edges:
+            if e.type == "Features":
+                assert isinstance(e.dst, FeatureGroup)
+                feature_groups.append(e.dst)
+
+        return feature_groups
+
+    @property
     def features(self) -> list[FeatureNode]:
-        feature_groups = [e.dst for e in self.src_edges if e.type == "Features"]
         feature_nodes: list[FeatureNode] = []
-        for fg in feature_groups:
+
+        for fg in self.feature_groups:
             assert isinstance(fg, FeatureGroup)
             feature_nodes += fg.feature_nodes
 
@@ -57,6 +72,16 @@ class Object(Node):
         Features.connect(o, fg)
 
         return o
+
+    @property
+    def frames(self) -> list[Frame]:
+        ret: list[Frame] = []
+
+        for e in self.dst_edges:
+            if isinstance(e.src, Frame):
+                ret.append(e.src)
+
+        return ret
 
     @staticmethod
     def distance(obj: Object, features: Collection[FeatureNode]) -> float:
@@ -121,11 +146,21 @@ class CandidateObjects:
         return len(self.order)
 
 
+class ResolvedObject(Node):
+    object: Object
+    feature_group: FeatureGroup
+    x: XLoc
+    y: YLoc
+
+
+ObjectData = ResolvedObject
+
+
 class ObjectResolver(Component):
     name: str = "resolver"
     type: str = "object"
     auto: bool = True
-    bus = EventBus[Object]("object")
+    bus = EventBus[ObjectData]("object")
 
     def __init__(self) -> None:
         super().__init__()
@@ -173,4 +208,8 @@ class ObjectResolver(Component):
             self.resolved_object_counter.add(1, attributes={"new": True})
             o = Object.with_features(fg)
 
-        self.obj_res_conn.send(o)
+        self.obj_res_conn.send(ResolvedObject(object=o, feature_group=fg, x=x, y=y))
+
+
+class ObjectCache(LRUCache[tuple[XLoc, YLoc], ResolvedObject]):
+    pass
