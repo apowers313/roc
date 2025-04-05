@@ -10,6 +10,7 @@ import json
 import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from itertools import islice
 from typing import (
@@ -1868,6 +1869,26 @@ class SchemaValidationError(Exception):
         super().__init__(f"Error validating schema:\n{err_str}")
 
 
+dot_graph_header = """digraph Schema {
+    graph [
+        fontname="Arial"
+        labelloc="t"
+    ]
+
+    node [
+        fontname="Arial"
+        shape=record
+        style=filled
+        fillcolor=gray95
+    ]
+
+    edge [
+        fontname="Arial"
+        style=""
+    ]
+    """
+
+
 class Schema:
     """The automatically generated GraphDB schema."""
 
@@ -1933,6 +1954,26 @@ class Schema:
 
         return ret
 
+    def to_dot(self) -> str:
+        """Converts a schema to a Graphviz DOT diagram
+
+        Returns:
+            str: The text of the Graphviz DOT diagram. Can be passed to
+            the Graphviz program to convert to an image.
+        """
+        ret = dot_graph_header
+
+        # nodes
+        for n in self.nodes:
+            ret += n.to_dot()
+
+        # edges
+        for e in self.edges:
+            ret += e.to_dot()
+
+        ret += "}"
+        return ret
+
     @classmethod
     def _repr_markdown_(cls) -> str:
         return f"``` mermaid\n{Schema().to_mermaid()}\n```\n"
@@ -1951,7 +1992,14 @@ def _pydantic_get_default(m: type[BaseModel], f: str) -> Any:
 
 
 def _is_local(c: type[object], attr: str) -> bool:
+    local_to_parent = [_is_local(p, attr) for p in c.__mro__ if p is not c]
+    if any(local_to_parent):
+        return False
+
     if attr in c.__dict__:
+        return True
+
+    if hasattr(c, "__fields__") and attr in c.__fields__:
         return True
 
     if hasattr(c, "__wrapped__"):
@@ -2017,29 +2065,39 @@ class _FieldDescription:
         return str(self.default_val)
 
 
+@dataclass
+class ParamData:
+    type: str
+    name: str
+    default: Any
+
+    @property
+    def formatted_default(self) -> str:
+        return f" = {self.default}" if self.default is not inspect._empty else ""
+
+
 class _MethodDescription:
     def __init__(self, model: type[BaseModel], name: str) -> None:
         self.model = model
         self.name = name
         self.signature = inspect.signature(getattr(model, name))
         self.return_type = _clean_annotation(self.signature.return_annotation)
-        self.params = self.signature.parameters
+        self.raw_params = self.signature.parameters
 
     @property
-    def uml_params(self) -> list[str]:
-        ret: list[str] = []
+    def params(self) -> list[ParamData]:
+        ret: list[ParamData] = []
 
-        for param_name, param in self.params.items():
+        for param_name, param_type in self.raw_params.items():
             if param_name == "self":
                 continue
 
             t = (
-                f"{_clean_annotation(param.annotation)} "
-                if param.annotation is not inspect._empty
+                _clean_annotation(param_type.annotation)
+                if param_type.annotation is not inspect._empty
                 else ""
             )
-            default_val = f" = {param.default}" if param.default is not inspect._empty else ""
-            ret.append(f"{t}{param_name}{default_val}")
+            ret.append(ParamData(type=t, name=param_name, default=param_type.default))
 
         return ret
 
@@ -2095,12 +2153,46 @@ class _NodeDescription(_ModelDescription):
         # add methods
         for method in self.methods:
             sym = "+" if _is_local(self.model, method.name) else "^"
-            params = ", ".join(method.uml_params)
+            param_list = [f"{p.type} {p.name}{p.formatted_default}" for p in method.params]
+            params = ", ".join(param_list)
             ret += f"""{" ":>{indent}}{self.name}: {sym}{method.name}({params}) {method.return_type}\n"""
 
         # add links to inherited nodes
         for parent in self.parent_class_names:
             ret += f"""{" ":>{indent}}{self.name} ..|> {parent}: inherits\n"""
+
+        return ret
+
+    def to_dot(self, indent: int = 4) -> str:
+        ret = f"""\n{" ":>{indent}}// Node: {self.name}\n"""
+
+        # create fields
+        fields_str = ""
+        for field in self.fields:
+            sym = "+" if _is_local(self.model, field.name) else "^"
+            default_val = (
+                f" = {field.default_val_str}" if field.default_val is not PydanticUndefined else ""
+            )
+            fields_str += f"""{sym}{field.name}: {field.type}{default_val}<br align="left"/>"""
+
+        # create methods
+        methods_str = ""
+        for method in self.methods:
+            sym = "+" if _is_local(self.model, method.name) else "^"
+            param_list = [f"{p.name}: {p.type}{p.formatted_default}" for p in method.params]
+            params = ", ".join(param_list)
+            methods_str += (
+                f"""{sym}{method.name}({params}): {method.return_type}<br align="left"/>"""
+            )
+
+        # add node
+        ret += f"""{" ":>{indent}}{self.name} [label=<{{ <b>{self.name}</b> | {fields_str} | {methods_str} }}>]\n"""
+
+        # add links to inherited nodes
+        for parent in self.parent_class_names:
+            ret += (
+                f"""{" ":>{indent}}{self.name} -> {parent} [label="inherits" arrowhead=empty]\n"""
+            )
 
         return ret
 
@@ -2141,5 +2233,14 @@ class _EdgeDescription(_ModelDescription):
         # add connections
         for conn in self.allowed_connections:
             ret += f"""{" ":>{indent}}{conn[0]} --> {conn[1]}: {self.resolved_name}\n"""
+
+        return ret
+
+    def to_dot(self, indent: int = 4) -> str:
+        ret = f"""\n{" ":>{indent}}// Edge: {self.resolved_name}\n"""
+
+        # add connections
+        for conn in self.allowed_connections:
+            ret += f"""{" ":>{indent}}{conn[0]} -> {conn[1]} [label="{self.resolved_name}" arrowhead=vee]\n"""
 
         return ret

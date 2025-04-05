@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
+from helpers.dot import dot_schema1
 from helpers.mermaid import mermaid_schema1
 from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
@@ -1606,6 +1607,30 @@ class TestSchema:
         schema = Schema()
 
         assert schema.to_mermaid() == mermaid_schema1
+
+    def test_dot(self, clear_registries) -> None:
+        class Bar(Node):
+            weight: float
+
+            def print_weight(self) -> None:
+                pass
+
+        class Foo(Bar):
+            name: str = Field(default="Bob")
+
+            def set_name(self, name: str = "Uggo") -> str:
+                self.name = name
+                return self.name
+
+        class Baz(Node):
+            pass
+
+        class Link(Edge):
+            allowed_connections: EdgeConnectionsList = [("Foo", "Baz")]
+
+        schema = Schema()
+
+        assert schema.to_dot() == dot_schema1
 
 
 class TestEdgeDescription:
