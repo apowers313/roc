@@ -15,7 +15,6 @@
 			"from .event import Event, EventBus",
 			"class ${2:upper_name}Data:",
 			"    pass",
-			"${2:upper_name}Event = Event[${2:upper_name}Data]",
 			"@register_component(\"${1:name}\", \"${1:name}\", auto=True)",
 			"class ${2:upper_name}(Component):",
 			"    bus = EventBus[${2:upper_name}Data](\"${1:name}\")",
