@@ -878,6 +878,177 @@ class TestNode:
         assert n.neighbors[1].id == NodeId(453)
         assert n.neighbors[2].id == NodeId(2)
 
+    def test_neighborhood_zero(self) -> None:
+        n = Node.get(NodeId(0))
+
+        neighborhood = n.neighborhood(depth=0)
+
+        assert len(neighborhood) == 1
+        assert neighborhood.ids == {0}
+
+    def test_neighborhood_one(self) -> None:
+        n = Node.get(NodeId(0))
+
+        neighborhood = n.neighborhood(depth=1)
+
+        assert len(neighborhood) == 4
+        assert neighborhood.ids == {0, 2, 6, 453}
+
+    def test_neighborhood_two(self) -> None:
+        n = Node.get(NodeId(0))
+
+        neighborhood = n.neighborhood(depth=2)
+
+        assert len(neighborhood) == 43
+        assert neighborhood.ids == {
+            0,
+            2,
+            219,
+            3,
+            336,
+            453,
+            454,
+            674,
+            975,
+            982,
+            1101,
+            1103,
+            7,
+            337,
+            49,
+            371,
+            374,
+            6,
+            8,
+            75,
+            77,
+            105,
+            111,
+            114,
+            134,
+            187,
+            189,
+            190,
+            191,
+            192,
+            220,
+            265,
+            266,
+            270,
+            287,
+            289,
+            293,
+            330,
+            366,
+            367,
+            4,
+            5,
+            1,
+        }
+
+    def test_connections(self) -> None:
+        n = Node.get(NodeId(0))
+        neighborhood = n.neighborhood(depth=2)
+
+        conns = neighborhood.connections
+
+        assert len(conns) == 93
+        assert conns.ids == {
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            3084,
+            17,
+            18,
+            19,
+            20,
+            3086,
+            7241,
+            7247,
+            1109,
+            3681,
+            3684,
+            1163,
+            1164,
+            3081,
+            1167,
+            1166,
+            1170,
+            3082,
+            1171,
+            1173,
+            1174,
+            1172,
+            1181,
+            5295,
+            5296,
+            5297,
+            5298,
+            5299,
+            5300,
+            3770,
+            1272,
+            1273,
+            1274,
+            1275,
+            1276,
+            1277,
+            1278,
+            1280,
+            3328,
+            3341,
+            3342,
+            3343,
+            3347,
+            3357,
+            3361,
+            3873,
+            3875,
+            3899,
+            3902,
+            5960,
+            3408,
+            3413,
+            3420,
+            3423,
+            2407,
+            3431,
+            3436,
+            2421,
+            2434,
+            2964,
+            2967,
+            919,
+            2969,
+            2973,
+            2974,
+            2975,
+            2977,
+            2980,
+            940,
+            941,
+            942,
+            943,
+            944,
+            945,
+            2496,
+            2499,
+        }
+
 
 # deletes edges
 

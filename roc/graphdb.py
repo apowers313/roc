@@ -865,10 +865,10 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
     """
 
     def __init__(self, ids: Iterable[EdgeId]):
-        self.__edges: list[EdgeId] = list(ids)
+        self._edges: list[EdgeId] = list(ids)
 
     def __iter__(self) -> EdgeFetchIterator:
-        return EdgeFetchIterator(self.__edges)
+        return EdgeFetchIterator(self._edges)
 
     @overload
     def __getitem__(self, idx: int, /) -> Edge: ...
@@ -877,12 +877,12 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
 
     def __getitem__(self, idx: slice[Any, Any, Any] | int, /) -> Edge | EdgeList:
         if isinstance(idx, slice):
-            return EdgeList(self.__edges[idx])
+            return EdgeList(self._edges[idx])
         else:
-            return Edge.get(self.__edges[idx])
+            return Edge.get(self._edges[idx])
 
     def __len__(self) -> int:
-        return len(self.__edges)
+        return len(self._edges)
 
     def __contains__(self, e: Any) -> bool:
         if isinstance(e, Edge) or isinstance(e, int):
@@ -890,10 +890,10 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
         else:
             return False
 
-        return e_id in self.__edges
+        return e_id in self._edges
 
     def __add__(self, l2: EdgeList) -> EdgeList:
-        return EdgeList(self.__edges + l2.__edges)
+        return EdgeList(self._edges + l2._edges)
 
     def __str__(self) -> str:
         ret = f"EdgeList({id(self)}):\n"
@@ -903,20 +903,24 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
 
         return ret
 
+    @property
+    def ids(self) -> set[EdgeId]:
+        return set(self._edges)
+
     def add(self, e: Edge | EdgeId) -> None:
         """Adds a new Edge to the list"""
         e_id = Edge.to_id(e)
 
-        if e_id in self.__edges:
+        if e_id in self._edges:
             return
 
-        self.__edges.append(e_id)
+        self._edges.append(e_id)
 
     def discard(self, e: Edge | EdgeId) -> None:
         """Removes an edge from the list"""
         e_id = Edge.to_id(e)
 
-        self.__edges.remove(e_id)
+        self._edges.remove(e_id)
 
     def replace(self, old: Edge | EdgeId, new: Edge | EdgeId) -> None:
         """Replaces all instances of an old Edge with a new Edge. Useful for when an Edge is
@@ -924,9 +928,9 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
         """
         old_id = Edge.to_id(old)
         new_id = Edge.to_id(new)
-        for i in range(len(self.__edges)):
-            if self.__edges[i] == old_id:
-                self.__edges[i] = new_id
+        for i in range(len(self._edges)):
+            if self._edges[i] == old_id:
+                self._edges[i] = new_id
 
     def select(
         self,
@@ -952,7 +956,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
             EdgeList: An EdgeList of the matching Edges.
         """
         self.db = db or GraphDB.singleton()
-        edge_ids = self.__edges
+        edge_ids = self._edges
         if filter_fn is not None:
             # TODO: Edge.get_many() would be more efficient here if / when it
             # gets implemented
@@ -1118,6 +1122,24 @@ class Node(BaseModel, extra="allow"):
 
         node_registry[clsname] = cls
         node_label_registry[labels_key] = cls
+
+    def neighborhood(self, depth: int = 1) -> NodeList:
+        if depth < 0:
+            raise Exception("neighborhood depth must be greater than zero")
+        elif depth == 0:
+            return NodeList([self.id])
+        elif depth == 1:
+            neighborhood = self.neighbors
+            neighborhood.add(self.id)
+            return neighborhood
+        else:
+            ret: set[NodeId] = set()
+            for node_id in self.neighbors._nodes:
+                n = Node.get(node_id)
+                node_ids = n.neighborhood(depth - 1).ids
+                ret.update(node_ids)
+
+            return NodeList(ret)
 
     @classmethod
     def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
@@ -1784,6 +1806,21 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
             ret += f"\t{n}\n"
 
         return ret
+
+    @property
+    def ids(self) -> set[NodeId]:
+        return set(self._nodes)
+
+    @property
+    def connections(self) -> EdgeList:
+        edge_set: set[EdgeId] = set()
+        for node_id in self._nodes:
+            n = Node.get(node_id)
+            for e in n.edges:
+                if e.src_id in self._nodes and e.dst_id in self._nodes:
+                    edge_set.add(e.id)
+
+        return EdgeList(edge_set)
 
     def add(self, n: Node | NodeId) -> None:
         """Adds a new Node to the list"""
