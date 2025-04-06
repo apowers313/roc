@@ -101,7 +101,7 @@ class DefaultActionRandom(DefaultActionExpMod):
     name = "random"
 
     def get_action(self) -> int:
-        """A default action for taking random Nethack actions."""
+        """A default action for taking random Nethack actions. Random movement."""
         settings = Config.get()
         if settings.gym_actions is None:
             raise ValueError("Trying to get action before actions have been configured")
@@ -109,6 +109,21 @@ class DefaultActionRandom(DefaultActionExpMod):
 
         ret = randrange(num_actions)
         return ret
+
+
+# @DefaultActionExpMod.register("random")
+class DefaultActionLeft(DefaultActionExpMod):
+    name = "right"
+
+    def get_action(self) -> int:
+        """Always move right."""
+        settings = Config.get()
+        if settings.gym_actions is None:
+            raise ValueError("Trying to get action before actions have been configured")
+
+        idx = settings.gym_actions.index(108)
+
+        return idx
 
 
 # @DefaultActionExpMod.register("weighted")
