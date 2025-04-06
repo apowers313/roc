@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
-from helpers.dot import dot_node1, dot_schema1
+from helpers.dot import dot_node1, dot_node2, dot_schema1
 from helpers.mermaid import mermaid_schema1
 from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
@@ -1693,6 +1693,22 @@ class TestNodeList:
         dot_str = n.neighborhood(depth=1).to_dot()
 
         assert dot_str == dot_node1
+
+    def test_to_dot_extra_styles(self) -> None:
+        class Character(Node):
+            name: str
+
+        class Allegiance(Node):
+            name: str
+
+        class Death(Node):
+            order: int
+
+        n = Node.get(NodeId(0))
+
+        dot_str = n.neighborhood(depth=1).to_dot(extra_styles={0: "style=filled, fillcolor=red"})
+
+        assert dot_str == dot_node2
 
 
 class TestTypes:

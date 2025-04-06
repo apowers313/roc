@@ -1127,7 +1127,7 @@ class Node(BaseModel, extra="allow"):
         node_registry[clsname] = cls
         node_label_registry[labels_key] = cls
 
-    def _repr_dot_(self) -> str:
+    def _repr_dot_(self, extra_style: str = "") -> str:
         # name
         name = f"<b>{self.__class__.__name__}({self.id})</b>"
 
@@ -1145,8 +1145,9 @@ class Node(BaseModel, extra="allow"):
             props.append(f'{prop_str}<br align="left"/>')
         props.sort()
 
-        # close header
-        return f"node{self.id} [label=<{{{name} | {''.join(props)}}}>]"
+        # create string
+        extra_space = " " if len(extra_style) else ""
+        return f"node{self.id} [label=<{{{name} | {''.join(props)}}}>{extra_space}{extra_style}]"
 
     def neighborhood(self, depth: int = 1) -> NodeList:
         if depth < 0:
@@ -1901,13 +1902,17 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
 
         return NodeList(node_ids)
 
-    def to_dot(self) -> str:
+    def to_dot(self, extra_styles: dict[int, str] = dict()) -> str:
+        """Converts the NodeList and all the Edges between Nodes in the list
+        into a string representing Graphviz DOT diagram.
+        """
         ret = dot_graph_header
 
         nodes = Node.get_many(self._nodes, load_edges=True)
         for n in nodes:
+            style = extra_styles[n.id] if n.id in extra_styles else ""
             ret += f"\n    // Node {n.id}\n"
-            ret += f"    {n._repr_dot_()}\n"
+            ret += f"    {n._repr_dot_(style)}\n"
 
         edges = self.connections
         for e in edges:
