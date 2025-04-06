@@ -7,6 +7,7 @@ from __future__ import annotations
 import functools
 import inspect
 import json
+import re
 import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
@@ -511,6 +512,9 @@ class Edge(BaseModel, extra="allow"):
             )
 
         edge_registry[edgetype] = cls
+
+    def _repr_dot_(self) -> str:
+        return f"node{self.src_id} -> node{self.dst_id}"
 
     @classmethod
     def get_cache(self) -> EdgeCache:
@@ -1122,6 +1126,27 @@ class Node(BaseModel, extra="allow"):
 
         node_registry[clsname] = cls
         node_label_registry[labels_key] = cls
+
+    def _repr_dot_(self) -> str:
+        # name
+        name = f"<b>{self.__class__.__name__}({self.id})</b>"
+
+        # props
+        props: list[str] = []
+        for f in _pydantic_get_fields(self.__class__):
+            fi = _pydantic_get_field(self.__class__, f)
+            prop_str = f"{f}: {_clean_annotation(fi.annotation)} = {str(getattr(self, f))}"
+
+            # escape prop str
+            # TODO: this could just be a static string
+            pattern = r"[" + re.escape('<>{}|\\"') + r"]"
+            prop_str = re.sub(pattern, r"\\\g<0>", prop_str)
+
+            props.append(f'{prop_str}<br align="left"/>')
+        props.sort()
+
+        # close header
+        return f"node{self.id} [label=<{{{name} | {''.join(props)}}}>]"
 
     def neighborhood(self, depth: int = 1) -> NodeList:
         if depth < 0:
@@ -1876,6 +1901,23 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
 
         return NodeList(node_ids)
 
+    def to_dot(self) -> str:
+        ret = dot_graph_header
+
+        nodes = Node.get_many(self._nodes, load_edges=True)
+        for n in nodes:
+            ret += f"\n    // Node {n.id}\n"
+            ret += f"    {n._repr_dot_()}\n"
+
+        edges = self.connections
+        for e in edges:
+            ret += f"\n    // Edge {e.id}\n"
+            ret += f"    {e._repr_dot_()}\n"
+
+        ret += "}"
+
+        return ret
+
 
 node_registry: dict[str, type[Node]] = {}
 node_label_registry: dict[frozenset[str], type[Node]] = {}
@@ -1906,7 +1948,7 @@ class SchemaValidationError(Exception):
         super().__init__(f"Error validating schema:\n{err_str}")
 
 
-dot_graph_header = """digraph Schema {
+dot_graph_header = """digraph {
     graph [
         fontname="Arial"
         labelloc="t"
