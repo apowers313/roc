@@ -12,8 +12,9 @@ import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import timedelta
 from itertools import islice
+from pathlib import Path
 from typing import (
     Any,
     Callable,
@@ -29,6 +30,7 @@ from typing import (
     overload,
 )
 
+import graphviz
 import mgclient
 import networkx as nx
 import scipy as sp
@@ -43,6 +45,7 @@ from typing_extensions import Self
 from .config import Config
 from .logger import logger
 from .reporting.observability import Observability
+from .utils import _timestamp_str
 
 RecordFn = Callable[[str, Iterator[Any]], None]
 CacheType = TypeVar("CacheType")
@@ -235,7 +238,7 @@ class GraphDB:
         # format timestamp
         if timestamp:
             # time format: https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior
-            timestr = datetime.now().strftime("%Y.%m.%d-%H.%M.%S")
+            timestr = _timestamp_str()
             filename = f"{filename}-{timestr}"
 
         logger.info(f"Writing graph to '{filename}'...")
@@ -514,7 +517,8 @@ class Edge(BaseModel, extra="allow"):
         edge_registry[edgetype] = cls
 
     def _repr_dot_(self) -> str:
-        return f"node{self.src_id} -> node{self.dst_id}"
+        name = self.__class__.__name__
+        return f'{_dot_safe_node_str(self.src_id)} -> {_dot_safe_node_str(self.dst_id)} [label="{name}"]'
 
     @classmethod
     def get_cache(self) -> EdgeCache:
@@ -1147,7 +1151,7 @@ class Node(BaseModel, extra="allow"):
 
         # create string
         extra_space = " " if len(extra_style) else ""
-        return f"node{self.id} [label=<{{{name} | {''.join(props)}}}>{extra_space}{extra_style}]"
+        return f"{_dot_safe_node_str(self.id)} [label=<{{{name} | {''.join(props)}}}>{extra_space}{extra_style}]"
 
     def neighborhood(self, depth: int = 1) -> NodeList:
         if depth < 0:
@@ -1166,6 +1170,40 @@ class Node(BaseModel, extra="allow"):
                 ret.update(node_ids)
 
             return NodeList(ret)
+
+    def render(
+        self,
+        depth: int = 2,
+        format: str = "svg",
+        filename: str | None = None,
+        file_timestamp: bool = True,
+        file_directory: Path | str | None = None,
+    ) -> Path:
+        if filename is None:
+            filename = f"node{self.id}"
+
+        if isinstance(file_directory, Path):
+            filepath = file_directory
+        elif isinstance(file_directory, str):
+            filepath = Path(file_directory)
+        else:
+            filepath = Path.cwd()
+
+        if file_timestamp:
+            filename = f"{filename}-{_timestamp_str()}"
+
+        dot_src = self.neighborhood(depth=depth).to_dot(
+            extra_styles={self.id: "style=filled, fillcolor=red"}
+        )
+
+        finalpath = graphviz.Source(dot_src).render(
+            filename=filename,
+            directory=filepath,
+            format=format,
+            cleanup=True,
+        )
+
+        return Path(finalpath)
 
     @classmethod
     def load(cls, id: NodeId, *, db: GraphDB | None = None) -> Self:
@@ -1902,13 +1940,13 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
 
         return NodeList(node_ids)
 
-    def to_dot(self, extra_styles: dict[int, str] = dict()) -> str:
+    def to_dot(self, depth: int = 1, extra_styles: dict[int, str] = dict()) -> str:
         """Converts the NodeList and all the Edges between Nodes in the list
         into a string representing Graphviz DOT diagram.
         """
         ret = dot_graph_header
 
-        nodes = Node.get_many(self._nodes, load_edges=True)
+        nodes = [Node.get(nid) for nid in self._nodes]
         for n in nodes:
             style = extra_styles[n.id] if n.id in extra_styles else ""
             ret += f"\n    // Node {n.id}\n"
@@ -2073,6 +2111,13 @@ def _pydantic_get_field(m: type[BaseModel], f: str) -> FieldInfo:
 
 def _pydantic_get_default(m: type[BaseModel], f: str) -> Any:
     return m.model_fields[f].get_default(call_default_factory=True)
+
+
+def _dot_safe_node_str(nid: NodeId) -> str:
+    if nid < 0:
+        return f"node_{abs(nid)}"
+    else:
+        return f"node{nid}"
 
 
 def _is_local(c: type[object], attr: str) -> bool:

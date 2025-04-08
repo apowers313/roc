@@ -1710,6 +1710,31 @@ class TestNodeList:
 
         assert dot_str == dot_node2
 
+    # @pytest.mark.requires_graphviz
+    def test_render(self) -> None:
+        class Character(Node):
+            name: str
+
+        class Allegiance(Node):
+            name: str
+
+        class Death(Node):
+            order: int
+
+        class LOYAL_TO(Edge):
+            pass
+
+        class VICTIM_IN(Edge):
+            pass
+
+        class KILLED(Edge):
+            method: str
+            count: int
+
+        n = Node.get(NodeId(0))
+
+        p = n.render(depth=1)
+
 
 class TestTypes:
     def test_get(self):

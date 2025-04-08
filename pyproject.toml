@@ -48,6 +48,7 @@ dependencies = [
   "opentelemetry-instrumentation-system-metrics>=0.51b0",
   "pyroscope-io>=0.8.8",
   "gruut>=2.4.0",
+  "graphviz>=0.20.3",
 ]
 
 [dependency-groups]
@@ -293,6 +294,7 @@ filterwarnings = [
 markers = [
   "slow: tests that take a long time to run",
   "requires_observability: tests that require a connection to an OpenTelemetry collection server",
+  "requires_graphviz: tests that require the graphviz executable",
   #  "pending: tests that haven't been written yet"
 ]
 
