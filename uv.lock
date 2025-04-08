@@ -690,6 +690,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ed/0e/5c61eedde9f6c87713e89d794f01e378cfd9565847d4576fa627d758c554/GPUtil-1.4.0.tar.gz", hash = "sha256:099e52c65e512cdfa8c8763fca67f5a5c2afb63469602d5dcb4d296b3661efb9", size = 5545 }
 
 [[package]]
+name = "graphviz"
+version = "0.20.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/fa/83/5a40d19b8347f017e417710907f824915fba411a9befd092e52746b63e9f/graphviz-0.20.3.zip", hash = "sha256:09d6bc81e6a9fa392e7ba52135a9d49f1ed62526f96499325930e87ca1b5925d", size = 256455 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/00/be/d59db2d1d52697c6adc9eacaf50e8965b6345cc143f671e1ed068818d5cf/graphviz-0.20.3-py3-none-any.whl", hash = "sha256:81f848f2904515d8cd359cc611faba817598d2feaac4027b266aa3eda7b3dde5", size = 47126 },
+]
+
+[[package]]
 name = "griffe"
 version = "1.5.5"
 source = { registry = "https://pypi.org/simple" }
@@ -5188,6 +5197,7 @@ dependencies = [
     { name = "click" },
     { name = "colored" },
     { name = "flexihumanhash" },
+    { name = "graphviz" },
     { name = "gruut" },
     { name = "gymnasium" },
     { name = "loguru" },
@@ -5273,6 +5283,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.4,<9.0.0" },
     { name = "colored", specifier = ">=2.2.4,<3.0.0" },
     { name = "flexihumanhash", specifier = ">=0.9.0,<1.0.0" },
+    { name = "graphviz", specifier = ">=0.20.3" },
     { name = "gruut", specifier = ">=2.4.0" },
     { name = "gymnasium", specifier = ">=1.0.0,<2.0.0" },
     { name = "loguru", specifier = ">=0.7.0,<1.0.0" },
