@@ -1,0 +1,89 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.12.8"
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "cdb070b2c039be0c881aa054d83dab32",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "MJUe",
+      "code_hash": "1d0db38904205bec4d6f6f6a1f6cec3e",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "vblA",
+      "code_hash": "e4c53013b20e9997a3d54453e1c208f5",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "bkHC",
+      "code_hash": "2ee83a3508dd093cce83d36f906f29ca",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "lEQa",
+      "code_hash": "3ed8c2b5923e2c6485e575747eec4538",
+      "outputs": [],
+      "console": []
+    },
+    {
+      "id": "PKri",
+      "code_hash": "9bbbc005e27d36ba0cd5faaed46db89f",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "Xref",
+      "code_hash": "5ff123e61a9d8bb621cd65be16ade831",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "['/home/apowers/Projects/roc/experiments/2025.02.28-15.44.39-test', '/usr/local/bin', '/usr/lib/python313.zip', '/usr/lib/python3.13', '/usr/lib/python3.13/lib-dynload', '/home/apowers/.local/lib/python3.13/site-packages', '/usr/local/lib/python3.13/dist-packages', '/usr/lib/python3/dist-packages', '/home/apowers/Projects/roc']\n"
+        }
+      ]
+    },
+    {
+      "id": "SFPL",
+      "code_hash": "e4f89d9db50a91f15e8599d35af4a07b",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "exception",
+          "evalue": "\n\nIMPORTANT: PLEASE READ THIS FOR ADVICE ON HOW TO SOLVE THIS ISSUE!\n\nImporting the numpy C-extensions failed. This error can happen for\nmany reasons, often due to issues with your setup or how NumPy was\ninstalled.\n\nWe have compiled some common reasons and troubleshooting tips at:\n\n    https://numpy.org/devdocs/user/troubleshooting-importerror.html\n\nPlease note and check the following:\n\n  * The Python version is: Python3.13 from \"/usr/bin/python3.13\"\n  * The NumPy version is: \"1.21.5\"\n\nand make sure that they are the versions you expect.\nPlease carefully study the documentation linked above for further help.\n\nOriginal error was: No module named 'numpy.core._multiarray_umath'\n",
+          "traceback": []
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stderr",
+          "text": "<span class=\"codehilite\"><div class=\"highlight\"><pre><span></span><span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/usr/lib/python3/dist-packages/numpy/core/__init__.py&quot;</span>, line <span class=\"m\">22</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">.</span><span class=\"w\"> </span><span class=\"kn\">import</span> <span class=\"n\">multiarray</span>\n  File <span class=\"nb\">&quot;/usr/lib/python3/dist-packages/numpy/core/multiarray.py&quot;</span>, line <span class=\"m\">12</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">.</span><span class=\"w\"> </span><span class=\"kn\">import</span> <span class=\"n\">overrides</span>\n  File <span class=\"nb\">&quot;/usr/lib/python3/dist-packages/numpy/core/overrides.py&quot;</span>, line <span class=\"m\">7</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">numpy.core._multiarray_umath</span><span class=\"w\"> </span><span class=\"kn\">import</span> <span class=\"p\">(</span>\n<span class=\"w\">    </span>    <span class=\"n\">add_docstring</span><span class=\"p\">,</span> <span class=\"n\">implement_array_function</span><span class=\"p\">,</span> <span class=\"n\">_get_implementing_args</span><span class=\"p\">)</span>\n<span class=\"gr\">ModuleNotFoundError</span>: <span class=\"n\">No module named &#39;numpy.core._multiarray_umath&#39;</span>\n\n<span class=\"gt\">During handling of the above exception, another exception occurred:</span>\n\n<span class=\"gt\">Traceback (most recent call last):</span>\n  File <span class=\"nb\">&quot;/home/apowers/.local/lib/python3.13/site-packages/marimo/_runtime/executor.py&quot;</span>, line <span class=\"m\">141</span>, in <span class=\"n\">execute_cell</span>\n<span class=\"w\">    </span><span class=\"n\">exec</span><span class=\"p\">(</span><span class=\"n\">cell</span><span class=\"o\">.</span><span class=\"n\">body</span><span class=\"p\">,</span> <span class=\"n\">glbls</span><span class=\"p\">)</span>\n<span class=\"w\">    </span><span class=\"pm\">~~~~^^^^^^^^^^^^^^^^^^</span>\n  File <span class=\"nb\">&quot;/tmp/marimo_670/__marimo__cell_SFPL_.py&quot;</span>, line <span class=\"m\">1</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">import</span><span class=\"w\"> </span><span class=\"nn\">roc</span>\n  File <span class=\"nb\">&quot;/home/apowers/Projects/roc/roc/__init__.py&quot;</span>, line <span class=\"m\">9</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">import</span><span class=\"w\"> </span><span class=\"nn\">roc.feature_extractors</span>\n  File <span class=\"nb\">&quot;/home/apowers/Projects/roc/roc/feature_extractors/__init__.py&quot;</span>, line <span class=\"m\">1</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">import</span><span class=\"w\"> </span><span class=\"nn\">roc.feature_extractors.color</span><span class=\"w\"> </span><span class=\"k\">as</span><span class=\"w\"> </span><span class=\"nn\">color</span>\n  File <span class=\"nb\">&quot;/home/apowers/Projects/roc/roc/feature_extractors/color.py&quot;</span>, line <span class=\"m\">5</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">..location</span><span class=\"w\"> </span><span class=\"kn\">import</span> <span class=\"n\">Point</span>\n  File <span class=\"nb\">&quot;/home/apowers/Projects/roc/roc/location.py&quot;</span>, line <span class=\"m\">7</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">import</span><span class=\"w\"> </span><span class=\"nn\">numpy</span><span class=\"w\"> </span><span class=\"k\">as</span><span class=\"w\"> </span><span class=\"nn\">np</span>\n  File <span class=\"nb\">&quot;/usr/lib/python3/dist-packages/numpy/__init__.py&quot;</span>, line <span class=\"m\">150</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"kn\">from</span><span class=\"w\"> </span><span class=\"nn\">.</span><span class=\"w\"> </span><span class=\"kn\">import</span> <span class=\"n\">core</span>\n  File <span class=\"nb\">&quot;/usr/lib/python3/dist-packages/numpy/core/__init__.py&quot;</span>, line <span class=\"m\">48</span>, in <span class=\"n\">&lt;module&gt;</span>\n<span class=\"w\">    </span><span class=\"k\">raise</span> <span class=\"ne\">ImportError</span><span class=\"p\">(</span><span class=\"n\">msg</span><span class=\"p\">)</span>\n<span class=\"x\">ImportError: </span>\n\n<span class=\"x\">IMPORTANT: PLEASE READ THIS FOR ADVICE ON HOW TO SOLVE THIS ISSUE!</span>\n\n<span class=\"x\">Importing the numpy C-extensions failed. This error can happen for</span>\n<span class=\"x\">many reasons, often due to issues with your setup or how NumPy was</span>\n<span class=\"x\">installed.</span>\n\n<span class=\"x\">We have compiled some common reasons and troubleshooting tips at:</span>\n\n<span class=\"x\">    https://numpy.org/devdocs/user/troubleshooting-importerror.html</span>\n\n<span class=\"x\">Please note and check the following:</span>\n\n<span class=\"x\">  * The Python version is: Python3.13 from &quot;/usr/bin/python3.13&quot;</span>\n<span class=\"x\">  * The NumPy version is: &quot;1.21.5&quot;</span>\n\n<span class=\"x\">and make sure that they are the versions you expect.</span>\n<span class=\"x\">Please carefully study the documentation linked above for further help.</span>\n\n<span class=\"x\">Original error was: No module named &#39;numpy.core._multiarray_umath&#39;</span>\n</pre></div>\n</span>"
+        }
+      ]
+    }
+  ]
+}
