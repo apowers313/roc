@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Collection, NewType, cast
 
 from cachetools import LRUCache
@@ -146,7 +147,8 @@ class CandidateObjects:
         return len(self.order)
 
 
-class ResolvedObject(Node):
+@dataclass
+class ResolvedObject:
     object: Object
     feature_group: FeatureGroup
     x: XLoc

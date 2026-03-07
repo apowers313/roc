@@ -5,10 +5,35 @@ from helpers.util import StubComponent
 from roc.action import Action, TakeAction
 from roc.component import Component
 from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicTransform
-from roc.object import Object, ObjectResolver
-from roc.sequencer import Sequencer
+from roc.location import XLoc, YLoc
+from roc.object import FeatureGroup, Object, ObjectResolver, ResolvedObject
+from roc.sequencer import Frame, Sequencer
 from roc.transformable import Transform
-from roc.transformer import Transformer
+from roc.transformer import Change, Transformer, TransformResult
+
+
+class TestTransform:
+    def test_src_frame(self) -> None:
+        src = Frame(tick=-1)
+        dst = Frame(tick=-1)
+        t = Transform()
+        Change.connect(src, t)
+        Change.connect(t, dst)
+
+        ret = t.src_frame
+
+        assert ret is src
+
+    def test_dst_frame(self) -> None:
+        src = Frame(tick=-1)
+        dst = Frame(tick=-1)
+        t = Transform()
+        Change.connect(src, t)
+        Change.connect(t, dst)
+
+        ret = t.dst_frame
+
+        assert ret is dst
 
 
 class TestTransformer:
@@ -33,12 +58,18 @@ class TestTransformer:
         )
 
         # first frame
-        object_resolver.obj_res_conn.send(Object())
+        o = Object()
+        fg = FeatureGroup()
+        object_resolver.obj_res_conn.send(
+            ResolvedObject(object=o, feature_group=fg, x=XLoc(0), y=YLoc(0))
+        )
         intrinsic.int_conn.send(IntrinsicData({"hunger": 1, "hp": 14, "hpmax": 14}))
         s.input_conn.send(TakeAction(action=20))
 
         # second frame
-        object_resolver.obj_res_conn.send(Object())
+        object_resolver.obj_res_conn.send(
+            ResolvedObject(object=o, feature_group=fg, x=XLoc(0), y=YLoc(0))
+        )
         intrinsic.int_conn.send(IntrinsicData({"hunger": 2, "hp": 7, "hpmax": 14}))
         s.input_conn.send(TakeAction(action=20))
 
@@ -46,13 +77,15 @@ class TestTransformer:
 
         # first event
         e = s.output.call_args_list[0].args[0]
-        assert isinstance(e.data, Transform)
-        t = e.data
+        assert isinstance(e.data, TransformResult)
+        t = e.data.transform
         assert len(t.src_edges) == 3
         assert len(t.dst_edges) == 1
         transform_nodes = t.successors.select(labels={"Transform", "IntrinsicTransform"})
         assert len(transform_nodes) == 2
         assert isinstance(transform_nodes[0], IntrinsicTransform)
+        assert transform_nodes[0].name == "hp"
         assert transform_nodes[0].normalized_change == -0.5
         assert isinstance(transform_nodes[1], IntrinsicTransform)
+        assert transform_nodes[1].name == "hunger"
         assert transform_nodes[1].normalized_change == -0.25

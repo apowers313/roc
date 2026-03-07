@@ -20,7 +20,7 @@ from roc.feature_extractors.shape import Shape, ShapeFeature
 from roc.feature_extractors.single import Single, SingleFeature
 from roc.graphdb import Node
 from roc.location import XLoc, YLoc
-from roc.object import CandidateObjects, FeatureGroup, Object, ObjectResolver
+from roc.object import CandidateObjects, FeatureGroup, Object, ObjectResolver, ResolvedObject
 from roc.perception import FeatureNode, VisionData
 
 
@@ -218,16 +218,16 @@ class TestObjectResolver:
         # first event
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, Object)
-        o = e.data
+        assert isinstance(e.data, ResolvedObject)
+        o = e.data.object
         # assert o.resolve_count == 0
         first_uuid = o.uuid
 
         # second event
         e = s.output.call_args_list[1].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, Object)
-        o = e.data
+        assert isinstance(e.data, ResolvedObject)
+        o = e.data.object
         # assert o.resolve_count == 1
         second_uuid = o.uuid
         assert second_uuid != first_uuid
@@ -235,8 +235,8 @@ class TestObjectResolver:
         # third event
         e = s.output.call_args_list[2].args[0]
         assert isinstance(e, Event)
-        assert isinstance(e.data, Object)
-        o = e.data
+        assert isinstance(e.data, ResolvedObject)
+        o = e.data.object
         third_uuid = o.uuid
         assert third_uuid != first_uuid
         assert third_uuid == second_uuid

@@ -17,7 +17,7 @@ from roc.event import Event
 from roc.graphdb import Edge, Node, Schema
 from roc.location import DebugGrid
 from roc.logger import logger
-from roc.object import Object, ObjectResolver
+from roc.object import Object, ObjectResolver, ResolvedObject
 from roc.reporting.observability import Observability, ObservabilityEvent, Observation, instance_id
 from roc.sequencer import Sequencer  # noqa: F401
 
@@ -62,8 +62,10 @@ class State(ABC, Generic[StateType]):
         if _state_init_done:
             return
 
+        state_component = StateComponent()
+
         # attention
-        att_conn = Attention.bus.connect(StateComponent())
+        att_conn = Attention.bus.connect(state_component)
 
         def att_evt_handler(e: Event[VisionAttentionData]) -> None:
             assert isinstance(e.data, VisionAttentionData)
@@ -73,9 +75,9 @@ class State(ABC, Generic[StateType]):
         att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
 
         # object
-        obj_conn = ObjectResolver.bus.connect(StateComponent())
+        obj_conn = ObjectResolver.bus.connect(state_component)
 
-        def obj_evt_handler(e: Event[Object]) -> None:
+        def obj_evt_handler(e: Event[ResolvedObject]) -> None:
             states.object.set(e.data)
 
         obj_conn.listen(obj_evt_handler, filter=lambda e: isinstance(e.data, Object))
@@ -128,7 +130,7 @@ class State(ABC, Generic[StateType]):
         logger.debug(f"config\n{settings}")
 
         schema = Schema()
-        logger.debug(f"schema\n{schema.to_mermaid()}")
+        logger.debug(f"schema\n{schema.to_dot()}")
 
     @staticmethod
     def send_events() -> None:
@@ -262,11 +264,11 @@ class CurrentAttentionState(State[VisionAttentionData]):
             return "Current Attention: None"
 
 
-class CurrentObjectState(State[Object]):
+class CurrentObjectState(State[ResolvedObject]):
     def __init__(self) -> None:
         super().__init__("curr-object", display_name="Current Object")
 
-    def set(self, obj: Object) -> None:
+    def set(self, obj: ResolvedObject) -> None:
         self.val = obj
 
     def __str__(self) -> str:

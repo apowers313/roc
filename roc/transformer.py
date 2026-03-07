@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from .component import Component
@@ -8,7 +9,10 @@ from .graphdb import Edge, EdgeConnectionsList
 from .sequencer import Frame, Sequencer
 from .transformable import Transform, Transformable
 
-TransformerEvent = Event[Transform]
+
+@dataclass
+class TransformResult:
+    transform: Transform
 
 
 class Change(Edge):
@@ -23,7 +27,7 @@ class Transformer(Component):
     name: str = "transformer"
     type: str = "transformer"
     auto: bool = True
-    bus = EventBus[Transform]("transformer")
+    bus = EventBus[TransformResult]("transformer")
 
     def __init__(self) -> None:
         super().__init__()
@@ -35,6 +39,7 @@ class Transformer(Component):
         return isinstance(e.data, Frame)
 
     def do_transformer(self, e: Event[Frame]) -> None:
+        # print("do_transformer", e)
         current_frame = e.data
 
         # get previous frame
@@ -69,4 +74,5 @@ class Transformer(Component):
         Change.connect(previous_frame, ret)
         Change.connect(ret, current_frame)
 
-        self.transformer_conn.send(ret)
+        # print("transformer sending")
+        self.transformer_conn.send(TransformResult(transform=ret))

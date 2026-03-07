@@ -45,7 +45,7 @@ class TestFrame:
         # the frame for prediction
         mod = Frame(tick=-1)
         t = Transform()
-        it = IntrinsicTransform(normalized_change=0.05)
+        it = IntrinsicTransform(name="hp", normalized_change=0.05)
         Change.connect(mod, t)
         Change.connect(t, it)
 
@@ -127,6 +127,7 @@ class TestSequencer:
         assert isinstance(e, Event)
         assert isinstance(e.data, Frame)
         frame = e.data
+        frame.render(depth=3)
         assert len(frame.edges) == 5
         assert len(frame.src_edges) == 5
         # object

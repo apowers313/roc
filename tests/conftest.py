@@ -189,8 +189,10 @@ def fake_component(registered_test_component) -> Generator[Component, None, None
 
 
 @pytest.fixture
-def fake_bus() -> EventBus[FakeData]:
-    return EventBus[FakeData]("fake")
+def fake_bus() -> Generator[EventBus[FakeData], None, None]:
+    b = EventBus[FakeData]("fake")
+
+    yield b
 
 
 @pytest.fixture

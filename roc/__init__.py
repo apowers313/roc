@@ -16,6 +16,7 @@ from .expmod import ExpMod
 from .gymnasium import NethackGym
 from .jupyter import RocJupyterMagics, is_jupyter
 from .perception import Perception, PerceptionData
+from .predict import Predict
 from .reporting.observability import Observability
 from .reporting.state import State
 

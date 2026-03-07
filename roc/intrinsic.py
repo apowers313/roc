@@ -107,18 +107,24 @@ class IntrinsicNode(Node, Transformable):
     raw_value: Any
     normalized_value: float
 
+    def __str__(self) -> str:
+        return f"IntrinsicNode('{self.name}', {self.raw_value}({self.normalized_value}))"
+
     def same_transform_type(self, other: Transformable) -> bool:
         return isinstance(other, IntrinsicNode) and other.name == self.name
 
     def compatible_transform(self, t: Transform) -> bool:
         return isinstance(t, IntrinsicTransform)
 
-    def create_transform(self, other: Any) -> Transform | None:
-        if math.isclose(self.normalized_value, other.normalized_value):
+    def create_transform(self, previous: Any) -> Transform | None:
+        if math.isclose(self.normalized_value, previous.normalized_value):
             return None
 
         # TODO: create transform for raw values using IntrinsicOps?
-        return IntrinsicTransform(normalized_change=other.normalized_value - self.normalized_value)
+        return IntrinsicTransform(
+            name=self.name,
+            normalized_change=self.normalized_value - previous.normalized_value,
+        )
         # normalized_change = 0.4 - 0.5 = -0.1
 
     def apply_transform(self, t: Transform) -> IntrinsicNode:
@@ -129,7 +135,11 @@ class IntrinsicNode(Node, Transformable):
 
 
 class IntrinsicTransform(Transform):
+    name: str
     normalized_change: float
+
+    def __str__(self) -> str:
+        return f"IntrinsicTransform('{self.name}', {self.normalized_change})"
 
 
 class IntrinsicData:

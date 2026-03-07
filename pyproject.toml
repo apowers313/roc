@@ -49,6 +49,17 @@ dependencies = [
   "pyroscope-io>=0.8.8",
   "gruut>=2.4.0",
   "graphviz>=0.20.3",
+  "dash>=3.0.3",
+  "dash-cytoscape>=1.0.2",
+  "panel>=1.6.2",
+  "hvplot>=0.11.2",
+  "jupyter-bokeh>=4.0.5",
+  "bokeh>=3.7.2",
+  "bokeh-sampledata>=2024.2",
+  "plotly>=5.24.1",
+  "plotly-resampler>=0.10.0",
+  "cosmograph>=0.0.47",
+  "dash-bootstrap-components>=2.0.2",
 ]
 
 [dependency-groups]

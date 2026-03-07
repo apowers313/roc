@@ -9,7 +9,7 @@ from roc.component import Component
 from roc.event import Event, EventBus
 from roc.graphdb import Edge, EdgeConnectionsList, Node
 from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.object import Object, ObjectResolver, ResolvedObject
+from roc.object import FeatureGroup, Object, ObjectResolver, ResolvedObject
 from roc.transformable import Transform, Transformable
 
 tick = 0
@@ -72,9 +72,22 @@ class Frame(Node):
     def objects(self) -> list[Object]:
         ret: list[Object] = []
 
+        # print(
+        #     self.neighborhood(depth=2).to_dot(extra_styles={self.id: "style=filled, fillcolor=red"})
+        # )
+
+        # print("predecessors", self.predecessors)
+        # print("successors", self.successors)
+
         for e in self.src_edges:
-            if isinstance(e.dst, Object):
-                ret.append(e.dst)
+            # print("e.dst", e.dst)
+            if isinstance(e.dst, FeatureGroup):
+                # print("found feature group")
+                feature_group = e.dst
+                for fg_edge in feature_group.src_edges:
+                    if isinstance(fg_edge.dst, Object):
+                        # print("found object")
+                        ret.append(fg_edge.dst)
 
         return ret
 

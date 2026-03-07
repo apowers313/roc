@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .graphdb import Node
+
+if TYPE_CHECKING:
+    from .sequencer import Frame
 
 
 class Transformable(ABC):
     @abstractmethod
-    def same_transform_type(self, other: Transformable) -> bool:
+    def same_transform_type(self, other: Any) -> bool:
         """Indicates if two things are the same. e.g. Object(type="foo") and Object(type="bar")
         are the same Python class but different instance types
         """
@@ -30,4 +33,18 @@ class Transformable(ABC):
 
 
 class Transform(Node):
-    pass
+    @property
+    def src_frame(self) -> Frame:
+        edges = self.dst_edges.select(type="Change")
+        assert len(edges) == 1
+        n = edges[0].src
+        assert "Frame" in n.labels
+        return n  # type: ignore
+
+    @property
+    def dst_frame(self) -> Frame:
+        edges = self.src_edges.select(type="Change")
+        assert len(edges) == 1
+        n = edges[0].dst
+        assert "Frame" in n.labels
+        return n  # type: ignore

@@ -44,6 +44,9 @@ class Component(ABC):
 
     def __init__(self) -> None:
         global component_set
+        for c in component_set:
+            if c.name == self.name and c.type == self.type:
+                raise Exception(f"component already exists: {self.name}:{self.type}")
         component_set.add(self)
         self.bus_conns: dict[str, BusConnection[Any]] = {}
         logger.trace(f"++ incrementing component count: {self.name}:{self.type} {self}")
@@ -83,7 +86,7 @@ class Component(ABC):
 
     def __del__(self) -> None:
         global component_set
-        component_set.add(self)
+        # component_set.remove(self)
         logger.trace(f"-- decrementing component count: {self.name}:{self.type} {self}")
 
     def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:

@@ -159,6 +159,11 @@ class EventBus(Generic[EventData]):
         """
         return BusConnection[EventData](self, component)
 
+    # def next(self) -> Event[EventData]:
+    #     obs = self.subject.pipe(op.first())
+    #     ret: Event[EventData] = obs.run()
+    #     return ret
+
     @staticmethod
     def clear_names() -> None:
         """Clears all EventBusses that have been registered, mostly used for testing."""

@@ -67,7 +67,7 @@ class TestIntrinsic:
     def test_exists(self) -> None:
         Intrinsic()
 
-    def test_basic_intrinsic_data(self) -> None:
+    def test_basic_intrinsic_data(self, empty_components) -> None:
         intrinsic = Component.get("intrinsic", "intrinsic")
         assert isinstance(intrinsic, Intrinsic)
         s = StubComponent(
@@ -100,7 +100,7 @@ class TestIntrinsic:
         assert ret["hp"].name == "hp"
         assert ret["hp"].base == "hpmax"
 
-    def test_to_nodes(self) -> None:
+    def test_to_nodes(self, empty_components) -> None:
         Component.get("intrinsic", "intrinsic")
         id = IntrinsicData(test_blstat)
         assert id.normalized_intrinsics["hp"] == 1.0
