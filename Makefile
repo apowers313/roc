@@ -62,6 +62,18 @@ load-data:
 test:
 	uv run pytest -c pyproject.toml
 
+.PHONY: test-unit
+test-unit:
+	uv run pytest -c pyproject.toml tests/unit/ -q
+
+.PHONY: test-integration
+test-integration:
+	uv run pytest -c pyproject.toml tests/integration/ -q
+
+.PHONY: test-e2e
+test-e2e:
+	uv run pytest -c pyproject.toml tests/e2e/ -q
+
 .PHONY: profile
 profile:
 	# for example:
@@ -177,7 +189,7 @@ clean:
 pre-commit: 
 
 .PHONY: pre-push
-pre-push: doc-coverage test coverage docs lint
+pre-push: lint test-unit doc-coverage test coverage docs
 
 .PHONY: upgrade-python
 upgrade-python:

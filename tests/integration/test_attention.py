@@ -1,5 +1,11 @@
 # mypy: disable-error-code="no-untyped-def"
 
+"""Integration tests for VisionAttention and SaliencyMap.feature_report.
+
+These tests wire up real perception components and send real NetHack screen
+data through the pipeline.
+"""
+
 from copy import deepcopy
 from dataclasses import dataclass
 
@@ -25,181 +31,7 @@ from roc.location import IntGrid, XLoc, YLoc
 from roc.perception import FeatureNode, VisionData, VisualFeature
 
 
-class TestSaliencyMap:
-    @pytest.fixture()
-    def feature_for_test(self, empty_components) -> type:
-        class TestFeatureNode(FeatureNode):
-            @property
-            def attr_strs(self) -> list[str]:
-                return []
-
-        @dataclass(kw_only=True)
-        class FeatureForTest(VisualFeature[FeatureNode]):
-            origin_id: tuple[str, str] = ("foo", "bar")
-            feature_name: str = "Test"
-
-            def get_points(self) -> set[tuple[XLoc, YLoc]]:
-                return set()
-
-            def node_hash(self) -> int:
-                return 0
-
-            def _create_nodes(self) -> FeatureNode:
-                return TestFeatureNode()
-
-            def _dbfetch_nodes(self) -> FeatureNode | None:
-                return None
-
-        return FeatureForTest
-
-    def test_exists(self) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        SaliencyMap(g)
-
-    def test_get(self) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        val = sm.get_val(0, 0)
-        assert isinstance(val, list)
-        assert len(val) == 0
-
-        val = sm.get_val(2, 3)
-        assert isinstance(val, list)
-        assert len(val) == 0
-
-    def test_add(self, feature_for_test) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        f = feature_for_test()
-        sm.add_val(1, 2, f)
-
-        val = sm.get_val(0, 0)
-        assert isinstance(val, list)
-        assert len(val) == 0
-
-        val = sm.get_val(1, 2)
-        assert isinstance(val, list)
-        assert len(val) == 1
-        assert val[0] is f
-
-    def test_add_multiple(self, feature_for_test) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        f1 = feature_for_test()
-        f2 = feature_for_test()
-        sm.add_val(2, 2, f1)
-        sm.add_val(2, 2, f2)
-
-        val = sm.get_val(0, 0)
-        assert isinstance(val, list)
-        assert len(val) == 0
-
-        val = sm.get_val(2, 2)
-        assert isinstance(val, list)
-        assert len(val) == 2
-        assert f1 in val
-        assert f2 in val
-
-    def test_clear(self, feature_for_test) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        f = feature_for_test()
-        sm.add_val(1, 2, f)
-
-        val = sm.get_val(1, 2)
-        assert isinstance(val, list)
-        assert len(val) == 1
-        assert val[0] is f
-
-        sm.clear()
-
-        val = sm.get_val(1, 2)
-        assert isinstance(val, list)
-        assert len(val) == 0
-
-    def test_strength(self, feature_for_test) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm = SaliencyMap(g)
-        f = feature_for_test()
-
-        assert sm.get_strength(0, 1) == 0
-
-        sm.add_val(0, 0, f)
-        assert sm.get_strength(0, 0) == 1
-
-        sm.add_val(1, 1, f)
-        sm.add_val(1, 1, f)
-        assert sm.get_strength(1, 1) == 2
-
-        sm.add_val(2, 2, f)
-        sm.add_val(2, 2, f)
-        sm.add_val(2, 2, f)
-        assert sm.get_strength(2, 2) == 3
-
-        assert sm.get_max_strength() == 3
-        assert sm.get_max_strength() == 3
-
-    def test_copy(self, feature_for_test) -> None:
-        g = IntGrid(
-            [
-                [32, 32, 32],
-                [49, 50, 51],
-                [97, 98, 99],
-            ]
-        )
-        sm1 = SaliencyMap(g)
-        f = feature_for_test()
-        sm1.add_val(0, 0, f)
-
-        sm2 = deepcopy(sm1)
-
-        assert sm1 is not sm2
-        assert sm1.shape == sm2.shape
-        assert sm2.grid is not None
-        assert sm1.grid is not sm2.grid
-        assert sm2.grid[0, 0] == 32
-        assert sm2.grid[2, 2] == 99
-        assert isinstance(sm2[0, 0], list)
-        assert sm1[0, 0] is not sm2[0, 0]
-        assert sm2[0, 0][0] is f
-
+class TestSaliencyMapReport:
     def test_report(self, empty_components) -> None:
         delta = Component.get("delta", "perception")
         assert isinstance(delta, Delta)
@@ -258,25 +90,6 @@ class TestSaliencyMap:
         assert d["Shape"] == 13
         assert d["Delta"] == 2
         assert d["Motion"] == 2
-
-    # def test_str(self) -> None:
-    #     g = Grid(
-    #         [
-    #             [32, 32, 32],
-    #             [49, 50, 51],
-    #             [97, 98, 99],
-    #         ]
-    #     )
-    #     sm = SaliencyMap(g)
-    #     n = Node(labels=["TestNode"])
-    #     sm.add_val(0, 0, n)
-    #     sm.add_val(1, 1, n)
-    #     sm.add_val(1, 1, n)
-    #     sm.add_val(2, 2, n)
-    #     sm.add_val(2, 2, n)
-    #     sm.add_val(2, 2, n)
-
-    #     assert str(sm) == "\u2591  \n \u2593 \n  \u2588\n"
 
 
 class TestVisionAttention:
@@ -806,10 +619,6 @@ class TestVisionAttention:
         e = s.output.call_args_list[0].args[0]
         assert isinstance(e, Event)
         assert isinstance(e.data, VisionAttentionData)
-        # print(e.data.focus_points.to_dict())
-        # print("e.data.focus_points", e.data.focus_points)
-        # print("df", df)
-        # print("isclose", np.isclose(e.data.focus_points, df))
         df = pd.DataFrame(
             {
                 "x": {

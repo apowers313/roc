@@ -306,7 +306,9 @@ markers = [
   "slow: tests that take a long time to run",
   "requires_observability: tests that require a connection to an OpenTelemetry collection server",
   "requires_graphviz: tests that require the graphviz executable",
-  #  "pending: tests that haven't been written yet"
+  "unit: fast isolated tests with no external dependencies",
+  "integration: component interaction tests requiring DB",
+  "e2e: full pipeline tests",
 ]
 
 # Extra options:
