@@ -254,9 +254,7 @@ class TestNode:
         cache.clear()
         assert len(cache) == 0
 
-        nodes = Node.find(
-            f"src.testname = '{unique_name}'", src_labels={"TestNode", "Foo"}
-        )
+        nodes = Node.find(f"src.testname = '{unique_name}'", src_labels={"TestNode", "Foo"})
         assert len(nodes) == 1
         assert nodes[0].id == old_id
         assert nodes[0].testname == unique_name  # type: ignore
