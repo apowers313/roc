@@ -244,19 +244,22 @@ class TestNode:
         assert n2.labels == {"TestNode", "Foo"}
 
     def test_node_find_multiple_labels(self) -> None:
+        import uuid
+
+        unique_name = f"test_node_find_multiple_labels_{uuid.uuid4().hex[:8]}"
         cache = Node.get_cache()
-        n = Node(labels=["TestNode", "Foo"], testname="test_node_find_multiple_labels")
+        n = Node(labels=["TestNode", "Foo"], testname=unique_name)
         Node.save(n)
         old_id = n.id
         cache.clear()
         assert len(cache) == 0
 
         nodes = Node.find(
-            "src.testname = 'test_node_find_multiple_labels'", src_labels={"TestNode", "Foo"}
+            f"src.testname = '{unique_name}'", src_labels={"TestNode", "Foo"}
         )
         assert len(nodes) == 1
         assert nodes[0].id == old_id
-        assert nodes[0].testname == "test_node_find_multiple_labels"  # type: ignore
+        assert nodes[0].testname == unique_name  # type: ignore
         assert nodes[0].labels == {"TestNode", "Foo"}
 
     def test_node_find_edge_type(self) -> None:
