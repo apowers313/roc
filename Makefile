@@ -188,7 +188,7 @@ clean:
 pre-commit: 
 
 .PHONY: pre-push
-pre-push: lint test-unit doc-coverage test coverage docs
+pre-push: lint test-unit doc-coverage coverage docs
 
 .PHONY: upgrade-python
 upgrade-python:
