@@ -41,7 +41,7 @@ pre-commit-install:
 #* Formatters
 .PHONY: codestyle
 codestyle:
-	uv run black --config pyproject.toml ./
+	uv run ruff format --config pyproject.toml ./
 
 .PHONY: formatting
 formatting: codestyle
@@ -85,7 +85,7 @@ profile:
 .PHONY: check-codestyle
 check-codestyle:
 	uv run ruff check --config=./pyproject.toml .
-	uv run black --config pyproject.toml ./
+	uv run ruff format --check --config pyproject.toml ./
 	uv run ruff check --config ./pyproject.toml --fix
 
 .PHONY: mypy
@@ -108,8 +108,7 @@ check-safety:
 
 .PHONY: update-dev-deps
 update-dev-deps:
-	uv add -D bandit@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest
-	uv add -D --allow-prereleases black@latest
+	uv add -D bandit@latest mypy@latest pre-commit@latest pydocstyle@latest pylint@latest pytest@latest pyupgrade@latest safety@latest coverage@latest coverage-badge@latest pytest-html@latest pytest-cov@latest ruff@latest
 
 # Docs
 .PHONY: docs

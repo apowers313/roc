@@ -6,7 +6,6 @@ These tests wire up real perception components and send real NetHack screen
 data through the pipeline.
 """
 
-
 import numpy as np
 import pandas as pd
 from helpers.nethack_screens import screens

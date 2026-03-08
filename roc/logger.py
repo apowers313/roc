@@ -25,9 +25,9 @@ class DebugModuleLevel(BaseModel):
     @field_validator("module_name", mode="before")
     @classmethod
     def validate_module_name(cls, name: str) -> str:
-        assert (
-            name in module_names
-        ), f"Module name '{name}' not a valid module name. Must be one of {module_names}"
+        assert name in module_names, (
+            f"Module name '{name}' not a valid module name. Must be one of {module_names}"
+        )
 
         return name
 

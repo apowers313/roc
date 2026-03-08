@@ -54,7 +54,6 @@ def magic_cli_decorator(cli):  # type: ignore
 # The class MUST call this class decorator at creation time
 @magics_class
 class RocJupyterMagics(Magics):
-
     @line_magic
     @magic_cli_decorator(roc_cli)
     def roc(self, line: str) -> None:

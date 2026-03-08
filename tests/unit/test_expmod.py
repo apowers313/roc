@@ -75,7 +75,9 @@ class TestExpModGet:
             modtype = "test-get-default"
             name = "default-entry"
 
-        result = ExpMod.get.__func__(type("FakeExpMod", (), {"modtype": "test-get-default"}), default="default-entry")  # type: ignore[attr-defined]
+        result = ExpMod.get.__func__(  # type: ignore[attr-defined]
+            type("FakeExpMod", (), {"modtype": "test-get-default"}), default="default-entry"
+        )
         assert result is expmod_registry["test-get-default"]["default-entry"]
 
     def test_missing_raises(self):

@@ -2,7 +2,6 @@
 
 """Unit tests for roc/config.py."""
 
-
 import pytest
 
 from roc.config import (
