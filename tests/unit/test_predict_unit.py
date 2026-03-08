@@ -3,7 +3,6 @@
 """Unit tests for roc/predict.py -- do_predict early return and scoring logic."""
 
 from unittest.mock import MagicMock, patch
-from weakref import WeakSet
 
 import pytest
 

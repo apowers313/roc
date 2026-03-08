@@ -238,9 +238,7 @@ class TestComponentShutdownAndReset:
             type = "unit_test_reset"
 
         comp = _ResetComp()
-        loaded_components[
-            (ComponentName("reset_comp"), ComponentType("unit_test_reset"))
-        ] = comp
+        loaded_components[(ComponentName("reset_comp"), ComponentType("unit_test_reset"))] = comp
 
         Component.reset()
         assert len(loaded_components) == 0

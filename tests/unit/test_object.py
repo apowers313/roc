@@ -10,10 +10,8 @@ from roc.location import XLoc, YLoc
 from roc.object import (
     CandidateObjects,
     FeatureGroup,
-    Features,
     Object,
     ObjectCache,
-    ObjectId,
     ResolvedObject,
 )
 
@@ -65,17 +63,15 @@ class TestObject:
         # Create mock feature nodes with labels and str representations
         f1 = MagicMock()
         f1.labels = {"SingleNode", "FeatureNode"}
-        f1.__str__ = lambda self: "SingleNode(a)"
+        f1.configure_mock(**{"__str__": MagicMock(return_value="SingleNode(a)")})
 
         f2 = MagicMock()
         f2.labels = {"ColorNode", "FeatureNode"}
-        f2.__str__ = lambda self: "ColorNode(red)"
+        f2.configure_mock(**{"__str__": MagicMock(return_value="ColorNode(red)")})
 
         f3 = MagicMock()
         f3.labels = {"SingleNode", "FeatureNode"}
-        f3.__str__ = lambda self: "SingleNode(b)"
-
-        from roc.perception import FeatureNode
+        f3.configure_mock(**{"__str__": MagicMock(return_value="SingleNode(b)")})
 
         # Mock the object's features
         with patch.object(type(o), "features", new_callable=PropertyMock, return_value=[f1]):
@@ -103,7 +99,9 @@ class TestFeatureGroup:
         mock_edge2.type = "Other"
         mock_edge2.dst = MagicMock()
 
-        with patch.object(type(fg), "src_edges", new_callable=PropertyMock, return_value=[mock_edge1, mock_edge2]):
+        with patch.object(
+            type(fg), "src_edges", new_callable=PropertyMock, return_value=[mock_edge1, mock_edge2]
+        ):
             nodes = fg.feature_nodes
             assert len(nodes) == 1
             assert nodes[0] is mock_edge1.dst
@@ -144,7 +142,6 @@ class TestCandidateObjects:
         with patch("roc.object.Observability.tracer") as mock_tracer:
             mock_span = MagicMock()
             mock_tracer.start_as_current_span.return_value = mock_span
-            mock_span.__call__ = MagicMock(side_effect=lambda f: f)
 
             co = CandidateObjects([fn])
             assert len(co) == 0

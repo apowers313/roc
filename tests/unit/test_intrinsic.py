@@ -9,6 +9,7 @@ import pytest
 from roc.config import (
     ConfigBoolIntrinsic,
     ConfigIntIntrinsic,
+    ConfigIntrinsicType,
     ConfigMapIntrinsic,
     ConfigPercentIntrinsic,
 )
@@ -311,7 +312,7 @@ class TestConfigIntrinsics:
     def test_creates_int_op(self):
         from roc.intrinsic import _config_intrinsics
 
-        specs = [ConfigIntIntrinsic(name="hp", config=(0, 100))]
+        specs: list[ConfigIntrinsicType] = [ConfigIntIntrinsic(name="hp", config=(0, 100))]
         result = _config_intrinsics(specs)
         assert "hp" in result
         assert result["hp"].name == "hp"
@@ -319,28 +320,30 @@ class TestConfigIntrinsics:
     def test_creates_percent_op(self):
         from roc.intrinsic import _config_intrinsics
 
-        specs = [ConfigPercentIntrinsic(name="hp_pct", config="maxhp")]
+        specs: list[ConfigIntrinsicType] = [ConfigPercentIntrinsic(name="hp_pct", config="maxhp")]
         result = _config_intrinsics(specs)
         assert "hp_pct" in result
 
     def test_creates_map_op(self):
         from roc.intrinsic import _config_intrinsics
 
-        specs = [ConfigMapIntrinsic(name="hunger", config={0: 0.0, 1: 0.5})]
+        specs: list[ConfigIntrinsicType] = [
+            ConfigMapIntrinsic(name="hunger", config={0: 0.0, 1: 0.5})
+        ]
         result = _config_intrinsics(specs)
         assert "hunger" in result
 
     def test_creates_bool_op(self):
         from roc.intrinsic import _config_intrinsics
 
-        specs = [ConfigBoolIntrinsic(name="blind")]
+        specs: list[ConfigIntrinsicType] = [ConfigBoolIntrinsic(name="blind")]
         result = _config_intrinsics(specs)
         assert "blind" in result
 
     def test_creates_multiple(self):
         from roc.intrinsic import _config_intrinsics
 
-        specs = [
+        specs: list[ConfigIntrinsicType] = [
             ConfigIntIntrinsic(name="hp", config=(0, 100)),
             ConfigBoolIntrinsic(name="blind"),
         ]

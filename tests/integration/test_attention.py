@@ -6,17 +6,14 @@ These tests wire up real perception components and send real NetHack screen
 data through the pipeline.
 """
 
-from copy import deepcopy
-from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-import pytest
 from helpers.nethack_screens import screens
 from helpers.nethack_screens2 import screens as screens2
 from helpers.util import StubComponent
 
-from roc.attention import SaliencyMap, VisionAttention, VisionAttentionData
+from roc.attention import VisionAttention, VisionAttentionData
 from roc.component import Component
 from roc.event import Event
 from roc.feature_extractors.color import Color
@@ -27,8 +24,7 @@ from roc.feature_extractors.line import Line
 from roc.feature_extractors.motion import Motion
 from roc.feature_extractors.shape import Shape
 from roc.feature_extractors.single import Single
-from roc.location import IntGrid, XLoc, YLoc
-from roc.perception import FeatureNode, VisionData, VisualFeature
+from roc.perception import VisionData
 
 
 class TestSaliencyMapReport:

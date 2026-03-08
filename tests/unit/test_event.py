@@ -2,7 +2,7 @@
 
 """Unit tests for roc/event.py."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -90,7 +90,7 @@ class TestBusConnection:
         assert len(conn.subscribers) == 1
         conn.close()
         # After close, subscribers should be disposed
-        assert all(sub.is_disposed for sub in conn.subscribers)
+        assert all(sub.is_disposed for sub in conn.subscribers)  # type: ignore[attr-defined]
 
 
 class TestEvent:

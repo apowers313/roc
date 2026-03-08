@@ -1,0 +1,51 @@
+transaction_id,transaction_date,source,target,transaction_value,transaction_type
+1,08/04/2025,Gym_B,DOOM Factory,500,Shipment
+2,19/04/2025,Local Distributor A,DOOM Retail,795,Sale
+3,01/04/2025,Sapper HQ,DOOM Factory,163,Order
+4,30/04/2025,Warehouse_1,Warehouse_2,1347,Order
+5,20/04/2025,Local Distributor B,Gym_B,360,Order
+6,03/04/2025,Gym_B,Warehouse_2,753,Transfer
+7,24/04/2025,DOOM Factory,DOOM Retail,952,Transfer
+8,18/04/2025,Sapper HQ,DOOM Retail,616,Sale
+9,30/04/2025,Local Distributor A,Sapper HQ,666,Order
+10,12/04/2025,DOOM Factory,Sapper HQ,458,Transfer
+11,28/04/2025,Sapper HQ,DOOM Factory,999,Sale
+12,27/04/2025,Warehouse_2,Gym_A,458,Transfer
+13,02/04/2025,Sapper HQ,Warehouse_2,1917,Transfer
+14,14/04/2025,Gym_B,Gym_A,544,Order
+15,18/04/2025,Gym_B,Local Distributor A,544,Transfer
+16,23/04/2025,Warehouse_1,Gym_B,1402,Sale
+17,12/04/2025,Local Distributor C,Local Distributor B,1117,Shipment
+18,04/04/2025,Local Distributor B,Gym_B,895,Order
+19,03/04/2025,Local Distributor C,Sapper HQ,1827,Transfer
+20,20/04/2025,Local Distributor B,Sapper HQ,1592,Transfer
+21,27/04/2025,Local Distributor B,Local Distributor C,1928,Sale
+22,01/05/2025,Local Distributor A,Gym_B,775,Shipment
+23,30/04/2025,Local Distributor B,DOOM Retail,1986,Order
+24,04/04/2025,Sapper HQ,DOOM Retail,1962,Transfer
+25,16/04/2025,DOOM Factory,Local Distributor A,1953,Shipment
+26,14/04/2025,Local Distributor B,Warehouse_1,512,Transfer
+27,18/04/2025,Sapper HQ,Gym_A,1803,Transfer
+28,08/04/2025,DOOM Retail,Local Distributor A,1401,Sale
+29,05/04/2025,Gym_B,DOOM Retail,934,Order
+30,02/04/2025,DOOM Factory,DOOM Retail,1661,Order
+31,24/04/2025,Sapper HQ,Local Distributor C,1877,Order
+32,13/04/2025,Gym_B,Gym_A,1293,Sale
+33,27/04/2025,DOOM Retail,DOOM Factory,1403,Order
+34,22/04/2025,Sapper HQ,Warehouse_1,300,Sale
+35,03/04/2025,DOOM Retail,DOOM Factory,1627,Shipment
+36,26/04/2025,Local Distributor C,Warehouse_1,1760,Shipment
+37,23/04/2025,DOOM Retail,Local Distributor A,818,Order
+38,15/04/2025,Local Distributor A,Warehouse_2,235,Order
+39,15/04/2025,DOOM Factory,DOOM Retail,839,Sale
+40,02/04/2025,Gym_A,Local Distributor C,1182,Shipment
+41,24/04/2025,Local Distributor C,Warehouse_1,1863,Order
+42,23/04/2025,Local Distributor B,Sapper HQ,1451,Sale
+43,16/04/2025,Local Distributor A,Warehouse_2,856,Order
+44,21/04/2025,DOOM Retail,Local Distributor C,1922,Shipment
+45,23/04/2025,Gym_B,Gym_A,1072,Order
+46,17/04/2025,Local Distributor A,DOOM Retail,1832,Shipment
+47,25/04/2025,DOOM Retail,Gym_B,1544,Order
+48,07/04/2025,Local Distributor C,DOOM Retail,339,Shipment
+49,20/04/2025,DOOM Retail,Gym_A,1090,Order
+50,30/04/2025,Warehouse_2,Local Distributor A,1107,Shipment

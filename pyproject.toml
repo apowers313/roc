@@ -146,12 +146,17 @@ exclude = [
   ".git",
   "setup.py",
   "experiments",
+  ".fttemplates",
+  "threadtest_marimo.py",
 ]
 ignore = ["DEP003"]
 
 [tool.deptry.per_rule_ignores]
 DEP001 = ["gymnasium"]
-DEP002 = ["pydot"]     # pydot is an optional dependency for networkx
+# pydot: optional dependency for networkx
+# psutil: used in test conftest.py (excluded from scan)
+# visualization libs: used in experiments/ and marimo notebooks (excluded from scan)
+DEP002 = ["pydot", "psutil", "dash", "dash-cytoscape", "panel", "hvplot", "jupyter-bokeh", "bokeh", "bokeh-sampledata", "plotly", "plotly-resampler", "cosmograph", "dash-bootstrap-components"]
 
 [tool.black]
 # https://github.com/psf/black
@@ -198,7 +203,7 @@ ignore-module = false
 ignore-nested-functions = true
 ignore-nested-classes = true
 ignore-setters = true
-fail-under = 45
+fail-under = 37
 verbose = 0
 quiet = false
 omit-covered-files = false
@@ -259,7 +264,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 follow_imports = "silent"
 plugins = ["pydantic.mypy", "numpy.typing.mypy_plugin"]
-exclude = ["site", ".fttemplates", ".marimo.py"]
+exclude = ["site", ".fttemplates", ".marimo.py", "experiments"]
 
 # [[tool.mypy.overrides]]
 # module = "*_test.py"

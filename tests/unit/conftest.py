@@ -2,13 +2,11 @@
 
 """Lightweight conftest for unit tests -- no DB, no observability, no logger init."""
 
-import gc
-from typing import Any, Generator
+from typing import Generator
 
 import pytest
 
 from roc.config import Config
-from roc.reporting.observability import Observability
 
 
 @pytest.fixture(autouse=True)

@@ -17,13 +17,13 @@ def clear_breakpoints():
 
 class TestBreakpointInfo:
     def test_dataclass(self):
-        fn = lambda: True  # noqa: E731
+        fn = lambda: True
         info = BreakpointInfo(fn=fn, src="test.py:1")
         assert info.fn is fn
         assert info.src == "test.py:1"
 
     def test_dataclass_none_src(self):
-        fn = lambda: True  # noqa: E731
+        fn = lambda: True
         info = BreakpointInfo(fn=fn, src=None)
         assert info.src is None
 
@@ -102,7 +102,7 @@ class TestBreakpointState:
 class TestBreakpointAdd:
     def test_add_with_name(self):
         bp = Breakpoint()
-        fn = lambda: True  # noqa: E731
+        fn = lambda: True
         bp.add(fn, name="my_bp")
         assert "my_bp" in bp
         assert _breakpoints_dict["my_bp"].fn is fn
@@ -131,8 +131,8 @@ class TestBreakpointAdd:
 
     def test_add_overwrite(self):
         bp = Breakpoint()
-        fn1 = lambda: True  # noqa: E731
-        fn2 = lambda: False  # noqa: E731
+        fn1 = lambda: True
+        fn2 = lambda: False
         bp.add(fn1, name="test")
         bp.add(fn2, name="test", overwrite=True)
         assert _breakpoints_dict["test"].fn is fn2
@@ -203,7 +203,7 @@ class TestBreakpointResume:
         assert bp.brk is True
         bp.resume(quiet=True)
         assert bp.brk is False
-        assert bp.trigger is None
+        assert bp.trigger is None  # type: ignore[unreachable]
 
     def test_resume_when_not_broken_is_noop(self):
         bp = Breakpoint()

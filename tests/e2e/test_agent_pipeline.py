@@ -5,18 +5,12 @@ Environment -> Perception -> Attention -> ObjectResolver -> Sequencer -> Transfo
 """
 
 import time
-from unittest.mock import MagicMock
 
-from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
-from roc.action import Action, ActionRequest, TakeAction
-from roc.attention import Attention, VisionAttentionData
-from roc.component import Component
+from roc.action import Action, ActionRequest
 from roc.event import Event
 from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.object import ObjectResolver, ResolvedObject
-from roc.perception import Perception, VisionData
 from roc.sequencer import Frame, Sequencer
 from roc.transformer import TransformResult, Transformer
 

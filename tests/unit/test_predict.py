@@ -34,10 +34,11 @@ class TestPredictionCandidateFramesExpMod:
         assert PredictionCandidateFramesExpMod.modtype == "prediction-candidate"
 
     def test_has_abstract_get_candidates(self):
-        import inspect
 
         assert hasattr(PredictionCandidateFramesExpMod, "get_candidates")
-        assert getattr(PredictionCandidateFramesExpMod.get_candidates, "__isabstractmethod__", False)
+        assert getattr(
+            PredictionCandidateFramesExpMod.get_candidates, "__isabstractmethod__", False
+        )
 
 
 class TestPredictionConfidenceExpMod:
@@ -45,10 +46,11 @@ class TestPredictionConfidenceExpMod:
         assert PredictionConfidenceExpMod.modtype == "prediction-confidence"
 
     def test_has_abstract_calculate_confidence(self):
-        import inspect
 
         assert hasattr(PredictionConfidenceExpMod, "calculate_confidence")
-        assert getattr(PredictionConfidenceExpMod.calculate_confidence, "__isabstractmethod__", False)
+        assert getattr(
+            PredictionConfidenceExpMod.calculate_confidence, "__isabstractmethod__", False
+        )
 
 
 class TestObjectBasedPrediction:

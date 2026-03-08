@@ -178,9 +178,11 @@ class IntrinsicData:
             n = IntrinsicNode(
                 name=key,
                 raw_value=self.intrinsics[key],
-                normalized_value=self.normalized_intrinsics[key]
-                if key in self.normalized_intrinsics
-                else math.nan,
+                normalized_value=(
+                    self.normalized_intrinsics[key]
+                    if key in self.normalized_intrinsics
+                    else math.nan
+                ),
             )
             ret.append(n)
 

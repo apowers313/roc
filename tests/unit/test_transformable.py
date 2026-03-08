@@ -30,7 +30,9 @@ class TestTransform:
         mock_edge_list = MagicMock()
         mock_edge_list.select.return_value = [mock_edge]
 
-        with patch.object(type(t), "dst_edges", new_callable=PropertyMock, return_value=mock_edge_list):
+        with patch.object(
+            type(t), "dst_edges", new_callable=PropertyMock, return_value=mock_edge_list
+        ):
             result = t.src_frame
             assert result is mock_frame
             mock_edge_list.select.assert_called_once_with(type="Change")
@@ -46,7 +48,9 @@ class TestTransform:
         mock_edge_list = MagicMock()
         mock_edge_list.select.return_value = [mock_edge]
 
-        with patch.object(type(t), "src_edges", new_callable=PropertyMock, return_value=mock_edge_list):
+        with patch.object(
+            type(t), "src_edges", new_callable=PropertyMock, return_value=mock_edge_list
+        ):
             result = t.dst_frame
             assert result is mock_frame
             mock_edge_list.select.assert_called_once_with(type="Change")

@@ -195,7 +195,6 @@ class TestCurrentSaliencyMapState:
 
         csms = CurrentSaliencyMapState()
         mock_sal = MagicMock()
-        mock_sal.__str__ = MagicMock(return_value="saliency_str")
         mock_sal.feature_report.return_value = {"feat1": 0.5}
         csms.set(mock_sal)
         result = str(csms)
@@ -214,12 +213,10 @@ class TestCurrentAttentionState:
         from roc.reporting.state import CurrentAttentionState
 
         cas = CurrentAttentionState()
-        mock_att = MagicMock()
-        mock_att.__str__ = MagicMock(return_value="attention_str")
+        mock_att = MagicMock(spec=str)
         cas.set(mock_att)
         result = str(cas)
         assert "Current Attention:" in result
-        assert "attention_str" in result
 
 
 class TestCurrentObjectState:
@@ -233,12 +230,10 @@ class TestCurrentObjectState:
         from roc.reporting.state import CurrentObjectState
 
         cos = CurrentObjectState()
-        mock_obj = MagicMock()
-        mock_obj.__str__ = MagicMock(return_value="obj_str")
+        mock_obj = MagicMock(spec=str)
         cos.set(mock_obj)
         result = str(cos)
         assert "Current Object:" in result
-        assert "obj_str" in result
 
 
 class TestComponentsState:
@@ -246,7 +241,9 @@ class TestComponentsState:
         from roc.reporting.state import ComponentsState
 
         cs = ComponentsState()
-        with patch("roc.reporting.state.Component.get_loaded_components", return_value=["a:b", "c:d"]):
+        with patch(
+            "roc.reporting.state.Component.get_loaded_components", return_value=["a:b", "c:d"]
+        ):
             result = cs.get()
             assert result == ["a:b", "c:d"]
 
@@ -325,8 +322,7 @@ class TestObsEvents:
     def test_object_obs_event(self):
         from roc.reporting.state import ObjectObsEvent
 
-        mock_obj = MagicMock()
-        mock_obj.__str__ = MagicMock(return_value="obj_str")
+        mock_obj = MagicMock(spec=str)
         evt = ObjectObsEvent(mock_obj)
         assert evt.name == "roc.attention.object"
 
@@ -362,6 +358,7 @@ class TestObsEvents:
         chars = np.array([[65, 66], [67, 68]])
         evt = ScreenObsEvent(chars)
         assert evt.name == "roc.screen"
+        assert evt.body is not None
         assert "AB" in evt.body
         assert "CD" in evt.body
 

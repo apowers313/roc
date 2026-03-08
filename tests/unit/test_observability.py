@@ -2,7 +2,7 @@
 
 """Unit tests for roc/reporting/observability.py."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from opentelemetry._logs import SeverityNumber
@@ -84,6 +84,7 @@ class TestObservabilityEvent:
         evt = ObservabilityEvent("test.event", body="body", attributes={"custom": "val"})
         assert evt.name == "test.event"
         # Merged attributes should contain both custom and common
+        assert evt.attributes is not None
         assert "custom" in evt.attributes
         for key in roc_common_attributes:
             assert key in evt.attributes
@@ -92,6 +93,7 @@ class TestObservabilityEvent:
         from roc.reporting.observability import ObservabilityEvent, roc_common_attributes
 
         evt = ObservabilityEvent("test.event")
+        assert evt.attributes is not None
         for key in roc_common_attributes:
             assert key in evt.attributes
 

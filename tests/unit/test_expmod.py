@@ -3,9 +3,7 @@
 """Unit tests for roc/expmod.py."""
 
 import tempfile
-from collections import defaultdict
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 

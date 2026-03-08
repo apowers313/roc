@@ -2,11 +2,9 @@
 
 """Unit tests for roc/reporting/observability.py -- loguru_to_otel coverage."""
 
-from time import time_ns
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
-import pytest
 from opentelemetry._logs import SeverityNumber
 
 
@@ -46,7 +44,10 @@ class TestLoguruToOtel:
         mock_logger_provider = MagicMock()
         mock_logger_provider.get_logger.return_value = mock_logger
 
-        with patch("roc.reporting.observability.otel_logs.get_logger_provider", return_value=mock_logger_provider):
+        with patch(
+            "roc.reporting.observability.otel_logs.get_logger_provider",
+            return_value=mock_logger_provider,
+        ):
             loguru_to_otel(msg)
 
         mock_logger.emit.assert_called_once()
@@ -64,7 +65,10 @@ class TestLoguruToOtel:
         mock_logger_provider = MagicMock()
         mock_logger_provider.get_logger.return_value = mock_noop
 
-        with patch("roc.reporting.observability.otel_logs.get_logger_provider", return_value=mock_logger_provider):
+        with patch(
+            "roc.reporting.observability.otel_logs.get_logger_provider",
+            return_value=mock_logger_provider,
+        ):
             # Should not raise even though it's NoOp
             loguru_to_otel(msg)
 
@@ -84,7 +88,10 @@ class TestLoguruToOtel:
         mock_logger_provider = MagicMock()
         mock_logger_provider.get_logger.return_value = mock_logger
 
-        with patch("roc.reporting.observability.otel_logs.get_logger_provider", return_value=mock_logger_provider):
+        with patch(
+            "roc.reporting.observability.otel_logs.get_logger_provider",
+            return_value=mock_logger_provider,
+        ):
             loguru_to_otel(msg)
 
         log_record = mock_logger.emit.call_args[0][0]
@@ -117,8 +124,14 @@ class TestLoguruToOtel:
         mock_logger_provider.get_logger.return_value = mock_logger
 
         with (
-            patch("roc.reporting.observability.otel_logs.get_logger_provider", return_value=mock_logger_provider),
-            patch("roc.reporting.observability.traceback.format_exception", return_value=["Traceback...\n", "RuntimeError: runtime error\n"]),
+            patch(
+                "roc.reporting.observability.otel_logs.get_logger_provider",
+                return_value=mock_logger_provider,
+            ),
+            patch(
+                "roc.reporting.observability.traceback.format_exception",
+                return_value=["Traceback...\n", "RuntimeError: runtime error\n"],
+            ),
         ):
             loguru_to_otel(msg)
 
@@ -140,7 +153,10 @@ class TestLoguruToOtel:
         mock_logger_provider = MagicMock()
         mock_logger_provider.get_logger.return_value = mock_logger
 
-        with patch("roc.reporting.observability.otel_logs.get_logger_provider", return_value=mock_logger_provider):
+        with patch(
+            "roc.reporting.observability.otel_logs.get_logger_provider",
+            return_value=mock_logger_provider,
+        ):
             loguru_to_otel(msg)
 
         log_record = mock_logger.emit.call_args[0][0]

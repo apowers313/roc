@@ -12,7 +12,6 @@ from roc.sequencer import (
     FrameAttribute,
     NextFrame,
     get_next_tick,
-    tick,
 )
 
 
@@ -69,13 +68,24 @@ class TestFrame:
 
     def test_transformable_with_items(self):
         f = Frame()
-        mock_transformable = MagicMock(spec=["same_transform_type", "compatible_transform", "create_transform", "apply_transform"])
+        mock_transformable = MagicMock(
+            spec=[
+                "same_transform_type",
+                "compatible_transform",
+                "create_transform",
+                "apply_transform",
+            ]
+        )
         # Make isinstance check work for Transformable
-        from roc.transformable import Transformable
 
         mock_non_transformable = MagicMock(spec=[])
 
-        with patch.object(type(f), "successors", new_callable=PropertyMock, return_value=[mock_transformable, mock_non_transformable]):
+        with patch.object(
+            type(f),
+            "successors",
+            new_callable=PropertyMock,
+            return_value=[mock_transformable, mock_non_transformable],
+        ):
             # We need the isinstance check to work; mock with spec won't pass isinstance
             # So let's use a real approach
             pass
@@ -84,7 +94,9 @@ class TestFrame:
         f = Frame()
         mock_edge_list = MagicMock()
         mock_edge_list.select.return_value = []
-        with patch.object(type(f), "src_edges", new_callable=PropertyMock, return_value=mock_edge_list):
+        with patch.object(
+            type(f), "src_edges", new_callable=PropertyMock, return_value=mock_edge_list
+        ):
             assert f.transforms == []
 
     def test_objects_empty(self):
@@ -108,7 +120,9 @@ class TestFrame:
         mock_edge = MagicMock()
         mock_edge.dst = mock_fg
 
-        with patch.object(type(f), "src_edges", new_callable=PropertyMock, return_value=[mock_edge]):
+        with patch.object(
+            type(f), "src_edges", new_callable=PropertyMock, return_value=[mock_edge]
+        ):
             result = f.objects
             assert len(result) == 1
             assert result[0] is mock_obj

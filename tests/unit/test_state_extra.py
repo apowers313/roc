@@ -23,7 +23,7 @@ class TestStateInit:
     @patch("roc.reporting.state.ObjectResolver")
     @patch("roc.reporting.state.Attention")
     def test_init_sets_up_listeners(self, mock_attention, mock_obj_resolver, mock_print_startup):
-        from roc.reporting.state import State, _state_init_done
+        from roc.reporting.state import State
 
         import roc.reporting.state as state_mod
 
@@ -59,7 +59,7 @@ class TestStatePrint:
     @patch("roc.reporting.state.State.init")
     @patch("builtins.print")
     def test_print_outputs_sections(self, mock_print, mock_init):
-        from roc.reporting.state import State, states
+        from roc.reporting.state import State
 
         State.print()
 

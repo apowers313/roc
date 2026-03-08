@@ -113,7 +113,7 @@ class TestChangedPoint:
 
 class TestGrid:
     def test_new_2d(self):
-        g = Grid(np.array([[1, 2], [3, 4]]))
+        g: Grid[int] = Grid(np.array([[1, 2], [3, 4]]))
         assert g.shape == (2, 2)
 
     def test_new_1d_raises(self):
@@ -121,7 +121,7 @@ class TestGrid:
             Grid(np.array([1, 2, 3]))
 
     def test_iter(self):
-        g = Grid(np.array([[10, 20], [30, 40]]))
+        g: Grid[int] = Grid(np.array([[10, 20], [30, 40]]))
         points = list(g)
         # Should yield (x, y, val) tuples
         assert (0, 0, 10) in points
@@ -130,18 +130,18 @@ class TestGrid:
         assert (1, 1, 40) in points
 
     def test_get_val(self):
-        g = Grid(np.array([[10, 20], [30, 40]]))
+        g: Grid[int] = Grid(np.array([[10, 20], [30, 40]]))
         assert g.get_val(0, 0) == 10
         assert g.get_val(1, 0) == 20
         assert g.get_val(0, 1) == 30
 
     def test_set_val(self):
-        g = Grid(np.array([[10, 20], [30, 40]]))
+        g: Grid[int] = Grid(np.array([[10, 20], [30, 40]]))
         g.set_val(1, 1, 99)
         assert g.get_val(1, 1) == 99
 
     def test_width_height(self):
-        g = Grid(np.array([[1, 2, 3], [4, 5, 6]]))
+        g: Grid[int] = Grid(np.array([[1, 2, 3], [4, 5, 6]]))
         assert g.width == 3
         assert g.height == 2
 

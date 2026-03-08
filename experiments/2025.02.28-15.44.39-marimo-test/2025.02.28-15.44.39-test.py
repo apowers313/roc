@@ -17,6 +17,7 @@ def _(mo):
 @app.cell
 def _():
     import marimo as mo
+
     return (mo,)
 
 
@@ -43,7 +44,8 @@ def _():
 @app.cell
 def _():
     import sys
-    sys.path.append('/home/apowers/Projects/roc')
+
+    sys.path.append("/home/apowers/Projects/roc")
     return (sys,)
 
 
@@ -56,6 +58,7 @@ def _(sys):
 @app.cell
 def _():
     import roc
+
     return (roc,)
 
 
