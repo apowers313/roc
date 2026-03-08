@@ -1187,7 +1187,8 @@ class Node(BaseModel, extra="allow"):
         elif isinstance(file_directory, str):
             filepath = Path(file_directory)
         else:
-            filepath = Path.cwd()
+            filepath = Path.cwd() / "tmp"
+            filepath.mkdir(exist_ok=True)
 
         if file_timestamp:
             filename = f"{filename}-{_timestamp_str()}"
