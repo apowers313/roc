@@ -2008,7 +2008,7 @@ dot_graph_header = """digraph {
         fontname="Arial"
         style=""
     ]
-    """
+"""
 
 
 class Schema:
