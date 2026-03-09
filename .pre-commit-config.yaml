@@ -11,8 +11,10 @@ repos:
       stages: [commit]
       language: system
       entry: make pre-commit
+      pass_filenames: false
     - id: test
       name: Test
       stages: [push]
       language: system
       entry: make pre-push
+      pass_filenames: false
