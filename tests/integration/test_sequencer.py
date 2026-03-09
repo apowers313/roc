@@ -93,7 +93,7 @@ class TestSequencer:
         assert frame.src_edges[1].type == "NextFrame"
         assert isinstance(frame.src_edges[1].dst, Frame)
 
-    def test_basic(self, empty_components) -> None:
+    def test_basic(self, empty_components, tmp_path) -> None:
         sequencer = Component.get("sequencer", "sequencer")
         assert isinstance(sequencer, Sequencer)
         action = Component.get("action", "action")
@@ -127,7 +127,7 @@ class TestSequencer:
         assert isinstance(e, Event)
         assert isinstance(e.data, Frame)
         frame = e.data
-        frame.render(depth=3)
+        frame.render(depth=3, file_directory=tmp_path)
         assert len(frame.edges) == 5
         assert len(frame.src_edges) == 5
         # object
