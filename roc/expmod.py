@@ -1,4 +1,44 @@
-"""Experiment modules for swapping out agent behaviors at runtime."""
+"""Runtime plugin system for swapping agent behaviors via configuration.
+
+The ExpMod system lets you define interchangeable implementations of agent behaviors
+(action selection, prediction strategies, etc.) and switch between them without modifying
+core code. Implementations are selected by setting (modtype, name) pairs in config.
+
+Architecture:
+    - Define an abstract base by subclassing ExpMod with a ``modtype`` class attribute.
+    - Define concrete implementations by subclassing the base with a ``name`` attribute.
+    - Implementations auto-register on class definition via ``__init_subclass__``.
+    - Consuming code calls ``MyBase.get(default="name").method()`` to dispatch to the
+      active implementation.
+
+Example:
+    Define a new modtype and implementation::
+
+        class MyExpMod(ExpMod):
+            modtype = "my-feature"
+
+            def do_thing(self) -> int: ...
+
+        class MyImpl(MyExpMod):
+            name = "simple"
+
+            def do_thing(self) -> int:
+                return 42
+
+    Use it from consuming code::
+
+        result = MyExpMod.get(default="simple").do_thing()
+
+Configuration (in Config):
+    - ``expmod_dirs``: directories to scan for module files (default: ``experiments/modules/``)
+    - ``expmods``: filenames to dynamically import
+    - ``expmods_use``: list of ``(modtype, name)`` tuples to activate
+
+Module-level state:
+    - ``expmod_registry``: maps modtype -> name -> ExpMod instance
+    - ``expmod_modtype_current``: tracks which name is active per modtype
+    - ``expmod_loaded``: tracks dynamically imported module objects
+"""
 
 from __future__ import annotations
 
@@ -19,41 +59,40 @@ expmod_loaded: dict[str, ModuleType] = {}
 class ExpMod:
     """Base class for experiment modules that can be swapped at runtime.
 
-    Subclasses register themselves by modtype and name, allowing different
-    implementations to be selected via configuration.
+    Subclasses register themselves automatically by ``modtype`` and ``name``, allowing
+    different implementations to be selected via configuration. To create a new modtype,
+    subclass ExpMod directly and set ``modtype``. To create an implementation, subclass
+    the modtype base and set ``name``.
+
+    Attributes:
+        modtype: Identifies the category of behavior (e.g. "action", "prediction-candidate").
+            Must be set by every subclass.
+        name: Identifies a specific implementation within a modtype (e.g. "pass", "weighted").
+            Must be set by concrete implementations (not required on abstract bases that
+            directly subclass ExpMod).
     """
 
     modtype: str = str()
     name: str = str()
 
     def __init_subclass__(cls) -> None:
+        """Auto-register subclasses into the expmod_registry.
+
+        Validates that ``modtype`` is always set and that ``name`` is set for concrete
+        implementations (classes that don't directly subclass ExpMod). Raises on duplicate
+        registrations. Instantiates the class and stores it in ``expmod_registry[modtype][name]``.
+        """
         if cls.modtype is ExpMod.modtype:
             raise NotImplementedError(f"{cls.__name__} must implement class attribute 'modtype'")
 
         if cls.name is ExpMod.name and ExpMod not in cls.__bases__:
-            print("bases:", cls.__bases__)
             raise NotImplementedError(f"{cls.__name__} must implement class attribute 'name'")
-            # TODO: warning? check to see if ExpMod is a direct predecessor?
-            # return
 
         if cls.name in expmod_registry[cls.modtype]:
             raise Exception(
                 f"ExpMod.register attempting to register duplicate name '{cls.name}' for module '{cls.modtype}'"
             )
         expmod_registry[cls.modtype][cls.name] = cls()
-
-    # @staticmethod
-    # def register(name: str) -> Callable[[type[ExpMod]], type[ExpMod]]:
-    #     def register_decorator(cls: type[ExpMod]) -> type[ExpMod]:
-    #         if name in expmod_registry[cls.modtype]:
-    #             raise Exception(
-    #                 f"ExpMod.register attempting to register duplicate name '{name}' for module '{cls.modtype}'"
-    #             )
-    #         expmod_registry[cls.modtype][name] = cls()
-
-    #         return cls
-
-    #     return register_decorator
 
     @classmethod
     def get(cls, default: str | None = None) -> Self:
@@ -129,7 +168,17 @@ class ExpMod:
 
     @staticmethod
     def init() -> None:
-        """Loads and activates experiment modules from configuration."""
+        """Load and activate experiment modules from configuration.
+
+        Searches for module files listed in ``Config.expmods`` across all directories
+        in ``Config.expmod_dirs`` (plus the current directory). Each directory is tried
+        in order for any modules not yet found. After loading, activates implementations
+        listed in ``Config.expmods_use``.
+
+        Raises:
+            FileNotFoundError: If any listed module file cannot be found in any search path.
+            Exception: If ``expmods_use`` contains duplicate modtype entries.
+        """
         settings = Config.get()
 
         mods = settings.expmods.copy()
