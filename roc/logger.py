@@ -25,6 +25,7 @@ class DebugModuleLevel(BaseModel):
     @field_validator("module_name", mode="before")
     @classmethod
     def validate_module_name(cls, name: str) -> str:
+        """Validates that the module name is a known roc module."""
         assert name in module_names, (
             f"Module name '{name}' not a valid module name. Must be one of {module_names}"
         )
@@ -74,6 +75,7 @@ class LogFilter:
 
     @classmethod
     def parse_module_str(cls, s: str) -> list[DebugModuleLevel]:
+        """Parses a semicolon-separated string of 'module:LEVEL' pairs."""
         s = s.strip()
 
         mod_list = s.split(";")

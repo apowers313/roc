@@ -1,3 +1,5 @@
+"""Experiment modules for swapping out agent behaviors at runtime."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -15,6 +17,12 @@ expmod_loaded: dict[str, ModuleType] = {}
 
 
 class ExpMod:
+    """Base class for experiment modules that can be swapped at runtime.
+
+    Subclasses register themselves by modtype and name, allowing different
+    implementations to be selected via configuration.
+    """
+
     modtype: str = str()
     name: str = str()
 
@@ -49,6 +57,17 @@ class ExpMod:
 
     @classmethod
     def get(cls, default: str | None = None) -> Self:
+        """Returns the currently active module for this modtype.
+
+        Args:
+            default: Fallback module name if none has been set.
+
+        Raises:
+            Exception: If no module is set and no default is provided.
+
+        Returns:
+            The active ExpMod instance for this modtype.
+        """
         modtype = cls.modtype
         name: str | None = (
             expmod_modtype_current[modtype]
@@ -62,6 +81,15 @@ class ExpMod:
 
     @classmethod
     def set(cls, name: str, modtype: str | None = None) -> None:
+        """Sets the active module for a given modtype.
+
+        Args:
+            name: The registered name of the module to activate.
+            modtype: The module type category. Defaults to the calling class's modtype.
+
+        Raises:
+            Exception: If the modtype or name is not registered.
+        """
         if modtype is None:
             modtype = cls.modtype
 
@@ -77,6 +105,15 @@ class ExpMod:
 
     @staticmethod
     def import_file(filename: str, basepath: str = "") -> ModuleType:
+        """Dynamically imports a Python file as an experiment module.
+
+        Args:
+            filename: The filename to import.
+            basepath: Directory to prepend to the filename.
+
+        Returns:
+            The imported module.
+        """
         module_name = f"roc:expmod:{filename}"
         filepath = Path(basepath) / filename
 
@@ -92,6 +129,7 @@ class ExpMod:
 
     @staticmethod
     def init() -> None:
+        """Loads and activates experiment modules from configuration."""
         settings = Config.get()
 
         mods = settings.expmods.copy()

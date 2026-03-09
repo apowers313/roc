@@ -13,10 +13,13 @@ from ..perception import (
 
 
 class SingleNode(FeatureNode):
+    """Graph node representing a single isolated feature by its glyph type."""
+
     type: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns the type as a string."""
         return [str(self.type)]
 
 
@@ -27,9 +30,11 @@ class SingleFeature(PointFeature[SingleNode]):
     feature_name: str = "Single"
 
     def _create_nodes(self) -> SingleNode:
+        """Creates a new SingleNode for this feature's type."""
         return SingleNode(type=self.type)
 
     def _dbfetch_nodes(self) -> SingleNode | None:
+        """Looks up an existing SingleNode by type in the database."""
         return SingleNode.find_one("src.type = $type", params={"type": self.type})
 
 

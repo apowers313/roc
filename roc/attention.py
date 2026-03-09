@@ -32,6 +32,8 @@ from .reporting.observability import Observability
 
 
 class VisionAttentionSchema:
+    """Schema for the focus points DataFrame produced by attention."""
+
     x: int
     y: int
     strength: float
@@ -40,6 +42,8 @@ class VisionAttentionSchema:
 
 @dataclass
 class VisionAttentionData:
+    """Carries focus points and the saliency map produced by visual attention."""
+
     focus_points: DataSet[VisionAttentionSchema]
     saliency_map: SaliencyMap
 
@@ -60,10 +64,18 @@ AttentionEvent = Event[AttentionData]
 
 
 class Attention(Component, ABC):
+    """Abstract base for attention components that determine where the agent focuses."""
+
     bus = EventBus[AttentionData]("attention")
 
 
 class SaliencyMap(Grid[list[VisualFeature[Any]]]):
+    """A 2D grid where each cell contains the visual features that cover that location.
+
+    Computes saliency strength per cell based on feature count and type bonuses
+    (motion is most salient, then change, then unique features).
+    """
+
     grid: IntGrid | None
 
     def __new__(cls, grid: IntGrid | None = None) -> Self:
@@ -81,6 +93,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return str(self.to_debug_grid())
 
     def to_debug_grid(self) -> DebugGrid:
+        """Converts the saliency map to a color-coded debug grid for visualization."""
         assert self.grid is not None
         dg = DebugGrid(self.grid)
         max_str = self.get_max_strength()
@@ -97,6 +110,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return dg
 
     def to_html_vals(self) -> dict[str, list[list[str | int]]]:
+        """Returns the saliency map as HTML-friendly character, foreground, and background values."""
         dg = self.to_debug_grid()
         return dg.to_html_vals()
 
@@ -118,6 +132,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
     @property
     def size(self) -> int:
+        """Total number of features across all cells."""
         sz = 0
         for val in self:
             sz = sz + len(val)
@@ -125,10 +140,12 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return sz
 
     def add_val(self, x: int, y: int, val: VisualFeature[Any]) -> None:
+        """Adds a visual feature to the cell at (x, y)."""
         feature_list = self.get_val(x, y)
         feature_list.append(val)
 
     def get_max_strength(self) -> int:
+        """Returns the highest saliency strength value across all cells."""
         max = 0
         for y in range(self.height):
             for x in range(self.width):
@@ -139,6 +156,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return max
 
     def get_strength(self, x: int, y: int) -> int:
+        """Returns the saliency strength at (x, y), including type-based bonuses."""
         feature_list = self.get_val(x, y)
         # TODO: not really sure that the strength should depend on the number of features
         ret = len(feature_list)
@@ -163,6 +181,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return ret
 
     def feature_report(self) -> dict[str, int]:
+        """Returns a count of unique features per feature type across the entire map."""
         feature_id: dict[str, set[int]] = dict()
 
         # create a set of unique IDs for every distinct feature
@@ -179,6 +198,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return ret
 
     def get_focus(self) -> DataSet[VisionAttentionSchema]:
+        """Identifies peak saliency locations using morphological dilation and labels adjacent peaks."""
         max_str = self.get_max_strength()
 
         # prevent divide by zero
@@ -230,6 +250,8 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
 
 class VisionAttention(Attention):
+    """Attention component that builds a saliency map from visual features and emits focus points."""
+
     name: str = "vision"
     type: str = "attention"
     auto: bool = True
@@ -244,6 +266,7 @@ class VisionAttention(Attention):
         self.settled: set[str] = set()
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Accept VisualFeature, Settled, and VisionData events."""
         allow = (
             isinstance(e.data, VisualFeature)
             or isinstance(e.data, Settled)
@@ -253,6 +276,7 @@ class VisionAttention(Attention):
 
     @Observability.tracer.start_as_current_span("do_attention")
     def do_attention(self, e: PerceptionEvent) -> None:
+        """Accumulates features into the saliency map and emits focus when all extractors settle."""
         # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
             self.saliency_map.grid = IntGrid(e.data.chars)
@@ -293,6 +317,8 @@ class VisionAttention(Attention):
 
 
 class CrossModalAttention(Attention):
+    """Placeholder for cross-modal attention that combines multiple attention sources."""
+
     name: str = "cross-modal"
     type: str = "attention"
     auto: bool = True

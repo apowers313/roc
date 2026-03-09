@@ -1,3 +1,5 @@
+"""Prediction system that uses past transforms to predict future frames."""
+
 from abc import abstractmethod
 from typing import Any
 
@@ -9,6 +11,8 @@ from .transformer import Transformer, TransformResult
 
 
 class NoPrediction:
+    """Sentinel indicating that no prediction could be made."""
+
     None
 
 
@@ -18,6 +22,8 @@ PredictEvent = Event[PredictData]
 
 
 class Predict(Component):
+    """Component that predicts future frames based on past transforms."""
+
     name: str = "predict"
     type: str = "predict"
     auto: bool = True
@@ -31,9 +37,11 @@ class Predict(Component):
         self.transformer_conn.listen(self.do_predict)
 
     def event_filter(self, e: Event[Any]) -> bool:
+        """Only process TransformResult events."""
         return isinstance(e.data, TransformResult)
 
     def do_predict(self, e: Event[TransformResult]) -> None:
+        """Finds candidate frames, applies transforms, scores predictions, and emits the best one."""
         # print("do_predict")
 
         # print("e.data", e.data)
@@ -81,23 +89,34 @@ class Predict(Component):
 
 
 class PredictionCandidateFramesExpMod(ExpMod):
+    """Base class for modules that find candidate frames for prediction."""
+
     modtype = "prediction-candidate"
 
     @abstractmethod
-    def get_candidates(self, frame: Frame) -> list[Frame]: ...
+    def get_candidates(self, frame: Frame) -> list[Frame]:
+        """Returns frames that are candidates for predicting the next state."""
+        ...
 
 
 class PredictionConfidenceExpMod(ExpMod):
+    """Base class for modules that score how confident a prediction is."""
+
     modtype = "prediction-confidence"
 
     @abstractmethod
-    def calculate_confidence(self, f: Frame) -> float: ...
+    def calculate_confidence(self, f: Frame) -> float:
+        """Returns a confidence score for a predicted frame."""
+        ...
 
 
 class ObjectBasedPrediction(PredictionCandidateFramesExpMod):
+    """Finds prediction candidates by looking up frames associated with the current objects."""
+
     name = "object-based"
 
     def get_candidates(self, frame: Frame) -> list[Frame]:
+        """Returns all frames that share objects with the given frame."""
         ret: list[Frame] = []
 
         objs = frame.objects

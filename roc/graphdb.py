@@ -429,6 +429,7 @@ class EdgeCreateFailed(Exception):
 
 
 def _get_next_new_edge_id() -> EdgeId:
+    """Returns the next temporary negative EdgeId for unsaved edges."""
     global next_new_edge
     id = next_new_edge
     next_new_edge = cast(EdgeId, next_new_edge - 1)
@@ -517,6 +518,7 @@ class Edge(BaseModel, extra="allow"):
         edge_registry[edgetype] = cls
 
     def _repr_dot_(self) -> str:
+        """Returns a Graphviz DOT representation of this edge."""
         name = self.__class__.__name__
         return f'{_dot_safe_node_str(self.src_id)} -> {_dot_safe_node_str(self.dst_id)} [label="{name}"]'
 
@@ -813,6 +815,7 @@ def _check_schema(
     dst: Node,
     db: GraphDB,
 ) -> None:
+    """Validates that an edge connection is allowed by the schema's allowed_connections list."""
     allowed_connections = _pydantic_get_default(edge_cls, "allowed_connections")
     src_name = src.__class__.__name__
     src_names = _get_node_parent_names(src.__class__)
@@ -913,6 +916,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
 
     @property
     def ids(self) -> set[EdgeId]:
+        """The set of EdgeIds in this list."""
         return set(self._edges)
 
     def add(self, e: Edge | EdgeId) -> None:
@@ -993,6 +997,7 @@ class NodeCreationFailed(Exception):
 
 
 def _get_next_new_node_id() -> NodeId:
+    """Returns the next temporary negative NodeId for unsaved nodes."""
     global next_new_node
     id = next_new_node
     next_new_node = cast(NodeId, next_new_node - 1)
@@ -1132,6 +1137,7 @@ class Node(BaseModel, extra="allow"):
         node_label_registry[labels_key] = cls
 
     def _repr_dot_(self, extra_style: str = "") -> str:
+        """Returns a Graphviz DOT record-style representation of this node."""
         # name
         name = f"<b>{self.__class__.__name__}({self.id})</b>"
 
@@ -1154,6 +1160,7 @@ class Node(BaseModel, extra="allow"):
         return f"{_dot_safe_node_str(self.id)} [label=<{{{name} | {''.join(props)}}}>{extra_space}{extra_style}]"
 
     def neighborhood(self, depth: int = 1) -> NodeList:
+        """Returns all nodes within the given graph distance from this node."""
         if depth < 0:
             raise Exception("neighborhood depth must be greater than zero")
         elif depth == 0:
@@ -1179,6 +1186,7 @@ class Node(BaseModel, extra="allow"):
         file_timestamp: bool = True,
         file_directory: Path | str | None = None,
     ) -> Path:
+        """Renders this node's neighborhood as a Graphviz diagram and returns the output file path."""
         if filename is None:
             filename = f"node{self.id}"
 
@@ -1289,6 +1297,7 @@ class Node(BaseModel, extra="allow"):
         load_edges: bool = False,
         params_to_str: bool = True,
     ) -> list[Self]:
+        """Queries the graph database for nodes matching a WHERE clause and returns them."""
         db = db or GraphDB.singleton()
 
         if load_edges:
@@ -1439,6 +1448,7 @@ class Node(BaseModel, extra="allow"):
         return_nodes: bool = False,
         progress_callback: ProgressFn | None = None,
     ) -> list[Node]:
+        """Loads multiple nodes by ID in batches, using the cache where possible."""
         db = db or GraphDB.singleton()
 
         if not isinstance(node_ids, set):
@@ -1874,10 +1884,12 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
 
     @property
     def ids(self) -> set[NodeId]:
+        """The set of NodeIds in this list."""
         return set(self._nodes)
 
     @property
     def connections(self) -> EdgeList:
+        """All edges where both source and destination are in this NodeList."""
         edge_set: set[EdgeId] = set()
         for node_id in self._nodes:
             n = Node.get(node_id)
@@ -2099,22 +2111,27 @@ class Schema:
 
     @classmethod
     def _repr_markdown_(cls) -> str:
+        """Returns the schema as a Mermaid diagram wrapped in a markdown code block."""
         return f"``` mermaid\n{Schema().to_mermaid()}\n```\n"
 
 
 def _pydantic_get_fields(m: type[BaseModel]) -> set[str]:
+    """Returns the set of field names defined on a Pydantic model."""
     return set(m.model_fields.keys())
 
 
 def _pydantic_get_field(m: type[BaseModel], f: str) -> FieldInfo:
+    """Returns the FieldInfo for a named field on a Pydantic model."""
     return m.model_fields[f]
 
 
 def _pydantic_get_default(m: type[BaseModel], f: str) -> Any:
+    """Returns the default value for a named field on a Pydantic model."""
     return m.model_fields[f].get_default(call_default_factory=True)
 
 
 def _dot_safe_node_str(nid: NodeId) -> str:
+    """Converts a NodeId to a valid Graphviz DOT identifier."""
     if nid < 0:
         return f"node_{abs(nid)}"
     else:
@@ -2122,6 +2139,7 @@ def _dot_safe_node_str(nid: NodeId) -> str:
 
 
 def _is_local(c: type[object], attr: str) -> bool:
+    """Returns True if the attribute is defined directly on the class, not inherited."""
     local_to_parent = [_is_local(p, attr) for p in c.__mro__ if p is not c]
     if any(local_to_parent):
         return False
@@ -2139,6 +2157,7 @@ def _is_local(c: type[object], attr: str) -> bool:
 
 
 def _get_node_parent_names(model: type[BaseModel]) -> set[str]:
+    """Returns the names of all Node ancestor classes, excluding the model itself and Node."""
     ret = {c.__name__ for c in model.__mro__ if Node in c.__mro__}
     if model.__name__ in ret:
         ret.remove(model.__name__)
@@ -2149,6 +2168,7 @@ def _get_node_parent_names(model: type[BaseModel]) -> set[str]:
 
 
 def _clean_annotation(annotation: Any) -> str:
+    """Converts a type annotation to a clean string representation."""
     import typing
 
     if isinstance(annotation, str):
@@ -2169,10 +2189,13 @@ def _clean_annotation(annotation: Any) -> str:
 
 @functools.cache
 def _get_methods(c: type[object]) -> set[str]:
+    """Returns the set of method names defined on a class (cached)."""
     return {name for name, member in inspect.getmembers(c) if inspect.isfunction(member)}
 
 
 class _FieldDescription:
+    """Describes a single Pydantic field for schema documentation."""
+
     def __init__(self, model: type[BaseModel], fieldname: str) -> None:
         self.model = model
         self.field_info = _pydantic_get_field(model, fieldname)
@@ -2197,16 +2220,21 @@ class _FieldDescription:
 
 @dataclass
 class ParamData:
+    """Holds type, name, and default value for a method parameter."""
+
     type: str
     name: str
     default: Any
 
     @property
     def formatted_default(self) -> str:
+        """Returns the default value formatted for display, or empty string if no default."""
         return f" = {self.default}" if self.default is not inspect._empty else ""
 
 
 class _MethodDescription:
+    """Describes a single method on a model for schema documentation."""
+
     def __init__(self, model: type[BaseModel], name: str) -> None:
         self.model = model
         self.name = name
@@ -2216,6 +2244,7 @@ class _MethodDescription:
 
     @property
     def params(self) -> list[ParamData]:
+        """Returns the method's parameters as a list of ParamData, excluding self."""
         ret: list[ParamData] = []
 
         for param_name, param_type in self.raw_params.items():
@@ -2233,6 +2262,8 @@ class _MethodDescription:
 
 
 class _ModelDescription:
+    """Base class that extracts fields, parents, and methods from a Pydantic model for schema docs."""
+
     def __init__(self, model: type[BaseModel]) -> None:
         self.model = model
 
@@ -2261,6 +2292,8 @@ class _ModelDescription:
 
 
 class _NodeDescription(_ModelDescription):
+    """Describes a Node subclass for schema documentation and diagram generation."""
+
     def __init__(self, node_cls: type[Node]) -> None:
         super().__init__(node_cls)
 
@@ -2270,6 +2303,7 @@ class _NodeDescription(_ModelDescription):
         return f"NodeDesc({self.name})"
 
     def to_mermaid(self, indent: int = 4) -> str:
+        """Generates a Mermaid class diagram fragment for this node type."""
         ret = f"""\n{" ":>{indent}}%% Node: {self.name}\n"""
 
         # add fields
@@ -2294,6 +2328,7 @@ class _NodeDescription(_ModelDescription):
         return ret
 
     def to_dot(self, indent: int = 4) -> str:
+        """Generates a Graphviz DOT fragment for this node type."""
         ret = f"""\n{" ":>{indent}}// Node: {self.name}\n"""
 
         # create fields
@@ -2328,6 +2363,8 @@ class _NodeDescription(_ModelDescription):
 
 
 class _EdgeDescription(_ModelDescription):
+    """Describes an Edge subclass for schema documentation and diagram generation."""
+
     def __init__(self, edge_cls: type[Edge]) -> None:
         super().__init__(edge_cls)
 
@@ -2352,12 +2389,14 @@ class _EdgeDescription(_ModelDescription):
 
     @property
     def resolved_name(self) -> str:
+        """Returns the edge type name, including the class name if they differ."""
         if self.edgetype == self.name:
             return self.name
 
         return f"{self.edgetype} ({self.name})"
 
     def to_mermaid(self, indent: int = 4) -> str:
+        """Generates a Mermaid diagram fragment for this edge type's connections."""
         ret = f"""\n{" ":>{indent}}%% Edge: {self.resolved_name}\n"""
 
         # add connections
@@ -2367,6 +2406,7 @@ class _EdgeDescription(_ModelDescription):
         return ret
 
     def to_dot(self, indent: int = 4) -> str:
+        """Generates a Graphviz DOT fragment for this edge type's connections."""
         ret = f"""\n{" ":>{indent}}// Edge: {self.resolved_name}\n"""
 
         # add connections

@@ -1,3 +1,5 @@
+"""Determines if something important happened based on intrinsic state changes."""
+
 from typing import Any
 
 from .component import Component
@@ -7,6 +9,8 @@ from .intrinsic import Intrinsic, IntrinsicData, IntrinsicEvent
 
 
 class SignificanceData:
+    """Carries a significance score representing how important a state change is."""
+
     def __init__(self, significance: float) -> None:
         self.significance = significance
 
@@ -15,6 +19,8 @@ SignificanceEvent = Event[SignificanceData]
 
 
 class Significance(Component):
+    """Component that computes a weighted significance score from normalized intrinsics."""
+
     name: str = "significance"
     type: str = "significance"
     auto: bool = True
@@ -27,9 +33,11 @@ class Significance(Component):
         self.intrinsic_conn.listen(self.do_significance)
 
     def event_filter(self, e: Event[Any]) -> bool:
+        """Only process IntrinsicData events."""
         return isinstance(e.data, IntrinsicData)
 
     def do_significance(self, e: IntrinsicEvent) -> None:
+        """Computes a weighted sum of normalized intrinsic values and emits the result."""
         significance = 0.0
         settings = Config.get()
         assert isinstance(e.data, IntrinsicData)

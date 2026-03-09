@@ -28,6 +28,8 @@ T = TypeVar("T")
 
 
 class ComponentId(NamedTuple):
+    """Uniquely identifies a component by its type and name."""
+
     type: str
     name: str
 
@@ -137,6 +139,7 @@ class Component(ABC):
 
     @property
     def id(self) -> ComponentId:
+        """The unique identifier for this component."""
         return ComponentId(self.type, self.name)
 
     @staticmethod
@@ -237,4 +240,5 @@ default_components: set[ComponentKey] = set()
 
 
 def _component_registry_key(name: str, type: str) -> ComponentKey:
+    """Creates a registry key tuple from a component name and type."""
     return ComponentKey((ComponentName(name), ComponentType(type)))

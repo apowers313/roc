@@ -39,27 +39,37 @@ if "pytest" in sys.modules:
 
 # intrinsics configs
 class ConfigIntrinsicBase(BaseModel):
+    """Base model for intrinsic configuration entries."""
+
     type: str
     name: str
     config: Any
 
 
 class ConfigPercentIntrinsic(ConfigIntrinsicBase):
+    """Config for percent-based intrinsics (e.g. hp as a fraction of hpmax)."""
+
     type: Literal["percent"] = "percent"
     config: str
 
 
 class ConfigMapIntrinsic(ConfigIntrinsicBase):
+    """Config for map-based intrinsics that map discrete values to floats."""
+
     type: Literal["map"] = "map"
     config: dict[int, float]
 
 
 class ConfigIntIntrinsic(ConfigIntrinsicBase):
+    """Config for integer range intrinsics with a min and max."""
+
     type: Literal["int"] = "int"
     config: tuple[int, int]
 
 
 class ConfigBoolIntrinsic(ConfigIntrinsicBase):
+    """Config for boolean intrinsics (true/false)."""
+
     type: Literal["bool"] = "bool"
     config: None = None
 
@@ -183,6 +193,7 @@ class Config(BaseSettings):
 
     @staticmethod
     def print() -> None:
+        """Prints the current configuration to stdout."""
         print(Config.get())  # noqa: T201
 
     @staticmethod

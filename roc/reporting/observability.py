@@ -1,3 +1,5 @@
+"""OpenTelemetry-based observability: logging, metrics, tracing, and profiling."""
+
 from __future__ import annotations
 
 import importlib
@@ -90,6 +92,8 @@ roc_common_attributes = {
 
 
 class ObservabilityEvent(Event):
+    """An OpenTelemetry event with ROC common attributes automatically merged in."""
+
     def __init__(
         self,
         name: str,
@@ -101,6 +105,8 @@ class ObservabilityEvent(Event):
 
 
 class ObservabilityBase(type):
+    """Metaclass that makes Observability a singleton."""
+
     _instances: dict[type, Observability] = {}
 
     def __call__(cls, *args: Any, **kwargs: Any) -> Observability:
@@ -115,6 +121,8 @@ class ObservabilityBase(type):
 
 
 class Observability(metaclass=ObservabilityBase):
+    """Singleton that initializes and provides access to OpenTelemetry instrumentation."""
+
     def __init__(self) -> None:
         settings = Config.get()
         roc_logger.init()
@@ -210,22 +218,27 @@ class Observability(metaclass=ObservabilityBase):
 
     @staticmethod
     def init() -> None:
+        """Initializes the Observability singleton."""
         Observability()
 
     @classmethod
     def event(cls, evt: Event) -> None:
+        """Emits an observability event."""
         Observability.event_logger.emit(evt)
 
     @classmethod
     def set_event_logger(cls, event_logger: EventLogger) -> None:
+        """Sets the OpenTelemetry event logger."""
         cls.event_logger = event_logger
 
     @classmethod
     def set_tracer(cls, tracer: Tracer) -> None:
+        """Sets the OpenTelemetry tracer."""
         cls.tracer = tracer
 
     @classmethod
     def set_meter(cls, meter: Meter) -> None:
+        """Sets the OpenTelemetry meter."""
         cls.meter = meter
 
 
@@ -304,6 +317,7 @@ def _lg_to_otel_severity(loguru_sev: int) -> tuple[SeverityNumber, str]:
 # Largely copied from:
 # https://github.com/open-telemetry/opentelemetry-python/blob/a7fe4f8bac7fa36291c6acf86982bbb356e3ae6d/opentelemetry-sdk/src/opentelemetry/sdk/_logs/_internal/__init__.py#L558
 def loguru_to_otel(msg: str) -> None:
+    """Loguru sink that forwards log records to OpenTelemetry."""
     body = msg.strip()
 
     # loguru hides all the log information on a "record" attribute on the string

@@ -1,3 +1,5 @@
+"""Identifies contiguous regions of the same glyph value using flood-fill labeling."""
+
 from dataclasses import dataclass
 
 import numpy as np
@@ -17,11 +19,14 @@ NONZERO_VAL = -1
 
 
 class FloodNode(FeatureNode):
+    """Graph node representing a flood-fill region by type and size."""
+
     type: int
     size: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns type and size as strings."""
         return [str(self.type), str(self.size)]
 
 
@@ -32,9 +37,11 @@ class FloodFeature(AreaFeature[FloodNode]):
     feature_name: str = "Flood"
 
     def _create_nodes(self) -> FloodNode:
+        """Creates a new FloodNode with type and size."""
         return FloodNode(type=self.type, size=self.size)
 
     def _dbfetch_nodes(self) -> FloodNode | None:
+        """Looks up an existing FloodNode by type and size."""
         return FloodNode.find_one(
             "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
         )
@@ -49,9 +56,11 @@ class Flood(FeatureExtractor[TypedPointCollection]):
     type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Only process VisionData events."""
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> None:
+        """Labels contiguous regions and emits FloodFeatures for regions above minimum size."""
         assert isinstance(e.data, VisionData)
         data = IntGrid(e.data.glyphs)
         indices = np.indices(data.T.shape).T

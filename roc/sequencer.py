@@ -1,3 +1,5 @@
+"""Assembles game state snapshots (Frames) from perception, intrinsic, and action events."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -17,6 +19,7 @@ PREDICTED_FRAME_TICK = -1
 
 
 def get_next_tick() -> int:
+    """Returns the next sequential tick number for frame ordering."""
     global tick
 
     tick += 1
@@ -25,10 +28,13 @@ def get_next_tick() -> int:
 
 
 class Frame(Node):
+    """A snapshot of the game state at one timestep, containing objects, intrinsics, and actions."""
+
     tick: int = Field(default_factory=get_next_tick)
 
     @property
     def transforms(self) -> list[Transform]:
+        """All transforms associated with this frame's change node."""
         ret: list[Transform] = []
 
         changes = self.src_edges.select(type="Change")
@@ -48,6 +54,7 @@ class Frame(Node):
 
     @property
     def transformable(self) -> list[Transformable]:
+        """All transformable attributes attached to this frame."""
         ret: list[Transformable] = []
 
         for n in self.successors:
@@ -58,6 +65,7 @@ class Frame(Node):
 
     @staticmethod
     def merge_transforms(src: Frame, mod: Frame) -> Frame:
+        """Creates a predicted frame by applying transforms from mod to src's transformables."""
         ret = Frame(tick=PREDICTED_FRAME_TICK)
 
         for st in src.transformable:
@@ -70,6 +78,7 @@ class Frame(Node):
 
     @property
     def objects(self) -> list[Object]:
+        """All Objects referenced by this frame's feature groups."""
         ret: list[Object] = []
 
         # print(
@@ -93,6 +102,8 @@ class Frame(Node):
 
 
 class FrameAttribute(Edge):
+    """An edge connecting a Frame to its constituent data (features, actions, intrinsics)."""
+
     allowed_connections: EdgeConnectionsList = [
         ("Frame", "FeatureGroup"),
         ("Frame", "TakeAction"),
@@ -102,10 +113,14 @@ class FrameAttribute(Edge):
 
 
 class NextFrame(Edge):
+    """An edge linking consecutive Frames in temporal order."""
+
     allowed_connections: EdgeConnectionsList = [("Frame", "Frame")]
 
 
 class Sequencer(Component):
+    """Component that assembles Frames from object resolution, intrinsic, and action events."""
+
     name: str = "sequencer"
     type: str = "sequencer"
     auto: bool = True
@@ -124,6 +139,7 @@ class Sequencer(Component):
         self.current_frame: Frame = Frame()
 
     def event_filter(self, e: Event[Any]) -> bool:
+        """Accept ResolvedObject, TakeAction, and IntrinsicData events."""
         return (
             isinstance(e.data, ResolvedObject)
             or isinstance(e.data, TakeAction)
@@ -131,13 +147,16 @@ class Sequencer(Component):
         )
 
     def handle_object_resolution_event(self, e: Event[ResolvedObject]) -> None:
+        """Attaches a resolved object's feature group to the current frame."""
         FrameAttribute.connect(self.current_frame, e.data.feature_group)
 
     def handle_intrinsic_event(self, e: Event[IntrinsicData]) -> None:
+        """Attaches intrinsic nodes to the current frame."""
         for intrinsic_node in e.data.to_nodes():
             FrameAttribute.connect(self.current_frame, intrinsic_node)
 
     def handle_action_event(self, e: Event[Any]) -> None:
+        """On TakeAction, closes the current frame and starts a new one."""
         # start new frame on action
         if isinstance(e.data, TakeAction):
             # connect action data to the old frame

@@ -1,3 +1,5 @@
+"""Object identification and resolution from visual features."""
+
 from __future__ import annotations
 
 import random
@@ -25,10 +27,14 @@ ObjectId = NewType("ObjectId", int)
 
 
 class Features(Edge):
+    """An edge connecting an Object to its FeatureGroups."""
+
     allowed_connections: EdgeConnectionsList = [("Object", "FeatureGroup")]
 
 
 class Object(Node):
+    """A persistent entity identified by matching feature groups across frames."""
+
     # XXX: this was originally a UUIDv4, but Memgraph can't store Integers that
     # large right now
     uuid: ObjectId = Field(default_factory=lambda: ObjectId(random.randint(0, 2**63)))
@@ -37,6 +43,7 @@ class Object(Node):
 
     @property
     def feature_groups(self) -> list[FeatureGroup]:
+        """All feature groups associated with this object."""
         feature_groups: list[FeatureGroup] = []
 
         for e in self.src_edges:
@@ -48,6 +55,7 @@ class Object(Node):
 
     @property
     def features(self) -> list[FeatureNode]:
+        """All feature nodes across all feature groups of this object."""
         feature_nodes: list[FeatureNode] = []
 
         for fg in self.feature_groups:
@@ -69,6 +77,7 @@ class Object(Node):
 
     @staticmethod
     def with_features(fg: FeatureGroup) -> Object:
+        """Creates a new Object and connects it to the given FeatureGroup."""
         o = Object()
         Features.connect(o, fg)
 
@@ -76,6 +85,7 @@ class Object(Node):
 
     @property
     def frames(self) -> list[Frame]:
+        """All frames that reference this object."""
         ret: list[Frame] = []
 
         for e in self.dst_edges:
@@ -86,6 +96,10 @@ class Object(Node):
 
     @staticmethod
     def distance(obj: Object, features: Collection[FeatureNode]) -> float:
+        """Computes feature-space distance between an object and a set of features.
+
+        Distance 0 means identical features; higher means more different.
+        """
         assert isinstance(obj, Object)
         # TODO: allowed_attrs is physical attributes, not really great but
         # NetHack doesn't give us much feature-space to work with. in the future
@@ -99,14 +113,18 @@ class Object(Node):
 
 
 class FeatureGroup(Node):
+    """A collection of feature nodes that together describe one observation."""
+
     @staticmethod
     def with_features(features: Collection[PerceptionFeature[Any]]) -> FeatureGroup:
+        """Creates a FeatureGroup from perception-level features, converting them to nodes."""
         feature_nodes: set[FeatureNode] = {f.to_nodes() for f in features}
 
         return FeatureGroup.from_nodes(feature_nodes)
 
     @staticmethod
     def from_nodes(feature_nodes: Collection[FeatureNode]) -> FeatureGroup:
+        """Creates a FeatureGroup from existing feature nodes."""
         fg = FeatureGroup()
         for f in feature_nodes:
             Detail.connect(fg, f)
@@ -115,10 +133,13 @@ class FeatureGroup(Node):
 
     @property
     def feature_nodes(self) -> list[FeatureNode]:
+        """The feature nodes connected to this group via Detail edges."""
         return [cast(FeatureNode, e.dst) for e in self.src_edges if e.type == "Detail"]
 
 
 class CandidateObjects:
+    """Ranks existing objects by feature-space distance to a set of new features."""
+
     @Observability.tracer.start_as_current_span("create_candidate_object")
     def __init__(self, feature_nodes: Collection[FeatureNode]) -> None:
         # TODO: this currently only uses features, not context, for resolution
@@ -149,6 +170,8 @@ class CandidateObjects:
 
 @dataclass
 class ResolvedObject:
+    """The result of object resolution: the matched or new object with its features and location."""
+
     object: Object
     feature_group: FeatureGroup
     x: XLoc
@@ -159,6 +182,8 @@ ObjectData = ResolvedObject
 
 
 class ObjectResolver(Component):
+    """Component that matches visual features to existing objects or creates new ones."""
+
     name: str = "resolver"
     type: str = "object"
     auto: bool = True
@@ -181,10 +206,12 @@ class ObjectResolver(Component):
         )
 
     def event_filter(self, e: AttentionEvent) -> bool:
+        """Only process events from the vision attention component."""
         return e.src_id.name == "vision" and e.src_id.type == "attention"
 
     @Observability.tracer.start_as_current_span("do_object_resolution")
     def do_object_resolution(self, e: AttentionEvent) -> None:
+        """Resolves the highest-saliency focus point to an existing or new object."""
         # TODO: instead of just taking the first focus_point (highest saliency
         # strength) we probably want to adjust the strength for known objects /
         # novel objects
@@ -214,4 +241,4 @@ class ObjectResolver(Component):
 
 
 class ObjectCache(LRUCache[tuple[XLoc, YLoc], ResolvedObject]):
-    pass
+    """LRU cache mapping screen locations to their most recently resolved objects."""

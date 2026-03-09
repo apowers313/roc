@@ -15,10 +15,13 @@ from .single import SingleFeature
 
 
 class ColorNode(FeatureNode):
+    """Graph node representing a NetHack color value."""
+
     type: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns the color name as a string."""
         color: str
 
         # https://github.com/NetHack/NetHack/blob/8bb764e624aa228ce2a5374739408ed81b77d40e/include/color.h#L14
@@ -89,9 +92,11 @@ class ColorFeature(PointFeature[ColorNode]):
     feature_name: str = "Color"
 
     def _create_nodes(self) -> ColorNode:
+        """Creates a new ColorNode for this color type."""
         return ColorNode(type=self.type)
 
     def _dbfetch_nodes(self) -> ColorNode | None:
+        """Looks up an existing ColorNode by type."""
         return ColorNode.find_one("src.type = $type", params={"type": self.type})
 
 

@@ -92,6 +92,7 @@ class ProprioceptiveData:
 
     @staticmethod
     def from_dict(d: dict[str, Any]) -> ProprioceptiveData:
+        """Creates ProprioceptiveData from a dictionary of inventory arrays."""
         inv_strs = _to_numpy(d, "inv_strs")
         inv_letters = _to_numpy(d, "inv_letters")
         inv_glyphs = _to_numpy(d, "inv_glyphs")
@@ -100,10 +101,12 @@ class ProprioceptiveData:
 
 
 class Settled:
-    pass
+    """Sentinel indicating that a feature extractor has finished processing the current frame."""
 
 
 class Direction(str, Enum):
+    """Cardinal and intercardinal directions for motion features."""
+
     up = "UP"
     down = "DOWN"
     left = "LEFT"
@@ -118,10 +121,14 @@ class Direction(str, Enum):
 
 
 class Detail(Edge):
+    """An edge connecting a FeatureGroup to one of its FeatureNodes."""
+
     allowed_connections: EdgeConnectionsList = [("FeatureGroup", "FeatureNode")]
 
 
 class FeatureNode(Node):
+    """Base class for graph nodes representing extracted features."""
+
     def __hash__(self) -> int:
         # XXX: this is dangerous because ID changes when a node is saved
         # should be okay for this use case though
@@ -132,7 +139,9 @@ class FeatureNode(Node):
 
     @property
     @abstractmethod
-    def attr_strs(self) -> list[str]: ...
+    def attr_strs(self) -> list[str]:
+        """Human-readable attribute strings for display."""
+        ...
 
 
 cache_registry: dict[str, WeakValueDictionary[int, Node]] = defaultdict(WeakValueDictionary)
@@ -141,13 +150,18 @@ FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
 
 @dataclass(kw_only=True)
 class Feature:
+    """Base class for all extracted features."""
+
     feature_name: str
     origin_id: tuple[str, str]
 
 
 @dataclass(kw_only=True)
 class VisualFeature(Feature, ABC, Generic[FeatureNodeType]):
+    """A visual feature that can be converted to graph nodes, with caching."""
+
     def to_nodes(self) -> FeatureNodeType:
+        """Converts this feature to a graph node, using cache or DB lookup first."""
         # check local cache
         cache = cache_registry[self.feature_name]
 
@@ -165,40 +179,56 @@ class VisualFeature(Feature, ABC, Generic[FeatureNodeType]):
         return n
 
     @abstractmethod
-    def get_points(self) -> set[tuple[XLoc, YLoc]]: ...
+    def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns the screen locations covered by this feature."""
+        ...
 
     @abstractmethod
-    def _create_nodes(self) -> FeatureNodeType: ...
+    def _create_nodes(self) -> FeatureNodeType:
+        """Creates a new graph node for this feature."""
+        ...
 
     @abstractmethod
-    def _dbfetch_nodes(self) -> FeatureNodeType | None: ...
+    def _dbfetch_nodes(self) -> FeatureNodeType | None:
+        """Attempts to find an existing graph node for this feature in the database."""
+        ...
 
     @abstractmethod
-    def node_hash(self) -> int: ...
+    def node_hash(self) -> int:
+        """Returns a hash value for caching this feature's node."""
+        ...
 
 
 @dataclass(kw_only=True)
 class AreaFeature(VisualFeature[FeatureNodeType]):
+    """A visual feature covering multiple adjacent screen locations."""
+
     type: int
     points: set[tuple[XLoc, YLoc]]
     size: int
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns all points in this area feature."""
         return self.points
 
     def node_hash(self) -> int:
+        """Hashes by type and size."""
         return hash((self.type, self.size))
 
 
 @dataclass(kw_only=True)
 class PointFeature(VisualFeature[FeatureNodeType]):
+    """A visual feature at a single screen location."""
+
     type: int
     point: tuple[XLoc, YLoc]
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns the single point of this feature."""
         return {self.point}
 
     def node_hash(self) -> int:
+        """Hashes by type value."""
         return self.type
 
 
@@ -219,18 +249,23 @@ class Perception(Component, ABC):
         self.pb_conn.listen(self.do_perception)
 
     @abstractmethod
-    def do_perception(self, e: PerceptionEvent) -> None: ...
+    def do_perception(self, e: PerceptionEvent) -> None:
+        """Processes a perception event."""
+        ...
 
 
 fe_list: list[ReferenceType[FeatureExtractor[Any]]] = []
 
 
 class FeatureExtractor(Perception, Generic[FeatureType], ABC):
+    """Abstract base for components that extract specific features from perception data."""
+
     def __init__(self) -> None:
         super().__init__()
         fe_list.append(ref(self))
 
     def do_perception(self, e: PerceptionEvent) -> None:
+        """Extracts a feature from the event and sends it on the perception bus."""
         f = self.get_feature(e)
         if f is None:
             return
@@ -238,13 +273,17 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
         self.pb_conn.send(f)
 
     def settled(self) -> None:
+        """Signals that this extractor has finished processing the current frame."""
         self.pb_conn.send(Settled())
 
     @abstractmethod
-    def get_feature(self, e: PerceptionEvent) -> Feature | None: ...
+    def get_feature(self, e: PerceptionEvent) -> Feature | None:
+        """Extracts a feature from the event, or returns None if not applicable."""
+        ...
 
     @classmethod
     def list(cls) -> list[str]:
+        """Returns the IDs of all active feature extractors."""
         ret: list[str] = []
         for fe_ref in fe_list:
             fe = fe_ref()
@@ -256,6 +295,7 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
 
 
 def _to_numpy(d: dict[str, Any], k: str) -> np.ndarray[Any, Any]:
+    """Extracts a key from a dict and ensures it is a numpy array."""
     if not k in d:
         raise Exception(f"Expected '{k}' to exist in dict for .from_dict()")
 

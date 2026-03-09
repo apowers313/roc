@@ -17,11 +17,14 @@ from .delta import DeltaFeature
 
 
 class MotionNode(FeatureNode):
+    """Graph node representing a motion event with type and direction."""
+
     type: int
     direction: Direction
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns type and direction as strings."""
         return [str(self.type), str(self.direction)]
 
 
@@ -41,15 +44,19 @@ class MotionFeature(VisualFeature[MotionNode]):
         return f"{self.type} '{chr(self.type)}' {self.direction}: ({self.start_point[0]}, {self.start_point[1]}) -> ({self.end_point[0]}, {self.end_point[1]})"
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns the destination point of the motion."""
         return {self.end_point}
 
     def node_hash(self) -> int:
+        """Hashes by type and direction."""
         return hash((self.type, self.direction))
 
     def _create_nodes(self) -> MotionNode:
+        """Creates a new MotionNode with type and direction."""
         return MotionNode(type=self.type, direction=self.direction)
 
     def _dbfetch_nodes(self) -> MotionNode | None:
+        """Looks up an existing MotionNode by type and direction."""
         return MotionNode.find_one(
             "src.type = $type AND src.direction = $direction",
             params={"type": self.type, "direction": self.direction},
@@ -70,12 +77,14 @@ class Motion(FeatureExtractor[MotionFeature]):
         self.delta_list: DeltaList = []
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Only process events from the delta perception component."""
         # only listen to delta:perception events
         if e.src_id.name == "delta" and e.src_id.type == "perception":
             return True
         return False
 
     def get_feature(self, e: PerceptionEvent) -> None:
+        """Matches adjacent deltas to detect motion and emits MotionFeatures."""
         if isinstance(e.data, Settled):
             self.delta_list.clear()
             self.settled()
@@ -119,6 +128,7 @@ def adjacent_direction(d1: DeltaFeature, d2: DeltaFeature) -> Direction:
 
 
 def emit_motion(mc: Motion, old_delta: DeltaFeature, new_delta: DeltaFeature) -> None:
+    """Emits a MotionFeature from a pair of adjacent deltas that indicate movement."""
     mc.pb_conn.send(
         MotionFeature(
             origin_id=mc.id,

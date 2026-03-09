@@ -15,10 +15,13 @@ from .single import SingleFeature
 
 
 class ShapeNode(FeatureNode):
+    """Graph node representing a character shape."""
+
     type: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns the character representation of this shape."""
         return [chr(self.type)]
 
 
@@ -29,9 +32,11 @@ class ShapeFeature(PointFeature[ShapeNode]):
     feature_name: str = "Shape"
 
     def _create_nodes(self) -> ShapeNode:
+        """Creates a new ShapeNode for this character type."""
         return ShapeNode(type=self.type)
 
     def _dbfetch_nodes(self) -> ShapeNode | None:
+        """Looks up an existing ShapeNode by type."""
         return ShapeNode.find_one("src.type = $type", params={"type": self.type})
 
 

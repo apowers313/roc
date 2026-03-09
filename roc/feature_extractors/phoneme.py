@@ -15,10 +15,13 @@ from ..perception import (
 
 
 class PhonemeNode(FeatureNode):
+    """Graph node representing a phoneme feature."""
+
     type: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns the type as a string."""
         return [str(self.type)]
 
 
@@ -30,9 +33,11 @@ class PhonemeFeature(Feature):
     phonemes: list[list[str]]
 
     def _create_nodes(self) -> PhonemeNode:
+        """Creates a new PhonemeNode."""
         return PhonemeNode(type=42)  # XXX TODO type
 
     def _dbfetch_nodes(self) -> PhonemeNode | None:
+        """Looks up an existing PhonemeNode."""
         return PhonemeNode.find_one("src.type = $type", params={"type": 42})  # XXX TODO type
 
 

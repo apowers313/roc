@@ -1,3 +1,5 @@
+"""2D grid primitives, point collections, and debug visualization utilities."""
+
 from __future__ import annotations
 
 from colorsys import hsv_to_rgb
@@ -46,15 +48,18 @@ class Point:
 
     @overload
     @staticmethod
-    def isadjacent(*, x1: XLoc, y1: YLoc, x2: XLoc, y2: YLoc) -> bool: ...
+    def isadjacent(*, x1: XLoc, y1: YLoc, x2: XLoc, y2: YLoc) -> bool:
+        """Check adjacency using raw coordinates."""
 
     @overload
     @staticmethod
-    def isadjacent(*, p1: Point, x2: XLoc, y2: YLoc) -> bool: ...
+    def isadjacent(*, p1: Point, x2: XLoc, y2: YLoc) -> bool:
+        """Check adjacency using a Point and raw coordinates."""
 
     @overload
     @staticmethod
-    def isadjacent(*, p1: Point, p2: Point) -> bool: ...
+    def isadjacent(*, p1: Point, p2: Point) -> bool:
+        """Check adjacency using two Points."""
 
     @staticmethod
     def isadjacent(
@@ -67,6 +72,7 @@ class Point:
         p1: Point | None = None,
         p2: Point | None = None,
     ) -> bool:
+        """Returns True if two positions are adjacent (within Chebyshev distance 1), False if same or farther."""
         if isinstance(p1, Point):
             x1 = p1.x
             y1 = p1.y
@@ -110,6 +116,8 @@ ValLocTuple = tuple[XLoc, YLoc, GridType]
 
 
 class Grid(npt.NDArray[Any], Generic[GridType]):
+    """A typed 2D numpy array with x,y coordinate access and iteration."""
+
     def __new__(cls, input_array: npt.ArrayLike) -> Self:
         obj = np.asarray(input_array).view(cls)
         assert obj.ndim == 2
@@ -131,25 +139,32 @@ class Grid(npt.NDArray[Any], Generic[GridType]):
     #     self.val_list = val_list
 
     def get_val(self, x: int, y: int) -> GridType:
+        """Returns the value at grid position (x, y)."""
         # XXX: not sure why I need to cast here, should this already be typed?
         return cast(GridType, self[y, x])
 
     def set_val(self, x: int, y: int, v: GridType) -> None:
+        """Sets the value at grid position (x, y)."""
         self[y, x] = v
 
     @property
     def width(self) -> int:
+        """The number of columns in the grid."""
         # XXX: shape is a tuple of ints, not sure why this is being grumpy
         # https://numpy.org/doc/2.1/reference/generated/numpy.shape.html
         return self.shape[1]  # type: ignore
 
     @property
     def height(self) -> int:
+        """The number of rows in the grid."""
         return self.shape[0]  # type: ignore
 
 
 class IntGrid(Grid[int]):
+    """A Grid specialized for integer values with Point-based access."""
+
     def get_point(self, x: XLoc, y: YLoc) -> Point:
+        """Returns the value at (x, y) as a Point."""
         return Point(x, y, self[y, x])
 
     def points(self) -> Iterator[Point]:
@@ -159,6 +174,8 @@ class IntGrid(Grid[int]):
 
 
 class TextGrid(IntGrid):
+    """An IntGrid that renders integer values as characters for display."""
+
     def __str__(self) -> str:
         ret = ""
         last_y = 0
@@ -194,6 +211,8 @@ class GridStyle:
 
 
 class DebugGrid(Grid[GridStyle]):
+    """A debug visualization grid that renders characters with colored backgrounds and foregrounds."""
+
     def __new__(cls, grid: IntGrid) -> DebugGrid:
         # obj = np.ndarray((grid.height, grid.width), dtype=object).view(DebugGrid)
         obj = np.array(
@@ -221,6 +240,7 @@ class DebugGrid(Grid[GridStyle]):
             return
 
     def to_html_vals(self) -> dict[str, list[list[int | str]]]:
+        """Returns the grid as dicts of chars, foreground colors, and background colors."""
         ret: dict[str, list[list[int | str]]] = {
             "chars": [],
             "fg": [],
@@ -249,6 +269,7 @@ class DebugGrid(Grid[GridStyle]):
         return ret
 
     def set_style(self, x: int, y: int, *, style: str | None = None, **kwargs: float) -> None:
+        """Sets visual style properties (hue, brightness, saturation) for a cell."""
         s = self.get_val(x, y)
 
         if style:
@@ -277,6 +298,7 @@ class DebugGrid(Grid[GridStyle]):
                     raise Exception(f"unknown key '{key}' in set_style")
 
     def get_front_rgb(self, x: int, y: int) -> tuple[int, int, int]:
+        """Returns the foreground RGB color for the cell at (x, y)."""
         s = self.get_val(x, y)
         rgb = hsv_to_rgb(s.front_hue, s.front_saturation, s.front_brightness)
         ret = tuple(map(lambda c: round(c * 255), rgb))
@@ -284,6 +306,7 @@ class DebugGrid(Grid[GridStyle]):
         return ret
 
     def get_back_rgb(self, x: int, y: int) -> tuple[int, int, int]:
+        """Returns the background RGB color for the cell at (x, y)."""
         s = self.get_val(x, y)
         rgb = hsv_to_rgb(s.back_hue, s.back_saturation, s.back_brightness)
         ret = tuple(map(lambda c: round(c * 255), rgb))
@@ -363,10 +386,12 @@ class PointCollection:
 
     @property
     def size(self) -> int:
+        """The number of points in the collection."""
         return len(self._point_hash)
 
     @property
     def points(self) -> PointList:
+        """All points in the collection as a list."""
         return list(self._point_hash.values())
 
 
@@ -381,6 +406,7 @@ class TypedPointCollection(PointCollection):
         return f"{len(self._point_hash)} Points: {self.type} ({chr(self.type)})"
 
     def do_hash(self, p: Point) -> int:
+        """Hashes by both position and value, since all points share the same type."""
         return hash(p)
 
     def add(self, p: Point) -> None:

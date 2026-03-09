@@ -40,23 +40,31 @@ class Action(Component):
         self.action_bus_conn.listen(self.action_request)
 
     def event_filter(self, e: ActionEvent) -> bool:
+        """Only process ActionRequest events."""
         return isinstance(e.data, ActionRequest)
 
     def action_request(self, e: ActionEvent) -> None:
+        """Determines the action to take and sends it on the action bus."""
         action = DefaultActionExpMod.get(default="pass").get_action()
         actevt = TakeAction(action=action)
         self.action_bus_conn.send(actevt)
 
 
 class DefaultActionExpMod(ExpMod):
+    """Base class for experiment modules that determine the agent's action."""
+
     modtype = "action"
 
     @abstractmethod
-    def get_action(self) -> int: ...
+    def get_action(self) -> int:
+        """Returns the action ID to take."""
+        ...
 
 
 # @DefaultActionExpMod.register("pass")
 class DefaultActionPass(DefaultActionExpMod):
+    """Default action module that always passes (does nothing)."""
+
     name = "pass"
 
     def get_action(self) -> int:

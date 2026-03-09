@@ -98,6 +98,12 @@ class BusConnection(Generic[EventData]):
         *,
         filter: EventFilter[EventData] | None = None,
     ) -> None:
+        """Subscribes a listener to events on this bus connection.
+
+        Args:
+            listener: Callback invoked for each matching event.
+            filter: Optional additional filter beyond the component's event_filter.
+        """
         pipe_args: list[Callable[[Any], Observable[Event[EventData]]]] = [
             # op.filter(lambda e: e.src is not self.attached_component),
             # op.do_action(lambda e: print("before filter", e)),
@@ -110,6 +116,7 @@ class BusConnection(Generic[EventData]):
         self.subscribers.append(sub)
 
     def close(self) -> None:
+        """Disposes all subscriptions on this bus connection."""
         logger.debug(
             f"Closing connection from component {self.attached_component.id}  -> {self.attached_bus.name} bus"
         )

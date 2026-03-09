@@ -1,3 +1,5 @@
+"""Detects changes between consecutive frames by comparing transformable attributes."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -12,10 +14,14 @@ from .transformable import Transform, Transformable
 
 @dataclass
 class TransformResult:
+    """Carries the result of comparing two consecutive frames."""
+
     transform: Transform
 
 
 class Change(Edge):
+    """An edge connecting Frames to their Transforms."""
+
     allowed_connections: EdgeConnectionsList = [
         ("Transform", "Transform"),
         ("Frame", "Transform"),
@@ -24,6 +30,8 @@ class Change(Edge):
 
 
 class Transformer(Component):
+    """Component that detects changes between consecutive frames."""
+
     name: str = "transformer"
     type: str = "transformer"
     auto: bool = True
@@ -36,9 +44,11 @@ class Transformer(Component):
         self.sequencer_conn.listen(self.do_transformer)
 
     def event_filter(self, e: Event[Any]) -> bool:
+        """Only process Frame events."""
         return isinstance(e.data, Frame)
 
     def do_transformer(self, e: Event[Frame]) -> None:
+        """Compares current and previous frames, emitting transforms for any changes."""
         # print("do_transformer", e)
         current_frame = e.data
 

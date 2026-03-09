@@ -1,3 +1,5 @@
+"""Interfaces for objects that can detect and represent changes between frames."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -10,6 +12,8 @@ if TYPE_CHECKING:
 
 
 class Transformable(ABC):
+    """Interface for objects that can be compared across frames to detect changes."""
+
     @abstractmethod
     def same_transform_type(self, other: Any) -> bool:
         """Indicates if two things are the same. e.g. Object(type="foo") and Object(type="bar")
@@ -33,8 +37,11 @@ class Transformable(ABC):
 
 
 class Transform(Node):
+    """A graph node representing the diff between two frame states."""
+
     @property
     def src_frame(self) -> Frame:
+        """The frame this transform originates from."""
         edges = self.dst_edges.select(type="Change")
         assert len(edges) == 1
         n = edges[0].src
@@ -43,6 +50,7 @@ class Transform(Node):
 
     @property
     def dst_frame(self) -> Frame:
+        """The frame this transform leads to."""
         edges = self.src_edges.select(type="Change")
         assert len(edges) == 1
         n = edges[0].dst

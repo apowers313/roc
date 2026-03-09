@@ -1,3 +1,5 @@
+"""Identifies horizontal and vertical lines of repeated glyph values."""
+
 from dataclasses import dataclass
 
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
@@ -13,11 +15,14 @@ MIN_LINE_COUNT = 4
 
 
 class LineNode(FeatureNode):
+    """Graph node representing a line feature by type and length."""
+
     type: int
     size: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns type and size as strings."""
         return [str(self.type), str(self.size)]
 
 
@@ -28,9 +33,11 @@ class LineFeature(AreaFeature[LineNode]):
     feature_name: str = "Line"
 
     def _create_nodes(self) -> LineNode:
+        """Creates a new LineNode with type and length."""
         return LineNode(type=self.type, size=self.size)
 
     def _dbfetch_nodes(self) -> LineNode | None:
+        """Looks up an existing LineNode by type and size."""
         return LineNode.find_one(
             "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
         )
@@ -45,9 +52,11 @@ class Line(FeatureExtractor[TypedPointCollection]):
     type: str = "perception"
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Only process VisionData events."""
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> None:
+        """Scans for horizontal and vertical lines of repeated values."""
         assert isinstance(e.data, VisionData)
         data = IntGrid(e.data.glyphs)
 

@@ -12,10 +12,13 @@ from .single import SingleFeature
 
 
 class DistanceNode(FeatureNode):
+    """Graph node representing a Chebyshev distance between two features."""
+
     size: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns the distance size as a string."""
         return [str(self.size)]
 
 
@@ -29,19 +32,25 @@ class DistanceFeature(VisualFeature[DistanceNode]):
     size: int
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns both endpoints of the distance measurement."""
         return {self.start_point, self.end_point}
 
     def node_hash(self) -> int:
+        """Hashes by distance size."""
         return hash(self.size)
 
     def _create_nodes(self) -> DistanceNode:
+        """Creates a new DistanceNode with the measured size."""
         return DistanceNode(size=self.size)
 
     def _dbfetch_nodes(self) -> DistanceNode | None:
+        """Looks up an existing DistanceNode by size."""
         return DistanceNode.find_one("src.size = $size", params={"size": self.size})
 
 
 class Distance(FeatureExtractor[DistanceFeature]):
+    """Component that calculates Chebyshev distances between single features."""
+
     name: str = "distance"
     type: str = "perception"
 
@@ -50,12 +59,14 @@ class Distance(FeatureExtractor[DistanceFeature]):
         self.prev_features: list[SingleFeature] = []
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Only process events from the single perception component."""
         # only listen to single:perception events
         if e.src_id.name == "single" and e.src_id.type == "perception":
             return True
         return False
 
     def get_feature(self, e: PerceptionEvent) -> None:
+        """Calculates distances between the current feature and all previous features."""
         data = e.data
 
         if isinstance(data, Settled):
@@ -85,6 +96,7 @@ class Distance(FeatureExtractor[DistanceFeature]):
 
 
 def chebyshev_distance(p1: tuple[XLoc, YLoc], p2: tuple[XLoc, YLoc]) -> int:
+    """Computes the Chebyshev distance (max of dx, dy) between two points."""
     x1 = p1[0]
     x2 = p2[0]
     y1 = p1[1]

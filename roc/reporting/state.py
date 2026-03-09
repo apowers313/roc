@@ -1,3 +1,5 @@
+"""Runtime state tracking and observability event emission for debugging and monitoring."""
+
 from __future__ import annotations
 
 import dataclasses
@@ -26,11 +28,15 @@ _state_init_done = False
 
 
 class StateComponent(Component):
+    """Internal component used to listen on event buses for state updates."""
+
     name: str = "state"
     type: str = "reporting"
 
 
 class State(ABC, Generic[StateType]):
+    """Base class for tracking a piece of runtime state."""
+
     def __init__(self, name: str, display_name: str | None = None) -> None:
         self.name = name
         self.display_name = display_name or name
@@ -40,24 +46,29 @@ class State(ABC, Generic[StateType]):
         return f"{self.display_name}: {self.val}"
 
     def get(self) -> StateType:
+        """Returns the current state value."""
         if self.val is None:
             raise Exception("Trying to get state value before it is set")
 
         return self.val
 
     def set(self, v: StateType) -> None:
+        """Sets the current state value."""
         self.val = v
 
     @staticmethod
     def get_states() -> "StateList":
+        """Returns the global StateList singleton."""
         return states
 
     @staticmethod
     def get_state_names() -> list[str]:
+        """Returns the names of all tracked states."""
         return [field.name for field in dataclasses.fields(StateList)]
 
     @staticmethod
     def init() -> None:
+        """Initializes state tracking by connecting to event buses."""
         global _state_init_done
         if _state_init_done:
             return
@@ -88,6 +99,7 @@ class State(ABC, Generic[StateType]):
 
     @staticmethod
     def print_startup_info() -> None:
+        """Logs system info, git status, and loaded components at startup."""
         logger.info(f"Starting ROC, instance id: {instance_id}")
 
         def log_cmd(
@@ -134,6 +146,7 @@ class State(ABC, Generic[StateType]):
 
     @staticmethod
     def send_events() -> None:
+        """Emits observability events for the current state of all tracked values."""
         states = State.get_states()
 
         if states.screen.val is not None:
@@ -154,6 +167,7 @@ class State(ABC, Generic[StateType]):
 
     @staticmethod
     def print() -> None:
+        """Prints all current state values to stdout."""
         State.init()
 
         def header(s: str) -> None:
@@ -175,20 +189,26 @@ class State(ABC, Generic[StateType]):
 
 
 class LoopState(State[int]):
+    """Tracks the current game loop iteration number."""
+
     def __init__(self) -> None:
         super().__init__("loop", display_name="Loop Number")
         self.val = 0
 
     def incr(self) -> None:
+        """Increments the loop counter by one."""
         self.val = self.get() + 1
 
 
 class NodeCacheState(State[float]):
+    """Tracks the Node cache utilization ratio."""
+
     def __init__(self) -> None:
         super().__init__("node-cache", display_name="Node Cache")
         self.val = 0
 
     def get(self) -> float:
+        """Returns the current cache utilization as a fraction."""
         c = Node.get_cache()
         return c.currsize / c.maxsize
 
@@ -198,11 +218,14 @@ class NodeCacheState(State[float]):
 
 
 class EdgeCacheState(State[float]):
+    """Tracks the Edge cache utilization ratio."""
+
     def __init__(self) -> None:
         super().__init__("edge-cache", display_name="Edge Cache")
         self.val = 0
 
     def get(self) -> float:
+        """Returns the current cache utilization as a fraction."""
         c = Edge.get_cache()
         return c.currsize / c.maxsize
 
@@ -212,10 +235,13 @@ class EdgeCacheState(State[float]):
 
 
 class CurrentScreenState(State[dict[str, Any]]):
+    """Tracks the most recent screen data from the environment."""
+
     def __init__(self) -> None:
         super().__init__("curr-screen", display_name="Current Screen")
 
     def set(self, screen: dict[str, Any]) -> None:
+        """Sets the current screen data."""
         self.val = screen
 
     def __str__(self) -> str:
@@ -231,10 +257,13 @@ class CurrentScreenState(State[dict[str, Any]]):
 
 
 class CurrentSaliencyMapState(State[SaliencyMap]):
+    """Tracks the most recent saliency map."""
+
     def __init__(self) -> None:
         super().__init__("curr-saliency", display_name="Current Saliency Map")
 
     def set(self, sal: SaliencyMap) -> None:
+        """Sets the current saliency map."""
         self.val = sal
 
     def __str__(self) -> str:
@@ -250,10 +279,13 @@ class CurrentSaliencyMapState(State[SaliencyMap]):
 
 
 class CurrentAttentionState(State[VisionAttentionData]):
+    """Tracks the most recent attention data with focus points."""
+
     def __init__(self) -> None:
         super().__init__("curr-saliency", display_name="Current Saliency Map")
 
     def set(self, att: VisionAttentionData) -> None:
+        """Sets the current attention data."""
         self.val = att
 
     def __str__(self) -> str:
@@ -265,10 +297,13 @@ class CurrentAttentionState(State[VisionAttentionData]):
 
 
 class CurrentObjectState(State[ResolvedObject]):
+    """Tracks the most recently resolved object."""
+
     def __init__(self) -> None:
         super().__init__("curr-object", display_name="Current Object")
 
     def set(self, obj: ResolvedObject) -> None:
+        """Sets the current resolved object."""
         self.val = obj
 
     def __str__(self) -> str:
@@ -279,11 +314,14 @@ class CurrentObjectState(State[ResolvedObject]):
 
 
 class ComponentsState(State[list[str]]):
+    """Tracks the list of loaded components."""
+
     def __init__(self) -> None:
         super().__init__("components", display_name="Components")
         self.val = []
 
     def get(self) -> list[str]:
+        """Returns the list of currently loaded component names."""
         self.val = Component.get_loaded_components()
         return self.val
 
@@ -293,11 +331,13 @@ class ComponentsState(State[list[str]]):
 
 
 class BlstatsState(State[list[tuple[str, str]]]):
-    pass
+    """Tracks the bottom-line stats from the NetHack environment."""
 
 
 @dataclass
 class StateList:
+    """Container holding all tracked state objects."""
+
     loop: LoopState = LoopState()
     node_cache: NodeCacheState = NodeCacheState()
     edge_cache: EdgeCacheState = EdgeCacheState()
@@ -312,6 +352,7 @@ states = StateList()
 
 
 def bytes2human(n: int) -> str:
+    """Converts a byte count to a human-readable string (e.g. '1.5GB')."""
     # stolen from: https://psutil.readthedocs.io/en/latest/#recipes
     symbols = ("K", "M", "G", "T", "P", "E", "Z", "Y")
     prefix = {}
@@ -325,16 +366,22 @@ def bytes2human(n: int) -> str:
 
 
 class SaliencyObsEvent(ObservabilityEvent):
+    """Observability event carrying saliency map data."""
+
     def __init__(self, sm: SaliencyMap) -> None:
         super().__init__("roc.attention.saliency", body=sm.to_html_vals())
 
 
 class ObjectObsEvent(ObservabilityEvent):
+    """Observability event carrying the current resolved object."""
+
     def __init__(self, o: CurrentObjectState) -> None:
         super().__init__("roc.attention.object", body=str(o))
 
 
 class FeatureObsEvent(ObservabilityEvent):
+    """Observability event carrying the feature report from a saliency map."""
+
     def __init__(self, sm: CurrentSaliencyMapState) -> None:
         s = ""
         if sm.val is not None:
@@ -348,6 +395,8 @@ class FeatureObsEvent(ObservabilityEvent):
 
 
 class AttentionObsEvent(ObservabilityEvent):
+    """Observability event carrying the attention grid with focus point overlays."""
+
     def __init__(self, vd: VisionAttentionData) -> None:
         sm = vd.saliency_map
         assert sm.grid is not None
@@ -362,11 +411,15 @@ class AttentionObsEvent(ObservabilityEvent):
 
 
 class FocusObsEvent(ObservabilityEvent):
+    """Observability event carrying the focus points from attention."""
+
     def __init__(self, vd: VisionAttentionData) -> None:
         super().__init__("roc.attention.focus_points", body=str(vd.focus_points))
 
 
 class ScreenObsEvent(ObservabilityEvent):
+    """Observability event carrying the current screen text."""
+
     def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
         screen = ""
         for row in tty_chars:
@@ -377,11 +430,14 @@ class ScreenObsEvent(ObservabilityEvent):
 
 
 class IntrinsicObsEvent(ObservabilityEvent):
+    """Observability event carrying intrinsic state (bottom-line stats)."""
+
     def __init__(self, bl: dict[str, Any]) -> None:
         super().__init__("roc.intrinsics", body=bl)
 
 
 def node_cache_gague(*args: Any) -> Iterable[Observation]:
+    """OpenTelemetry gauge callback that reports Node cache size and triggers state events."""
     # NOTE: need send and print state events every time metrics are recorded, just
     # sticking this here because it needs to be somewhere
     State.send_events()
@@ -392,6 +448,7 @@ def node_cache_gague(*args: Any) -> Iterable[Observation]:
 
 
 def edge_cache_gague(*args: Any) -> Iterable[Observation]:
+    """OpenTelemetry gauge callback that reports Edge cache size."""
     c = Edge.get_cache()
     yield Observation(c.currsize, attributes={"max": c.maxsize})
 

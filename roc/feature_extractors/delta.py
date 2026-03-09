@@ -15,11 +15,14 @@ from ..perception import (
 
 
 class DeltaNode(FeatureNode):
+    """Graph node representing a change from one glyph value to another."""
+
     old_val: int
     new_val: int
 
     @property
     def attr_strs(self) -> list[str]:
+        """Returns old and new values as strings."""
         return [str(self.old_val), str(self.new_val)]
 
 
@@ -33,18 +36,22 @@ class DeltaFeature(VisualFeature[DeltaNode]):
     point: tuple[XLoc, YLoc]
 
     def get_points(self) -> set[tuple[XLoc, YLoc]]:
+        """Returns the single point where the change occurred."""
         return {self.point}
 
     def __str__(self) -> str:
         return f"({self.point[0]}, {self.point[1]}): {self.old_val} -> {self.new_val}\n"
 
     def node_hash(self) -> int:
+        """Hashes by old and new values."""
         return hash((self.old_val, self.new_val))
 
     def _create_nodes(self) -> DeltaNode:
+        """Creates a new DeltaNode with the old and new values."""
         return DeltaNode(old_val=self.old_val, new_val=self.new_val)
 
     def _dbfetch_nodes(self) -> DeltaNode | None:
+        """Looks up an existing DeltaNode by old and new values."""
         return DeltaNode.find_one(
             "src.old_val = $old_val AND src.new_val = $new_val",
             params={"old_val": self.old_val, "new_val": self.new_val},
@@ -62,9 +69,11 @@ class Delta(FeatureExtractor[DeltaFeature]):
         self.prev_viz: IntGrid | None = None
 
     def event_filter(self, e: PerceptionEvent) -> bool:
+        """Only process VisionData events."""
         return isinstance(e.data, VisionData)
 
     def get_feature(self, e: PerceptionEvent) -> None:
+        """Compares current and previous vision data, emitting DeltaFeatures for changed cells."""
         data = e.data
         assert isinstance(data, VisionData)
 
