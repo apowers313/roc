@@ -8,11 +8,11 @@ import pytest
 
 from roc.location import XLoc, YLoc
 from roc.object import (
-    CandidateObjects,
     FeatureGroup,
     Object,
     ObjectCache,
     ResolvedObject,
+    SymmetricDifferenceResolution,
 )
 
 
@@ -75,7 +75,7 @@ class TestObject:
 
         # Mock the object's features
         with patch.object(type(o), "features", new_callable=PropertyMock, return_value=[f1]):
-            dist = Object.distance(o, [f2, f3])
+            dist = SymmetricDifferenceResolution._distance(o, [f2, f3])
             # symmetric diff: all different -> distance should be nonzero
             assert isinstance(dist, float)
 
@@ -131,17 +131,14 @@ class TestObjectCache:
         assert len(cache) == 0
 
 
-class TestCandidateObjects:
-    def test_constructor_and_len(self):
-        # CandidateObjects needs feature_nodes that have predecessors
+class TestSymmetricDifferenceResolution:
+    def test_resolve_no_candidates(self):
         fn = MagicMock()
         mock_node_list = MagicMock()
         mock_node_list.select.return_value = []
         fn.predecessors = mock_node_list
 
-        with patch("roc.object.Observability.tracer") as mock_tracer:
-            mock_span = MagicMock()
-            mock_tracer.start_as_current_span.return_value = mock_span
-
-            co = CandidateObjects([fn])
-            assert len(co) == 0
+        resolution = SymmetricDifferenceResolution()
+        fg = MagicMock()
+        result = resolution.resolve([fn], fg)
+        assert result is None

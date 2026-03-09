@@ -14,6 +14,7 @@ from pydantic import Field
 from .attention import Attention, AttentionEvent
 from .component import Component
 from .event import EventBus
+from .expmod import ExpMod
 from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
 from .perception import Detail, FeatureNode
@@ -94,23 +95,6 @@ class Object(Node):
 
         return ret
 
-    @staticmethod
-    def distance(obj: Object, features: Collection[FeatureNode]) -> float:
-        """Computes feature-space distance between an object and a set of features.
-
-        Distance 0 means identical features; higher means more different.
-        """
-        assert isinstance(obj, Object)
-        # TODO: allowed_attrs is physical attributes, not really great but
-        # NetHack doesn't give us much feature-space to work with. in the future
-        # we may want to come back and use motion or other features for object recognition
-        allowed_attrs = {"SingleNode", "ColorNode", "ShapeNode"}  # TODO: line? flood?
-        features_strs: set[str] = {str(f) for f in features if f.labels & allowed_attrs}
-        obj_features: set[str] = {
-            str(f) for f in obj.features if isinstance(f, FeatureNode) and f.labels & allowed_attrs
-        }
-        return float(len(features_strs ^ obj_features))
-
 
 class FeatureGroup(Node):
     """A collection of feature nodes that together describe one observation."""
@@ -137,35 +121,108 @@ class FeatureGroup(Node):
         return [cast(FeatureNode, e.dst) for e in self.src_edges if e.type == "Detail"]
 
 
-class CandidateObjects:
-    """Ranks existing objects by feature-space distance to a set of new features."""
+class ObjectResolutionExpMod(ExpMod):
+    """Base class for object resolution experiment modules.
 
-    @Observability.tracer.start_as_current_span("create_candidate_object")
-    def __init__(self, feature_nodes: Collection[FeatureNode]) -> None:
-        # TODO: this currently only uses features, not context, for resolution
-        # the other objects in the current context should influence resolution
+    Subclasses implement ``resolve()`` to match a set of observed feature nodes to an
+    existing Object, or return None to indicate a new Object should be created.
+    """
+
+    modtype = "object-resolution"
+
+    def resolve(
+        self,
+        feature_nodes: Collection[FeatureNode],
+        feature_group: FeatureGroup,
+    ) -> Object | None:
+        """Match feature nodes to an existing Object or return None to create a new one.
+
+        Args:
+            feature_nodes: The feature nodes from the current observation.
+            feature_group: The FeatureGroup node for the current observation.
+
+        Returns:
+            The matched Object, or None if no match was found.
+        """
+        raise NotImplementedError
+
+
+class SymmetricDifferenceResolution(ObjectResolutionExpMod):
+    """Matches objects using symmetric set difference of physical features.
+
+    Walks the graph backwards from feature nodes to find candidate Objects, computes
+    the symmetric difference between physical feature sets (SingleNode, ColorNode,
+    ShapeNode), and matches if the best candidate has distance <= 1.
+    """
+
+    name = "symmetric-difference"
+
+    candidate_object_counter = Observability.meter.create_counter(
+        "roc.candidate_objects",
+        unit="object",
+        description="total number of candidate objects scanned during resolution",
+    )
+
+    def resolve(
+        self,
+        feature_nodes: Collection[FeatureNode],
+        feature_group: FeatureGroup,
+    ) -> Object | None:
+        """Match feature nodes to an existing Object using symmetric set difference."""
+        candidates = self._find_candidates(feature_nodes)
+        self.candidate_object_counter.add(len(candidates))
+        if not candidates:
+            return None
+
+        best_obj, best_dist = candidates[0]
+        if best_dist <= 1:
+            return best_obj
+        return None
+
+    @Observability.tracer.start_as_current_span("find_candidate_objects")
+    def _find_candidates(
+        self, feature_nodes: Collection[FeatureNode]
+    ) -> list[tuple[Object, float]]:
+        """Find and rank candidate Objects by feature distance.
+
+        Args:
+            feature_nodes: The feature nodes to match against.
+
+        Returns:
+            List of (Object, distance) tuples sorted by ascending distance.
+        """
         distance_idx: dict[NodeId, float] = defaultdict(float)
 
-        # TODO: getting all objects for the set of features is going to be a
-        # huge explosion of objects... need to come back to this an make a
-        # smarter selection algorithm
         feature_groups = [
             fg for n in feature_nodes for fg in n.predecessors.select(labels={"FeatureGroup"})
         ]
         objs = [obj for fg in feature_groups for obj in fg.predecessors.select(labels={"Object"})]
         for obj in objs:
             assert isinstance(obj, Object)
-            distance_idx[obj.id] += Object.distance(obj, feature_nodes)
+            distance_idx[obj.id] += self._distance(obj, feature_nodes)
 
-        self.distance_idx = distance_idx
-        self.order: list[NodeId] = sorted(self.distance_idx, key=lambda k: self.distance_idx[k])
+        order = sorted(distance_idx, key=lambda k: distance_idx[k])
+        return [(Object.get(n), distance_idx[n]) for n in order]
 
-    def __getitem__(self, idx: int) -> tuple[Object, float]:
-        n = self.order[idx]
-        return (Object.get(n), self.distance_idx[n])
+    @staticmethod
+    def _distance(obj: Object, features: Collection[FeatureNode]) -> float:
+        """Compute symmetric set difference between an Object's features and new features.
 
-    def __len__(self) -> int:
-        return len(self.order)
+        Only considers physical attributes: SingleNode, ColorNode, ShapeNode.
+
+        Args:
+            obj: The candidate Object.
+            features: The new observation's feature nodes.
+
+        Returns:
+            The count of features present in one set but not the other.
+        """
+        allowed_attrs = {"SingleNode", "ColorNode", "ShapeNode"}
+        features_strs: set[str] = {str(f) for f in features if f.labels & allowed_attrs}
+        obj_features: set[str] = {
+            str(f) for f in obj.features if isinstance(f, FeatureNode) and f.labels & allowed_attrs
+        }
+        return float(len(features_strs ^ obj_features))
 
 
 @dataclass
@@ -194,11 +251,6 @@ class ObjectResolver(Component):
         self.att_conn = self.connect_bus(Attention.bus)
         self.att_conn.listen(self.do_object_resolution)
         self.obj_res_conn = self.connect_bus(ObjectResolver.bus)
-        self.candidate_object_counter = Observability.meter.create_counter(
-            "roc.candidate_objects",
-            unit="object",
-            description="total number of objects scanned for object recognition",
-        )
         self.resolved_object_counter = Observability.meter.create_counter(
             "roc.objects_resolved",
             unit="object",
@@ -220,20 +272,14 @@ class ObjectResolver(Component):
         y = YLoc(int(focus_point["y"]))
         features = e.data.saliency_map.get_val(x, y)
         fg = FeatureGroup.with_features(features)
-        # Argument 1 to "with_features" of "FeatureGroup" has incompatible type "list[Feature[Any]]"; expected "FeatureGroup"
-        objs = CandidateObjects(fg.feature_nodes)
-        self.candidate_object_counter.add(len(objs))
 
-        o: Object | None = None
-        if len(objs) > 0:
-            o, dist = objs[0]
+        resolution = ObjectResolutionExpMod.get(default="symmetric-difference")
+        o = resolution.resolve(fg.feature_nodes, fg)
+
+        if o is not None:
             self.resolved_object_counter.add(1, attributes={"new": False})
             o.resolve_count += 1
-
-        # TODO: "> 1" as a cutoff for matching is pretty arbitrary
-        # should it be a % of features?
-        # or the cutoff for matching be determined by how well the prediction is works?
-        if o is None or dist > 1:
+        else:
             self.resolved_object_counter.add(1, attributes={"new": True})
             o = Object.with_features(fg)
 

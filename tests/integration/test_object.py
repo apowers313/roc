@@ -20,7 +20,13 @@ from roc.feature_extractors.shape import Shape, ShapeFeature
 from roc.feature_extractors.single import Single, SingleFeature
 from roc.graphdb import Node
 from roc.location import XLoc, YLoc
-from roc.object import CandidateObjects, FeatureGroup, Object, ObjectResolver, ResolvedObject
+from roc.object import (
+    FeatureGroup,
+    Object,
+    ObjectResolver,
+    ResolvedObject,
+    SymmetricDifferenceResolution,
+)
 from roc.perception import FeatureNode, VisionData
 
 
@@ -93,39 +99,48 @@ class TestObject:
         fg = FeatureGroup.from_nodes([features["shape1"], features["color1"], features["single1"]])
         obj = Object.with_features(fg)
 
-        dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
+        dist = SymmetricDifferenceResolution._distance(
+            obj, [features["shape1"], features["color1"], features["single1"]]
+        )
         assert dist == 0
 
     def test_distance_one(self, features) -> None:
         fg = FeatureGroup.from_nodes([features["shape1"], features["color1"]])
         obj = Object.with_features(fg)
 
-        dist = Object.distance(obj, [features["shape1"], features["color1"], features["single1"]])
+        dist = SymmetricDifferenceResolution._distance(
+            obj, [features["shape1"], features["color1"], features["single1"]]
+        )
         assert dist == 1
 
     def test_distance_two_exclusive(self, features) -> None:
         fg = FeatureGroup.from_nodes([features["shape1"], features["color1"]])
         obj = Object.with_features(fg)
 
-        dist = Object.distance(obj, [features["color1"], features["single1"]])
+        dist = SymmetricDifferenceResolution._distance(
+            obj, [features["color1"], features["single1"]]
+        )
         assert dist == 2
 
 
-class TestCandidateObjects:
+class TestSymmetricDifferenceResolution:
+    def setup_method(self) -> None:
+        self.resolution = SymmetricDifferenceResolution()
+
     def test_empty(self) -> None:
         f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
         nodes = f.to_nodes()
-        objs = CandidateObjects([nodes])
-        assert len(objs) == 0
+        candidates = self.resolution._find_candidates([nodes])
+        assert len(candidates) == 0
 
     def test_one_object(self) -> None:
         o = Object()
         fn = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))).to_nodes()
         fg = FeatureGroup.from_nodes([fn])
         Node.connect(o, fg, "Features")
-        objs = CandidateObjects([fn])
-        assert len(objs) == 1
-        o2, dist = objs[0]
+        candidates = self.resolution._find_candidates([fn])
+        assert len(candidates) == 1
+        o2, dist = candidates[0]
         assert o2 is o
         assert dist == 0
 
@@ -137,44 +152,43 @@ class TestCandidateObjects:
         assert o1 is not o2
 
         # feature common to both objects
-        objs = CandidateObjects([features["single2"]])
-        assert len(objs) == 2
-        assert o1.id in objs.order
-        assert o2.id in objs.order
+        candidates = self.resolution._find_candidates([features["single2"]])
+        assert len(candidates) == 2
+        candidate_ids = [c[0].id for c in candidates]
+        assert o1.id in candidate_ids
+        assert o2.id in candidate_ids
 
         # feature only in object 1
-        objs = CandidateObjects([features["single1"]])
-        assert len(objs) == 1
-        assert o1.id in objs.order
-        assert o2.id not in objs.order
+        candidates = self.resolution._find_candidates([features["single1"]])
+        assert len(candidates) == 1
+        candidate_ids = [c[0].id for c in candidates]
+        assert o1.id in candidate_ids
+        assert o2.id not in candidate_ids
 
         # feature only in object 2
-        objs = CandidateObjects([features["single3"]])
-        assert len(objs) == 1
-        assert o1.id not in objs.order
-        assert o2.id in objs.order
+        candidates = self.resolution._find_candidates([features["single3"]])
+        assert len(candidates) == 1
+        candidate_ids = [c[0].id for c in candidates]
+        assert o1.id not in candidate_ids
+        assert o2.id in candidate_ids
 
         # overlapping features, object 1 is stronger
-        objs = CandidateObjects([features["single1"], features["single2"]])
-        assert len(objs) == 2
-        assert o1.id in objs.order
-        assert o2.id in objs.order
-        ret_obj, dist = objs[0]
+        candidates = self.resolution._find_candidates([features["single1"], features["single2"]])
+        assert len(candidates) == 2
+        ret_obj, dist = candidates[0]
         assert ret_obj is o1
         assert dist == 0
-        ret_obj, dist = objs[1]
+        ret_obj, dist = candidates[1]
         assert ret_obj is o2
         assert dist == 2
 
         # overlapping features, object 2 is stronger
-        objs = CandidateObjects([features["single2"], features["single3"]])
-        assert len(objs) == 2
-        assert o1.id in objs.order
-        assert o2.id in objs.order
-        ret_obj, dist = objs[0]
+        candidates = self.resolution._find_candidates([features["single2"], features["single3"]])
+        assert len(candidates) == 2
+        ret_obj, dist = candidates[0]
         assert ret_obj is o2
         assert dist == 0
-        ret_obj, dist = objs[1]
+        ret_obj, dist = candidates[1]
         assert ret_obj is o1
         assert dist == 2
 

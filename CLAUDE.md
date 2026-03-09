@@ -21,9 +21,9 @@ uv run pytest -c pyproject.toml tests/object_test.py::TestClass::test   # Run sp
 
 # Linting & Formatting
 make lint               # Run mypy + check-codestyle + deptry
-make check-codestyle    # Run ruff + black
+make check-codestyle    # Run ruff check + ruff format --check
 make mypy               # Type checking only
-make codestyle          # Auto-format with black
+make codestyle          # Auto-format with ruff format
 
 # Coverage
 make coverage           # Run tests with coverage (90% minimum threshold)
@@ -86,7 +86,7 @@ CI requires a Memgraph service container. Tests that need the DB will fail witho
 
 ## Code Style
 
-- **Line length**: 100 characters (black + ruff)
+- **Line length**: 100 characters (ruff)
 - **Type checking**: Strict mypy with pydantic and numpy plugins
 - **Docstrings**: Google convention (enforced by ruff). Not required in tests or magic methods.
 - **Python version**: 3.13

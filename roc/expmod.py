@@ -19,6 +19,7 @@ Example:
 
             def do_thing(self) -> int: ...
 
+
         class MyImpl(MyExpMod):
             name = "simple"
 
