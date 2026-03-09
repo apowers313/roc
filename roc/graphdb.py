@@ -1931,13 +1931,11 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
             labels (set[str] | str | None, optional): If the Node labels exactly matches
                 this set, it is included in the return results. Defaults to None.
             partial_labels (set[str] | None): If the Node labels contain all the
-                labels in partial_labels (and potentially additional lebels) it is
-                included in the results. Defaults to None
-            id (NodeId | None, optional): If the NodeId matches this id it is
+                labels in partial_labels (and potentially additional labels) it is
                 included in the results. Defaults to None.
 
         Returns:
-            NodeList: An NodeList of the matching Nodes.
+            NodeList: A NodeList of the matching Nodes.
         """
         node_ids = self._nodes
         if filter_fn is not None:

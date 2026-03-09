@@ -29,11 +29,9 @@ pool_scheduler = ThreadPoolScheduler(thread_count)
 
 
 class Event(ABC, Generic[EventData]):
-    """An abstract event class for sending messages between Components over an EventBus
+    """An abstract event class for sending messages between Components over an EventBus.
 
-    Args:
-        ABC (ABC): Abstract base class
-        Generic (EventData): The data to be carried by the event
+    Generic over EventData, the type of data carried by the event.
     """
 
     def __init__(self, data: EventData, src_id: ComponentId, bus: EventBus[EventData]):
@@ -68,10 +66,9 @@ EventListener = Callable[[Event[EventData]], None]
 
 
 class BusConnection(Generic[EventData]):
-    """A connection between an EventBus and a Component, used to send Events
+    """A connection between an EventBus and a Component, used to send Events.
 
-    Args:
-        Generic (EventData): The data type that will be sent over this connection
+    Generic over EventData, the type of data sent over this connection.
     """
 
     def __init__(self, bus: EventBus[EventData], component: Component):
@@ -131,10 +128,9 @@ eventbus_names: set[str] = set()
 
 
 class EventBus(Generic[EventData]):
-    """A communication channel for sending events between Components
+    """A communication channel for sending events between Components.
 
-    Args:
-        Generic (EventData): The data type that is allowed to be sent over the bus
+    Generic over EventData, the type of data allowed to be sent over the bus.
     """
 
     name: str

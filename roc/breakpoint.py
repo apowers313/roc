@@ -98,7 +98,7 @@ class Breakpoint:
 
         Raises:
             Exception: Raises an exception if the specified breakpoint name
-            already exists and overwrite is False.
+                already exists and overwrite is False.
         """
         global _breakpoints_dict
 

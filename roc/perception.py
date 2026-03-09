@@ -41,7 +41,7 @@ class VisionData:
 
         Args:
             d (dict[str, Any]): The dictionary to create VisionData from. Must
-            have 'chars', 'glyphs', and 'colors' members.
+                have 'chars', 'glyphs', and 'colors' members.
 
         Returns:
             VisionData: The newly created vision data.
