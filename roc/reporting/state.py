@@ -3,28 +3,33 @@
 from __future__ import annotations
 
 import dataclasses
+import json
 import subprocess
 from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
+from time import time_ns
 from typing import Any, Generic, Iterable, TypeVar
 
 import nle
-import numpy as np
+from opentelemetry import trace as otel_trace
+from opentelemetry._logs import SeverityNumber
+from opentelemetry.sdk._logs import LogRecord
 
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
 from roc.config import Config
 from roc.event import Event
 from roc.graphdb import Edge, Node, Schema
-from roc.location import DebugGrid
 from roc.logger import logger
 from roc.object import Object, ObjectResolver, ResolvedObject
-from roc.reporting.observability import Observability, ObservabilityEvent, Observation, instance_id
+from roc.reporting.observability import Observability, Observation, instance_id
 from roc.sequencer import Sequencer  # noqa: F401
 
 StateType = TypeVar("StateType")
 _state_init_done = False
+
+otel_logger = Observability.get_logger("roc.state")
 
 
 class StateComponent(Component):
@@ -127,8 +132,8 @@ class State(ABC, Generic[StateType]):
 
         log_cmd("git hash", ["git", "show", "--no-patch", '--pretty=format:"%H"'])
         log_cmd("git status", ["git", "status"], multiline=True)
-        log_cmd("python location", ["which", "python"])
-        log_cmd("python version", ["python", "--version"])
+        log_cmd("python location", ["which", "python3"])
+        log_cmd("python version", ["python3", "--version"])
         log_cmd("uv version", ["uv", "--version"])
         log_cmd("python packages", ["uv", "pip", "list"], multiline=True)
         log_cmd("system info", ["uname", "-a"])
@@ -145,25 +150,81 @@ class State(ABC, Generic[StateType]):
         logger.debug(f"schema\n{schema.to_dot()}")
 
     @staticmethod
-    def send_events() -> None:
-        """Emits observability events for the current state of all tracked values."""
-        states = State.get_states()
+    def emit_state_logs() -> None:
+        """Emits current state values as OTel log records."""
+        current_states = State.get_states()
 
+        if current_states.screen.val is not None:
+            screen_text = ""
+            for row in current_states.screen.val["chars"]:
+                for ch in row:
+                    screen_text += chr(ch)
+                screen_text += "\n"
+            _emit_state_record("roc.screen", screen_text)
+
+        if current_states.salency.val is not None:
+            saliency = current_states.salency.val
+            _emit_state_record("roc.attention.saliency", str(saliency))
+            s = ""
+            features = saliency.feature_report()
+            for feat_name in features:
+                s += f"\t\t{feat_name}: {features[feat_name]}\n"
+            _emit_state_record("roc.attention.features", s)
+
+        if current_states.object.val is not None:
+            _emit_state_record("roc.attention.object", str(current_states.object))
+
+        if current_states.attention.val is not None:
+            _emit_state_record(
+                "roc.attention.focus_points", str(current_states.attention.val.focus_points)
+            )
+
+    @staticmethod
+    def maybe_emit_snapshot(tick: int) -> None:
+        """Emit a state snapshot as an OTel log record if the tick matches the interval.
+
+        Args:
+            tick: The current tick number.
+        """
+        settings = Config.get()
+        interval = settings.debug_snapshot_interval
+        if interval <= 0 or tick <= 0 or tick % interval != 0:
+            return
+
+        snapshot: dict[str, Any] = {"tick": tick}
+
+        # Screen
         if states.screen.val is not None:
-            screen = states.screen.val["chars"]
-            Observability.event(ScreenObsEvent(screen))
+            screen_text = ""
+            for row in states.screen.val["chars"]:
+                for ch in row:
+                    screen_text += chr(ch)
+                screen_text += "\n"
+            snapshot["screen"] = screen_text
+        else:
+            snapshot["screen"] = None
 
-        if states.salency.val is not None:
-            saliency = states.salency.val
-            Observability.event(SaliencyObsEvent(saliency))
-            Observability.event(FeatureObsEvent(states.salency))
-
+        # Objects
         if states.object.val is not None:
-            Observability.event(ObjectObsEvent(states.object))
+            snapshot["objects"] = str(states.object.val)
+        else:
+            snapshot["objects"] = None
 
-        if states.attention.val is not None:
-            #     Observability.event(AttentionObsEvent(states.attention.val))
-            Observability.event(FocusObsEvent(states.attention.val))
+        # Loop state
+        snapshot["loop"] = states.loop.val
+
+        span_context = otel_trace.get_current_span().get_span_context()
+        log_record = LogRecord(
+            timestamp=time_ns(),
+            severity_number=SeverityNumber.INFO,
+            severity_text="INFO",
+            body=json.dumps(snapshot, default=str),
+            attributes={"event.name": "roc.state.snapshot"},
+            trace_id=span_context.trace_id,
+            span_id=span_context.span_id,
+            trace_flags=span_context.trace_flags,
+        )
+        otel_logger.emit(log_record)
 
     @staticmethod
     def print() -> None:
@@ -365,84 +426,24 @@ def bytes2human(n: int) -> str:
     return "%sB" % n
 
 
-class SaliencyObsEvent(ObservabilityEvent):
-    """Observability event carrying saliency map data."""
-
-    def __init__(self, sm: SaliencyMap) -> None:
-        super().__init__("roc.attention.saliency", body=sm.to_html_vals())
-
-
-class ObjectObsEvent(ObservabilityEvent):
-    """Observability event carrying the current resolved object."""
-
-    def __init__(self, o: CurrentObjectState) -> None:
-        super().__init__("roc.attention.object", body=str(o))
-
-
-class FeatureObsEvent(ObservabilityEvent):
-    """Observability event carrying the feature report from a saliency map."""
-
-    def __init__(self, sm: CurrentSaliencyMapState) -> None:
-        s = ""
-        if sm.val is not None:
-            features = sm.val.feature_report()
-            for feat_name in features:
-                s += f"\t\t{feat_name}: {features[feat_name]}\n"
-        else:
-            s = "No features."
-
-        super().__init__("roc.attention.features", body=s)
-
-
-class AttentionObsEvent(ObservabilityEvent):
-    """Observability event carrying the attention grid with focus point overlays."""
-
-    def __init__(self, vd: VisionAttentionData) -> None:
-        sm = vd.saliency_map
-        assert sm.grid is not None
-        dg = DebugGrid(sm.grid)
-
-        for idx, row in vd.focus_points.iterrows():
-            x = int(row["x"])
-            y = int(row["y"])
-            dg.set_style(x, y, back_brightness=row["strength"], back_hue=1)
-
-        super().__init__("roc.attention.grid", body=str(dg.to_html_vals()))
-
-
-class FocusObsEvent(ObservabilityEvent):
-    """Observability event carrying the focus points from attention."""
-
-    def __init__(self, vd: VisionAttentionData) -> None:
-        super().__init__("roc.attention.focus_points", body=str(vd.focus_points))
-
-
-class ScreenObsEvent(ObservabilityEvent):
-    """Observability event carrying the current screen text."""
-
-    def __init__(self, tty_chars: np.ndarray[Any, Any]) -> None:
-        screen = ""
-        for row in tty_chars:
-            for ch in row:
-                screen += chr(ch)
-            screen += "\n"
-        super().__init__("roc.screen", body=screen)
-
-
-class IntrinsicObsEvent(ObservabilityEvent):
-    """Observability event carrying intrinsic state (bottom-line stats)."""
-
-    def __init__(self, bl: dict[str, Any]) -> None:
-        super().__init__("roc.intrinsics", body=bl)
+def _emit_state_record(event_name: str, body: str) -> None:
+    """Emit a state value as an OTel log record."""
+    span_context = otel_trace.get_current_span().get_span_context()
+    log_record = LogRecord(
+        timestamp=time_ns(),
+        severity_number=SeverityNumber.INFO,
+        severity_text="INFO",
+        body=body,
+        attributes={"event.name": event_name},
+        trace_id=span_context.trace_id,
+        span_id=span_context.span_id,
+        trace_flags=span_context.trace_flags,
+    )
+    otel_logger.emit(log_record)
 
 
 def node_cache_gague(*args: Any) -> Iterable[Observation]:
-    """OpenTelemetry gauge callback that reports Node cache size and triggers state events."""
-    # NOTE: need send and print state events every time metrics are recorded, just
-    # sticking this here because it needs to be somewhere
-    State.send_events()
-    State.print()
-
+    """OpenTelemetry gauge callback that reports Node cache size."""
     c = Node.get_cache()
     yield Observation(c.currsize, attributes={"max": c.maxsize})
 

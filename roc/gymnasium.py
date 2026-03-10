@@ -115,6 +115,7 @@ class Gym(Component, ABC):
                 observation_counter.add(1)
                 loop_num += 1
                 State.get_states().loop.set(loop_num)
+                State.maybe_emit_snapshot(loop_num)
 
                 if done or truncated:
                     # log game over info
@@ -126,8 +127,10 @@ class Gym(Component, ABC):
                     logger.info(screen, death=True, game_num=game_num)
                     logger.info(f"Game {game_num} completed, starting next game")
                     # flush cache to graphdb
-                    GraphDB.flush()
-                    GraphDB.export()
+                    if settings.graphdb_flush:
+                        GraphDB.flush()
+                    if settings.graphdb_export:
+                        GraphDB.export()
                     # restart and prepare to go again
                     self.env.reset()
                     game_counter.add(1)

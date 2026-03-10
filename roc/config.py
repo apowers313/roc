@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import sys
 import warnings
 from datetime import datetime
@@ -176,6 +177,22 @@ class Config(BaseSettings):
             # str
         ],
     )
+    # graphdb controls
+    graphdb_export: bool = Field(default=False)
+    graphdb_flush: bool = Field(default=False)
+    # debug log controls
+    debug_log: bool = Field(default=False)
+    debug_log_path: str = Field(
+        default=f"tmp/debug_log-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.jsonl"
+    )
+    # debugpy controls
+    debug_port: int = Field(default=5678)
+    debug_wait: bool = Field(default=False)
+    # remote logger controls
+    debug_remote_log: bool = Field(default=True)
+    debug_remote_log_url: str = Field(default="https://dev.ato.ms:9080/log")
+    # snapshot controls
+    debug_snapshot_interval: int = Field(default=0)  # emit snapshot every N ticks (0 = disabled)
     # significance config
     significance_weights: dict[str, float] = Field(
         default={
@@ -225,10 +242,25 @@ class Config(BaseSettings):
         global _config_singleton
         initialized = _config_singleton is not None
         if initialized and not force:
-            warnings.warn(
-                "Config already initialized, returning existing configuration.",
-                ConfigInitWarning,
-            )
+            # Build a detailed warning message with caller info and changed keys
+            frame = inspect.stack()[1]
+            caller_info = f"{frame.filename}:{frame.lineno}"
+
+            passed_conf = config or {}
+            changed_keys: list[str] = []
+            if passed_conf and _config_singleton is not None:
+                for key, new_val in passed_conf.items():
+                    if hasattr(_config_singleton, key):
+                        old_val = getattr(_config_singleton, key)
+                        if old_val != new_val:
+                            changed_keys.append(f"  {key}: {old_val!r} -> {new_val!r}")
+
+            msg = f"Config already initialized, returning existing configuration. Called from {caller_info}"
+            if changed_keys:
+                diff = "\n".join(changed_keys)
+                msg += f"\nChanged keys that will be IGNORED:\n{diff}"
+
+            warnings.warn(msg, ConfigInitWarning)
             return
 
         passed_conf = config or {}

@@ -111,3 +111,46 @@ class TestConfigDefaults:
         assert len(cfg.perception_components) > 0
         # Should be list of (name, type) tuples
         assert isinstance(cfg.perception_components[0], (list, tuple))
+
+    def test_graphdb_export_default_false(self):
+        assert Config.get().graphdb_export is False
+
+    def test_graphdb_flush_default_false(self):
+        assert Config.get().graphdb_flush is False
+
+    def test_debug_log_default_false(self):
+        assert Config.get().debug_log is False
+
+    def test_debug_log_path_default(self):
+        path = Config.get().debug_log_path
+        assert path.startswith("tmp/debug_log-")
+        assert path.endswith(".jsonl")
+
+    def test_debug_remote_log_default_true(self):
+        assert Config.get().debug_remote_log is True
+
+    def test_debug_remote_log_url_default(self):
+        assert Config.get().debug_remote_log_url == "https://dev.ato.ms:9080/log"
+
+    def test_debug_snapshot_interval_default_zero(self):
+        assert Config.get().debug_snapshot_interval == 0
+
+
+class TestConfigInitWarningDetails:
+    def test_init_with_different_values_warns_with_diff(self):
+        """Config.init() with different values should warn and show what changed."""
+        Config.init(config={"db_host": "first.host"}, force=True)
+        with pytest.warns(ConfigInitWarning, match="db_host"):
+            Config.init(config={"db_host": "second.host"})
+
+    def test_init_warning_includes_caller_info(self):
+        """Warning message should include the caller's file and line."""
+        Config.init(config={}, force=True)
+        with pytest.warns(ConfigInitWarning, match=r"test_config\.py"):
+            Config.init()
+
+    def test_init_with_same_values_warns_without_diff(self):
+        """Config.init() with same values should warn but not show diff."""
+        Config.init(config={"db_host": "127.0.0.1"}, force=True)
+        with pytest.warns(ConfigInitWarning, match="already initialized"):
+            Config.init(config={"db_host": "127.0.0.1"})

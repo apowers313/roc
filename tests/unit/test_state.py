@@ -310,63 +310,27 @@ class TestBytes2Human:
         assert bytes2human(500) == "500B"
 
 
-class TestObsEvents:
-    def test_saliency_obs_event(self):
-        from roc.reporting.state import SaliencyObsEvent
+class TestEmitStateRecord:
+    def test_emit_state_record_creates_log_record(self):
+        from roc.reporting.state import _emit_state_record
 
-        mock_sm = MagicMock()
-        mock_sm.to_html_vals.return_value = "<html>"
-        evt = SaliencyObsEvent(mock_sm)
-        assert evt.name == "roc.attention.saliency"
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            _emit_state_record("roc.screen", "test body")
+            mock_logger.emit.assert_called_once()
+            log_record = mock_logger.emit.call_args[0][0]
+            assert log_record.body == "test body"
+            assert log_record.attributes["event.name"] == "roc.screen"
 
-    def test_object_obs_event(self):
-        from roc.reporting.state import ObjectObsEvent
+    def test_emit_state_record_has_severity_info(self):
+        from opentelemetry._logs import SeverityNumber
 
-        mock_obj = MagicMock(spec=str)
-        evt = ObjectObsEvent(mock_obj)
-        assert evt.name == "roc.attention.object"
+        from roc.reporting.state import _emit_state_record
 
-    def test_feature_obs_event_with_value(self):
-        from roc.reporting.state import FeatureObsEvent
-
-        mock_state = MagicMock()
-        mock_sal = MagicMock()
-        mock_sal.feature_report.return_value = {"f1": 0.1}
-        mock_state.val = mock_sal
-        evt = FeatureObsEvent(mock_state)
-        assert evt.name == "roc.attention.features"
-
-    def test_feature_obs_event_none(self):
-        from roc.reporting.state import FeatureObsEvent
-
-        mock_state = MagicMock()
-        mock_state.val = None
-        evt = FeatureObsEvent(mock_state)
-        assert evt.name == "roc.attention.features"
-
-    def test_focus_obs_event(self):
-        from roc.reporting.state import FocusObsEvent
-
-        mock_vd = MagicMock()
-        mock_vd.focus_points = "focus_data"
-        evt = FocusObsEvent(mock_vd)
-        assert evt.name == "roc.attention.focus_points"
-
-    def test_screen_obs_event(self):
-        from roc.reporting.state import ScreenObsEvent
-
-        chars = np.array([[65, 66], [67, 68]])
-        evt = ScreenObsEvent(chars)
-        assert evt.name == "roc.screen"
-        assert evt.body is not None
-        assert "AB" in evt.body
-        assert "CD" in evt.body
-
-    def test_intrinsic_obs_event(self):
-        from roc.reporting.state import IntrinsicObsEvent
-
-        evt = IntrinsicObsEvent({"hp": 50})
-        assert evt.name == "roc.intrinsics"
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            _emit_state_record("roc.test", "body")
+            log_record = mock_logger.emit.call_args[0][0]
+            assert log_record.severity_number == SeverityNumber.INFO
+            assert log_record.severity_text == "INFO"
 
 
 class TestStatePrintStartupInfo:
@@ -389,28 +353,31 @@ class TestStatePrintStartupInfo:
         State.print_startup_info()
 
 
-class TestStateSendEvents:
-    @patch("roc.reporting.state.Observability.event")
-    def test_send_events_all_none(self, mock_event):
+class TestEmitStateLogs:
+    def test_emit_state_logs_all_none(self):
         from roc.reporting.state import State, states
 
-        # Reset all to None
         states.screen.val = None
         states.salency.val = None
         states.object.val = None
         states.attention.val = None
-        State.send_events()
-        mock_event.assert_not_called()
 
-    @patch("roc.reporting.state.Observability.event")
-    def test_send_events_with_screen(self, mock_event):
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            State.emit_state_logs()
+            mock_logger.emit.assert_not_called()
+
+    def test_emit_state_logs_with_screen(self):
         from roc.reporting.state import State, states
 
         states.screen.val = {"chars": np.array([[65, 66]])}
         states.salency.val = None
         states.object.val = None
         states.attention.val = None
-        State.send_events()
-        assert mock_event.call_count == 1
-        # Clean up
+
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            State.emit_state_logs()
+            assert mock_logger.emit.call_count == 1
+            log_record = mock_logger.emit.call_args[0][0]
+            assert log_record.attributes["event.name"] == "roc.screen"
+            assert "AB" in log_record.body
         states.screen.val = None

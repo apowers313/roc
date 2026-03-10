@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import importlib
+import json
 import math
 import os
 import sys
 import traceback
+from collections.abc import Sequence
 from datetime import datetime
 from time import time_ns
-from typing import Any
+from typing import IO, Any
 
 import pyroscope
 from flexihumanhash import FlexiHumanHash
@@ -17,7 +19,7 @@ from opentelemetry import _events as otel_events
 from opentelemetry import _logs as otel_logs
 from opentelemetry import metrics as otel_metrics
 from opentelemetry import trace as otel_trace
-from opentelemetry._events import Event, EventLogger, NoOpEventLogger
+from opentelemetry._events import EventLogger, NoOpEventLogger
 from opentelemetry._logs import NoOpLogger, SeverityNumber
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
@@ -26,7 +28,12 @@ from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrument
 from opentelemetry.metrics import Meter, Observation
 from opentelemetry.sdk._events import EventLoggerProvider
 from opentelemetry.sdk._logs import LoggerProvider, LogRecord
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+    LogExporter,
+    LogExportResult,
+    SimpleLogRecordProcessor,
+)
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
@@ -91,17 +98,40 @@ roc_common_attributes = {
 }
 
 
-class ObservabilityEvent(Event):
-    """An OpenTelemetry event with ROC common attributes automatically merged in."""
+class JsonlFileExporter(LogExporter):
+    """OTel log exporter that writes records as single-line JSON to a file."""
 
-    def __init__(
-        self,
-        name: str,
-        body: Any | None = None,
-        attributes: dict[str, int | float | str] = dict(),
-    ):
-        merged_attrs = attributes | roc_common_attributes
-        super().__init__(name, body=body, attributes=merged_attrs)
+    def __init__(self, file_path: str) -> None:
+        os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
+        self._file_handle: IO[str] = open(file_path, "w")
+
+    def export(self, batch: Sequence[Any]) -> LogExportResult:
+        """Export log records as JSONL (one JSON object per line)."""
+        try:
+            for log_data in batch:
+                record = log_data.log_record
+                entry: dict[str, Any] = {
+                    "body": str(record.body) if record.body is not None else None,
+                    "severity_number": record.severity_number.value
+                    if record.severity_number
+                    else None,
+                    "severity_text": record.severity_text,
+                    "timestamp": record.timestamp,
+                    "observed_timestamp": record.observed_timestamp,
+                    "attributes": dict(record.attributes) if record.attributes else None,
+                    "trace_id": str(record.trace_id) if record.trace_id else None,
+                    "span_id": str(record.span_id) if record.span_id else None,
+                }
+                self._file_handle.write(json.dumps(entry, default=str) + "\n")
+            self._file_handle.flush()
+            return LogExportResult.SUCCESS
+        except Exception:
+            return LogExportResult.FAILURE
+
+    def shutdown(self) -> None:
+        """Close the file handle."""
+        if not self._file_handle.closed:
+            self._file_handle.close()
 
 
 class ObservabilityBase(type):
@@ -123,6 +153,9 @@ class ObservabilityBase(type):
 class Observability(metaclass=ObservabilityBase):
     """Singleton that initializes and provides access to OpenTelemetry instrumentation."""
 
+    _debug_log_configured: bool = False
+    _remote_log_configured: bool = False
+
     def __init__(self) -> None:
         settings = Config.get()
         roc_logger.init()
@@ -133,6 +166,28 @@ class Observability(metaclass=ObservabilityBase):
             logger_provider = LoggerProvider(resource=resource)
             otlp_log_exporter = OTLPLogExporter(endpoint=settings.observability_host, insecure=True)
             logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_log_exporter))
+
+            # debug JSONL file exporter (synchronous for crash safety)
+            if settings.debug_log:
+                self._debug_log_exporter = JsonlFileExporter(settings.debug_log_path)
+                logger_provider.add_log_record_processor(
+                    SimpleLogRecordProcessor(self._debug_log_exporter)
+                )
+                Observability._debug_log_configured = True
+
+            # remote logger exporter (synchronous for real-time querying)
+            if settings.debug_remote_log:
+                from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
+
+                self._remote_log_exporter = RemoteLoggerExporter(
+                    url=settings.debug_remote_log_url,
+                    session_id=instance_id,
+                )
+                logger_provider.add_log_record_processor(
+                    SimpleLogRecordProcessor(self._remote_log_exporter)
+                )
+                Observability._remote_log_configured = True
+
             otel_logs.set_logger_provider(logger_provider=logger_provider)
 
             # connect logs to loguru
@@ -154,6 +209,30 @@ class Observability(metaclass=ObservabilityBase):
             otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
             roc_logger.logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
         else:
+            # Even when OTel logging to OTLP is disabled, support debug log/remote log
+            _need_local_provider = (
+                settings.debug_log or settings.debug_remote_log
+            ) and not _disable_for_pytest_scanning
+            if _need_local_provider:
+                logger_provider = LoggerProvider(resource=resource)
+                if settings.debug_log:
+                    self._debug_log_exporter = JsonlFileExporter(settings.debug_log_path)
+                    logger_provider.add_log_record_processor(
+                        SimpleLogRecordProcessor(self._debug_log_exporter)
+                    )
+                    Observability._debug_log_configured = True
+                if settings.debug_remote_log:
+                    from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
+
+                    self._remote_log_exporter = RemoteLoggerExporter(
+                        url=settings.debug_remote_log_url,
+                        session_id=instance_id,
+                    )
+                    logger_provider.add_log_record_processor(
+                        SimpleLogRecordProcessor(self._remote_log_exporter)
+                    )
+                    Observability._remote_log_configured = True
+                otel_logs.set_logger_provider(logger_provider=logger_provider)
             self.set_event_logger(NoOpEventLogger("roc"))
 
         if settings.observability_metrics and not _disable_for_pytest_scanning:
@@ -218,13 +297,51 @@ class Observability(metaclass=ObservabilityBase):
 
     @staticmethod
     def init() -> None:
-        """Initializes the Observability singleton."""
+        """Initializes the Observability singleton and configures debug exporters."""
         Observability()
+        Observability._configure_debug_exporters()
 
     @classmethod
-    def event(cls, evt: Event) -> None:
-        """Emits an observability event."""
-        Observability.event_logger.emit(evt)
+    def _configure_debug_exporters(cls) -> None:
+        """Add debug exporters to the existing logger provider if config requires them.
+
+        This is called after singleton creation so that CLI flags (which update
+        Config after the module-level init) can still enable debug exporters.
+        """
+        settings = Config.get()
+        global _disable_for_pytest_scanning
+        if _disable_for_pytest_scanning:
+            return
+
+        needs_debug_log = settings.debug_log and not getattr(cls, "_debug_log_configured", False)
+        needs_remote_log = settings.debug_remote_log and not getattr(
+            cls, "_remote_log_configured", False
+        )
+        if not needs_debug_log and not needs_remote_log:
+            return
+
+        provider = otel_logs.get_logger_provider()
+        if not isinstance(provider, LoggerProvider):
+            # No LoggerProvider was set up during __init__ (e.g. OTLP logging
+            # was disabled and no debug exporters were needed at that time).
+            # Create one now so we have somewhere to attach debug exporters.
+            provider = LoggerProvider(resource=resource)
+            otel_logs.set_logger_provider(logger_provider=provider)
+
+        if needs_debug_log:
+            debug_exporter = JsonlFileExporter(settings.debug_log_path)
+            provider.add_log_record_processor(SimpleLogRecordProcessor(debug_exporter))
+            cls._debug_log_configured = True
+
+        if needs_remote_log:
+            from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
+
+            remote_exporter = RemoteLoggerExporter(
+                url=settings.debug_remote_log_url,
+                session_id=instance_id,
+            )
+            provider.add_log_record_processor(SimpleLogRecordProcessor(remote_exporter))
+            cls._remote_log_configured = True
 
     @classmethod
     def set_event_logger(cls, event_logger: EventLogger) -> None:
@@ -240,6 +357,22 @@ class Observability(metaclass=ObservabilityBase):
     def set_meter(cls, meter: Meter) -> None:
         """Sets the OpenTelemetry meter."""
         cls.meter = meter
+
+    @staticmethod
+    def get_logger(name: str) -> Any:
+        """Returns a named OTel logger for emitting structured log records.
+
+        Args:
+            name: The logger name (typically a module name).
+
+        Returns:
+            An OTel Logger instance.
+        """
+        return otel_logs.get_logger_provider().get_logger(
+            name,
+            version=roc_version,
+            attributes=roc_common_attributes,
+        )
 
 
 # skip natural LogRecord attributes

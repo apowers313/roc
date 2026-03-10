@@ -84,16 +84,30 @@ class TestNodeCacheGauge:
         mock_cache.currsize = 10
         mock_cache.maxsize = 100
 
-        with (
-            patch("roc.reporting.state.Node.get_cache", return_value=mock_cache),
-            patch("roc.reporting.state.State.send_events"),
-            patch("roc.reporting.state.State.print"),
-        ):
+        with patch("roc.reporting.state.Node.get_cache", return_value=mock_cache):
             results = list(node_cache_gague())
 
         assert len(results) == 1
         assert results[0].value == 10
         assert results[0].attributes == {"max": 100}
+
+    def test_gauge_does_not_call_print_or_emit(self):
+        """node_cache_gauge callback should not call State.print() or emit_state_logs()."""
+        from roc.reporting.state import node_cache_gague
+
+        mock_cache = MagicMock()
+        mock_cache.currsize = 10
+        mock_cache.maxsize = 100
+
+        with (
+            patch("roc.reporting.state.Node.get_cache", return_value=mock_cache),
+            patch("roc.reporting.state.State.print") as mock_print,
+            patch("roc.reporting.state.State.emit_state_logs") as mock_emit,
+        ):
+            list(node_cache_gague())
+
+        mock_print.assert_not_called()
+        mock_emit.assert_not_called()
 
 
 class TestEdgeCacheGauge:
@@ -112,13 +126,11 @@ class TestEdgeCacheGauge:
         assert results[0].attributes == {"max": 50}
 
 
-class TestStateSendEventsExtra:
-    @patch("roc.reporting.state.Observability.event")
-    def test_send_events_with_saliency(self, mock_event):
+class TestEmitStateLogsExtra:
+    def test_emit_state_logs_with_saliency(self):
         from roc.reporting.state import State, states
 
         mock_sal = MagicMock()
-        mock_sal.to_html_vals.return_value = "<html>"
         mock_sal.feature_report.return_value = {"feat1": 0.5}
 
         states.screen.val = None
@@ -126,14 +138,13 @@ class TestStateSendEventsExtra:
         states.object.val = None
         states.attention.val = None
 
-        State.send_events()
-
-        # Should send SaliencyObsEvent and FeatureObsEvent
-        assert mock_event.call_count == 2
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            State.emit_state_logs()
+            # Should emit saliency and features records
+            assert mock_logger.emit.call_count == 2
         states.salency.val = None
 
-    @patch("roc.reporting.state.Observability.event")
-    def test_send_events_with_object(self, mock_event):
+    def test_emit_state_logs_with_object(self):
         from roc.reporting.state import State, states
 
         mock_obj = MagicMock()
@@ -142,12 +153,12 @@ class TestStateSendEventsExtra:
         states.object.val = mock_obj
         states.attention.val = None
 
-        State.send_events()
-        assert mock_event.call_count == 1
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            State.emit_state_logs()
+            assert mock_logger.emit.call_count == 1
         states.object.val = None
 
-    @patch("roc.reporting.state.Observability.event")
-    def test_send_events_with_attention(self, mock_event):
+    def test_emit_state_logs_with_attention(self):
         from roc.reporting.state import State, states
 
         mock_att = MagicMock()
@@ -157,6 +168,7 @@ class TestStateSendEventsExtra:
         states.object.val = None
         states.attention.val = mock_att
 
-        State.send_events()
-        assert mock_event.call_count == 1
+        with patch("roc.reporting.state.otel_logger") as mock_logger:
+            State.emit_state_logs()
+            assert mock_logger.emit.call_count == 1
         states.attention.val = None

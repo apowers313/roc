@@ -41,9 +41,12 @@ ng: NethackGym | None = None
 
 def init(config: dict[str, Any] | None = None) -> None:
     """Initializes the agent before starting the agent."""
-    Config.init(config)
+    Config.init(config, force=config is not None)
     roc_logger.init()
     Observability.init()
+    from .debugpy_setup import maybe_start_debugpy
+
+    maybe_start_debugpy()
     global ng
     ng = NethackGym()
     Component.init()

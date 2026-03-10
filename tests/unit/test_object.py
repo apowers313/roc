@@ -11,6 +11,7 @@ from roc.object import (
     FeatureGroup,
     Object,
     ObjectCache,
+    ResolutionContext,
     ResolvedObject,
     SymmetricDifferenceResolution,
 )
@@ -44,6 +45,12 @@ class TestObject:
     def test_resolve_count_default(self):
         o = Object()
         assert o.resolve_count == 0
+
+    def test_last_position_defaults(self):
+        o = Object()
+        assert o.last_x is None
+        assert o.last_y is None
+        assert o.last_tick == 0
 
     def test_str_format(self):
         o = Object()
@@ -131,6 +138,14 @@ class TestObjectCache:
         assert len(cache) == 0
 
 
+class TestResolutionContext:
+    def test_constructor(self):
+        ctx = ResolutionContext(x=XLoc(5), y=YLoc(10), tick=42)
+        assert ctx.x == 5
+        assert ctx.y == 10
+        assert ctx.tick == 42
+
+
 class TestSymmetricDifferenceResolution:
     def test_resolve_no_candidates(self):
         fn = MagicMock()
@@ -140,5 +155,30 @@ class TestSymmetricDifferenceResolution:
 
         resolution = SymmetricDifferenceResolution()
         fg = MagicMock()
-        result = resolution.resolve([fn], fg)
+        ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
+        result = resolution.resolve([fn], fg, ctx)
         assert result is None
+
+    def test_resolve_accepts_context(self):
+        """Verify symmetric-difference accepts and ignores the context param."""
+        fn = MagicMock()
+        mock_node_list = MagicMock()
+        mock_node_list.select.return_value = []
+        fn.predecessors = mock_node_list
+
+        resolution = SymmetricDifferenceResolution()
+        fg = MagicMock()
+        ctx = ResolutionContext(x=XLoc(99), y=YLoc(99), tick=999)
+        result = resolution.resolve([fn], fg, ctx)
+        # Context should be accepted without error; result unchanged
+        assert result is None
+
+    def test_last_position_assignment(self):
+        """Verify position and tick can be set."""
+        o = Object()
+        o.last_x = XLoc(5)
+        o.last_y = YLoc(10)
+        o.last_tick = 42
+        assert o.last_x == 5
+        assert o.last_y == 10
+        assert o.last_tick == 42

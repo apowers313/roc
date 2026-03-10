@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "mcp-debugger": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@debugmcp/mcp-debugger"],
+      "env": {}
+    },
+    "grafana": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-grafana"],
+      "env": {}
+    }
+  }
+}
