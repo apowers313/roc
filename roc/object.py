@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+import json
 import math
 import random
 from collections import defaultdict
 from dataclasses import dataclass
+from time import time_ns
 from typing import TYPE_CHECKING, Any, Collection, NewType, cast
+
+from opentelemetry import trace as otel_trace
 
 from scipy.special import logsumexp
 
 from cachetools import LRUCache
+from loguru import logger
 from flexihumanhash import FlexiHumanHash
+from opentelemetry._logs import SeverityNumber
+from opentelemetry.sdk._logs import LogRecord
 from pydantic import Field
 
 from .attention import Attention, AttentionEvent
@@ -20,9 +27,11 @@ from .event import EventBus
 from .expmod import ExpMod
 from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
 from .location import XLoc, YLoc
-from .perception import Detail, FeatureNode
+from .perception import Detail, FeatureKind, FeatureNode
 from .perception import VisualFeature as PerceptionFeature
 from .reporting.observability import Observability
+
+_otel_logger = Observability.get_logger("roc.resolution")
 
 if TYPE_CHECKING:
     from .sequencer import Frame
@@ -228,7 +237,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         Returns:
             List of (Object, distance) tuples sorted by ascending distance.
         """
-        distance_idx: dict[NodeId, float] = defaultdict(float)
+        distance_idx: dict[NodeId, float] = {}
 
         feature_groups = [
             fg for n in feature_nodes for fg in n.predecessors.select(labels={"FeatureGroup"})
@@ -236,16 +245,19 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         objs = [obj for fg in feature_groups for obj in fg.predecessors.select(labels={"Object"})]
         for obj in objs:
             assert isinstance(obj, Object)
-            distance_idx[obj.id] += self._distance(obj, feature_nodes)
+            if obj.id not in distance_idx:
+                distance_idx[obj.id] = self._distance(obj, feature_nodes)
 
         order = sorted(distance_idx, key=lambda k: distance_idx[k])
         return [(Object.get(n), distance_idx[n]) for n in order]
 
     @staticmethod
     def _distance(obj: Object, features: Collection[FeatureNode]) -> float:
-        """Compute symmetric set difference between an Object's features and new features.
+        """Compute symmetric set difference between an Object's physical features and new features.
 
-        Only considers physical attributes: SingleNode, ColorNode, ShapeNode.
+        Only considers features where FeatureNode.physical is True (appearance-based
+        features like shape, color, lines, floods) and ignores event-based features
+        (deltas, motion).
 
         Args:
             obj: The candidate Object.
@@ -254,11 +266,16 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         Returns:
             The count of features present in one set but not the other.
         """
-        allowed_attrs = {"SingleNode", "ColorNode", "ShapeNode"}
-        features_strs: set[str] = {str(f) for f in features if f.labels & allowed_attrs}
-        obj_features: set[str] = {
-            str(f) for f in obj.features if isinstance(f, FeatureNode) and f.labels & allowed_attrs
+        features_strs: set[str] = {
+            str(f) for f in features if f.kind == FeatureKind.PHYSICAL
         }
+        obj_features: set[str] = {
+            str(f)
+            for f in obj.features
+            if isinstance(f, FeatureNode) and f.kind == FeatureKind.PHYSICAL
+        }
+        if not features_strs and not obj_features:
+            return float("inf")
         return float(len(features_strs ^ obj_features))
 
 
@@ -329,6 +346,9 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
 
         if not candidates:
             self.dirichlet_decision_counter.add(1, attributes={"outcome": "new_object"})
+            self._log_decision(
+                "new_object", None, feature_strs, [], {}, context, reason="no_candidates"
+            )
             return None
 
         # Step 2: Compute priors (candidates + "new" hypothesis)
@@ -346,6 +366,16 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         # Step 6: Update alphas if matched
         if result is not None:
             self._update_alphas(result.id, feature_strs)
+
+        # Log the decision
+        self._log_decision(
+            "match" if result is not None else "new_object",
+            result,
+            feature_strs,
+            candidates,
+            log_posteriors,
+            context,
+        )
 
         return result
 
@@ -523,6 +553,57 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             self._alphas[object_id][f] = self.prior_alpha + 1.0
         self._global_vocab.update(feature_strs)
 
+    def _log_decision(
+        self,
+        outcome: str,
+        matched_obj: Object | None,
+        feature_strs: list[str],
+        candidates: list[Object],
+        log_posteriors: dict[NodeId | str, float],
+        context: ResolutionContext,
+        *,
+        reason: str = "",
+    ) -> None:
+        """Emit an OTel log record describing this resolution decision."""
+        # Build posteriors summary sorted by probability
+        posteriors_summary: list[tuple[str, float]] = []
+        for k, lp in sorted(log_posteriors.items(), key=lambda x: x[1], reverse=True):
+            posteriors_summary.append((str(k), round(math.exp(lp), 6)))
+
+        record: dict[str, Any] = {
+            "event": "resolution_decision",
+            "outcome": outcome,
+            "reason": reason,
+            "tick": context.tick,
+            "x": int(context.x),
+            "y": int(context.y),
+            "features": feature_strs,
+            "num_candidates": len(candidates),
+            "posteriors": posteriors_summary,
+            "matched_object_id": matched_obj.id if matched_obj is not None else None,
+            "vocab_size": len(self._global_vocab),
+            "total_objects_tracked": len(self._alphas),
+        }
+
+        if matched_obj is not None:
+            alphas = self._alphas.get(matched_obj.id, {})
+            record["matched_alpha_sum"] = round(sum(alphas.values()), 1)
+            record["matched_alpha_count"] = len(alphas)
+
+        span_context = otel_trace.get_current_span().get_span_context()
+        _otel_logger.emit(
+            LogRecord(
+                timestamp=time_ns(),
+                severity_number=SeverityNumber.INFO,
+                severity_text="INFO",
+                body=json.dumps(record, default=str),
+                attributes={"event.name": "roc.resolution.decision"},
+                trace_id=span_context.trace_id,
+                span_id=span_context.span_id,
+                trace_flags=span_context.trace_flags,
+            )
+        )
+
 
 @dataclass
 class ResolvedObject:
@@ -591,6 +672,7 @@ class ObjectResolver(Component):
         if o is not None:
             self.resolved_object_counter.add(1, attributes={"new": False})
             o.resolve_count += 1
+            logger.debug("object resolved: matched existing id={}", o.uuid)
             if o.last_x is not None and o.last_y is not None:
                 dist = abs(int(x) - int(o.last_x)) + abs(int(y) - int(o.last_y))
                 self.spatial_distance_histogram.record(dist)
@@ -600,6 +682,10 @@ class ObjectResolver(Component):
         else:
             self.resolved_object_counter.add(1, attributes={"new": True})
             o = Object.with_features(fg)
+            logger.info(
+                "object resolved: NEW object id={} at ({},{}) features={}",
+                o.uuid, x, y, [str(f) for f in fg.feature_nodes],
+            )
             # Initialize alphas for the new object in the ExpMod
             if hasattr(resolution, "initialize_alphas"):
                 feature_strs = [str(f) for f in fg.feature_nodes]

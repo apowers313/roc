@@ -13,6 +13,7 @@ from roc.object import (
     ResolutionContext,
     SymmetricDifferenceResolution,
 )
+from roc.perception import FeatureKind
 
 
 @pytest.fixture(autouse=True)
@@ -28,6 +29,7 @@ def make_feature_node(label: str, str_repr: str) -> MagicMock:
     """Create a mock FeatureNode with label and string representation."""
     fn = MagicMock()
     fn.labels = {label, "FeatureNode"}
+    fn.kind = FeatureKind.PHYSICAL
     fn.configure_mock(**{"__str__": MagicMock(return_value=str_repr)})
     return fn
 
