@@ -13,6 +13,7 @@ from roc.object import (
     DirichletCategoricalResolution,
     Object,
     ResolutionContext,
+    _feature_to_objects,
 )
 
 
@@ -49,43 +50,22 @@ def make_object_with_position(x: int | None, y: int | None, tick: int) -> Object
 
 
 def setup_candidate_return(feature_nodes: list[MagicMock], obj: Object):
-    """Wire mock feature nodes so _find_candidates returns obj."""
-    mock_fg = MagicMock()
-    mock_fg.labels = {"FeatureGroup"}
-
-    mock_obj_list = MagicMock()
-    mock_obj_list.select.return_value = [obj]
-
-    mock_fg.predecessors = mock_obj_list
-
+    """Populate the reverse index so _find_candidates returns obj."""
     for fn in feature_nodes:
-        mock_fg_list = MagicMock()
-        mock_fg_list.select.return_value = [mock_fg]
-        fn.predecessors = mock_fg_list
+        _feature_to_objects[fn.id].add(obj.id)
 
 
 def setup_multi_candidate_return(feature_nodes: list[MagicMock], objs: list[Object]):
-    """Wire mock feature nodes so _find_candidates returns multiple objects."""
-    mock_fg = MagicMock()
-    mock_fg.labels = {"FeatureGroup"}
-
-    mock_obj_list = MagicMock()
-    mock_obj_list.select.return_value = objs
-
-    mock_fg.predecessors = mock_obj_list
-
+    """Populate the reverse index so _find_candidates returns multiple objects."""
     for fn in feature_nodes:
-        mock_fg_list = MagicMock()
-        mock_fg_list.select.return_value = [mock_fg]
-        fn.predecessors = mock_fg_list
+        for obj in objs:
+            _feature_to_objects[fn.id].add(obj.id)
 
 
 def setup_no_candidates(feature_nodes: list[MagicMock]):
-    """Wire mock feature nodes so _find_candidates returns nothing."""
+    """Ensure _find_candidates returns nothing for these feature nodes."""
     for fn in feature_nodes:
-        mock_nl = MagicMock()
-        mock_nl.select.return_value = []
-        fn.predecessors = mock_nl
+        _feature_to_objects.pop(fn.id, None)
 
 
 class TestColdStart:

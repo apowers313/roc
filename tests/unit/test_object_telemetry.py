@@ -12,6 +12,7 @@ from roc.object import (
     ObjectResolver,
     ResolutionContext,
     SymmetricDifferenceResolution,
+    _feature_to_objects,
 )
 from roc.perception import FeatureKind
 
@@ -43,15 +44,8 @@ class TestSymmetricDifferenceDecisionCounter:
         # Create a candidate object
         obj = Object()
         with patch.object(type(obj), "features", new_callable=PropertyMock, return_value=[fn1]):
-            # Mock graph walk: fn1 -> FeatureGroup -> Object
-            mock_fg = MagicMock()
-            mock_fg_nl = MagicMock()
-            mock_fg_nl.select.return_value = [mock_fg]
-            fn1.predecessors = mock_fg_nl
-
-            mock_obj_nl = MagicMock()
-            mock_obj_nl.select.return_value = [obj]
-            mock_fg.predecessors = mock_obj_nl
+            # Populate reverse index so _find_candidates finds obj
+            _feature_to_objects[fn1.id].add(obj.id)
 
             fg = MagicMock()
             ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
@@ -76,19 +70,8 @@ class TestSymmetricDifferenceDecisionCounter:
             new_callable=PropertyMock,
             return_value=[obj_feature],
         ):
-            # Mock graph walk to return candidate with high distance
-            mock_fg = MagicMock()
-            mock_fg_nl = MagicMock()
-            mock_fg_nl.select.return_value = [mock_fg]
-            fn1.predecessors = mock_fg_nl
-
-            fn2_nl = MagicMock()
-            fn2_nl.select.return_value = []
-            fn2.predecessors = fn2_nl
-
-            mock_obj_nl = MagicMock()
-            mock_obj_nl.select.return_value = [obj]
-            mock_fg.predecessors = mock_obj_nl
+            # Populate reverse index: only fn1 points to obj (fn2 has no candidates)
+            _feature_to_objects[fn1.id].add(obj.id)
 
             fg = MagicMock()
             ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
@@ -105,14 +88,8 @@ class TestSymmetricDifferenceDecisionCounter:
 
         obj = Object()
         with patch.object(type(obj), "features", new_callable=PropertyMock, return_value=[fn1]):
-            mock_fg = MagicMock()
-            mock_fg_nl = MagicMock()
-            mock_fg_nl.select.return_value = [mock_fg]
-            fn1.predecessors = mock_fg_nl
-
-            mock_obj_nl = MagicMock()
-            mock_obj_nl.select.return_value = [obj]
-            mock_fg.predecessors = mock_obj_nl
+            # Populate reverse index so _find_candidates finds obj
+            _feature_to_objects[fn1.id].add(obj.id)
 
             fg = MagicMock()
             ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
@@ -126,10 +103,7 @@ class TestSymmetricDifferenceDecisionCounter:
         resolution = SymmetricDifferenceResolution()
         fn1 = make_feature_node("SingleNode", "SingleNode(a)")
 
-        mock_nl = MagicMock()
-        mock_nl.select.return_value = []
-        fn1.predecessors = mock_nl
-
+        # No entries in reverse index -> zero candidates
         fg = MagicMock()
         ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
 

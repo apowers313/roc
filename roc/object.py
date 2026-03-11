@@ -38,6 +38,10 @@ if TYPE_CHECKING:
 
 ObjectId = NewType("ObjectId", int)
 
+# Reverse index: FeatureNode ID -> set of Object IDs that contain that feature.
+# Updated when new Objects are created, avoids expensive graph walks in _find_candidates.
+_feature_to_objects: dict[NodeId, set[NodeId]] = defaultdict(set)
+
 
 class Features(Edge):
     """An edge connecting an Object to its FeatureGroups."""
@@ -96,6 +100,9 @@ class Object(Node):
         """Creates a new Object and connects it to the given FeatureGroup."""
         o = Object()
         Features.connect(o, fg)
+
+        for fn in fg.feature_nodes:
+            _feature_to_objects[fn.id].add(o.id)
 
         return o
 
@@ -231,6 +238,9 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
     ) -> list[tuple[Object, float]]:
         """Find and rank candidate Objects by feature distance.
 
+        Uses the reverse index (_feature_to_objects) to find candidates in O(f)
+        instead of walking the graph via predecessors.select().
+
         Args:
             feature_nodes: The feature nodes to match against.
 
@@ -239,14 +249,12 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         """
         distance_idx: dict[NodeId, float] = {}
 
-        feature_groups = [
-            fg for n in feature_nodes for fg in n.predecessors.select(labels={"FeatureGroup"})
-        ]
-        objs = [obj for fg in feature_groups for obj in fg.predecessors.select(labels={"Object"})]
-        for obj in objs:
-            assert isinstance(obj, Object)
-            if obj.id not in distance_idx:
-                distance_idx[obj.id] = self._distance(obj, feature_nodes)
+        for fn in feature_nodes:
+            for obj_id in _feature_to_objects.get(fn.id, ()):
+                if obj_id not in distance_idx:
+                    obj = Object.get(obj_id)
+                    assert isinstance(obj, Object)
+                    distance_idx[obj_id] = self._distance(obj, feature_nodes)
 
         order = sorted(distance_idx, key=lambda k: distance_idx[k])
         return [(Object.get(n), distance_idx[n]) for n in order]
@@ -380,19 +388,21 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         return result
 
     def _find_candidates(self, feature_nodes: Collection[FeatureNode]) -> list[Object]:
-        """Graph walk: FeatureNode -> FeatureGroup -> Object."""
+        """Find candidate Objects using reverse index.
+
+        Uses the reverse index (_feature_to_objects) to find candidates in O(f)
+        instead of walking the graph via predecessors.select().
+        """
         seen: set[NodeId] = set()
         candidates: list[Object] = []
 
-        feature_groups = [
-            fg for n in feature_nodes for fg in n.predecessors.select(labels={"FeatureGroup"})
-        ]
-        objs = [obj for fg in feature_groups for obj in fg.predecessors.select(labels={"Object"})]
-        for obj in objs:
-            assert isinstance(obj, Object)
-            if obj.id not in seen:
-                seen.add(obj.id)
-                candidates.append(obj)
+        for fn in feature_nodes:
+            for obj_id in _feature_to_objects.get(fn.id, ()):
+                if obj_id not in seen:
+                    seen.add(obj_id)
+                    obj = Object.get(obj_id)
+                    assert isinstance(obj, Object)
+                    candidates.append(obj)
 
         return candidates
 

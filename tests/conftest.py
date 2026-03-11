@@ -15,6 +15,7 @@ from roc.config import Config
 from roc.event import BusConnection, EventBus
 from roc.graphdb import Edge, GraphDB, Node
 from roc.logger import init as logger_init
+from roc.object import _feature_to_objects
 from roc.perception import Perception, PerceptionData
 from roc.reporting.observability import Observability
 
@@ -32,6 +33,7 @@ def clear_cache() -> Generator[None, None, None]:
 
     Node.get_cache().clear()
     Edge.get_cache().clear()
+    _feature_to_objects.clear()
 
 
 @pytest.fixture(autouse=True)

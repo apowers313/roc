@@ -135,10 +135,9 @@ class TestSymmetricDifferenceResolution:
         assert len(candidates) == 0
 
     def test_one_object(self) -> None:
-        o = Object()
         fn = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2))).to_nodes()
         fg = FeatureGroup.from_nodes([fn])
-        Node.connect(o, fg, "Features")
+        o = Object.with_features(fg)
         candidates = self.resolution._find_candidates([fn])
         assert len(candidates) == 1
         o2, dist = candidates[0]
