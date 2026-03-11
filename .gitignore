@@ -34,3 +34,6 @@ experiments/.ipynb_checkpoints
 
 # ignore site files
 site/
+
+# playwright MCP
+.playwright-mcp/
