@@ -138,6 +138,11 @@ class Config(BaseSettings):
     expmods_use: list[tuple[str, str]] = [
         ("action", "weighted"),
     ]
+    # saliency-attenuation/linear-decline config
+    saliency_attenuation_capacity: int = 5
+    saliency_attenuation_radius: int = 3
+    saliency_attenuation_max_penalty: float = 1.0
+    saliency_attenuation_max_attenuation: float = 0.9
     # component config
     perception_components: list[tuple[str, str]] = Field(
         default=[

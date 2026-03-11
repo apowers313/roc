@@ -212,6 +212,14 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
             ]
         )
 
+        # attenuate strength image (inhibition of return)
+        from .saliency_attenuation import SaliencyAttenuationExpMod
+
+        attenuation = SaliencyAttenuationExpMod.get(default="none")
+        pre_peak = np.unravel_index(np.argmax(fkimg), fkimg.shape)
+        fkimg = attenuation.attenuate(fkimg, self)
+        post_peak = np.unravel_index(np.argmax(fkimg), fkimg.shape)
+
         # find peaks through dilation
         seed = np.copy(fkimg)
         seed[1:-1, 1:-1] = fkimg.min()
@@ -246,7 +254,66 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
             .reset_index(drop=True)
         )
 
-        return DataSet[VisionAttentionSchema](df)
+        ds = DataSet[VisionAttentionSchema](df)
+
+        # record saliency attenuation metrics
+        from .saliency_attenuation import (
+            _otel_logger as sa_logger,
+            peak_count_histogram,
+            top_peak_shifted_counter,
+            top_peak_strength_histogram,
+        )
+
+        peak_count_histogram.record(len(ds))
+        if len(ds) > 0:
+            top_strength = float(ds.iloc[0]["strength"])
+            top_peak_strength_histogram.record(top_strength)
+        shifted = pre_peak != post_peak
+        if shifted:
+            top_peak_shifted_counter.add(1, {"shifted": True})
+
+        # structured log record
+        import json
+        from time import time_ns
+
+        from opentelemetry import trace as otel_trace
+        from opentelemetry._logs import SeverityNumber
+        from opentelemetry.sdk._logs import LogRecord
+
+        span_context = otel_trace.get_current_span().get_span_context()
+        log_record: dict[str, Any] = {
+            "event": "saliency_attenuation",
+            "flavor": attenuation.name,
+            "peak_count": len(ds),
+            "top_peak_strength": float(ds.iloc[0]["strength"]) if len(ds) > 0 else 0.0,
+            "top_peak_shifted": bool(shifted),
+            "pre_peak": list(pre_peak),
+            "post_peak": list(post_peak),
+        }
+
+        # Add flavor-specific fields
+        from .saliency_attenuation import LinearDeclineAttenuation
+
+        if isinstance(attenuation, LinearDeclineAttenuation):
+            log_record["history"] = [
+                {"x": loc.x, "y": loc.y, "tick": loc.tick} for loc in attenuation._history
+            ]
+            log_record["history_size"] = len(attenuation._history)
+        sa_logger.emit(
+            LogRecord(
+                timestamp=time_ns(),
+                severity_number=SeverityNumber.INFO,
+                severity_text="INFO",
+                body=json.dumps(log_record, default=str),
+                attributes={"event.name": "roc.saliency_attenuation"},
+                trace_id=span_context.trace_id,
+                span_id=span_context.span_id,
+                trace_flags=span_context.trace_flags,
+            )
+        )
+
+        attenuation.notify_focus(ds)
+        return ds
 
 
 class VisionAttention(Attention):

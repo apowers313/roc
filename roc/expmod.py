@@ -35,6 +35,33 @@ Configuration (in Config):
     - ``expmods``: filenames to dynamically import
     - ``expmods_use``: list of ``(modtype, name)`` tuples to activate
 
+Per-ExpMod configuration:
+    ExpMods that need tunable parameters should add individual fields to
+    ``Config`` with a descriptive prefix (e.g. ``saliency_attenuation_radius``).
+    The ExpMod reads these in its ``__init__`` via ``Config.get()``, falling
+    back to class-attribute defaults if Config is not yet initialized.
+
+    This keeps parameters discoverable, type-checked, and settable via
+    environment variables (e.g. ``roc_saliency_attenuation_radius=5``).
+
+    Example::
+
+        # In config.py:
+        my_expmod_threshold: float = 0.5
+
+
+        # In the ExpMod:
+        class MyImpl(MyExpMod):
+            name = "fancy"
+            threshold: float = 0.5  # default
+
+            def __init__(self) -> None:
+                super().__init__()
+                try:
+                    self.threshold = Config.get().my_expmod_threshold
+                except Exception:
+                    pass  # Config not initialized during import-time registration
+
 Module-level state:
     - ``expmod_registry``: maps modtype -> name -> ExpMod instance
     - ``expmod_modtype_current``: tracks which name is active per modtype

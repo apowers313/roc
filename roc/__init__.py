@@ -8,6 +8,7 @@ from typing import Any
 # be registered
 import roc.feature_extractors
 import roc.logger as roc_logger
+import roc.saliency_attenuation
 
 from .action import Action, ActionData
 from .component import Component
