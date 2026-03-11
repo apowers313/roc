@@ -9,6 +9,7 @@ from ..location import IntGrid, TypedPointCollection
 from ..perception import (
     AreaFeature,
     FeatureExtractor,
+    FeatureKind,
     FeatureNode,
     PerceptionEvent,
     VisionData,
@@ -19,15 +20,18 @@ NONZERO_VAL = -1
 
 
 class FloodNode(FeatureNode):
-    """Graph node representing a flood-fill region by type and size."""
+    """Graph node representing a flood-fill region by type, size, color, and shape."""
 
+    kind = FeatureKind.PHYSICAL
     type: int
     size: int
+    color: int
+    shape: int
 
     @property
     def attr_strs(self) -> list[str]:
-        """Returns type and size as strings."""
-        return [str(self.type), str(self.size)]
+        """Returns type, size, color, and shape as strings."""
+        return [str(self.type), str(self.size), str(self.color), chr(self.shape)]
 
 
 @dataclass(kw_only=True)
@@ -35,15 +39,27 @@ class FloodFeature(AreaFeature[FloodNode]):
     """A collection of points representing similar values that are all adjacent to each other"""
 
     feature_name: str = "Flood"
+    color: int = 0
+    shape: int = 0
+
+    def node_hash(self) -> int:
+        """Hashes by type, size, color, and shape."""
+        return hash((self.type, self.size, self.color, self.shape))
 
     def _create_nodes(self) -> FloodNode:
-        """Creates a new FloodNode with type and size."""
-        return FloodNode(type=self.type, size=self.size)
+        """Creates a new FloodNode with type, size, color, and shape."""
+        return FloodNode(type=self.type, size=self.size, color=self.color, shape=self.shape)
 
     def _dbfetch_nodes(self) -> FloodNode | None:
-        """Looks up an existing FloodNode by type and size."""
+        """Looks up an existing FloodNode by type, size, color, and shape."""
         return FloodNode.find_one(
-            "src.type = $type AND src.size = $size", params={"type": self.type, "size": self.size}
+            "src.type = $type AND src.size = $size AND src.color = $color AND src.shape = $shape",
+            params={
+                "type": self.type,
+                "size": self.size,
+                "color": self.color,
+                "shape": self.shape,
+            },
         )
 
 
@@ -62,7 +78,8 @@ class Flood(FeatureExtractor[TypedPointCollection]):
     def get_feature(self, e: PerceptionEvent) -> None:
         """Labels contiguous regions and emits FloodFeatures for regions above minimum size."""
         assert isinstance(e.data, VisionData)
-        data = IntGrid(e.data.glyphs)
+        vd = e.data
+        data = IntGrid(vd.glyphs)
         indices = np.indices(data.T.shape).T
         structure = np.ones((3, 3), dtype=int)
 
@@ -85,12 +102,15 @@ class Flood(FeatureExtractor[TypedPointCollection]):
                         val = 0
                     if len(point_list) >= MIN_FLOOD_SIZE:
                         point_set = {(p[0], p[1]) for p in point_list}
+                        rep = point_list[0]
                         self.pb_conn.send(
                             FloodFeature(
                                 origin_id=self.id,
                                 points=point_set,
                                 type=val,
                                 size=len(point_set),
+                                color=int(vd.colors[rep[1], rep[0]]),
+                                shape=int(vd.chars[rep[1], rep[0]]),
                             )
                         )
 
