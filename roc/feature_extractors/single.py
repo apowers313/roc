@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ..location import IntGrid, Point
 from ..perception import (
     FeatureExtractor,
+    FeatureKind,
     FeatureNode,
     PerceptionEvent,
     PointFeature,
@@ -15,6 +16,7 @@ from ..perception import (
 class SingleNode(FeatureNode):
     """Graph node representing a single isolated feature by its glyph type."""
 
+    kind = FeatureKind.PHYSICAL
     type: int
 
     @property

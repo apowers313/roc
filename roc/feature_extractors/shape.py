@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
+    FeatureKind,
     FeatureNode,
     PerceptionEvent,
     PointFeature,
@@ -17,6 +18,7 @@ from .single import SingleFeature
 class ShapeNode(FeatureNode):
     """Graph node representing a character shape."""
 
+    kind = FeatureKind.PHYSICAL
     type: int
 
     @property

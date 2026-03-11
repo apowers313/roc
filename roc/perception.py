@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 from weakref import ReferenceType, WeakValueDictionary, ref
 
 import numpy as np
@@ -126,8 +126,21 @@ class Detail(Edge):
     allowed_connections: EdgeConnectionsList = [("FeatureGroup", "FeatureNode")]
 
 
+class FeatureKind(Enum):
+    """Categorizes how a feature relates to object identity.
+
+    physical: Describes what something looks like (shape, color, spatial extent).
+    relational: Describes what happened or relationships between things (change, motion, distance).
+    """
+
+    PHYSICAL = "physical"
+    RELATIONAL = "relational"
+
+
 class FeatureNode(Node):
     """Base class for graph nodes representing extracted features."""
+
+    kind: ClassVar[FeatureKind] = FeatureKind.RELATIONAL
 
     def __hash__(self) -> int:
         # XXX: this is dangerous because ID changes when a node is saved
