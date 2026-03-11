@@ -274,9 +274,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         Returns:
             The count of features present in one set but not the other.
         """
-        features_strs: set[str] = {
-            str(f) for f in features if f.kind == FeatureKind.PHYSICAL
-        }
+        features_strs: set[str] = {str(f) for f in features if f.kind == FeatureKind.PHYSICAL}
         obj_features: set[str] = {
             str(f)
             for f in obj.features
@@ -694,7 +692,10 @@ class ObjectResolver(Component):
             o = Object.with_features(fg)
             logger.info(
                 "object resolved: NEW object id={} at ({},{}) features={}",
-                o.uuid, x, y, [str(f) for f in fg.feature_nodes],
+                o.uuid,
+                x,
+                y,
+                [str(f) for f in fg.feature_nodes],
             )
             # Initialize alphas for the new object in the ExpMod
             if hasattr(resolution, "initialize_alphas"):

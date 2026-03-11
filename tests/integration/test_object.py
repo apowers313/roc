@@ -212,17 +212,13 @@ class TestSymmetricDifferenceRegression:
         ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
 
         # Observation 1: single1 + color1 + shape1
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx)
         assert result1 is None, "first observation should create a new object"
         obj1 = Object.with_features(fg1)
 
         # Observation 2: single2 + color2 + shape2 (completely different features)
-        fg2 = FeatureGroup.from_nodes(
-            [features["single2"], features["color2"], features["shape2"]]
-        )
+        fg2 = FeatureGroup.from_nodes([features["single2"], features["color2"], features["shape2"]])
         ctx2 = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=2)
         result2 = self.resolution.resolve(fg2.feature_nodes, fg2, ctx2)
         assert result2 is None, (
@@ -239,23 +235,18 @@ class TestSymmetricDifferenceRegression:
         ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
 
         # Observation 1: single1 + color1 + shape1
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx)
         assert result1 is None
         obj1 = Object.with_features(fg1)
 
         # Observation 2: single1 + color2 + shape2 (shares single1, differs in 2)
-        fg2 = FeatureGroup.from_nodes(
-            [features["single1"], features["color2"], features["shape2"]]
-        )
+        fg2 = FeatureGroup.from_nodes([features["single1"], features["color2"], features["shape2"]])
         ctx2 = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=2)
         result2 = self.resolution.resolve(fg2.feature_nodes, fg2, ctx2)
         # symmetric diff: {color1, shape1} ^ {color2, shape2} = 4, so should NOT match
         assert result2 is None, (
-            "observations differing in 2+ features should not match, "
-            f"but matched object {result2}"
+            f"observations differing in 2+ features should not match, but matched object {result2}"
         )
 
     def test_identical_features_should_match(self, features) -> None:
@@ -263,17 +254,13 @@ class TestSymmetricDifferenceRegression:
         ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
 
         # Observation 1: single1 + color1 + shape1
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx)
         assert result1 is None
         obj1 = Object.with_features(fg1)
 
         # Observation 2: same features
-        fg2 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg2 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         ctx2 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=2)
         result2 = self.resolution.resolve(fg2.feature_nodes, fg2, ctx2)
         assert result2 is obj1, "identical features should match the existing object"
@@ -306,10 +293,8 @@ class TestSymmetricDifferenceRegression:
 
         unique_ids = {o.uuid for o in objects}
         assert len(unique_ids) == 3, (
-            f"3 distinct feature sets should produce 3 distinct objects, "
-            f"got {len(unique_ids)}"
+            f"3 distinct feature sets should produce 3 distinct objects, got {len(unique_ids)}"
         )
-
 
     def test_reused_features_cause_false_match(self, features) -> None:
         """When a new observation shares a feature node with an existing object but
@@ -322,9 +307,7 @@ class TestSymmetricDifferenceRegression:
         all observations collapse to a single object.
         """
         # Observation 1: single1 + color1 + shape1 -> new object
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result1 is None
@@ -332,9 +315,7 @@ class TestSymmetricDifferenceRegression:
 
         # Observation 2: single1 + color1 + shape2
         # Shares single1 and color1 with obj1 (distance should be 2: shape1 vs shape2)
-        fg2 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape2"]]
-        )
+        fg2 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape2"]])
         ctx2 = ResolutionContext(x=XLoc(2), y=YLoc(2), tick=2)
         result2 = self.resolution.resolve(fg2.feature_nodes, fg2, ctx2)
         assert result2 is None, (
@@ -354,9 +335,7 @@ class TestSymmetricDifferenceRegression:
         objects_created: list[Object] = []
 
         # Tick 1: first observation -> new object
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result is None
@@ -383,9 +362,7 @@ class TestSymmetricDifferenceRegression:
         different observation still creates a new object.
         """
         # Create first object
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result is None
@@ -407,8 +384,7 @@ class TestSymmetricDifferenceRegression:
         ctx_new = ResolutionContext(x=XLoc(10), y=YLoc(10), tick=10)
         result_new = self.resolution.resolve(fg_new.feature_nodes, fg_new, ctx_new)
         assert result_new is None, (
-            "completely different features should create new object, "
-            f"but matched {result_new}"
+            f"completely different features should create new object, but matched {result_new}"
         )
 
     def test_distance_inflation_from_multiple_graph_paths(self, features) -> None:
@@ -422,9 +398,7 @@ class TestSymmetricDifferenceRegression:
         all similar-looking cells collapse to one object per game.
         """
         # Object 1: single1 + color1 + shape1
-        fg1 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape1"]]
-        )
+        fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result1 is None
@@ -434,9 +408,7 @@ class TestSymmetricDifferenceRegression:
         # Shares single1 and color1 -> obj1 found via 2 graph paths
         # True distance = 2 (shape1 vs shape2 symmetric diff)
         # Inflated distance = 2 * 2 = 4 (distance computed and summed twice)
-        fg2 = FeatureGroup.from_nodes(
-            [features["single1"], features["color1"], features["shape2"]]
-        )
+        fg2 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape2"]])
         ctx2 = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=2)
 
         candidates = self.resolution._find_candidates(fg2.feature_nodes)
@@ -449,7 +421,6 @@ class TestSymmetricDifferenceRegression:
             f"(inflated by += accumulation if > 2)"
         )
 
-
     def test_no_physical_features_shared_node_false_match(self) -> None:
         """Bug: when two observations share a non-physical feature node and have
         no physical features, _distance returns 0 (empty set ^ empty set).
@@ -461,13 +432,17 @@ class TestSymmetricDifferenceRegression:
 
         # Create a shared DeltaNode (same old_val/new_val = same hash = same node)
         shared_delta = DeltaFeature(
-            origin_id=("foo", "bar"), old_val=100, new_val=200,
+            origin_id=("foo", "bar"),
+            old_val=100,
+            new_val=200,
             point=(XLoc(10), YLoc(5)),
         ).to_nodes()
 
         # A different DeltaNode
         other_delta = DeltaFeature(
-            origin_id=("foo", "bar"), old_val=300, new_val=400,
+            origin_id=("foo", "bar"),
+            old_val=300,
+            new_val=400,
             point=(XLoc(30), YLoc(15)),
         ).to_nodes()
 

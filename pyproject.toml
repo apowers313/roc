@@ -248,7 +248,7 @@ warn_unused_configs = true
 warn_unused_ignores = true
 follow_imports = "silent"
 plugins = ["pydantic.mypy", "numpy.typing.mypy_plugin"]
-exclude = ["site", ".fttemplates", ".marimo.py", "experiments"]
+exclude = ["site", ".fttemplates", ".marimo.py", "experiments", "tmp"]
 
 # [[tool.mypy.overrides]]
 # module = "*_test.py"
