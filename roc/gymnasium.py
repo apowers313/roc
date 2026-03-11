@@ -137,6 +137,7 @@ class Gym(Component, ABC):
                     game_num += 1
 
         logger.info("NLE loop done, exiting.")
+        Observability.shutdown()
         _dump_env_end()
 
 

@@ -301,6 +301,14 @@ class Observability(metaclass=ObservabilityBase):
         Observability()
         Observability._configure_debug_exporters()
 
+    @staticmethod
+    def shutdown() -> None:
+        """Flushes and shuts down profiling to ensure data is sent before exit."""
+        try:
+            pyroscope.shutdown()
+        except Exception:
+            pass
+
     @classmethod
     def _configure_debug_exporters(cls) -> None:
         """Add debug exporters to the existing logger provider if config requires them.
