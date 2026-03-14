@@ -314,10 +314,10 @@ class TestEmitStateRecord:
     def test_emit_state_record_creates_log_record(self):
         from roc.reporting.state import _emit_state_record
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             _emit_state_record("roc.screen", "test body")
-            mock_logger.emit.assert_called_once()
-            log_record = mock_logger.emit.call_args[0][0]
+            mock_logger.return_value.emit.assert_called_once()
+            log_record = mock_logger.return_value.emit.call_args[0][0]
             assert log_record.body == "test body"
             assert log_record.attributes["event.name"] == "roc.screen"
 
@@ -326,9 +326,9 @@ class TestEmitStateRecord:
 
         from roc.reporting.state import _emit_state_record
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             _emit_state_record("roc.test", "body")
-            log_record = mock_logger.emit.call_args[0][0]
+            log_record = mock_logger.return_value.emit.call_args[0][0]
             assert log_record.severity_number == SeverityNumber.INFO
             assert log_record.severity_text == "INFO"
 
@@ -355,29 +355,43 @@ class TestStatePrintStartupInfo:
 
 class TestEmitStateLogs:
     def test_emit_state_logs_all_none(self):
+        from roc.event import Event
         from roc.reporting.state import State, states
 
+        Event._step_counts.clear()
         states.screen.val = None
         states.salency.val = None
         states.object.val = None
         states.attention.val = None
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.emit_state_logs()
-            mock_logger.emit.assert_not_called()
+            # Only graphdb.summary is emitted (unconditionally)
+            assert mock_logger.return_value.emit.call_count == 1
+            log_record = mock_logger.return_value.emit.call_args[0][0]
+            assert log_record.attributes["event.name"] == "roc.graphdb.summary"
 
     def test_emit_state_logs_with_screen(self):
+        import json
+
+        from roc.event import Event
         from roc.reporting.state import State, states
 
-        states.screen.val = {"chars": np.array([[65, 66]])}
+        Event._step_counts.clear()
+        states.screen.val = {"chars": np.array([[65, 66]]), "colors": np.array([[7, 7]])}
         states.salency.val = None
         states.object.val = None
         states.attention.val = None
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.emit_state_logs()
-            assert mock_logger.emit.call_count == 1
-            log_record = mock_logger.emit.call_args[0][0]
+            # screen + graphdb.summary
+            assert mock_logger.return_value.emit.call_count == 2
+            log_record = mock_logger.return_value.emit.call_args_list[0][0][0]
             assert log_record.attributes["event.name"] == "roc.screen"
-            assert "AB" in log_record.body
+            # Body is now JSON in the shared {chars, fg, bg} format
+            body = json.loads(log_record.body)
+            assert body["chars"] == [[65, 66]]
+            assert "fg" in body
+            assert "bg" in body
         states.screen.val = None

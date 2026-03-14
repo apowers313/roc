@@ -34,6 +34,9 @@ class Event(ABC, Generic[EventData]):
     Generic over EventData, the type of data carried by the event.
     """
 
+    #: Per-step event counts by bus name, reset after each emission.
+    _step_counts: dict[str, int] = {}
+
     def __init__(self, data: EventData, src_id: ComponentId, bus: EventBus[EventData]):
         """The initializer for the Event
 
@@ -43,9 +46,17 @@ class Event(ABC, Generic[EventData]):
             bus (EventBus): The EventBus that the event is being sent over
         """
         event_counter.add(1, attributes={"source": src_id, "bus": bus.name})
+        Event._step_counts[bus.name] = Event._step_counts.get(bus.name, 0) + 1
         self.data = data
         self.src_id = src_id
         self.bus = bus
+
+    @staticmethod
+    def get_step_counts() -> dict[str, int]:
+        """Return per-bus event counts since last reset and clear them."""
+        counts = dict(Event._step_counts)
+        Event._step_counts.clear()
+        return counts
 
     def __repr__(self) -> str:
         data_str = pretty_repr(

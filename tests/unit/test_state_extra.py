@@ -128,39 +128,51 @@ class TestEdgeCacheGauge:
 
 class TestEmitStateLogsExtra:
     def test_emit_state_logs_with_saliency(self):
+        from roc.event import Event
         from roc.reporting.state import State, states
 
+        Event._step_counts.clear()
         mock_sal = MagicMock()
         mock_sal.feature_report.return_value = {"feat1": 0.5}
+        mock_sal.to_html_vals.return_value = {
+            "chars": [[46]],
+            "fg": [["ffffff"]],
+            "bg": [["0000ff"]],
+        }
 
         states.screen.val = None
         states.salency.val = mock_sal
         states.object.val = None
         states.attention.val = None
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.emit_state_logs()
-            # Should emit saliency and features records
-            assert mock_logger.emit.call_count == 2
+            # Should emit saliency, features, and graphdb.summary records
+            assert mock_logger.return_value.emit.call_count == 3
         states.salency.val = None
 
     def test_emit_state_logs_with_object(self):
+        from roc.event import Event
         from roc.reporting.state import State, states
 
+        Event._step_counts.clear()
         mock_obj = MagicMock()
         states.screen.val = None
         states.salency.val = None
         states.object.val = mock_obj
         states.attention.val = None
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.emit_state_logs()
-            assert mock_logger.emit.call_count == 1
+            # object + graphdb.summary
+            assert mock_logger.return_value.emit.call_count == 2
         states.object.val = None
 
     def test_emit_state_logs_with_attention(self):
+        from roc.event import Event
         from roc.reporting.state import State, states
 
+        Event._step_counts.clear()
         mock_att = MagicMock()
         mock_att.focus_points = "data"
         states.screen.val = None
@@ -168,7 +180,8 @@ class TestEmitStateLogsExtra:
         states.object.val = None
         states.attention.val = mock_att
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.emit_state_logs()
-            assert mock_logger.emit.call_count == 1
+            # focus_points + graphdb.summary
+            assert mock_logger.return_value.emit.call_count == 2
         states.attention.val = None

@@ -22,8 +22,11 @@ from .graphdb import GraphDB
 from .intrinsic import Intrinsic, IntrinsicData
 from .logger import logger
 from .perception import AuditoryData, Perception, ProprioceptiveData, VisionData
+from .reporting.metrics import RocMetrics
 from .reporting.observability import Observability
-from .reporting.state import State
+from .reporting.screen_renderer import render_grid_html, screen_to_html_vals
+from .reporting.state import State, _emit_state_record
+from .reporting.wandb_reporter import WandbReporter
 
 
 class Gym(Component, ABC):
@@ -81,6 +84,8 @@ class Gym(Component, ABC):
             "roc.obs_total", unit="observations", description="total number of observations"
         )
         game_counter.add(1)
+        WandbReporter.start_game(game_num)
+        _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
 
         # main environment loop
         while game_num <= settings.num_games:
@@ -116,6 +121,41 @@ class Gym(Component, ABC):
                 loop_num += 1
                 State.get_states().loop.set(loop_num)
                 State.maybe_emit_snapshot(loop_num)
+                State.emit_state_logs()
+
+                # Log per-tick game state to W&B
+                blstats = obs["blstats"]
+                game_metrics = {
+                    "score": int(blstats[blstat_offsets.SCORE]),
+                    "hp": int(blstats[blstat_offsets.HP]),
+                    "hp_max": int(blstats[blstat_offsets.HPMAX]),
+                    "energy": int(blstats[blstat_offsets.ENE]),
+                    "energy_max": int(blstats[blstat_offsets.ENEMAX]),
+                    "depth": int(blstats[blstat_offsets.DEPTH]),
+                    "gold": int(blstats[blstat_offsets.GOLD]),
+                    "x": int(blstats[blstat_offsets.X]),
+                    "y": int(blstats[blstat_offsets.Y]),
+                    "hunger": int(blstats[blstat_offsets.HUNGER]),
+                    "xp_level": int(blstats[blstat_offsets.XP]),
+                    "experience": int(blstats[blstat_offsets.EXP]),
+                    "ac": int(blstats[blstat_offsets.AC]),
+                }
+                RocMetrics.log_step(game_metrics)
+
+                # Emit game metrics as OTel log record for Parquet storage
+                import json as _json
+
+                _emit_state_record(
+                    "roc.game_metrics",
+                    _json.dumps(game_metrics, separators=(",", ":")),
+                )
+
+                # Log screen as rich media to W&B
+                screen_state = State.get_states().screen.val
+                if screen_state is not None:
+                    screen_vals = screen_to_html_vals(screen_state)
+                    screen_html = render_grid_html(screen_vals)
+                    RocMetrics.log_media("screen", screen_html)
 
                 if done or truncated:
                     # log game over info
@@ -131,12 +171,35 @@ class Gym(Component, ABC):
                         GraphDB.flush()
                     if settings.graphdb_export:
                         GraphDB.export()
+                    # Buffer game-end data before flush so it's in the same step
+                    blstats = obs["blstats"]
+                    score = int(blstats[blstat_offsets.SCORE])
+                    outcome = "done" if done else "truncated"
+                    WandbReporter.end_game(
+                        outcome=outcome,
+                        final_score=score,
+                    )
+                    _emit_state_record(
+                        "roc.game_end",
+                        f'{{"game_number": {game_num}, "outcome": "{outcome}", "score": {score}}}',
+                    )
+
+                # Flush all buffered W&B data as one log call so all panels
+                # (metrics, screen, saliency_map) share the same step counter.
+                # end_game() buffers into the same step; start_game() buffers
+                # into the next tick's step. Exactly one wandb.log() per tick.
+                RocMetrics.flush_step()
+
+                if done or truncated:
                     # restart and prepare to go again
                     self.env.reset()
                     game_counter.add(1)
                     game_num += 1
+                    WandbReporter.start_game(game_num)
+                    _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
 
         logger.info("NLE loop done, exiting.")
+        WandbReporter.finish()
         Observability.shutdown()
         _dump_env_end()
 

@@ -221,16 +221,68 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         candidates = self._find_candidates(feature_nodes)
         self.candidate_object_counter.add(len(candidates))
         self.candidates_histogram.record(len(candidates))
+        feature_strs = [str(f) for f in feature_nodes]
+
         if not candidates:
             self.decision_counter.add(1, attributes={"outcome": "new_object"})
+            self._log_decision("new_object", None, feature_strs, candidates, context)
             return None
 
         best_obj, best_dist = candidates[0]
         if best_dist <= 1:
             self.decision_counter.add(1, attributes={"outcome": "match"})
+            self._log_decision(
+                "match", best_obj, feature_strs, candidates, context, best_distance=best_dist
+            )
             return best_obj
         self.decision_counter.add(1, attributes={"outcome": "new_object"})
+        self._log_decision(
+            "new_object", None, feature_strs, candidates, context, best_distance=best_dist
+        )
         return None
+
+    def _log_decision(
+        self,
+        outcome: str,
+        matched_obj: Object | None,
+        feature_strs: list[str],
+        candidates: list[tuple[Object, float]],
+        context: ResolutionContext,
+        *,
+        best_distance: float | None = None,
+    ) -> None:
+        """Emit an OTel log record describing this resolution decision."""
+        record: dict[str, Any] = {
+            "event": "resolution_decision",
+            "algorithm": "symmetric-difference",
+            "outcome": outcome,
+            "tick": context.tick,
+            "x": int(context.x),
+            "y": int(context.y),
+            "features": feature_strs,
+            "num_candidates": len(candidates),
+            "matched_object_id": matched_obj.id if matched_obj is not None else None,
+        }
+        if best_distance is not None:
+            record["best_distance"] = best_distance
+        if candidates:
+            record["candidate_distances"] = [
+                (str(obj.id), round(dist, 2)) for obj, dist in candidates[:5]
+            ]
+
+        span_context = otel_trace.get_current_span().get_span_context()
+        _otel_logger.emit(
+            LogRecord(
+                timestamp=time_ns(),
+                severity_number=SeverityNumber.INFO,
+                severity_text="INFO",
+                body=json.dumps(record, default=str),
+                attributes={"event.name": "roc.resolution.decision"},
+                trace_id=span_context.trace_id,
+                span_id=span_context.span_id,
+                trace_flags=span_context.trace_flags,
+            )
+        )
 
     @Observability.tracer.start_as_current_span("find_candidate_objects")
     def _find_candidates(

@@ -23,13 +23,16 @@ from roc.event import Event
 from roc.graphdb import Edge, Node, Schema
 from roc.logger import logger
 from roc.object import Object, ObjectResolver, ResolvedObject
-from roc.reporting.observability import Observability, Observation, instance_id
+from roc.reporting.observability import Observability, Observation, instance_id, resource
 from roc.sequencer import Sequencer  # noqa: F401
 
 StateType = TypeVar("StateType")
 _state_init_done = False
 
-otel_logger = Observability.get_logger("roc.state")
+
+def _get_otel_logger() -> Any:
+    """Get a fresh OTel logger bound to the current provider."""
+    return Observability.get_logger("roc.state")
 
 
 class StateComponent(Component):
@@ -155,16 +158,17 @@ class State(ABC, Generic[StateType]):
         current_states = State.get_states()
 
         if current_states.screen.val is not None:
-            screen_text = ""
-            for row in current_states.screen.val["chars"]:
-                for ch in row:
-                    screen_text += chr(ch)
-                screen_text += "\n"
-            _emit_state_record("roc.screen", screen_text)
+            from roc.reporting.screen_renderer import screen_to_html_vals
+
+            screen_vals = screen_to_html_vals(current_states.screen.val)
+            _emit_state_record("roc.screen", json.dumps(screen_vals, separators=(",", ":")))
 
         if current_states.salency.val is not None:
             saliency = current_states.salency.val
-            _emit_state_record("roc.attention.saliency", str(saliency))
+            saliency_vals = saliency.to_html_vals()
+            _emit_state_record(
+                "roc.attention.saliency", json.dumps(saliency_vals, separators=(",", ":"))
+            )
             s = ""
             features = saliency.feature_report()
             for feat_name in features:
@@ -177,6 +181,30 @@ class State(ABC, Generic[StateType]):
         if current_states.attention.val is not None:
             _emit_state_record(
                 "roc.attention.focus_points", str(current_states.attention.val.focus_points)
+            )
+
+        # Graph DB summary
+        node_cache = Node.get_cache()
+        edge_cache = Edge.get_cache()
+        _emit_state_record(
+            "roc.graphdb.summary",
+            json.dumps(
+                {
+                    "node_count": node_cache.currsize,
+                    "node_max": node_cache.maxsize,
+                    "edge_count": edge_cache.currsize,
+                    "edge_max": edge_cache.maxsize,
+                },
+                separators=(",", ":"),
+            ),
+        )
+
+        # Event bus activity summary
+        step_counts = Event.get_step_counts()
+        if step_counts:
+            _emit_state_record(
+                "roc.event.summary",
+                json.dumps(step_counts, separators=(",", ":")),
             )
 
     @staticmethod
@@ -219,12 +247,13 @@ class State(ABC, Generic[StateType]):
             severity_number=SeverityNumber.INFO,
             severity_text="INFO",
             body=json.dumps(snapshot, default=str),
+            resource=resource,
             attributes={"event.name": "roc.state.snapshot"},
             trace_id=span_context.trace_id,
             span_id=span_context.span_id,
             trace_flags=span_context.trace_flags,
         )
-        otel_logger.emit(log_record)
+        _get_otel_logger().emit(log_record)
 
     @staticmethod
     def print() -> None:
@@ -434,12 +463,13 @@ def _emit_state_record(event_name: str, body: str) -> None:
         severity_number=SeverityNumber.INFO,
         severity_text="INFO",
         body=body,
+        resource=resource,
         attributes={"event.name": event_name},
         trace_id=span_context.trace_id,
         span_id=span_context.span_id,
         trace_flags=span_context.trace_flags,
     )
-    otel_logger.emit(log_record)
+    _get_otel_logger().emit(log_record)
 
 
 def node_cache_gague(*args: Any) -> Iterable[Observation]:
