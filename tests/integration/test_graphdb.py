@@ -6,11 +6,13 @@ from unittest.mock import MagicMock
 
 import pytest
 from cachetools import Cache
-from helpers.dot import dot_node1, dot_node2, dot_schema1
+from helpers.dot import dot_schema1, make_dot_node1, make_dot_node2
 from helpers.mermaid import mermaid_schema1
 from helpers.schema import GotCharacter, GotSeason
 from helpers.util import assert_similar, normalize_whitespace
 from pydantic import Field, ValidationError
+
+from helpers.got_ids import got_edge_id, got_edge_ids, got_node_id, got_node_ids
 
 from roc.graphdb import (
     Edge,
@@ -40,8 +42,8 @@ class TestGraphDB:
         db = GraphDB.singleton()
         res = list(
             db.raw_fetch(
-                """
-                MATCH (n)-[e]-(m) WHERE id(n) = 0
+                f"""
+                MATCH (n)-[e]-(m) WHERE id(n) = {got_node_id(0)}
                 RETURN n, e, id(e) as e_id, id(startNode(e)) as e_start, id(endNode(e)) as e_end
                 """
             )
@@ -108,7 +110,7 @@ class TestGraphDB:
                 print(f"--- id{id} <-- {e.src.id}")  # noqa: T201
                 walk_node(e.src.id)
 
-        walk_node(0)
+        walk_node(got_node_id(0))
         print("CNT", cnt)  # noqa: T201
         print("MAX", max)  # noqa: T201
         print("MAXSIZE", maxsize)  # noqa: T201
@@ -129,8 +131,8 @@ class TestGraphDB:
 
 class TestNode:
     def test_node_get(self) -> None:
-        n = Node.get(cast(NodeId, 0))
-        assert n.id == 0
+        n = Node.get(cast(NodeId, got_node_id(0)))
+        assert n.id == got_node_id(0)
         assert len(n.src_edges) == 2
         assert len(n.dst_edges) == 1
         assert Node.to_dict(n) == {"name": "Waymar Royce"}
@@ -140,11 +142,11 @@ class TestNode:
 
     def test_node_get_many(self) -> None:
         node_ids = {
-            cast(NodeId, 0),
-            cast(NodeId, 1),
-            cast(NodeId, 2),
-            cast(NodeId, 3),
-            cast(NodeId, 4),
+            cast(NodeId, got_node_id(0)),
+            cast(NodeId, got_node_id(1)),
+            cast(NodeId, got_node_id(2)),
+            cast(NodeId, got_node_id(3)),
+            cast(NodeId, got_node_id(4)),
         }
         nodes = Node.get_many(node_ids)
         assert len(nodes) == len(node_ids)
@@ -154,11 +156,11 @@ class TestNode:
 
     def test_node_get_many_with_edges(self) -> None:
         node_ids = {
-            cast(NodeId, 0),
-            cast(NodeId, 1),
-            cast(NodeId, 2),
-            cast(NodeId, 3),
-            cast(NodeId, 4),
+            cast(NodeId, got_node_id(0)),
+            cast(NodeId, got_node_id(1)),
+            cast(NodeId, got_node_id(2)),
+            cast(NodeId, got_node_id(3)),
+            cast(NodeId, got_node_id(4)),
         }
         nodes = Node.get_many(node_ids, load_edges=True)
         assert len(nodes) == len(node_ids)
@@ -174,34 +176,34 @@ class TestNode:
     def test_node_find(self) -> None:
         node_cache = Node.get_cache()
         edge_cache = Edge.get_cache()
-        assert 4 not in node_cache
+        assert got_node_id(4) not in node_cache
         assert len(edge_cache) == 0
 
         nodes = Node.find("src.name = 'Winter Is Coming'")
         assert len(nodes) == 1
-        assert nodes[0].id == 4
+        assert nodes[0].id == got_node_id(4)
         assert nodes[0].name == "Winter Is Coming"  # type: ignore
-        assert 4 in node_cache
+        assert got_node_id(4) in node_cache
         assert len(node_cache) == 1
         assert len(edge_cache) == 0
 
     def test_node_find_with_params(self) -> None:
         node_cache = Node.get_cache()
         edge_cache = Edge.get_cache()
-        assert 4 not in node_cache
+        assert got_node_id(4) not in node_cache
         assert len(edge_cache) == 0
 
         nodes = Node.find("src.name = $title", params={"title": "Winter Is Coming"})
         assert len(nodes) == 1
-        assert nodes[0].id == 4
+        assert nodes[0].id == got_node_id(4)
         assert nodes[0].name == "Winter Is Coming"  # type: ignore
-        assert 4 in node_cache
+        assert got_node_id(4) in node_cache
         assert len(node_cache) == 1
         assert len(edge_cache) == 0
 
     def test_node_find_with_alt_names(self) -> None:
         cache = Node.get_cache()
-        assert 4 not in cache
+        assert got_node_id(4) not in cache
 
         nodes = Node.find(
             "n.name = 'Zalla' AND type(e) = 'LOYAL_TO'",
@@ -209,7 +211,7 @@ class TestNode:
             edge_name="e",
         )
         assert len(nodes) == 1
-        assert nodes[0].id == 295
+        assert nodes[0].id == got_node_id(295)
         assert nodes[0].name == "Zalla"  # type: ignore
 
     def test_node_find_not_found(self) -> None:
@@ -226,7 +228,7 @@ class TestNode:
 
         nodes = Node.find("src.name =~ 'B.*'", src_labels={"Location"})
         assert len(nodes) == 2
-        assert set([n.id for n in nodes]) == {1, 310}
+        assert set([n.id for n in nodes]) == got_node_ids({1, 310})
 
     def test_node_find_single_node_with_no_relationships(self) -> None:
         cache = Node.get_cache()
@@ -266,54 +268,54 @@ class TestNode:
 
         nodes = Node.find("src.name =~ 'Z.*'", edge_type="VICTIM_IN")
         assert len(nodes) == 1
-        assert nodes[0].id == 295
+        assert nodes[0].id == got_node_id(295)
 
     def test_node_find_cached(self) -> None:
         cache = Node.get_cache()
-        assert 4 not in cache
-        n1 = Node.get(NodeId(4))
-        assert 4 in cache
+        assert got_node_id(4) not in cache
+        n1 = Node.get(NodeId(got_node_id(4)))
+        assert got_node_id(4) in cache
 
         nodes = Node.find("src.name = 'Winter Is Coming'")
         assert len(nodes) == 1
-        assert nodes[0].id == 4
-        assert 4 in cache
+        assert nodes[0].id == got_node_id(4)
+        assert got_node_id(4) in cache
         assert len(cache) == 1
         assert n1 is nodes[0]
 
     def test_node_find_adds_to_cache(self) -> None:
         cache = Node.get_cache()
-        assert 4 not in cache
+        assert got_node_id(4) not in cache
         nodes = Node.find("src.name = 'Winter Is Coming'")
-        assert 4 in cache
+        assert got_node_id(4) in cache
 
-        n1 = Node.get(NodeId(4))
-        assert 4 in cache
+        n1 = Node.get(NodeId(got_node_id(4)))
+        assert got_node_id(4) in cache
         assert len(cache) == 1
         assert n1 is nodes[0]
 
     def test_node_find_multiple_some_cached(self) -> None:
         cache = Node.get_cache()
-        assert 4 not in cache
+        assert got_node_id(4) not in cache
         assert len(cache) == 0
-        n1 = Node.get(NodeId(349))
-        assert 349 in cache
-        n2 = Node.get(NodeId(266))
-        assert 266 in cache
-        n3 = Node.get(NodeId(362))
-        assert 362 in cache
+        n1 = Node.get(NodeId(got_node_id(349)))
+        assert got_node_id(349) in cache
+        n2 = Node.get(NodeId(got_node_id(266)))
+        assert got_node_id(266) in cache
+        n3 = Node.get(NodeId(got_node_id(362)))
+        assert got_node_id(362) in cache
         assert len(cache) == 3
 
         nodes = Node.find("src.name =~ 'E.*'")
         assert len(nodes) == 5
         assert len(cache) == 5
         node_ids = {n.id for n in nodes}
-        assert node_ids == {425, 349, 266, 362, 37}
+        assert node_ids == got_node_ids({425, 349, 266, 362, 37})
         for nid in node_ids:
             assert nid in cache
-        new_n1 = next((n for n in nodes if n.id == 349), None)
-        new_n2 = next((n for n in nodes if n.id == 266), None)
-        new_n3 = next((n for n in nodes if n.id == 362), None)
+        new_n1 = next((n for n in nodes if n.id == got_node_id(349)), None)
+        new_n2 = next((n for n in nodes if n.id == got_node_id(266)), None)
+        new_n3 = next((n for n in nodes if n.id == got_node_id(362)), None)
         assert new_n1 is n1
         assert new_n2 is n2
         assert new_n3 is n3
@@ -327,13 +329,13 @@ class TestNode:
         nodes = Node.find("src.name = 'Winter Is Coming'", load_edges=True)
         assert len(nodes) == 1
         assert len(node_cache) == 1
-        assert nodes[0].id == 4
+        assert nodes[0].id == got_node_id(4)
         assert len(node_cache) == 1
         assert len(edge_cache) == 8
         src_edge_ids = {e.id for e in nodes[0].src_edges}
-        assert src_edge_ids == {17}
+        assert src_edge_ids == got_edge_ids({17})
         dst_edge_ids = {e.id for e in nodes[0].dst_edges}
-        assert dst_edge_ids == {5295, 5298, 5301, 5304, 5307, 5310, 5313}
+        assert dst_edge_ids == got_edge_ids({5295, 5298, 5301, 5304, 5307, 5310, 5313})
 
     def test_node_find_and_load_edges_with_different_edge_name(self) -> None:
         node_cache = Node.get_cache()
@@ -344,13 +346,13 @@ class TestNode:
         nodes = Node.find("src.name = 'Winter Is Coming'", load_edges=True, edge_name="bob")
         assert len(nodes) == 1
         assert len(node_cache) == 1
-        assert nodes[0].id == 4
+        assert nodes[0].id == got_node_id(4)
         assert len(node_cache) == 1
         assert len(edge_cache) == 8
         src_edge_ids = {e.id for e in nodes[0].src_edges}
-        assert src_edge_ids == {17}
+        assert src_edge_ids == got_edge_ids({17})
         dst_edge_ids = {e.id for e in nodes[0].dst_edges}
-        assert dst_edge_ids == {5295, 5298, 5301, 5304, 5307, 5310, 5313}
+        assert dst_edge_ids == got_edge_ids({5295, 5298, 5301, 5304, 5307, 5310, 5313})
 
     # TODO: find node with one cached edge and one uncached edge, and load edges
 
@@ -358,10 +360,10 @@ class TestNode:
         c = Node.get_cache()
         assert c.hits == 0
         assert c.misses == 0
-        n1 = Node.get(cast(NodeId, 0))
+        n1 = Node.get(cast(NodeId, got_node_id(0)))
         assert c.hits == 0
         assert c.misses == 1
-        n2 = Node.get(cast(NodeId, 0))
+        n2 = Node.get(cast(NodeId, got_node_id(0)))
         assert c.hits == 1
         assert c.misses == 1
         assert id(n1) == id(n2)
@@ -859,196 +861,200 @@ class TestNode:
         assert f2.name == "bar"
 
     def test_predecessors(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         assert len(n.predecessors) == 1
-        assert n.predecessors[0].id == NodeId(2)
+        assert n.predecessors[0].id == NodeId(got_node_id(2))
 
     def test_successors(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         assert len(n.successors) == 2
-        assert n.successors[0].id == NodeId(6)
-        assert n.successors[1].id == NodeId(453)
+        assert n.successors[0].id == NodeId(got_node_id(6))
+        assert n.successors[1].id == NodeId(got_node_id(453))
 
     def test_neighbors(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         assert len(n.neighbors) == 3
-        assert n.neighbors[0].id == NodeId(6)
-        assert n.neighbors[1].id == NodeId(453)
-        assert n.neighbors[2].id == NodeId(2)
+        assert n.neighbors[0].id == NodeId(got_node_id(6))
+        assert n.neighbors[1].id == NodeId(got_node_id(453))
+        assert n.neighbors[2].id == NodeId(got_node_id(2))
 
     def test_neighborhood_zero(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         neighborhood = n.neighborhood(depth=0)
 
         assert len(neighborhood) == 1
-        assert neighborhood.ids == {0}
+        assert neighborhood.ids == got_node_ids({0})
 
     def test_neighborhood_one(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         neighborhood = n.neighborhood(depth=1)
 
         assert len(neighborhood) == 4
-        assert neighborhood.ids == {0, 2, 6, 453}
+        assert neighborhood.ids == got_node_ids({0, 2, 6, 453})
 
     def test_neighborhood_two(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         neighborhood = n.neighborhood(depth=2)
 
         assert len(neighborhood) == 43
-        assert neighborhood.ids == {
-            0,
-            2,
-            219,
-            3,
-            336,
-            453,
-            454,
-            674,
-            975,
-            982,
-            1101,
-            1103,
-            7,
-            337,
-            49,
-            371,
-            374,
-            6,
-            8,
-            75,
-            77,
-            105,
-            111,
-            114,
-            134,
-            187,
-            189,
-            190,
-            191,
-            192,
-            220,
-            265,
-            266,
-            270,
-            287,
-            289,
-            293,
-            330,
-            366,
-            367,
-            4,
-            5,
-            1,
-        }
+        assert neighborhood.ids == got_node_ids(
+            {
+                0,
+                2,
+                219,
+                3,
+                336,
+                453,
+                454,
+                674,
+                975,
+                982,
+                1101,
+                1103,
+                7,
+                337,
+                49,
+                371,
+                374,
+                6,
+                8,
+                75,
+                77,
+                105,
+                111,
+                114,
+                134,
+                187,
+                189,
+                190,
+                191,
+                192,
+                220,
+                265,
+                266,
+                270,
+                287,
+                289,
+                293,
+                330,
+                366,
+                367,
+                4,
+                5,
+                1,
+            }
+        )
 
     def test_connections(self) -> None:
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
         neighborhood = n.neighborhood(depth=2)
 
         conns = neighborhood.connections
 
         assert len(conns) == 93
-        assert conns.ids == {
-            0,
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            3084,
-            17,
-            18,
-            19,
-            20,
-            3086,
-            7241,
-            7247,
-            1109,
-            3681,
-            3684,
-            1163,
-            1164,
-            3081,
-            1167,
-            1166,
-            1170,
-            3082,
-            1171,
-            1173,
-            1174,
-            1172,
-            1181,
-            5295,
-            5296,
-            5297,
-            5298,
-            5299,
-            5300,
-            3770,
-            1272,
-            1273,
-            1274,
-            1275,
-            1276,
-            1277,
-            1278,
-            1280,
-            3328,
-            3341,
-            3342,
-            3343,
-            3347,
-            3357,
-            3361,
-            3873,
-            3875,
-            3899,
-            3902,
-            5960,
-            3408,
-            3413,
-            3420,
-            3423,
-            2407,
-            3431,
-            3436,
-            2421,
-            2434,
-            2964,
-            2967,
-            919,
-            2969,
-            2973,
-            2974,
-            2975,
-            2977,
-            2980,
-            940,
-            941,
-            942,
-            943,
-            944,
-            945,
-            2496,
-            2499,
-        }
+        assert conns.ids == got_edge_ids(
+            {
+                0,
+                1,
+                2,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                14,
+                15,
+                16,
+                3084,
+                17,
+                18,
+                19,
+                20,
+                3086,
+                7241,
+                7247,
+                1109,
+                3681,
+                3684,
+                1163,
+                1164,
+                3081,
+                1167,
+                1166,
+                1170,
+                3082,
+                1171,
+                1173,
+                1174,
+                1172,
+                1181,
+                5295,
+                5296,
+                5297,
+                5298,
+                5299,
+                5300,
+                3770,
+                1272,
+                1273,
+                1274,
+                1275,
+                1276,
+                1277,
+                1278,
+                1280,
+                3328,
+                3341,
+                3342,
+                3343,
+                3347,
+                3357,
+                3361,
+                3873,
+                3875,
+                3899,
+                3902,
+                5960,
+                3408,
+                3413,
+                3420,
+                3423,
+                2407,
+                3431,
+                3436,
+                2421,
+                2434,
+                2964,
+                2967,
+                919,
+                2969,
+                2973,
+                2974,
+                2975,
+                2977,
+                2980,
+                940,
+                941,
+                942,
+                943,
+                944,
+                945,
+                2496,
+                2499,
+            }
+        )
 
 
 # deletes edges
@@ -1056,7 +1062,7 @@ class TestNode:
 
 class TestEdgeList:
     def test_get_edge(self) -> None:
-        n = Node.get(cast(NodeId, 0))
+        n = Node.get(cast(NodeId, got_node_id(0)))
         e0 = n.src_edges[0]
         e1 = n.src_edges[1]
         e11 = n.dst_edges[0]
@@ -1064,26 +1070,26 @@ class TestEdgeList:
         assert isinstance(e1, Edge)
         assert isinstance(e11, Edge)
         # Edge 0
-        assert e0.id == 0
+        assert e0.id == got_edge_id(0)
         assert Edge.to_dict(e0) == {}
         assert e0.type == "LOYAL_TO"
-        assert e0.src_id == 0
-        assert e0.dst_id == 6
+        assert e0.src_id == got_node_id(0)
+        assert e0.dst_id == got_node_id(6)
         # Edge 1
-        assert e1.id == 1
+        assert e1.id == got_edge_id(1)
         assert Edge.to_dict(e1) == {}
         assert e1.type == "VICTIM_IN"
-        assert e1.src_id == 0
-        assert e1.dst_id == 453
+        assert e1.src_id == got_node_id(0)
+        assert e1.dst_id == got_node_id(453)
         # Edge 11
-        assert e11.id == 11
+        assert e11.id == got_edge_id(11)
         assert Edge.to_dict(e11) == {"count": 1, "method": "Ice sword"}
         assert e11.type == "KILLED"
-        assert e11.src_id == 2
-        assert e11.dst_id == 0
+        assert e11.src_id == got_node_id(2)
+        assert e11.dst_id == got_node_id(0)
 
     def test_iter(self) -> None:
-        n = Node.get(cast(NodeId, 0))
+        n = Node.get(cast(NodeId, got_node_id(0)))
         for e in n.src_edges:
             assert isinstance(e, Edge)
 
@@ -1092,7 +1098,7 @@ class TestEdgeList:
     # test_discard
 
     def test_contains(self) -> None:
-        n = Node.get(cast(NodeId, 0))
+        n = Node.get(cast(NodeId, got_node_id(0)))
         e = n.src_edges[0]
 
         assert e in n.src_edges
@@ -1100,14 +1106,14 @@ class TestEdgeList:
         assert "bob" not in n.src_edges  # type: ignore
 
     def test_select(self) -> None:
-        n = Node.get(cast(NodeId, 2))
+        n = Node.get(cast(NodeId, got_node_id(2)))
         src_edges = n.src_edges.select()
 
         assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 15
 
     def test_select_by_type(self, no_strict_schema) -> None:
-        n = Node.get(cast(NodeId, 2))
+        n = Node.get(cast(NodeId, got_node_id(2)))
         src_edges = n.src_edges.select(type="LOYAL_TO")
 
         assert isinstance(src_edges, EdgeList)
@@ -1115,26 +1121,26 @@ class TestEdgeList:
 
     def test_select_by_id(self) -> None:
         GraphDB.singleton().strict_schema = False
-        n = Node.get(cast(NodeId, 2))
-        src_edges = n.src_edges.select(id=EdgeId(2))
+        n = Node.get(cast(NodeId, got_node_id(2)))
+        src_edges = n.src_edges.select(id=EdgeId(got_edge_id(2)))
 
         assert isinstance(src_edges, EdgeList)
         assert len(src_edges) == 1
         assert src_edges[0].type == "LOYAL_TO"
-        assert src_edges[0].src_id == 2
-        assert src_edges[0].dst_id == 3
+        assert src_edges[0].src_id == got_node_id(2)
+        assert src_edges[0].dst_id == got_node_id(3)
 
     def test_concat(self) -> None:
-        list1 = EdgeList([EdgeId(1), EdgeId(2)])
-        list2 = EdgeList([EdgeId(3), EdgeId(4)])
+        list1 = EdgeList([EdgeId(got_edge_id(1)), EdgeId(got_edge_id(2))])
+        list2 = EdgeList([EdgeId(got_edge_id(3)), EdgeId(got_edge_id(4))])
 
         new_list = list1 + list2
 
         assert len(new_list) == 4
-        assert EdgeId(1) in new_list
-        assert EdgeId(2) in new_list
-        assert EdgeId(3) in new_list
-        assert EdgeId(4) in new_list
+        assert EdgeId(got_edge_id(1)) in new_list
+        assert EdgeId(got_edge_id(2)) in new_list
+        assert EdgeId(got_edge_id(3)) in new_list
+        assert EdgeId(got_edge_id(4)) in new_list
 
 
 class TestEdge:
@@ -1147,8 +1153,8 @@ class TestEdge:
         assert isinstance(c, Cache)
 
     def test_src(self) -> None:
-        n0 = Node.get(cast(NodeId, 0))
-        n2 = Node.get(cast(NodeId, 2))
+        n0 = Node.get(cast(NodeId, got_node_id(0)))
+        n2 = Node.get(cast(NodeId, got_node_id(2)))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
@@ -1160,9 +1166,9 @@ class TestEdge:
         assert id(e11.src) == id(n2)
 
     def test_dst(self) -> None:
-        n0 = Node.get(cast(NodeId, 0))
-        n6 = Node.get(cast(NodeId, 6))
-        n453 = Node.get(cast(NodeId, 453))
+        n0 = Node.get(cast(NodeId, got_node_id(0)))
+        n6 = Node.get(cast(NodeId, got_node_id(6)))
+        n453 = Node.get(cast(NodeId, got_node_id(453)))
         e0 = n0.src_edges[0]
         e1 = n0.src_edges[1]
         e11 = n0.dst_edges[0]
@@ -1578,17 +1584,21 @@ class TestEdge:
 
 class TestNodeList:
     def test_get_node(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        )
         n = node_list[0]
 
-        assert n.id == 2
+        assert n.id == got_node_id(2)
         assert n.labels == {"Character"}
 
     def test_iter(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        )
         n = node_list[0]
 
-        assert n.id == 2
+        assert n.id == got_node_id(2)
         assert n.labels == {"Character"}
 
     # test_add
@@ -1596,7 +1606,9 @@ class TestNodeList:
     # test_discard
 
     def test_contains(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        )
         n = node_list[0]
 
         assert n in node_list
@@ -1604,19 +1616,23 @@ class TestNodeList:
         assert "bob" not in n.src_edges  # type: ignore
 
     def test_select(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)])
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        )
         ret = node_list.select()
 
         assert isinstance(ret, NodeList)
         assert len(ret) == 3
 
     def test_select_by_labels(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)]).select(labels={"Character"})
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        ).select(labels={"Character"})
 
         assert isinstance(node_list, NodeList)
         assert len(node_list) == 2
-        assert node_list[0].id == NodeId(2)
-        assert node_list[1].id == NodeId(0)
+        assert node_list[0].id == NodeId(got_node_id(2))
+        assert node_list[1].id == NodeId(got_node_id(0))
 
     def test_select_by_exact_labels(self) -> None:
         n1 = Node(labels={"TestNode", "Foo", "Bar"})
@@ -1659,25 +1675,25 @@ class TestNodeList:
         assert n3.id in node_list
 
     def test_select_by_function(self) -> None:
-        node_list = NodeList([NodeId(2), NodeId(1), NodeId(0)]).select(
-            filter_fn=lambda n: n.id == NodeId(1)
-        )
+        node_list = NodeList(
+            [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
+        ).select(filter_fn=lambda n: n.id == NodeId(got_node_id(1)))
 
         assert isinstance(node_list, NodeList)
         assert len(node_list) == 1
-        assert node_list[0].id == NodeId(1)
+        assert node_list[0].id == NodeId(got_node_id(1))
 
     def test_concat(self) -> None:
-        list1 = NodeList([NodeId(1), NodeId(2)])
-        list2 = NodeList([NodeId(3), NodeId(4)])
+        list1 = NodeList([NodeId(got_node_id(1)), NodeId(got_node_id(2))])
+        list2 = NodeList([NodeId(got_node_id(3)), NodeId(got_node_id(4))])
 
         new_list = list1 + list2
 
         assert len(new_list) == 4
-        assert NodeId(1) in new_list
-        assert NodeId(2) in new_list
-        assert NodeId(3) in new_list
-        assert NodeId(4) in new_list
+        assert NodeId(got_node_id(1)) in new_list
+        assert NodeId(got_node_id(2)) in new_list
+        assert NodeId(got_node_id(3)) in new_list
+        assert NodeId(got_node_id(4)) in new_list
 
     def test_to_dot(self) -> None:
         class Character(Node):
@@ -1689,11 +1705,11 @@ class TestNodeList:
         class Death(Node):
             order: int
 
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         dot_str = n.neighborhood(depth=1).to_dot()
 
-        assert dot_str == dot_node1
+        assert dot_str == make_dot_node1()
 
     def test_to_dot_extra_styles(self) -> None:
         class Character(Node):
@@ -1705,11 +1721,13 @@ class TestNodeList:
         class Death(Node):
             order: int
 
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
-        dot_str = n.neighborhood(depth=1).to_dot(extra_styles={0: "style=filled, fillcolor=red"})
+        dot_str = n.neighborhood(depth=1).to_dot(
+            extra_styles={got_node_id(0): "style=filled, fillcolor=red"}
+        )
 
-        assert dot_str == dot_node2
+        assert dot_str == make_dot_node2()
 
     # @pytest.mark.requires_graphviz
     def test_render(self) -> None:
@@ -1732,25 +1750,25 @@ class TestNodeList:
             method: str
             count: int
 
-        n = Node.get(NodeId(0))
+        n = Node.get(NodeId(got_node_id(0)))
 
         p = n.render(depth=1)
 
 
 class TestTypes:
     def test_get(self):
-        c = GotCharacter.get(cast(NodeId, 0))
+        c = GotCharacter.get(cast(NodeId, got_node_id(0)))
 
         assert isinstance(c, GotCharacter)
         assert isinstance(c, Node)
 
     def test_parse_fail(self):
         with pytest.raises(ValidationError):
-            GotSeason.get(cast(NodeId, 0))
+            GotSeason.get(cast(NodeId, got_node_id(0)))
 
     def test_same_cache(self):
-        c = GotCharacter.get(cast(NodeId, 0))
-        n = Node.get(cast(NodeId, 0))
+        c = GotCharacter.get(cast(NodeId, got_node_id(0)))
+        n = Node.get(cast(NodeId, got_node_id(0)))
 
         assert id(n) == id(c)
         assert id(Node.get_cache()) == id(GotCharacter.get_cache())

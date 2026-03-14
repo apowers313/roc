@@ -75,7 +75,7 @@ import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from types import ModuleType
-from typing import Self, cast
+from typing import Any, Self, cast
 
 from roc.config import Config
 
@@ -121,6 +121,14 @@ class ExpMod:
                 f"ExpMod.register attempting to register duplicate name '{cls.name}' for module '{cls.modtype}'"
             )
         expmod_registry[cls.modtype][cls.name] = cls()
+
+    def params_dict(self) -> dict[str, Any]:
+        """Return public, non-callable instance attributes as a dict.
+
+        Returns:
+            Dictionary of parameter names to their values.
+        """
+        return {k: v for k, v in self.__dict__.items() if not k.startswith("_") and not callable(v)}
 
     @classmethod
     def get(cls, default: str | None = None) -> Self:

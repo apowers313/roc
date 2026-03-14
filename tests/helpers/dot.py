@@ -1,3 +1,5 @@
+from helpers.got_ids import got_edge_id, got_node_id
+
 dot_schema1 = """digraph {
     graph [
         fontname="Arial"
@@ -30,7 +32,9 @@ dot_schema1 = """digraph {
     Foo -> Baz [label="Link" arrowhead=vee]
 }"""
 
-dot_node1 = """digraph {
+
+def _dot_header() -> str:
+    return """digraph {
     graph [
         fontname="Arial"
         labelloc="t"
@@ -46,73 +50,78 @@ dot_node1 = """digraph {
     edge [
         fontname="Arial"
         style=""
-    ]
-
-    // Node 6
-    node6 [label=<{<b>Allegiance(6)</b> | labels: set = \\{'Allegiance'\\}<br align="left"/>name: str = Nights Watch<br align="left"/>}>]
-
-    // Node 453
-    node453 [label=<{<b>Death(453)</b> | labels: set = \\{'Death'\\}<br align="left"/>order: int = 1<br align="left"/>}>]
-
-    // Node 2
-    node2 [label=<{<b>Character(2)</b> | labels: set = \\{'Character'\\}<br align="left"/>name: str = White Walker<br align="left"/>}>]
-
-    // Node 0
-    node0 [label=<{<b>Character(0)</b> | labels: set = \\{'Character'\\}<br align="left"/>name: str = Waymar Royce<br align="left"/>}>]
-
-    // Edge 0
-    node0 -> node6 [label="Edge"]
-
-    // Edge 1
-    node0 -> node453 [label="Edge"]
-
-    // Edge 11
-    node2 -> node0 [label="Edge"]
-
-    // Edge 4
-    node2 -> node453 [label="Edge"]
-}"""
+    ]"""
 
 
-dot_node2 = """digraph {
-    graph [
-        fontname="Arial"
-        labelloc="t"
-    ]
+def make_dot_node1() -> str:
+    n0 = got_node_id(0)
+    n2 = got_node_id(2)
+    n6 = got_node_id(6)
+    n453 = got_node_id(453)
+    e0 = got_edge_id(0)
+    e1 = got_edge_id(1)
+    e4 = got_edge_id(4)
+    e11 = got_edge_id(11)
+    return f"""{_dot_header()}
 
-    node [
-        fontname="Arial"
-        shape=record
-        style=filled
-        fillcolor=gray95
-    ]
+    // Node {n6}
+    node{n6} [label=<{{<b>Allegiance({n6})</b> | labels: set = \\{{'Allegiance'\\}}<br align="left"/>name: str = Nights Watch<br align="left"/>}}>]
 
-    edge [
-        fontname="Arial"
-        style=""
-    ]
+    // Node {n453}
+    node{n453} [label=<{{<b>Death({n453})</b> | labels: set = \\{{'Death'\\}}<br align="left"/>order: int = 1<br align="left"/>}}>]
 
-    // Node 6
-    node6 [label=<{<b>Allegiance(6)</b> | labels: set = \\{'Allegiance'\\}<br align="left"/>name: str = Nights Watch<br align="left"/>}>]
+    // Node {n2}
+    node{n2} [label=<{{<b>Character({n2})</b> | labels: set = \\{{'Character'\\}}<br align="left"/>name: str = White Walker<br align="left"/>}}>]
 
-    // Node 453
-    node453 [label=<{<b>Death(453)</b> | labels: set = \\{'Death'\\}<br align="left"/>order: int = 1<br align="left"/>}>]
+    // Node {n0}
+    node{n0} [label=<{{<b>Character({n0})</b> | labels: set = \\{{'Character'\\}}<br align="left"/>name: str = Waymar Royce<br align="left"/>}}>]
 
-    // Node 2
-    node2 [label=<{<b>Character(2)</b> | labels: set = \\{'Character'\\}<br align="left"/>name: str = White Walker<br align="left"/>}>]
+    // Edge {e0}
+    node{n0} -> node{n6} [label="Edge"]
 
-    // Node 0
-    node0 [label=<{<b>Character(0)</b> | labels: set = \\{'Character'\\}<br align="left"/>name: str = Waymar Royce<br align="left"/>}> style=filled, fillcolor=red]
+    // Edge {e1}
+    node{n0} -> node{n453} [label="Edge"]
 
-    // Edge 0
-    node0 -> node6 [label="Edge"]
+    // Edge {e11}
+    node{n2} -> node{n0} [label="Edge"]
 
-    // Edge 1
-    node0 -> node453 [label="Edge"]
+    // Edge {e4}
+    node{n2} -> node{n453} [label="Edge"]
+}}"""
 
-    // Edge 11
-    node2 -> node0 [label="Edge"]
 
-    // Edge 4
-    node2 -> node453 [label="Edge"]
-}"""
+def make_dot_node2() -> str:
+    n0 = got_node_id(0)
+    n2 = got_node_id(2)
+    n6 = got_node_id(6)
+    n453 = got_node_id(453)
+    e0 = got_edge_id(0)
+    e1 = got_edge_id(1)
+    e4 = got_edge_id(4)
+    e11 = got_edge_id(11)
+    return f"""{_dot_header()}
+
+    // Node {n6}
+    node{n6} [label=<{{<b>Allegiance({n6})</b> | labels: set = \\{{'Allegiance'\\}}<br align="left"/>name: str = Nights Watch<br align="left"/>}}>]
+
+    // Node {n453}
+    node{n453} [label=<{{<b>Death({n453})</b> | labels: set = \\{{'Death'\\}}<br align="left"/>order: int = 1<br align="left"/>}}>]
+
+    // Node {n2}
+    node{n2} [label=<{{<b>Character({n2})</b> | labels: set = \\{{'Character'\\}}<br align="left"/>name: str = White Walker<br align="left"/>}}>]
+
+    // Node {n0}
+    node{n0} [label=<{{<b>Character({n0})</b> | labels: set = \\{{'Character'\\}}<br align="left"/>name: str = Waymar Royce<br align="left"/>}}> style=filled, fillcolor=red]
+
+    // Edge {e0}
+    node{n0} -> node{n6} [label="Edge"]
+
+    // Edge {e1}
+    node{n0} -> node{n453} [label="Edge"]
+
+    // Edge {e11}
+    node{n2} -> node{n0} [label="Edge"]
+
+    // Edge {e4}
+    node{n2} -> node{n453} [label="Edge"]
+}}"""

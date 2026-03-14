@@ -118,14 +118,6 @@ class TestConfigDefaults:
     def test_graphdb_flush_default_false(self):
         assert Config.get().graphdb_flush is False
 
-    def test_debug_log_default_false(self):
-        assert Config.get().debug_log is False
-
-    def test_debug_log_path_default(self):
-        path = Config.get().debug_log_path
-        assert path.startswith("tmp/debug_log-")
-        assert path.endswith(".jsonl")
-
     def test_debug_remote_log_default_true(self):
         assert Config.get().debug_remote_log is True
 

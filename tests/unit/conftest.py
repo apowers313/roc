@@ -41,11 +41,9 @@ def reset_observability() -> Generator[None, None, None]:
     from roc.reporting.observability import Observability, ObservabilityBase
 
     orig_instances = ObservabilityBase._instances.copy()
-    orig_debug_log = getattr(Observability, "_debug_log_configured", False)
     orig_remote_log = getattr(Observability, "_remote_log_configured", False)
 
     yield
 
     ObservabilityBase._instances = orig_instances
-    Observability._debug_log_configured = orig_debug_log
     Observability._remote_log_configured = orig_remote_log

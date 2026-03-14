@@ -12,10 +12,13 @@ from roc.config import Config
 
 def _make_fake_obs() -> dict[str, Any]:
     """Create a minimal observation dict matching what Gym.start() expects."""
+    # blstats needs at least 27 entries to cover all blstat_offsets
+    blstats = np.zeros(27, dtype=np.int64)
     return {
         "tty_chars": np.full((24, 80), ord(" "), dtype=np.uint8),
         "tty_colors": np.zeros((24, 80), dtype=np.int8),
         "tty_cursor": np.array([0, 0]),
+        "blstats": blstats,
     }
 
 

@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 import importlib
-import json
 import math
 import os
 import sys
 import traceback
-from collections.abc import Sequence
 from datetime import datetime
 from time import time_ns
-from typing import IO, Any
+from typing import Any
 
 import pyroscope
 from flexihumanhash import FlexiHumanHash
@@ -30,8 +28,6 @@ from opentelemetry.sdk._events import EventLoggerProvider
 from opentelemetry.sdk._logs import LoggerProvider, LogRecord
 from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
-    LogExporter,
-    LogExportResult,
     SimpleLogRecordProcessor,
 )
 from opentelemetry.sdk.metrics import MeterProvider
@@ -44,6 +40,7 @@ from opentelemetry.trace import Tracer
 
 import roc.logger as roc_logger
 from roc.config import Config
+from roc.reporting.parquet_exporter import ParquetExporter
 
 __all__ = [
     "Observability",
@@ -98,42 +95,6 @@ roc_common_attributes = {
 }
 
 
-class JsonlFileExporter(LogExporter):
-    """OTel log exporter that writes records as single-line JSON to a file."""
-
-    def __init__(self, file_path: str) -> None:
-        os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
-        self._file_handle: IO[str] = open(file_path, "w")
-
-    def export(self, batch: Sequence[Any]) -> LogExportResult:
-        """Export log records as JSONL (one JSON object per line)."""
-        try:
-            for log_data in batch:
-                record = log_data.log_record
-                entry: dict[str, Any] = {
-                    "body": str(record.body) if record.body is not None else None,
-                    "severity_number": record.severity_number.value
-                    if record.severity_number
-                    else None,
-                    "severity_text": record.severity_text,
-                    "timestamp": record.timestamp,
-                    "observed_timestamp": record.observed_timestamp,
-                    "attributes": dict(record.attributes) if record.attributes else None,
-                    "trace_id": str(record.trace_id) if record.trace_id else None,
-                    "span_id": str(record.span_id) if record.span_id else None,
-                }
-                self._file_handle.write(json.dumps(entry, default=str) + "\n")
-            self._file_handle.flush()
-            return LogExportResult.SUCCESS
-        except Exception:
-            return LogExportResult.FAILURE
-
-    def shutdown(self) -> None:
-        """Close the file handle."""
-        if not self._file_handle.closed:
-            self._file_handle.close()
-
-
 class ObservabilityBase(type):
     """Metaclass that makes Observability a singleton."""
 
@@ -153,8 +114,8 @@ class ObservabilityBase(type):
 class Observability(metaclass=ObservabilityBase):
     """Singleton that initializes and provides access to OpenTelemetry instrumentation."""
 
-    _debug_log_configured: bool = False
     _remote_log_configured: bool = False
+    _parquet_configured: bool = False
 
     def __init__(self) -> None:
         settings = Config.get()
@@ -165,15 +126,9 @@ class Observability(metaclass=ObservabilityBase):
             # log init
             logger_provider = LoggerProvider(resource=resource)
             otlp_log_exporter = OTLPLogExporter(endpoint=settings.observability_host, insecure=True)
-            logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_log_exporter))
-
-            # debug JSONL file exporter (synchronous for crash safety)
-            if settings.debug_log:
-                self._debug_log_exporter = JsonlFileExporter(settings.debug_log_path)
-                logger_provider.add_log_record_processor(
-                    SimpleLogRecordProcessor(self._debug_log_exporter)
-                )
-                Observability._debug_log_configured = True
+            logger_provider.add_log_record_processor(
+                BatchLogRecordProcessor(otlp_log_exporter, max_export_batch_size=32)
+            )
 
             # remote logger exporter (synchronous for real-time querying)
             if settings.debug_remote_log:
@@ -187,6 +142,16 @@ class Observability(metaclass=ObservabilityBase):
                     SimpleLogRecordProcessor(self._remote_log_exporter)
                 )
                 Observability._remote_log_configured = True
+
+            # Parquet exporter (always active -- source of truth for per-step data)
+            from pathlib import Path
+
+            run_dir = Path(settings.data_dir) / instance_id
+            self._parquet_exporter = ParquetExporter(run_dir=run_dir)
+            logger_provider.add_log_record_processor(
+                SimpleLogRecordProcessor(self._parquet_exporter)
+            )
+            Observability._parquet_configured = True
 
             otel_logs.set_logger_provider(logger_provider=logger_provider)
 
@@ -209,18 +174,10 @@ class Observability(metaclass=ObservabilityBase):
             otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
             roc_logger.logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
         else:
-            # Even when OTel logging to OTLP is disabled, support debug log/remote log
-            _need_local_provider = (
-                settings.debug_log or settings.debug_remote_log
-            ) and not _disable_for_pytest_scanning
+            # Even when OTel logging to OTLP is disabled, support remote log/parquet
+            _need_local_provider = not _disable_for_pytest_scanning
             if _need_local_provider:
                 logger_provider = LoggerProvider(resource=resource)
-                if settings.debug_log:
-                    self._debug_log_exporter = JsonlFileExporter(settings.debug_log_path)
-                    logger_provider.add_log_record_processor(
-                        SimpleLogRecordProcessor(self._debug_log_exporter)
-                    )
-                    Observability._debug_log_configured = True
                 if settings.debug_remote_log:
                     from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
 
@@ -232,6 +189,17 @@ class Observability(metaclass=ObservabilityBase):
                         SimpleLogRecordProcessor(self._remote_log_exporter)
                     )
                     Observability._remote_log_configured = True
+
+                # Parquet exporter (always active)
+                from pathlib import Path
+
+                run_dir = Path(settings.data_dir) / instance_id
+                self._parquet_exporter = ParquetExporter(run_dir=run_dir)
+                logger_provider.add_log_record_processor(
+                    SimpleLogRecordProcessor(self._parquet_exporter)
+                )
+                Observability._parquet_configured = True
+
                 otel_logs.set_logger_provider(logger_provider=logger_provider)
             self.set_event_logger(NoOpEventLogger("roc"))
 
@@ -321,11 +289,11 @@ class Observability(metaclass=ObservabilityBase):
         if _disable_for_pytest_scanning:
             return
 
-        needs_debug_log = settings.debug_log and not getattr(cls, "_debug_log_configured", False)
         needs_remote_log = settings.debug_remote_log and not getattr(
             cls, "_remote_log_configured", False
         )
-        if not needs_debug_log and not needs_remote_log:
+        needs_parquet = not getattr(cls, "_parquet_configured", False)
+        if not needs_remote_log and not needs_parquet:
             return
 
         provider = otel_logs.get_logger_provider()
@@ -336,11 +304,6 @@ class Observability(metaclass=ObservabilityBase):
             provider = LoggerProvider(resource=resource)
             otel_logs.set_logger_provider(logger_provider=provider)
 
-        if needs_debug_log:
-            debug_exporter = JsonlFileExporter(settings.debug_log_path)
-            provider.add_log_record_processor(SimpleLogRecordProcessor(debug_exporter))
-            cls._debug_log_configured = True
-
         if needs_remote_log:
             from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
 
@@ -350,6 +313,14 @@ class Observability(metaclass=ObservabilityBase):
             )
             provider.add_log_record_processor(SimpleLogRecordProcessor(remote_exporter))
             cls._remote_log_configured = True
+
+        if needs_parquet:
+            from pathlib import Path
+
+            run_dir = Path(settings.data_dir) / instance_id
+            parquet_exporter = ParquetExporter(run_dir=run_dir)
+            provider.add_log_record_processor(SimpleLogRecordProcessor(parquet_exporter))
+            cls._parquet_configured = True
 
     @classmethod
     def set_event_logger(cls, event_logger: EventLogger) -> None:

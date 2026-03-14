@@ -124,6 +124,8 @@ class Config(BaseSettings):
     status_update: int = Field(default=50)
     experiment_dir: str = Field(default="/home/apowers/experiment")
     data_dir: str = Field(default="/home/apowers/data")
+    ssl_certfile: str | None = Field(default=None)
+    ssl_keyfile: str | None = Field(default=None)
     # gym config
     num_games: int = Field(default=5)
     enable_gym_dump_env: bool = Field(default=False)
@@ -143,6 +145,16 @@ class Config(BaseSettings):
     saliency_attenuation_radius: int = 3
     saliency_attenuation_max_penalty: float = 1.0
     saliency_attenuation_max_attenuation: float = 0.9
+    # saliency-attenuation/active-inference config
+    saliency_attenuation_ai_max_states: int = 64
+    saliency_attenuation_ai_max_locations: int = 32
+    saliency_attenuation_ai_max_attenuation: float = 0.9
+    saliency_attenuation_ai_saliency_weight: float = 0.5
+    saliency_attenuation_ai_omega_alpha_prior: float = 2.0
+    saliency_attenuation_ai_omega_beta_prior: float = 1.0
+    saliency_attenuation_ai_zeta_alpha_prior: float = 2.0
+    saliency_attenuation_ai_zeta_beta_prior: float = 1.0
+    saliency_attenuation_ai_b_self_transition: float = 0.9
     # component config
     perception_components: list[tuple[str, str]] = Field(
         default=[
@@ -185,11 +197,6 @@ class Config(BaseSettings):
     # graphdb controls
     graphdb_export: bool = Field(default=False)
     graphdb_flush: bool = Field(default=False)
-    # debug log controls
-    debug_log: bool = Field(default=False)
-    debug_log_path: str = Field(
-        default=f"tmp/debug_log-{datetime.now().strftime('%Y.%m.%d-%H.%M.%S')}.jsonl"
-    )
     # debugpy controls
     debug_port: int = Field(default=5678)
     debug_wait: bool = Field(default=False)
@@ -198,6 +205,18 @@ class Config(BaseSettings):
     debug_remote_log_url: str = Field(default="https://dev.ato.ms:9080/log")
     # snapshot controls
     debug_snapshot_interval: int = Field(default=0)  # emit snapshot every N ticks (0 = disabled)
+    # W&B integration
+    wandb_enabled: bool = Field(default=False)
+    wandb_project: str = Field(default="ROC")
+    wandb_entity: str = Field(default="")
+    wandb_host: str = Field(default="")
+    wandb_api_key: str = Field(default="")
+    wandb_tags: list[str] = Field(default=[])
+    wandb_log_screens: bool = Field(default=True)
+    wandb_log_saliency: bool = Field(default=True)
+    wandb_log_interval: int = Field(default=1)
+    wandb_artifacts: list[str] = Field(default=[])
+    wandb_mode: str = Field(default="online")
     # significance config
     significance_weights: dict[str, float] = Field(
         default={

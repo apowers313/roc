@@ -34,11 +34,11 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 5
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             for i in range(1, 11):
                 State.maybe_emit_snapshot(i)
             # Should have 2 snapshots (tick 5 and tick 10)
-            assert mock_logger.emit.call_count == 2
+            assert mock_logger.return_value.emit.call_count == 2
 
     def test_snapshot_not_emitted_when_disabled(self):
         """No snapshots when interval is 0."""
@@ -47,10 +47,10 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 0
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             for i in range(1, 11):
                 State.maybe_emit_snapshot(i)
-            mock_logger.emit.assert_not_called()
+            mock_logger.return_value.emit.assert_not_called()
 
     def test_snapshot_not_emitted_on_non_interval_ticks(self):
         """No snapshot on ticks that aren't multiples of the interval."""
@@ -59,10 +59,10 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 5
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             for i in [1, 2, 3, 4, 6, 7, 8, 9]:
                 State.maybe_emit_snapshot(i)
-            mock_logger.emit.assert_not_called()
+            mock_logger.return_value.emit.assert_not_called()
 
     def test_snapshot_emitted_on_interval_tick(self):
         """Snapshot emitted exactly on interval tick."""
@@ -71,9 +71,9 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 3
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.maybe_emit_snapshot(3)
-            mock_logger.emit.assert_called_once()
+            mock_logger.return_value.emit.assert_called_once()
 
     def test_snapshot_contains_expected_fields(self):
         """Snapshot record should include screen, objects, and tick info."""
@@ -88,11 +88,11 @@ class TestSnapshotEmission:
         mock_obj.configure_mock(**{"__str__": MagicMock(return_value="test object")})
         states.object.val = mock_obj
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.maybe_emit_snapshot(1)
-            mock_logger.emit.assert_called_once()
+            mock_logger.return_value.emit.assert_called_once()
 
-            log_record = mock_logger.emit.call_args[0][0]
+            log_record = mock_logger.return_value.emit.call_args[0][0]
             body = log_record.body
             assert "tick" in body
             assert "screen" in body
@@ -111,11 +111,11 @@ class TestSnapshotEmission:
         states.screen.val = None
         states.object.val = None
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.maybe_emit_snapshot(1)
-            mock_logger.emit.assert_called_once()
+            mock_logger.return_value.emit.assert_called_once()
 
-            log_record = mock_logger.emit.call_args[0][0]
+            log_record = mock_logger.return_value.emit.call_args[0][0]
             body = log_record.body
             assert "tick" in body
 
@@ -126,9 +126,9 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 1
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.maybe_emit_snapshot(1)
-            log_record = mock_logger.emit.call_args[0][0]
+            log_record = mock_logger.return_value.emit.call_args[0][0]
             assert log_record.attributes is not None
             assert log_record.attributes.get("event.name") == "roc.state.snapshot"
 
@@ -139,6 +139,6 @@ class TestSnapshotEmission:
         settings = Config.get()
         settings.debug_snapshot_interval = 5
 
-        with patch("roc.reporting.state.otel_logger") as mock_logger:
+        with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             State.maybe_emit_snapshot(0)
-            mock_logger.emit.assert_not_called()
+            mock_logger.return_value.emit.assert_not_called()

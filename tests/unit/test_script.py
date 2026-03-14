@@ -11,22 +11,22 @@ from roc.script import JsonParam, cli
 
 class TestCliOptionGeneration:
     def test_bool_flag_true(self):
-        """--debug-log should pass debug_log=True to roc.init()."""
+        """--graphdb-export should pass graphdb_export=True to roc.init()."""
         runner = CliRunner()
         with patch("roc.script.roc") as mock_roc:
-            result = runner.invoke(cli, ["--debug-log"])
+            result = runner.invoke(cli, ["--graphdb-export"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
-            assert config["debug_log"] is True
+            assert config["graphdb_export"] is True
 
     def test_bool_flag_false(self):
-        """--no-debug-log should pass debug_log=False to roc.init()."""
+        """--no-graphdb-export should pass graphdb_export=False to roc.init()."""
         runner = CliRunner()
         with patch("roc.script.roc") as mock_roc:
-            result = runner.invoke(cli, ["--no-debug-log"])
+            result = runner.invoke(cli, ["--no-graphdb-export"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
-            assert config["debug_log"] is False
+            assert config["graphdb_export"] is False
 
     def test_int_option(self):
         """--num-games 3 should pass num_games=3."""
