@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import html as html_mod
 from typing import Any
 
 import pandas as pd
@@ -10,29 +9,7 @@ import param
 import panel as pn
 from panel.viewable import Viewer
 
-from roc.reporting.components.tables import compact_kv_table
-from roc.reporting.components.tokens import (
-    ACCENT,
-    COMPACT_TABLE_CSS,
-    FONT,
-    SUCCESS,
-    TEXT_DIM,
-    TEXT_MUTED,
-    WARNING,
-    no_data_html,
-)
-
-_OUTCOME_COLORS: dict[str, str] = {
-    "match": SUCCESS,
-    "new_object": ACCENT,
-    "low_confidence": WARNING,
-}
-
-_OUTCOME_LABELS: dict[str, str] = {
-    "match": "MATCHED",
-    "new_object": "NEW OBJECT",
-    "low_confidence": "LOW CONFIDENCE",
-}
+from roc.reporting.components.theme import COMPACT_CELL_CSS
 
 
 class ResolutionInspector(Viewer):
@@ -40,6 +17,8 @@ class ResolutionInspector(Viewer):
 
     Shows the outcome badge, summary stats, candidate table, and feature list
     from a single ``roc.resolution.decision`` event dict.
+
+    All sub-components are created once and updated in place to avoid flicker.
     """
 
     decision = param.Dict(
@@ -48,32 +27,59 @@ class ResolutionInspector(Viewer):
         doc="Resolution decision dict from roc.resolution.decision event",
     )
 
+    _OUTCOME_LABELS: dict[str, str] = {
+        "match": "MATCHED",
+        "new_object": "NEW OBJECT",
+        "low_confidence": "LOW CONFIDENCE",
+    }
+
     def __init__(self, **params: Any) -> None:
         super().__init__(**params)
-        self._content = pn.Column(sizing_mode="stretch_width")
+
+        # Persistent components -- updated in place
+        self._outcome_pane = pn.pane.Str("No resolution data", sizing_mode="stretch_width")
+        self._summary_table = pn.widgets.Tabulator(
+            pd.DataFrame({"key": ["--"], "value": ["--"]}),
+            theme="fast",
+            show_index=False,
+            header_filters=False,
+            configuration={"headerVisible": False},
+            stylesheets=[COMPACT_CELL_CSS],
+            sizing_mode="stretch_width",
+            disabled=True,
+            pagination=None,
+            visible=False,
+        )
+        self._candidates_table = pn.widgets.Tabulator(
+            pd.DataFrame({"object": [], "probability": []}),
+            theme="fast",
+            show_index=False,
+            header_filters=False,
+            stylesheets=[COMPACT_CELL_CSS],
+            sizing_mode="stretch_width",
+            height=150,
+            disabled=True,
+            pagination=None,
+            visible=False,
+        )
+        self._features_pane = pn.pane.Str("", sizing_mode="stretch_width", visible=False)
+
         self._render()
 
     @param.depends("decision", watch=True)
     def _render(self) -> None:
-        self._content.clear()
         d = self.decision
         if d is None:
-            self._content.append(
-                pn.pane.HTML(no_data_html("resolution"), sizing_mode="stretch_width")
-            )
+            self._outcome_pane.object = "No resolution data"
+            self._summary_table.visible = False
+            self._candidates_table.visible = False
+            self._features_pane.visible = False
             return
 
         # 1. Outcome badge
         outcome = d.get("outcome", "unknown")
-        color = _OUTCOME_COLORS.get(outcome, TEXT_MUTED)
-        label = _OUTCOME_LABELS.get(outcome, outcome.upper())
-        self._content.append(
-            pn.pane.HTML(
-                f'<span style="color:{color};font-weight:700;font-size:12px;'
-                f'font-family:{FONT};letter-spacing:0.5px;">{html_mod.escape(label)}</span>',
-                sizing_mode="stretch_width",
-            )
-        )
+        label = self._OUTCOME_LABELS.get(outcome, outcome.upper())
+        self._outcome_pane.object = label
 
         # 2. Summary table
         summary: dict[str, Any] = {}
@@ -87,35 +93,26 @@ class ResolutionInspector(Viewer):
             summary["candidates"] = d["num_candidates"]
         if "matched_object_id" in d:
             summary["matched"] = d["matched_object_id"]
-        if "best_distance" in d:
-            summary["distance"] = round(d["best_distance"], 4) if d["best_distance"] else None
         if "vocab_size" in d:
             summary["vocab_size"] = d["vocab_size"]
         if "total_objects_tracked" in d:
             summary["objects_tracked"] = d["total_objects_tracked"]
 
         if summary:
-            self._content.append(compact_kv_table(summary, "resolution"))
+            rows = [{"key": str(k), "value": str(v)} for k, v in summary.items()]
+            self._summary_table.value = pd.DataFrame(rows)
+            self._summary_table.visible = True
+        else:
+            self._summary_table.visible = False
 
-        # 3. Candidates table
+        # 3. Candidates table (posteriors or distances)
         candidates_df = self._build_candidates_df(d)
         if candidates_df is not None and len(candidates_df) > 0:
-            cand_height = min(len(candidates_df) * 20 + 4, 200)
-            self._content.append(
-                pn.widgets.Tabulator(
-                    candidates_df,
-                    theme="simple",
-                    theme_classes=["table-sm"],
-                    show_index=False,
-                    header_filters=False,
-                    stylesheets=[COMPACT_TABLE_CSS],
-                    sizing_mode="fixed",
-                    width=320,
-                    height=cand_height,
-                    disabled=True,
-                    pagination=None,
-                )
-            )
+            self._candidates_table.value = candidates_df
+            self._candidates_table.height = min(len(candidates_df) * 25 + 30, 150)
+            self._candidates_table.visible = True
+        else:
+            self._candidates_table.visible = False
 
         # 4. Features
         features = d.get("features")
@@ -123,27 +120,23 @@ class ResolutionInspector(Viewer):
             feat_str = ", ".join(str(f) for f in features[:20])
             if len(features) > 20:
                 feat_str += f" ... (+{len(features) - 20})"
-            self._content.append(
-                pn.pane.HTML(
-                    f'<div style="font-size:10px;color:{TEXT_DIM};font-family:{FONT};'
-                    f'padding:2px 0;">{html_mod.escape(feat_str)}</div>',
-                    sizing_mode="stretch_width",
-                )
-            )
+            self._features_pane.object = feat_str
+            self._features_pane.visible = True
+        else:
+            self._features_pane.visible = False
 
     @staticmethod
     def _build_candidates_df(d: dict[str, Any]) -> pd.DataFrame | None:
         """Build a DataFrame from candidate distances or posteriors."""
-        # Symmetric difference: candidate_distances is [(obj_id, distance), ...]
         dists = d.get("candidate_distances")
         if dists and isinstance(dists, list):
             rows = [
-                {"object": str(obj_id), "distance": round(float(dist), 4)} for obj_id, dist in dists
+                {"object": str(obj_id), "distance": round(float(dist), 4)}
+                for obj_id, dist in dists
             ]
             if rows:
                 return pd.DataFrame(rows)
 
-        # Dirichlet: posteriors is [(obj_id, probability), ...]
         posts = d.get("posteriors")
         if posts and isinstance(posts, list):
             rows = [
@@ -156,4 +149,12 @@ class ResolutionInspector(Viewer):
         return None
 
     def __panel__(self) -> pn.Column:
-        return self._content
+        return pn.Column(
+            self._outcome_pane,
+            self._summary_table,
+            pn.pane.Markdown("**Candidates**"),
+            self._candidates_table,
+            pn.pane.Markdown("**Features**"),
+            self._features_pane,
+            sizing_mode="stretch_width",
+        )

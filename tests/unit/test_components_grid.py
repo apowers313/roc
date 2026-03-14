@@ -2,6 +2,8 @@
 
 """Tests for roc/reporting/components/grid_viewer.py."""
 
+import panel as pn
+
 from roc.reporting.components.grid_viewer import GridViewer
 
 
@@ -17,32 +19,29 @@ class TestGridViewer:
         assert "<span" in html
         assert "monospace" in html
 
-    def test_none_shows_placeholder(self):
+    def test_none_returns_empty(self):
         viewer = GridViewer(grid_data=None)
         html = viewer._render()
-        assert "No data" in html
+        assert html == ""
 
-    def test_missing_chars_shows_placeholder(self):
+    def test_missing_chars_returns_empty(self):
         viewer = GridViewer(grid_data={"fg": [], "bg": []})
         html = viewer._render()
-        assert "Invalid" in html
+        assert html == ""
 
-    def test_title_rendered(self):
+    def test_panel_returns_html_pane(self):
         grid = {
             "chars": [[65]],
             "fg": [["ffffff"]],
             "bg": [["000000"]],
         }
-        viewer = GridViewer(grid_data=grid, title="Screen")
+        viewer = GridViewer(grid_data=grid)
         panel = viewer.__panel__()
-        # Title should be in one of the children
-        html_panes = [c for c in panel if hasattr(c, "object") and isinstance(c.object, str)]
-        title_found = any("Screen" in p.object for p in html_panes if p.object)
-        assert title_found
+        assert isinstance(panel, pn.pane.HTML)
 
     def test_reactive_update(self):
         viewer = GridViewer(grid_data=None)
-        assert "No data" in viewer._html_pane.object
+        assert viewer._html_pane.object == ""
 
         viewer.grid_data = {
             "chars": [[65]],

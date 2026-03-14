@@ -1,17 +1,22 @@
 # mypy: disable-error-code="no-untyped-def"
 
-"""Unit tests for roc/reporting/panel_debug.py."""
+"""Unit tests for roc/reporting/panel_debug.py.
+
+Tests the v2 dashboard built on Panel's components and theming.
+No tests depend on specific CSS classes or HTML content.
+"""
 
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
+import panel as pn
 import pytest
 from helpers.otel import make_log_record
 from opentelemetry._logs import SeverityNumber
 
 from roc.reporting.parquet_exporter import ParquetExporter
-from roc.reporting.run_store import RunStore, StepData
+from roc.reporting.run_store import RunStore
 
 
 @pytest.fixture()
@@ -116,6 +121,24 @@ def populated_run_dir(tmp_path: Path) -> Path:
                 )
             ]
         )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match" if i > 0 else "new_object",
+                            "tick": i + 1,
+                            "x": i,
+                            "y": i + 1,
+                            "features": ["ShapeNode(.)", "ColorNode(GREY)"],
+                            "num_candidates": i + 1,
+                            "posteriors": [["obj1", 0.8], ["new", 0.2]],
+                        }
+                    ),
+                )
+            ]
+        )
         # Log messages with different severity levels
         exporter.export([make_log_record(body=f"debug message {i}", severity=SeverityNumber.DEBUG)])
         exporter.export([make_log_record(body=f"info message {i}", severity=SeverityNumber.INFO)])
@@ -142,12 +165,6 @@ def mock_store(populated_run_dir: Path) -> RunStore:
     return RunStore(populated_run_dir)
 
 
-@pytest.fixture()
-def sample_step_data(mock_store: RunStore) -> StepData:
-    """Get a StepData instance for step 1."""
-    return mock_store.get_step_data(1)
-
-
 class TestDashboardCreation:
     def test_dashboard_creates_without_error(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
@@ -155,29 +172,29 @@ class TestDashboardCreation:
         dashboard = PanelDashboard(mock_store)
         assert dashboard is not None
 
-    def test_dashboard_has_step_slider(self, mock_store: RunStore):
-        import panel as pn
-
+    def test_dashboard_has_player(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         layout = dashboard.servable()
-        players = [w for w in layout.select(pn.widgets.Player) if isinstance(w, pn.widgets.Player)]
-        assert len(players) >= 1, "Dashboard should contain a Player widget"
+        players = list(layout.select(pn.widgets.Player))
+        assert len(players) >= 1
 
     def test_dashboard_has_run_selector(self, mock_store: RunStore):
-        import panel as pn
-
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         layout = dashboard.servable()
-        autos = [
-            w
-            for w in layout.select(pn.widgets.AutocompleteInput)
-            if isinstance(w, pn.widgets.AutocompleteInput)
-        ]
-        assert len(autos) >= 1, "Dashboard should contain an AutocompleteInput widget"
+        autos = list(layout.select(pn.widgets.AutocompleteInput))
+        assert len(autos) >= 1
+
+    def test_dashboard_has_game_selector(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        layout = dashboard.servable()
+        selects = list(layout.select(pn.widgets.Select))
+        assert len(selects) >= 1
 
 
 class TestScreenRendering:
@@ -188,7 +205,6 @@ class TestScreenRendering:
         assert dashboard._screen_viewer.grid_data is not None
         html = dashboard._screen_viewer._render()
         assert "<span" in html
-        assert "monospace" in html
 
     def test_screen_viewer_handles_none(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
@@ -196,7 +212,7 @@ class TestScreenRendering:
         dashboard = PanelDashboard(mock_store)
         dashboard._screen_viewer.grid_data = None
         html = dashboard._screen_viewer._render()
-        assert "No data" in html
+        assert html == ""
 
 
 class TestStepChange:
@@ -221,7 +237,7 @@ class TestStepChange:
         dashboard._on_game_change(1)
         assert dashboard._step_widget.value == 1
 
-    def test_step_change_updates_game_indicator(self, mock_store: RunStore):
+    def test_step_change_updates_game_selector(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -245,8 +261,6 @@ class TestStepChange:
         assert dashboard._step_widget.visible_buttons == expected
 
     def test_speed_selector_changes_interval(self, mock_store: RunStore):
-        from unittest.mock import MagicMock
-
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -270,14 +284,301 @@ class TestStepChange:
         assert "5x" in options
         assert "10x" in options
 
-    def test_timestamp_formatted_as_local_time(self, mock_store: RunStore):
+    def test_info_line_updates(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         dashboard._on_step_change(1)
         info = dashboard._info_pane.object
-        assert "202" in info
-        assert ":" in info
+        assert "Step 1" in info
+        assert "Game 1" in info
+
+
+class TestStatusIndicators:
+    def test_hp_indicator_updates(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        assert dashboard._hp_indicator.value == 16
+        assert "16" in dashboard._hp_indicator.format
+
+    def test_score_indicator_updates(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(5)
+        assert dashboard._score_indicator.value == 40
+
+    def test_hunger_indicator_present(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        assert dashboard._hunger_indicator.name == "Hunger"
+
+    def test_fallback_when_no_metrics(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        # Step 12 is in game 2 which has no metrics
+        dashboard._on_step_change(12)
+        assert dashboard._hp_indicator.name == "Step"
+        assert dashboard._score_indicator.name == "Game"
+
+
+class TestDataPanels:
+    def test_metrics_table_populated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        df = dashboard._metrics_table.value
+        assert len(df) > 0
+        assert "hp" in df["key"].values
+
+    def test_graph_table_populated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        df = dashboard._graph_table.value
+        assert len(df) > 0
+        assert "node_count" in df["key"].values
+
+    def test_features_table_populated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        df = dashboard._features_table.value
+        assert len(df) > 0
+
+    def test_attenuation_table_populated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        df = dashboard._attenuation_table.value
+        assert len(df) > 0
+
+    def test_object_info_updated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        text = dashboard._object_pane.object
+        assert isinstance(text, str)
+        assert len(text) > 0
+
+    def test_focus_pane_updated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        text = dashboard._focus_pane.object
+        assert isinstance(text, str)
+        assert len(text) > 0
+
+    def test_resolution_inspector_updated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        assert dashboard._resolution_inspector.decision is not None
+        assert dashboard._resolution_inspector._outcome_pane.object == "NEW OBJECT"
+
+        dashboard._on_step_change(5)
+        assert dashboard._resolution_inspector._outcome_pane.object == "MATCHED"
+
+    def test_log_table_populated(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        df = dashboard._log_table.value
+        assert len(df) > 0
+
+    def test_object_info_dict_format(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        # Mock get_step_data to return dict-format object_info (not raw)
+        from roc.reporting.run_store import StepData
+
+        mock_data = StepData(
+            step=1,
+            game_number=1,
+            object_info=[{"type": "wall", "x": 5, "y": 3}],
+            focus_points=[{"x": 5, "y": 3, "strength": 0.9}],
+        )
+        with patch.object(mock_store, "get_step_data", return_value=mock_data):
+            dashboard._on_step_change(1)
+        assert "type: wall" in dashboard._object_pane.object
+        assert "x: 5" in dashboard._focus_pane.object
+
+    def test_log_level_filter(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_step_change(1)
+        all_count = len(dashboard._log_table.value)
+
+        dashboard._log_level_selector.value = "ERROR"
+        dashboard._on_log_level_change()
+        error_count = len(dashboard._log_table.value)
+        assert error_count < all_count
+
+
+class TestHelperFunctions:
+    def test_format_timestamp_none(self):
+        from roc.reporting.panel_debug import _format_timestamp
+
+        assert _format_timestamp(None) == "N/A"
+
+    def test_format_timestamp_valid(self):
+        from roc.reporting.panel_debug import _format_timestamp
+
+        # 1 second in nanoseconds -- just check it produces a time-like string
+        result = _format_timestamp(1_000_000_000)
+        assert ":" in result
+        assert "." in result
+
+    def test_parse_features_raw(self):
+        from roc.reporting.panel_debug import _parse_features
+
+        features = [{"raw": "\t\twall: 3\n\t\tfloor: 7\n"}]
+        result = _parse_features(features)
+        assert result["wall"] == "3"
+        assert result["floor"] == "7"
+
+    def test_parse_features_dict(self):
+        from roc.reporting.panel_debug import _parse_features
+
+        features = [{"wall": 3, "floor": 7}]
+        result = _parse_features(features)
+        assert result["wall"] == 3
+
+    def test_parse_events(self):
+        from roc.reporting.panel_debug import _parse_events
+
+        events = [{"perception": 100, "step": 1, "game_number": 1}]
+        result = _parse_events(events)
+        assert result == {"perception": 100}
+        assert "step" not in result
+
+    def test_dict_to_df_none(self):
+        from roc.reporting.panel_debug import _dict_to_df, _EMPTY_KV_DF
+
+        result = _dict_to_df(None)
+        assert result is _EMPTY_KV_DF
+
+    def test_dict_to_df_skips_raw(self):
+        from roc.reporting.panel_debug import _dict_to_df
+
+        result = _dict_to_df({"raw": "blob", "hp": 16})
+        assert len(result) == 1
+        assert "hp" in result["key"].values
+
+    def test_dict_to_df_truncates(self):
+        from roc.reporting.panel_debug import _dict_to_df
+
+        result = _dict_to_df({"key": "x" * 200})
+        val = result["value"].iloc[0]
+        assert val.endswith("...")
+        assert len(val) == 80
+
+    def test_filter_logs_none(self):
+        from roc.reporting.panel_debug import _filter_logs, _EMPTY_LOG_DF
+
+        result = _filter_logs(None)
+        assert result is _EMPTY_LOG_DF
+
+    def test_filter_logs_by_level(self):
+        from roc.reporting.panel_debug import _filter_logs
+
+        logs = [
+            {"severity_text": "DEBUG", "severity_number": 5, "body": "debug"},
+            {"severity_text": "ERROR", "severity_number": 17, "body": "error"},
+        ]
+        result = _filter_logs(logs, min_level="ERROR")
+        assert len(result) == 1
+        assert result["level"].iloc[0] == "ERROR"
+
+
+class TestWidgetHandlers:
+    def test_handle_speed_widget(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = "10x"
+        dashboard._handle_speed_widget(event)
+        assert dashboard.speed == "10x"
+
+    def test_handle_run_widget(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = "some-run"
+        dashboard._handle_run_widget(event)
+        assert dashboard.run_name == "some-run"
+
+    def test_handle_game_widget_valid(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = "1"
+        dashboard._handle_game_widget(event)
+        assert dashboard.game == "1"
+
+    def test_handle_game_widget_non_digit(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        original = dashboard.game
+        event = MagicMock()
+        event.new = "abc"
+        dashboard._handle_game_widget(event)
+        assert dashboard.game == original
+
+    def test_handle_speed_param(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = "1x"
+        dashboard._handle_speed(event)
+        assert dashboard._step_widget.interval == 1000
+
+    def test_handle_run_param(self, populated_run_dir: Path, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store, data_dir=populated_run_dir.parent)
+        event = MagicMock()
+        event.new = populated_run_dir.name
+        dashboard._handle_run(event)
+
+    def test_handle_game_param(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = "1"
+        dashboard._handle_game(event)
+
+
+class TestRunChange:
+    def test_run_change_reloads_store(self, populated_run_dir: Path, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store, data_dir=populated_run_dir.parent)
+        old_store = dashboard._store
+        dashboard._on_run_change(populated_run_dir.name)
+        # Store should be replaced
+        assert dashboard._store is not old_store
 
 
 class TestSaliencyPanel:
@@ -289,100 +590,9 @@ class TestSaliencyPanel:
         html = dashboard._saliency_viewer._render()
         assert "<span" in html
 
-    def test_saliency_viewer_handles_none(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._saliency_viewer.grid_data = None
-        html = dashboard._saliency_viewer._render()
-        assert "No data" in html
-
-
-class TestComponentIntegration:
-    """Test that the dashboard correctly wires data to components."""
-
-    def test_features_populated_on_step(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._features_container)
-        assert len(children) > 0
-
-    def test_metrics_populated_on_step(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._metrics_container)
-        assert len(children) > 0
-
-    def test_graph_populated_on_step(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._graph_container)
-        assert len(children) > 0
-
-    def test_events_populated_on_step(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._events_container)
-        assert len(children) > 0
-
-    def test_logs_populated_on_step(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._logs_container)
-        assert len(children) > 0
-
-    def test_object_info_rendered(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        html = dashboard._object_pane.object
-        assert isinstance(html, str)
-        assert len(html) > 0
-
-    def test_focus_points_rendered(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        html = dashboard._focus_pane.object
-        assert isinstance(html, str)
-        assert len(html) > 0
-
-    def test_attenuation_populated(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        children = list(dashboard._attenuation_container)
-        assert len(children) > 0
-
-    def test_log_level_filter_updates(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(1)
-        # Change to ERROR and re-render
-        dashboard._log_level_selector.value = "ERROR"
-        dashboard._on_log_level_change()
-        children = list(dashboard._logs_container)
-        assert len(children) > 0
-
 
 class TestFullLayout:
-    def test_layout_has_all_sections(self, mock_store: RunStore):
-        import panel as pn
-
+    def test_layout_has_all_cards(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -390,15 +600,13 @@ class TestFullLayout:
         cards = list(layout.select(pn.Card))
         card_titles = [c.title for c in cards if hasattr(c, "title")]
 
+        assert "Game State" in card_titles
         assert "Perception" in card_titles
         assert "Attention" in card_titles
         assert "Object Resolution" in card_titles
-        assert "Game State" in card_titles
         assert "Log Messages" in card_titles
 
     def test_game_state_expanded(self, mock_store: RunStore):
-        import panel as pn
-
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -407,8 +615,6 @@ class TestFullLayout:
         assert not cards["Game State"].collapsed
 
     def test_detail_sections_collapsed(self, mock_store: RunStore):
-        import panel as pn
-
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -419,17 +625,7 @@ class TestFullLayout:
         assert cards["Object Resolution"].collapsed
         assert cards["Log Messages"].collapsed
 
-    def test_status_bar_present(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        status = dashboard._status_pane.object
-        assert "HP" in status
-        assert "Score" in status
-
-    def test_player_widget_always_accessible(self, mock_store: RunStore):
-        import panel as pn
-
+    def test_player_widget_present(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
@@ -438,46 +634,29 @@ class TestFullLayout:
         assert len(players) >= 1
 
     def test_screen_in_game_state_card(self, mock_store: RunStore):
-        import panel as pn
-
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         layout = dashboard.servable()
         cards = {c.title: c for c in layout.select(pn.Card) if hasattr(c, "title")}
-        # Screen viewer should be inside Game State card (search for HTML panes with grid content)
         game_html = list(cards["Game State"].select(pn.pane.HTML))
         assert len(game_html) >= 1
 
-
-class TestDesignRegression:
-    """Lock in design decisions to prevent regressions."""
-
-    def test_dark_mode_colors_used(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard, _BG
+    def test_no_global_css(self, mock_store: RunStore):
+        """Verify we are not injecting global CSS overrides."""
+        from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         layout = dashboard.servable()
+        # No styles dict with background colors on the top-level Column
         styles = layout.styles or {}
-        assert styles.get("background") == _BG
+        assert "background" not in styles
 
-    def test_saliency_no_legend(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        html = dashboard._saliency_viewer._render()
-        assert "Low" not in html
-        assert "High" not in html
-
-    def test_compact_card_margins(self, mock_store: RunStore):
-        import panel as pn
-
+    def test_uses_panel_indicators(self, mock_store: RunStore):
+        """Verify status bar uses pn.indicators.Number, not HTML."""
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         layout = dashboard.servable()
-        cards = list(layout.select(pn.Card))
-        for card in cards:
-            margin = (card.styles or {}).get("margin-bottom", "0px")
-            px = int(margin.replace("px", ""))
-            assert px <= 4, f"Card margin {margin} > 4px"
+        indicators = list(layout.select(pn.indicators.Number))
+        assert len(indicators) >= 5  # HP, Score, Depth, Gold, Energy, Hunger

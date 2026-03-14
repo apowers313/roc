@@ -8,7 +8,6 @@ import param
 import panel as pn
 from panel.viewable import Viewer
 
-from roc.reporting.components.tokens import TEXT_MUTED, FONT, title_html
 from roc.reporting.screen_renderer import render_grid_pane
 
 
@@ -17,6 +16,9 @@ class GridViewer(Viewer):
 
     Wraps ``render_grid_pane()`` with param-based data updates so the grid
     re-renders automatically when ``grid_data`` changes.
+
+    Raw HTML is justified here because there is no Panel widget that renders
+    a per-character-colored monospace grid.
     """
 
     grid_data = param.Dict(
@@ -24,7 +26,6 @@ class GridViewer(Viewer):
         allow_None=True,
         doc="Grid data: {chars: int[][], fg: hex[][], bg: hex[][]}",
     )
-    title = param.String(default="", doc="Optional title above the grid")
 
     def __init__(self, **params: Any) -> None:
         super().__init__(**params)
@@ -38,26 +39,12 @@ class GridViewer(Viewer):
         self._html_pane.object = self._render()
 
     def _render(self) -> str:
+        """Render grid data to HTML, or return empty string for no data."""
         if self.grid_data is None:
-            return self._placeholder("No data")
+            return ""
         if "chars" not in self.grid_data:
-            return self._placeholder("Invalid grid data")
+            return ""
         return render_grid_pane(self.grid_data)
 
-    @staticmethod
-    def _placeholder(message: str) -> str:
-        return (
-            f'<div style="font-family:{FONT};color:{TEXT_MUTED};'
-            f'font-size:11px;padding:4px 0;">{message}</div>'
-        )
-
-    def __panel__(self) -> pn.Column:
-        children: list[Any] = []
-        if self.title:
-            children.append(pn.pane.HTML(title_html(self.title)))
-        children.append(self._html_pane)
-        return pn.Column(
-            *children,
-            sizing_mode="stretch_width",
-            styles={"gap": "0px"},
-        )
+    def __panel__(self) -> pn.pane.HTML:
+        return self._html_pane

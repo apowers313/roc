@@ -1,155 +1,46 @@
-"""Compact dark-mode Panel debug dashboard for stepping through ROC game data.
+"""Panel debug dashboard for stepping through ROC game data.
 
 Displays game screen, saliency heatmap, and all agent data panels organized
 by pipeline stage in collapsible cards. Data loaded from Parquet via RunStore/DuckDB.
 
-Uses Panel's Viewer pattern with param.Parameter fields for reactive state.
-Delegates rendering to reusable components in ``roc.reporting.components``.
+Uses Panel's built-in components and theming -- no global CSS overrides.
+Components are created once and updated in place to avoid flicker during playback.
 """
 
 from __future__ import annotations
 
 import argparse
-import html as html_mod
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
 import param
 import panel as pn
+from bokeh.models import FactorRange, Range1d
+from bokeh.models.widgets.tables import HTMLTemplateFormatter
+from bokeh.plotting import figure
 from panel.viewable import Viewer
 
-from roc.reporting.components.charts import event_bar_chart
 from roc.reporting.components.grid_viewer import GridViewer
 from roc.reporting.components.resolution_inspector import ResolutionInspector
-from roc.reporting.components.status_bar import compact_status_bar
-from roc.reporting.components.tables import compact_kv_table, compact_log_table
-from roc.reporting.components.tokens import (
-    ACCENT,
-    BG,
-    BORDER,
-    FONT,
-    INPUT_BG,
-    SURFACE,
-    SURFACE_EL,
-    TEXT,
-    TEXT_DIM,
-    TEXT_MUTED,
-    no_data_html,
-    title_html,
-)
+from roc.reporting.components.theme import COMPACT_CELL_CSS
 from roc.reporting.run_store import RunStore, StepData
 
-# Re-export tokens for test access
-_BG = BG
-_SURFACE = SURFACE
-_SURFACE_EL = SURFACE_EL
-_INPUT_BG = INPUT_BG
-_BORDER = BORDER
-_TEXT = TEXT
-_TEXT_DIM = TEXT_DIM
-_TEXT_MUTED = TEXT_MUTED
-_ACCENT = ACCENT
-_SUCCESS = "#3fb950"
-_ERROR = "#f85149"
-_WARNING = "#d29922"
-_FONT = FONT
-
-#: Log severity levels ordered by number for filtering.
+#: Log severity levels ordered for filtering.
 _LOG_LEVELS = ["DEBUG", "INFO", "WARN", "ERROR"]
 
-# -- Global CSS for dark compact theme --
-_GLOBAL_CSS = f"""
-body {{
-    background: {BG} !important;
-    color: {TEXT};
-    font-family: {FONT};
-    font-size: 11px;
-    line-height: 1.4;
-}}
-.bk-root, .bk, .pn-container {{
-    background: {BG} !important;
-    color: {TEXT} !important;
-    font-family: {FONT} !important;
-}}
-.card {{
-    background: {SURFACE} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 4px !important;
-    margin-bottom: 4px !important;
-}}
-.card-header {{
-    background: {SURFACE_EL} !important;
-    padding: 2px 8px !important;
-    font-size: 11px !important;
-    border-bottom: 1px solid {BORDER} !important;
-    min-height: 0 !important;
-}}
-.card-body, .card .bk-panel-models-layout-Card {{
-    padding: 8px !important;
-}}
-select, .bk-input, input[type="text"] {{
-    height: 24px !important;
-    font-size: 11px !important;
-    background: {INPUT_BG} !important;
-    color: {TEXT} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 4px !important;
-    padding: 0 8px !important;
-    font-family: {FONT} !important;
-}}
-.bk-menu {{
-    background: {SURFACE} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 4px !important;
-    font-family: {FONT} !important;
-    font-size: 11px !important;
-    max-height: 200px !important;
-    overflow-y: auto !important;
-}}
-.bk-menu > div {{
-    padding: 4px 8px !important;
-    color: {TEXT} !important;
-    cursor: pointer !important;
-}}
-.bk-menu > div.bk-active, .bk-menu > div:hover {{
-    background: {INPUT_BG} !important;
-    color: {TEXT} !important;
-}}
-.bk-btn {{
-    background: {INPUT_BG} !important;
-    color: {TEXT} !important;
-    border: 1px solid {BORDER} !important;
-    border-radius: 4px !important;
-}}
-.bk-slider-title {{
-    color: {TEXT_DIM} !important;
-    font-size: 11px !important;
-}}
-label, .bk-label {{
-    color: {TEXT_DIM} !important;
-    font-size: 11px !important;
-    font-family: {FONT} !important;
-}}
-::-webkit-scrollbar {{ width: 6px; }}
-::-webkit-scrollbar-track {{ background: {BG}; }}
-::-webkit-scrollbar-thumb {{ background: {BORDER}; border-radius: 3px; }}
-fast-card.pn-wrapper {{
-    overflow-x: clip !important;
-}}
-/* RadioButtonGroup compact styling */
-.bk-btn-group .bk-btn {{
-    font-size: 10px !important;
-    padding: 2px 8px !important;
-    min-height: 0 !important;
-    line-height: 1.2 !important;
-}}
-.bk-btn-group .bk-btn.bk-active {{
-    background: {ACCENT} !important;
-    color: {BG} !important;
-    border-color: {ACCENT} !important;
-}}
-"""
+#: Severity level numbers for log filtering.
+_LEVEL_NUMBERS: dict[str, int] = {
+    "DEBUG": 5,
+    "INFO": 9,
+    "WARN": 13,
+    "WARNING": 13,
+    "ERROR": 17,
+}
+
+_EMPTY_KV_DF = pd.DataFrame({"key": ["--"], "value": ["No data"]})
+_EMPTY_LOG_DF = pd.DataFrame({"level": ["--"], "message": ["No log data"]})
 
 
 def _format_timestamp(ts: int | None) -> str:
@@ -158,17 +49,6 @@ def _format_timestamp(ts: int | None) -> str:
         return "N/A"
     dt = datetime.fromtimestamp(ts / 1e9, tz=timezone.utc).astimezone()
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
-
-def _preformatted_html(text: str) -> str:
-    """Render preformatted text as a compact HTML block."""
-    lines = text.strip().split("\n")
-    parts = [
-        f'<div style="white-space:pre;color:{TEXT};font-size:10px;'
-        f'font-family:{FONT};line-height:1.3;">{html_mod.escape(line)}</div>'
-        for line in lines
-    ]
-    return "".join(parts)
 
 
 def _parse_features(features: list[dict[str, Any]]) -> dict[str, Any]:
@@ -186,24 +66,140 @@ def _parse_features(features: list[dict[str, Any]]) -> dict[str, Any]:
     return merged
 
 
-def _parse_events(event_summary: list[dict[str, Any]]) -> dict[str, Any]:
+def _parse_events(event_summary: list[dict[str, Any]]) -> dict[str, int]:
     """Parse event summary list into a single dict for charting."""
-    merged: dict[str, Any] = {}
+    merged: dict[str, int] = {}
     for item in event_summary:
         for k, v in item.items():
-            if k not in ("step", "game_number"):
-                merged[k] = v
+            if k not in ("step", "game_number") and isinstance(v, (int, float)):
+                merged[k] = int(v)
     return merged
 
 
-# -- Dashboard Viewer --
+def _dict_to_df(data: dict[str, Any] | None) -> pd.DataFrame:
+    """Convert a dict to a key-value DataFrame for Tabulator display."""
+    if not data:
+        return _EMPTY_KV_DF
+
+    rows = []
+    for k, v in data.items():
+        if k in ("raw", "step", "game_number"):
+            continue
+        val_str = str(v)
+        if len(val_str) > 80:
+            val_str = val_str[:77] + "..."
+        rows.append({"key": str(k), "value": val_str})
+
+    return pd.DataFrame(rows) if rows else _EMPTY_KV_DF
+
+
+def _make_kv_tabulator() -> pn.widgets.Tabulator:
+    """Create a reusable compact key-value Tabulator."""
+    return pn.widgets.Tabulator(
+        _EMPTY_KV_DF,
+        theme="fast",
+        show_index=False,
+        header_filters=False,
+        configuration={"headerVisible": False},
+        stylesheets=[COMPACT_CELL_CSS],
+        sizing_mode="stretch_width",
+        disabled=True,
+        pagination=None,
+    )
+
+
+def _filter_logs(
+    logs: list[dict[str, Any]] | None, min_level: str = "DEBUG",
+) -> pd.DataFrame:
+    """Filter logs by severity and return a DataFrame."""
+    if not logs:
+        return _EMPTY_LOG_DF
+
+    min_num = _LEVEL_NUMBERS.get(min_level, 0)
+    rows = []
+    for log in logs:
+        severity = log.get("severity_number")
+        if severity is not None and severity < min_num:
+            continue
+        level = log.get("severity_text", "?")
+        body = log.get("body", "")
+        rows.append({"level": level, "message": str(body)})
+
+    return pd.DataFrame(rows) if rows else _EMPTY_LOG_DF
+
+
+def _make_log_tabulator() -> pn.widgets.Tabulator:
+    """Create a reusable log Tabulator with severity formatting."""
+    level_fmt = HTMLTemplateFormatter(
+        template=(
+            '<% if (value === "ERROR") { %>'
+            '<span style="color:var(--panel-danger-color, #e74c3c);font-weight:600">'
+            "[<%= value %>]</span>"
+            '<% } else if (value === "WARN" || value === "WARNING") { %>'
+            '<span style="color:var(--panel-warning-color, #f39c12);font-weight:600">'
+            "[<%= value %>]</span>"
+            "<% } else { %>"
+            "<span>[<%= value %>]</span>"
+            "<% } %>"
+        )
+    )
+    msg_fmt = HTMLTemplateFormatter(
+        template=(
+            '<% if (level === "ERROR") { %>'
+            '<span style="color:var(--panel-danger-color, #e74c3c)"><%= value %></span>'
+            '<% } else if (level === "WARN" || level === "WARNING") { %>'
+            '<span style="color:var(--panel-warning-color, #f39c12)"><%= value %></span>'
+            "<% } else { %>"
+            "<span><%= value %></span>"
+            "<% } %>"
+        )
+    )
+
+    return pn.widgets.Tabulator(
+        _EMPTY_LOG_DF,
+        theme="fast",
+        show_index=False,
+        header_filters=False,
+        configuration={"headerVisible": False},
+        stylesheets=[COMPACT_CELL_CSS],
+        sizing_mode="stretch_width",
+        height=200,
+        disabled=True,
+        pagination=None,
+        formatters={"level": level_fmt, "message": msg_fmt},
+    )
+
+
+def _make_event_chart() -> tuple[pn.pane.Bokeh, Any]:
+    """Create a reusable Bokeh horizontal bar chart.
+
+    Returns the pn.pane.Bokeh wrapper and the Bokeh figure for data updates.
+    """
+    # Start with a placeholder -- will be replaced on first data update
+    placeholder_names = ["--"]
+    fig = figure(
+        y_range=FactorRange(*placeholder_names),
+        height=200,
+        width=300,
+        toolbar_location=None,
+    )
+    renderer = fig.hbar(y=placeholder_names, right=[0], height=0.6)
+    fig.xgrid.visible = False  # type: ignore[attr-defined]
+    fig.x_range = Range1d(start=0, end=1)
+    fig.min_border_left = 80
+    fig.min_border_right = 10
+    fig.min_border_top = 5
+    fig.min_border_bottom = 5
+
+    pane = pn.pane.Bokeh(fig, sizing_mode="stretch_width", height=200, theme="dark_minimal")
+    return pane, (fig, renderer)
 
 
 class PanelDashboard(Viewer):
-    """Compact dark-mode debug dashboard for ROC game state inspection.
+    """Debug dashboard for ROC game state inspection.
 
-    Uses Panel's Viewer pattern with param.Parameter fields for reactive state.
-    Delegates rendering to components in ``roc.reporting.components``.
+    Components are created once in __init__ and updated in place via
+    .value/.object property changes to avoid flicker during playback.
     """
 
     SPEEDS: list[tuple[str, int]] = [
@@ -247,12 +243,10 @@ class PanelDashboard(Viewer):
             visible_buttons=["first", "previous", "pause", "play", "next", "last"],
         )
 
-        self._speed_selector = pn.widgets.AutocompleteInput(
+        self._speed_selector = pn.widgets.Select(
             name="Speed",
             options=[label for label, _ in self.SPEEDS],
             value=self._DEFAULT_SPEED,
-            restrict=True,
-            min_characters=0,
             width=80,
         )
 
@@ -268,12 +262,10 @@ class PanelDashboard(Viewer):
 
         games_df = store.list_games()
         game_options: list[int] = list(games_df["game_number"]) if len(games_df) > 0 else [0]
-        self._game_selector = pn.widgets.AutocompleteInput(
+        self._game_selector = pn.widgets.Select(
             name="Game",
             options=[str(g) for g in game_options],
             value=str(game_options[0]) if game_options else "0",
-            restrict=True,
-            min_characters=0,
         )
 
         self._log_level_selector = pn.widgets.RadioButtonGroup(
@@ -284,22 +276,47 @@ class PanelDashboard(Viewer):
             button_style="outline",
         )
 
-        # -- Component instances --
-        self._screen_viewer = GridViewer(title="Screen")
-        self._saliency_viewer = GridViewer(title="Saliency")
+        # -- Persistent component instances (created once, updated in place) --
+        self._screen_viewer = GridViewer()
+        self._saliency_viewer = GridViewer()
+        self._info_pane = pn.pane.Str("", sizing_mode="stretch_width")
+
+        # Status indicators (created once, updated via .value)
+        self._hp_indicator = pn.indicators.Number(
+            name="HP", value=0, format="{value}", font_size="14pt", title_size="8pt",
+        )
+        self._score_indicator = pn.indicators.Number(
+            name="Score", value=0, font_size="14pt", title_size="8pt",
+        )
+        self._depth_indicator = pn.indicators.Number(
+            name="Depth", value=0, font_size="14pt", title_size="8pt",
+        )
+        self._gold_indicator = pn.indicators.Number(
+            name="Gold", value=0, font_size="14pt", title_size="8pt",
+        )
+        self._energy_indicator = pn.indicators.Number(
+            name="Energy", value=0, format="{value}", font_size="14pt", title_size="8pt",
+        )
+        self._hunger_indicator = pn.indicators.Number(
+            name="Hunger", value=0, font_size="14pt", title_size="8pt",
+        )
+
+        # KV tabulators (created once, updated via .value = new_df)
+        self._metrics_table = _make_kv_tabulator()
+        self._graph_table = _make_kv_tabulator()
+        self._features_table = _make_kv_tabulator()
+        self._attenuation_table = _make_kv_tabulator()
         self._resolution_inspector = ResolutionInspector()
 
-        # -- Simple panes (for data that updates via .object or component replacement) --
-        self._status_pane = pn.pane.HTML("", sizing_mode="stretch_width")
-        self._info_pane = pn.pane.HTML("", sizing_mode="stretch_width")
-        self._features_container = pn.Column(sizing_mode="stretch_width")
-        self._metrics_container = pn.Column(sizing_mode="stretch_width")
-        self._graph_container = pn.Column(sizing_mode="stretch_width")
-        self._events_container = pn.Column(sizing_mode="stretch_width")
-        self._logs_container = pn.Column(sizing_mode="stretch_width")
-        self._object_pane = pn.pane.HTML("", sizing_mode="stretch_width")
-        self._focus_pane = pn.pane.HTML("", sizing_mode="stretch_width")
-        self._attenuation_container = pn.Column(sizing_mode="stretch_width")
+        # Text panes for raw/variable data (updated via .object)
+        self._object_pane = pn.pane.Str("No object data", sizing_mode="stretch_width")
+        self._focus_pane = pn.pane.Str("No focus data", sizing_mode="stretch_width")
+
+        # Event bar chart (persistent Bokeh figure, updated via data source)
+        self._events_pane, self._events_chart_state = _make_event_chart()
+
+        # Log table (created once, updated via .value = new_df)
+        self._log_table = _make_log_tabulator()
 
         # -- Wire widgets to params --
         self._step_widget.param.watch(self._handle_step_widget, "value")
@@ -357,7 +374,7 @@ class PanelDashboard(Viewer):
     # -- Business logic --
 
     def _on_step_change(self, step: int) -> None:
-        """Fetch data for step and update all components."""
+        """Fetch data for step and update all components in place."""
         data = self._store.get_step_data(step)
         self._last_data = data
 
@@ -365,59 +382,100 @@ class PanelDashboard(Viewer):
         self._screen_viewer.grid_data = data.screen
         self._saliency_viewer.grid_data = data.saliency
 
-        # Resolution inspector (reactive via param)
-        self._resolution_inspector.decision = data.resolution_metrics
-
-        # Status bar (factory returns new pane)
-        self._status_pane.object = compact_status_bar(
-            data.game_metrics, step=data.step, game_number=data.game_number
-        ).object
-
         # Info line
         self._info_pane.object = (
-            f'<div style="font-size:11px;color:{TEXT_DIM};padding:2px 0;'
-            f'font-family:{FONT};">'
             f"Step {data.step} | Game {data.game_number} | "
-            f"{_format_timestamp(data.timestamp)}</div>"
+            f"{_format_timestamp(data.timestamp)}"
         )
 
-        # Tables and charts (replace container contents)
-        self._update_container(
-            self._features_container,
-            compact_kv_table(_parse_features(data.features), "feature")
-            if data.features
-            else pn.pane.HTML(no_data_html("feature")),
-        )
-        self._update_container(
-            self._metrics_container,
-            compact_kv_table(data.game_metrics, "game metrics"),
-        )
-        self._update_container(
-            self._graph_container,
-            compact_kv_table(data.graph_summary, "graph DB"),
-        )
-        self._update_container(
-            self._events_container,
-            event_bar_chart(_parse_events(data.event_summary))
-            if data.event_summary
-            else pn.pane.HTML(no_data_html("event")),
-        )
-        self._update_container(
-            self._attenuation_container,
-            compact_kv_table(data.attenuation, "attenuation"),
-        )
+        # Status indicators (update .value in place)
+        metrics = data.game_metrics
+        if metrics:
+            hp = metrics.get("hp", 0)
+            hp_max = metrics.get("hp_max", 1)
+            self._hp_indicator.name = "HP"
+            self._hp_indicator.value = int(hp) if isinstance(hp, (int, float)) else 0
+            self._hp_indicator.format = f"{{value}}/{hp_max}"
+            self._hp_indicator.colors = [
+                (int(hp_max * 0.25), "danger"),
+                (int(hp_max * 0.5), "warning"),
+                (int(hp_max) + 1, "success"),
+            ]
+            self._score_indicator.name = "Score"
+            self._score_indicator.value = int(metrics.get("score", 0))
+            self._depth_indicator.name = "Depth"
+            self._depth_indicator.value = int(metrics.get("depth", 0))
+            self._gold_indicator.name = "Gold"
+            self._gold_indicator.value = int(metrics.get("gold", 0))
+            energy = metrics.get("energy", 0)
+            energy_max = metrics.get("energy_max", 1)
+            self._energy_indicator.name = "Energy"
+            self._energy_indicator.value = int(energy) if isinstance(energy, (int, float)) else 0
+            self._energy_indicator.format = f"{{value}}/{energy_max}"
+            hunger = metrics.get("hunger", 0)
+            self._hunger_indicator.value = int(hunger) if isinstance(hunger, (int, float)) else 0
+        else:
+            # Fallback: show step/game when no game metrics available
+            self._hp_indicator.name = "Step"
+            self._hp_indicator.value = data.step
+            self._hp_indicator.format = "{value}"
+            self._hp_indicator.colors = []
+            self._score_indicator.name = "Game"
+            self._score_indicator.value = data.game_number
+            self._depth_indicator.name = ""
+            self._depth_indicator.value = 0
+            self._gold_indicator.name = ""
+            self._gold_indicator.value = 0
+            self._energy_indicator.name = ""
+            self._energy_indicator.value = 0
+            self._energy_indicator.format = "{value}"
+            self._hunger_indicator.value = 0
 
-        # Object info (still HTML -- mixed raw/dict format)
-        self._object_pane.object = self._render_object(data)
-
-        # Focus points (still HTML -- DataFrame string format)
-        self._focus_pane.object = self._render_focus(data)
-
-        # Logs
-        self._update_container(
-            self._logs_container,
-            compact_log_table(data.logs, self._log_level_selector.value),
+        # KV tables (update DataFrame in place)
+        self._metrics_table.value = _dict_to_df(data.game_metrics)
+        self._graph_table.value = _dict_to_df(data.graph_summary)
+        self._features_table.value = _dict_to_df(
+            _parse_features(data.features) if data.features else None
         )
+        self._attenuation_table.value = _dict_to_df(data.attenuation)
+        self._resolution_inspector.decision = data.resolution_metrics
+
+        # Object info (text, update .object)
+        if data.object_info:
+            parts = []
+            for item in data.object_info:
+                if isinstance(item.get("raw"), str):
+                    parts.append(str(item["raw"]).strip())
+                else:
+                    for k, v in item.items():
+                        if k not in ("step", "game_number"):
+                            parts.append(f"{k}: {v}")
+            self._object_pane.object = "\n".join(parts) if parts else "No object data"
+        else:
+            self._object_pane.object = "No object data"
+
+        # Focus points (text, update .object)
+        if data.focus_points:
+            parts = []
+            for item in data.focus_points:
+                if isinstance(item.get("raw"), str):
+                    parts.append(str(item["raw"]).strip())
+                else:
+                    for k, v in item.items():
+                        if k not in ("step", "game_number"):
+                            parts.append(f"{k}: {v}")
+            self._focus_pane.object = "\n".join(parts) if parts else "No focus data"
+        else:
+            self._focus_pane.object = "No focus data"
+
+        # Event bar chart (update Bokeh data source in place)
+        if data.event_summary:
+            event_data = _parse_events(data.event_summary)
+            if event_data:
+                self._update_event_chart(event_data)
+
+        # Log table (update DataFrame in place)
+        self._log_table.value = _filter_logs(data.logs, self._log_level_selector.value)
 
         # Sync game selector
         game_str = str(data.game_number)
@@ -426,14 +484,36 @@ class PanelDashboard(Viewer):
             self._game_selector.value = game_str
             self._updating_game = False
 
+    def _update_event_chart(self, event_data: dict[str, int]) -> None:
+        """Update the Bokeh bar chart data source in place."""
+        fig, renderer = self._events_chart_state
+        names = list(event_data.keys())
+        counts = list(event_data.values())
+
+        # Update the data source
+        renderer.data_source.data = {"y": names, "right": counts}
+
+        # Update the y_range factors
+        fig.y_range.factors = names
+
+        # Update x_range
+        max_count = max(counts) if counts else 1
+        fig.x_range = Range1d(start=0, end=max_count * 1.1)
+
+        # Update chart height
+        chart_height = max(len(names) * 25, 80)
+        fig.height = chart_height
+        self._events_pane.height = chart_height
+
     def _on_log_level_change(self) -> None:
+        """Re-filter logs with new severity level."""
         if self._last_data is not None:
-            self._update_container(
-                self._logs_container,
-                compact_log_table(self._last_data.logs, self._log_level_selector.value),
+            self._log_table.value = _filter_logs(
+                self._last_data.logs, self._log_level_selector.value,
             )
 
     def _on_run_change(self, run_name: str) -> None:
+        """Switch to a different run directory."""
         run_dir = self._data_dir / run_name
         self._store = RunStore(run_dir)
         games_df = self._store.list_games()
@@ -446,12 +526,14 @@ class PanelDashboard(Viewer):
         self._step_widget.value = max(min_step, 1)
 
     def _on_speed_change(self, event: object) -> None:
+        """Update player interval from speed label."""
         label = getattr(event, "new", self._DEFAULT_SPEED)
         self._step_widget.interval = self._speed_to_interval.get(
             label, self._speed_to_interval[self._DEFAULT_SPEED]
         )
 
     def _on_game_change(self, game_number: int) -> None:
+        """Jump to the first step of a game."""
         if self._updating_game:
             return
         try:
@@ -465,192 +547,111 @@ class PanelDashboard(Viewer):
         except Exception:
             pass
 
-    # -- Render helpers for data that still needs custom HTML --
-
-    @staticmethod
-    def _render_object(data: StepData) -> str:
-        if data.object_info is None:
-            return no_data_html("object resolution")
-        parts: list[str] = []
-        for item in data.object_info:
-            if "raw" in item:
-                parts.append(_preformatted_html(str(item["raw"])))
-            else:
-                for k, v in item.items():
-                    if k not in ("step", "game_number"):
-                        val = str(v)[:77] + "..." if len(str(v)) > 80 else str(v)
-                        parts.append(
-                            f'<div style="display:flex;justify-content:space-between;'
-                            f'padding:1px 0;font-size:11px;font-family:{FONT};max-width:320px;">'
-                            f'<span style="color:{TEXT_DIM};margin-right:8px;">'
-                            f"{html_mod.escape(str(k))}</span>"
-                            f'<span style="color:{TEXT};font-weight:500;">'
-                            f"{html_mod.escape(val)}</span></div>"
-                        )
-        return (
-            f'<div style="font-family:{FONT};font-size:11px;color:{TEXT};'
-            f'line-height:1.5;">{"".join(parts)}</div>'
-            if parts
-            else no_data_html("object resolution")
-        )
-
-    @staticmethod
-    def _render_focus(data: StepData) -> str:
-        if data.focus_points is None:
-            return no_data_html("focus point")
-        parts: list[str] = []
-        for item in data.focus_points:
-            if "raw" in item:
-                parts.append(_preformatted_html(str(item["raw"])))
-            else:
-                for k, v in item.items():
-                    if k not in ("step", "game_number"):
-                        val = str(v)[:77] + "..." if len(str(v)) > 80 else str(v)
-                        parts.append(
-                            f'<div style="display:flex;justify-content:space-between;'
-                            f'padding:1px 0;font-size:11px;font-family:{FONT};max-width:320px;">'
-                            f'<span style="color:{TEXT_DIM};margin-right:8px;">'
-                            f"{html_mod.escape(str(k))}</span>"
-                            f'<span style="color:{TEXT};font-weight:500;">'
-                            f"{html_mod.escape(val)}</span></div>"
-                        )
-        return (
-            f'<div style="font-family:{FONT};font-size:11px;color:{TEXT};'
-            f'line-height:1.5;">{"".join(parts)}</div>'
-            if parts
-            else no_data_html("focus point")
-        )
-
-    @staticmethod
-    def _update_container(container: pn.Column, component: Any) -> None:
-        """Replace a container's contents with a new component."""
-        container.clear()
-        container.append(component)
-
     # -- Layout --
 
-    @staticmethod
-    def _card(
-        title: str,
-        *objects: Any,
-        collapsed: bool = False,
-    ) -> pn.Card:
-        return pn.Card(
-            *objects,
-            title=title,
-            collapsible=True,
-            collapsed=collapsed,
-            sizing_mode="stretch_width",
-            header_background=SURFACE_EL,
-            header_color=TEXT,
-            active_header_background=SURFACE_EL,
-            styles={
-                "background": SURFACE,
-                "border": f"1px solid {BORDER}",
-                "border-radius": "4px",
-                "margin-bottom": "2px",
-                "padding": "4px",
-            },
-        )
-
     def __panel__(self) -> pn.Column:
+        """Build the dashboard layout."""
         controls = pn.Row(
             self._run_selector,
             self._game_selector,
             self._speed_selector,
             sizing_mode="stretch_width",
-            styles={"gap": "8px"},
         )
 
-        def _titled(title: str, content: Any) -> pn.Column:
-            return pn.Column(
-                pn.pane.HTML(title_html(title)),
-                content,
-                sizing_mode="stretch_width",
-                styles={"gap": "0px"},
-            )
-
-        # Game State (expanded)
-        game_state_card = self._card(
-            "Game State",
-            pn.Row(
-                self._screen_viewer,
-                pn.Column(
-                    _titled("Vitals", self._metrics_container),
-                    _titled("Graph DB", self._graph_container),
-                    _titled("Events", self._events_container),
-                    sizing_mode="stretch_width",
-                    styles={"gap": "2px"},
-                ),
-                sizing_mode="stretch_width",
-                styles={"gap": "4px"},
-            ),
-            collapsed=False,
+        status_row = pn.Row(
+            self._hp_indicator,
+            self._score_indicator,
+            self._depth_indicator,
+            self._gold_indicator,
+            self._energy_indicator,
+            self._hunger_indicator,
+            sizing_mode="stretch_width",
         )
 
-        # Perception (collapsed)
-        perception_card = self._card(
-            "Perception",
-            _titled("Features", self._features_container),
-            collapsed=True,
-        )
-
-        # Attention (collapsed)
-        attention_card = self._card(
-            "Attention",
-            pn.Row(
-                self._saliency_viewer,
-                pn.Column(
-                    _titled("Focus Points", self._focus_pane),
-                    _titled("Attenuation", self._attenuation_container),
-                    sizing_mode="stretch_width",
-                    styles={"gap": "2px"},
-                ),
-                sizing_mode="stretch_width",
-                styles={"gap": "4px"},
-            ),
-            collapsed=True,
-        )
-
-        # Object Resolution (collapsed)
-        object_card = self._card(
-            "Object Resolution",
-            pn.Row(
-                _titled("Decision", self._object_pane),
-                _titled("Resolution", self._resolution_inspector),
-                sizing_mode="stretch_width",
-                styles={"gap": "4px"},
-            ),
-            collapsed=True,
-        )
-
-        # Log Messages (collapsed)
-        log_card = self._card(
-            "Log Messages",
-            pn.Row(self._log_level_selector),
-            self._logs_container,
-            collapsed=True,
-        )
-
-        # Sticky transport bar
         transport_bar = pn.Column(
             controls,
             self._step_widget,
             pn.Row(
                 self._info_pane,
-                self._status_pane,
+                status_row,
                 sizing_mode="stretch_width",
-                styles={"gap": "4px"},
             ),
             sizing_mode="stretch_width",
-            styles={
-                "position": "sticky",
-                "top": "0",
-                "z-index": "100",
-                "background": BG,
-                "padding": "4px",
-                "border-bottom": f"1px solid {BORDER}",
-            },
+        )
+
+        game_state_card = pn.Card(
+            pn.Row(
+                self._screen_viewer,
+                pn.Column(
+                    pn.pane.Markdown("**Vitals**"),
+                    self._metrics_table,
+                    pn.pane.Markdown("**Graph DB**"),
+                    self._graph_table,
+                    pn.pane.Markdown("**Events**"),
+                    self._events_pane,
+                    sizing_mode="stretch_width",
+                ),
+                sizing_mode="stretch_width",
+            ),
+            title="Game State",
+            collapsible=True,
+            collapsed=False,
+            sizing_mode="stretch_width",
+        )
+
+        perception_card = pn.Card(
+            self._features_table,
+            title="Perception",
+            collapsible=True,
+            collapsed=True,
+            sizing_mode="stretch_width",
+        )
+
+        attention_card = pn.Card(
+            pn.Row(
+                self._saliency_viewer,
+                pn.Column(
+                    pn.pane.Markdown("**Focus Points**"),
+                    self._focus_pane,
+                    pn.pane.Markdown("**Attenuation**"),
+                    self._attenuation_table,
+                    sizing_mode="stretch_width",
+                ),
+                sizing_mode="stretch_width",
+            ),
+            title="Attention",
+            collapsible=True,
+            collapsed=True,
+            sizing_mode="stretch_width",
+        )
+
+        object_card = pn.Card(
+            pn.Row(
+                pn.Column(
+                    pn.pane.Markdown("**Object Info**"),
+                    self._object_pane,
+                    sizing_mode="stretch_width",
+                ),
+                pn.Column(
+                    pn.pane.Markdown("**Resolution**"),
+                    self._resolution_inspector,
+                    sizing_mode="stretch_width",
+                ),
+                sizing_mode="stretch_width",
+            ),
+            title="Object Resolution",
+            collapsible=True,
+            collapsed=True,
+            sizing_mode="stretch_width",
+        )
+
+        log_card = pn.Card(
+            pn.Row(self._log_level_selector),
+            self._log_table,
+            title="Log Messages",
+            collapsible=True,
+            collapsed=True,
+            sizing_mode="stretch_width",
         )
 
         return pn.Column(
@@ -661,13 +662,12 @@ class PanelDashboard(Viewer):
             object_card,
             log_card,
             sizing_mode="stretch_width",
-            styles={"gap": "2px", "background": BG, "padding": "0 4px 40px 4px"},
         )
 
 
 def main() -> None:
     """Entry point for the panel-debug command."""
-    pn.extension(raw_css=[_GLOBAL_CSS])
+    pn.extension("tabulator")
 
     parser = argparse.ArgumentParser(description="ROC Panel Debug Dashboard")
     parser.add_argument("--run", type=str, default=None, help="Run directory name")
@@ -696,11 +696,7 @@ def main() -> None:
     template = pn.template.FastListTemplate(
         title="ROC Debug Dashboard",
         theme="dark",
-        accent_base_color=ACCENT,
-        header_background=SURFACE_EL,
-        background_color=BG,
         main=[dashboard],
-        raw_css=[_GLOBAL_CSS],
     )
 
     serve_kwargs: dict[str, object] = {
