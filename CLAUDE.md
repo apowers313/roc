@@ -179,6 +179,16 @@ roc_graphdb_flush=true     # Flush cache to Memgraph on game end
 4. **Need aggregate metrics across runs?** -> Grafana MCP (#4)
 5. **Quick sanity check?** -> Loguru terminal output (#5)
 
+## Panel Dashboard
+
+The debug dashboard (`roc/reporting/`) uses HoloViz Panel. When writing or modifying Panel code, follow the best practices in `design/panel-best-practices.md`. Key rules:
+
+- Use Panel's design system (`design=`, `theme=`, `--design-*` CSS variables) instead of global CSS overrides
+- Use `pn.indicators.*` (Number, Trend, Gauge) instead of raw HTML badges
+- Use `pn.pane.Markdown`/`pn.pane.Str` instead of `pn.pane.HTML` with inline-styled strings
+- Use Tabulator built-in themes + scoped `stylesheets=` instead of global `.bk-*` overrides
+- Never use `!important` to override Panel/Bokeh internal CSS classes
+
 ## Testing Notes
 
 - Tests use fixtures from `conftest.py` for clearing caches, restoring registries, and creating test components
