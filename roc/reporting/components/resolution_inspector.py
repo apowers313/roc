@@ -131,8 +131,7 @@ class ResolutionInspector(Viewer):
         dists = d.get("candidate_distances")
         if dists and isinstance(dists, list):
             rows = [
-                {"object": str(obj_id), "distance": round(float(dist), 4)}
-                for obj_id, dist in dists
+                {"object": str(obj_id), "distance": round(float(dist), 4)} for obj_id, dist in dists
             ]
             if rows:
                 return pd.DataFrame(rows)

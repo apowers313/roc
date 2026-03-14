@@ -109,7 +109,8 @@ def _make_kv_tabulator() -> pn.widgets.Tabulator:
 
 
 def _filter_logs(
-    logs: list[dict[str, Any]] | None, min_level: str = "DEBUG",
+    logs: list[dict[str, Any]] | None,
+    min_level: str = "DEBUG",
 ) -> pd.DataFrame:
     """Filter logs by severity and return a DataFrame."""
     if not logs:
@@ -283,22 +284,42 @@ class PanelDashboard(Viewer):
 
         # Status indicators (created once, updated via .value)
         self._hp_indicator = pn.indicators.Number(
-            name="HP", value=0, format="{value}", font_size="14pt", title_size="8pt",
+            name="HP",
+            value=0,
+            format="{value}",
+            font_size="14pt",
+            title_size="8pt",
         )
         self._score_indicator = pn.indicators.Number(
-            name="Score", value=0, font_size="14pt", title_size="8pt",
+            name="Score",
+            value=0,
+            font_size="14pt",
+            title_size="8pt",
         )
         self._depth_indicator = pn.indicators.Number(
-            name="Depth", value=0, font_size="14pt", title_size="8pt",
+            name="Depth",
+            value=0,
+            font_size="14pt",
+            title_size="8pt",
         )
         self._gold_indicator = pn.indicators.Number(
-            name="Gold", value=0, font_size="14pt", title_size="8pt",
+            name="Gold",
+            value=0,
+            font_size="14pt",
+            title_size="8pt",
         )
         self._energy_indicator = pn.indicators.Number(
-            name="Energy", value=0, format="{value}", font_size="14pt", title_size="8pt",
+            name="Energy",
+            value=0,
+            format="{value}",
+            font_size="14pt",
+            title_size="8pt",
         )
         self._hunger_indicator = pn.indicators.Number(
-            name="Hunger", value=0, font_size="14pt", title_size="8pt",
+            name="Hunger",
+            value=0,
+            font_size="14pt",
+            title_size="8pt",
         )
 
         # KV tabulators (created once, updated via .value = new_df)
@@ -384,8 +405,7 @@ class PanelDashboard(Viewer):
 
         # Info line
         self._info_pane.object = (
-            f"Step {data.step} | Game {data.game_number} | "
-            f"{_format_timestamp(data.timestamp)}"
+            f"Step {data.step} | Game {data.game_number} | {_format_timestamp(data.timestamp)}"
         )
 
         # Status indicators (update .value in place)
@@ -509,7 +529,8 @@ class PanelDashboard(Viewer):
         """Re-filter logs with new severity level."""
         if self._last_data is not None:
             self._log_table.value = _filter_logs(
-                self._last_data.logs, self._log_level_selector.value,
+                self._last_data.logs,
+                self._log_level_selector.value,
             )
 
     def _on_run_change(self, run_name: str) -> None:
