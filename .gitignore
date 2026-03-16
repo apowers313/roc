@@ -37,3 +37,8 @@ site/
 
 # playwright MCP
 .playwright-mcp/
+# W&B local run data
+wandb/
+
+# Graph exports
+*.gml
