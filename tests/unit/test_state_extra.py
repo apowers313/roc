@@ -128,9 +128,12 @@ class TestEdgeCacheGauge:
 
 class TestEmitStateLogsExtra:
     def test_emit_state_logs_with_saliency(self):
+        from roc.config import Config
         from roc.event import Event
         from roc.reporting.state import State, states
 
+        cfg = Config.get()
+        cfg.emit_state_saliency = True
         Event._step_counts.clear()
         mock_sal = MagicMock()
         mock_sal.feature_report.return_value = {"feat1": 0.5}

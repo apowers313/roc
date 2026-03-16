@@ -374,9 +374,12 @@ class TestEmitStateLogs:
     def test_emit_state_logs_with_screen(self):
         import json
 
+        from roc.config import Config
         from roc.event import Event
         from roc.reporting.state import State, states
 
+        cfg = Config.get()
+        cfg.emit_state_screen = True
         Event._step_counts.clear()
         states.screen.val = {"chars": np.array([[65, 66]]), "colors": np.array([[7, 7]])}
         states.salency.val = None

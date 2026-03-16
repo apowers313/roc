@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from helpers.otel import make_log_record
 
+from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.parquet_exporter import ParquetExporter
 from roc.reporting.run_store import RunStore, StepData
 
@@ -15,7 +16,8 @@ from roc.reporting.run_store import RunStore, StepData
 @pytest.fixture()
 def populated_run_dir(tmp_path: Path) -> Path:
     """Create a run directory with known test data using ParquetExporter."""
-    exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+    store = DuckLakeStore(tmp_path)
+    exporter = ParquetExporter(store=store, background=False)
 
     # Game 1: steps 1-10
     exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
@@ -94,17 +96,12 @@ class TestListGames:
 class TestListRuns:
     def test_list_runs_finds_directories(self, tmp_path: Path):
         # Create two valid run dirs
-        run1 = tmp_path / "run-1"
-        run1.mkdir()
-        exporter1 = ParquetExporter(run_dir=run1, flush_interval=1)
-        exporter1.export([make_log_record(event_name="roc.screen", body="x")])
-        exporter1.shutdown()
-
-        run2 = tmp_path / "run-2"
-        run2.mkdir()
-        exporter2 = ParquetExporter(run_dir=run2, flush_interval=1)
-        exporter2.export([make_log_record(event_name="roc.screen", body="x")])
-        exporter2.shutdown()
+        for name in ["run-1", "run-2"]:
+            run_dir = tmp_path / name
+            store = DuckLakeStore(run_dir)
+            exporter = ParquetExporter(store=store, background=False)
+            exporter.export([make_log_record(event_name="roc.screen", body="x")])
+            exporter.shutdown()
 
         runs = RunStore.list_runs(tmp_path)
         assert len(runs) == 2
@@ -114,15 +111,14 @@ class TestListRuns:
     def test_list_runs_ignores_incomplete(self, tmp_path: Path):
         # Valid run
         valid = tmp_path / "valid-run"
-        valid.mkdir()
-        exporter = ParquetExporter(run_dir=valid, flush_interval=1)
+        store = DuckLakeStore(valid)
+        exporter = ParquetExporter(store=store, background=False)
         exporter.export([make_log_record(event_name="roc.screen", body="x")])
         exporter.shutdown()
 
-        # Incomplete run (no screens.parquet)
+        # Incomplete run (no catalog.sqlite)
         incomplete = tmp_path / "incomplete-run"
         incomplete.mkdir()
-        (incomplete / "events.parquet").touch()
 
         runs = RunStore.list_runs(tmp_path)
         assert runs == ["valid-run"]
@@ -141,11 +137,12 @@ class TestGetStepData:
 
     def test_get_step_data_handles_missing_tables(self, tmp_path: Path):
         # Create a run with only screens
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
         exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
         exporter.shutdown()
 
-        store = RunStore(tmp_path)
+        store = RunStore(dl_store)
         sd = store.get_step_data(1)
         assert sd.screen is not None
         assert sd.saliency is None
@@ -182,9 +179,8 @@ class TestEdgeCases:
         sd = store.get_step_data(1)
         assert sd.logs is not None
 
-    def test_reload_is_noop(self, populated_run_dir: Path):
+    def test_step_count_stable(self, populated_run_dir: Path):
         store = RunStore(populated_run_dir)
-        store.reload()  # should not raise
         assert store.step_count() == 15
 
 

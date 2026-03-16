@@ -1,7 +1,8 @@
-"""DuckDB-based query layer over Parquet files produced by ParquetExporter."""
+"""Query layer for ROC run data stored as DuckLake-managed Parquet files."""
 
 from __future__ import annotations
 
+import glob as globmod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
@@ -9,10 +10,12 @@ from typing import Any, cast
 import duckdb
 import pandas as pd
 
+from roc.reporting.ducklake_store import DuckLakeStore
+
 
 @dataclass
 class StepData:
-    """All data for a single step, assembled from multiple Parquet sources."""
+    """All data for a single step, assembled from multiple tables."""
 
     step: int
     game_number: int
@@ -31,141 +34,140 @@ class StepData:
 
 
 class RunStore:
-    """Query Parquet files for a single run via DuckDB.
+    """Read-only query layer over DuckLake-managed Parquet files.
 
-    Each instance connects to an in-memory DuckDB database and queries
-    Parquet files on disk directly. DuckDB reads fresh data on each query,
-    so no explicit reload is needed.
+    Uses a standalone DuckDB connection to read Parquet files directly
+    from the ``data/main/<table>/`` directories.  Does not open the
+    DuckLake SQLite catalog, so it never conflicts with the writer.
+
+    Can also accept a ``DuckLakeStore`` for in-process use (tests).
     """
 
-    #: Parquet files that map to named tables.
     _TABLES = ("screens", "saliency", "events", "logs", "metrics")
 
-    def __init__(self, run_dir: Path) -> None:
-        self.run_dir = run_dir
-        self._conn = duckdb.connect(":memory:")
+    def __init__(self, store_or_dir: DuckLakeStore | Path) -> None:
+        if isinstance(store_or_dir, DuckLakeStore):
+            # In-process mode (tests): query through the shared store
+            self._store: DuckLakeStore | None = store_or_dir
+            self._conn: duckdb.DuckDBPyConnection | None = None
+            self.run_dir = store_or_dir.run_dir
+        else:
+            # Reader mode (dashboard): direct Parquet reads, no catalog
+            self._store = None
+            self._conn = duckdb.connect()
+            self.run_dir = store_or_dir
+        self._last_max_step: int = 0
+        self._refresh_max_step()
+
+    def _table_glob(self, table: str) -> str:
+        """Glob pattern for a table's Parquet files."""
+        return str(self.run_dir / "data" / "main" / table / "*.parquet")
+
+    def _has_table(self, table: str) -> bool:
+        """Check if any Parquet files exist for a table."""
+        if self._store is not None:
+            return self._store.has_table(table)
+        return bool(globmod.glob(self._table_glob(table)))
+
+    def _query(self, sql: str, params: list[Any] | None = None) -> duckdb.DuckDBPyConnection:
+        """Execute a query via the appropriate connection."""
+        if self._store is not None:
+            return self._store.execute(sql, params)
+        if params:
+            return self._conn.execute(sql, params)  # type: ignore[union-attr]
+        return self._conn.execute(sql)  # type: ignore[union-attr]
+
+    def _read_sql(self, table: str) -> str:
+        """SQL fragment to read a table's data."""
+        if self._store is not None:
+            return f'lake."{table}"'
+        return f"read_parquet('{self._table_glob(table)}', union_by_name=true)"
 
     def get_step(self, step: int, table: str) -> pd.DataFrame:
-        """Return all rows for a given step from the specified table.
-
-        Args:
-            step: The step number to query.
-            table: The Parquet file name (without extension).
-
-        Returns:
-            DataFrame with matching rows, or an empty DataFrame if the
-            file does not exist or the step is not found.
-        """
-        path = self.run_dir / f"{table}.parquet"
-        if not path.exists():
+        """Return all rows for a given step from the specified table."""
+        if not self._has_table(table):
             return pd.DataFrame()
-        return self._conn.execute(
-            "SELECT * FROM read_parquet(?) WHERE step = ?",
-            [str(path), step],
-        ).fetchdf()
+        try:
+            src = self._read_sql(table)
+            return self._query(f"SELECT * FROM {src} WHERE step = ?", [step]).fetchdf()
+        except (duckdb.CatalogException, duckdb.InvalidInputException):
+            return pd.DataFrame()
+
+    def _step_table(self) -> str | None:
+        """Return the best available table for step queries.
+
+        Prefers ``screens``, falls back to ``metrics`` so that historical
+        review works even when ``emit_state_screen=False``.
+        """
+        for table in ("screens", "metrics"):
+            if self._has_table(table):
+                return table
+        return None
 
     def step_count(self, game_number: int | None = None) -> int:
-        """Return the total number of steps, optionally filtered by game.
-
-        Args:
-            game_number: If provided, count only steps for this game.
-
-        Returns:
-            The number of distinct steps.
-        """
-        path = self.run_dir / "screens.parquet"
-        if not path.exists():
+        """Return the total number of steps, optionally filtered by game."""
+        table = self._step_table()
+        if table is None:
             return 0
+        src = self._read_sql(table)
         if game_number is not None:
-            result = self._conn.execute(
-                "SELECT COUNT(*) FROM read_parquet(?) WHERE game_number = ?",
-                [str(path), game_number],
+            result = self._query(
+                f"SELECT COUNT(*) FROM {src} WHERE game_number = ?",
+                [game_number],
             ).fetchone()
         else:
-            result = self._conn.execute(
-                "SELECT MAX(step) FROM read_parquet(?)",
-                [str(path)],
-            ).fetchone()
+            result = self._query(f"SELECT MAX(step) FROM {src}").fetchone()
         return result[0] if result and result[0] is not None else 0
 
     def step_range(self, game_number: int | None = None) -> tuple[int, int]:
-        """Return the (min, max) step for a game or the whole run.
-
-        Args:
-            game_number: If provided, scope to this game.
-
-        Returns:
-            Tuple of (min_step, max_step).
-        """
-        path = self.run_dir / "screens.parquet"
-        if not path.exists():
+        """Return the (min, max) step for a game or the whole run."""
+        table = self._step_table()
+        if table is None:
             return (0, 0)
+        src = self._read_sql(table)
         if game_number is not None:
-            result = self._conn.execute(
-                "SELECT MIN(step), MAX(step) FROM read_parquet(?) WHERE game_number = ?",
-                [str(path), game_number],
+            result = self._query(
+                f"SELECT MIN(step), MAX(step) FROM {src} WHERE game_number = ?",
+                [game_number],
             ).fetchone()
         else:
-            result = self._conn.execute(
-                "SELECT MIN(step), MAX(step) FROM read_parquet(?)",
-                [str(path)],
-            ).fetchone()
+            result = self._query(f"SELECT MIN(step), MAX(step) FROM {src}").fetchone()
         if result and result[0] is not None:
             return (result[0], result[1])
         return (0, 0)
 
     def list_games(self) -> pd.DataFrame:
-        """Return a summary DataFrame of all games in the run.
-
-        Columns: game_number, steps, start_ts, end_ts.
-        """
-        path = self.run_dir / "screens.parquet"
-        if not path.exists():
+        """Return a summary DataFrame of all games in the run."""
+        table = self._step_table()
+        if table is None:
             return pd.DataFrame(columns=["game_number", "steps", "start_ts", "end_ts"])
-        return self._conn.execute(
-            """
+        src = self._read_sql(table)
+        return self._query(
+            f"""
             SELECT
                 game_number,
                 COUNT(*) AS steps,
                 MIN(timestamp) AS start_ts,
                 MAX(timestamp) AS end_ts
-            FROM read_parquet(?)
+            FROM {src}
             GROUP BY game_number
             ORDER BY game_number
             """,
-            [str(path)],
         ).fetchdf()
 
     @staticmethod
     def list_runs(data_dir: Path) -> list[str]:
-        """Scan a data directory for valid run directories.
-
-        A directory is considered a valid run if it contains ``screens.parquet``.
-
-        Args:
-            data_dir: The parent directory containing run directories.
-
-        Returns:
-            Sorted list of run directory names.
-        """
+        """Scan a data directory for valid run directories."""
         runs: list[str] = []
         if not data_dir.exists():
             return runs
         for child in sorted(data_dir.iterdir()):
-            if child.is_dir() and (child / "screens.parquet").exists():
+            if child.is_dir() and DuckLakeStore.is_valid_run(child):
                 runs.append(child.name)
         return runs
 
     def get_step_data(self, step: int) -> StepData:
-        """Assemble all available data for a single step.
-
-        Args:
-            step: The step number to query.
-
-        Returns:
-            A StepData instance with fields populated from available Parquet files.
-        """
-        # Get screen data
+        """Assemble all available data for a single step."""
         screen_df = self.get_step(step, "screens")
         screen = None
         game_number = 0
@@ -176,13 +178,11 @@ class RunStore:
             game_number = int(row["game_number"])
             timestamp = row.get("timestamp")
 
-        # Get saliency data
         sal_df = self.get_step(step, "saliency")
         saliency = None
         if len(sal_df) > 0:
             saliency = _parse_body(sal_df.iloc[0].get("body"))
 
-        # Get events for this step -- route by event.name to specific fields
         events_df = self.get_step(step, "events")
         features = None
         object_info = None
@@ -215,8 +215,6 @@ class RunStore:
                         body if body is not None else {"raw": row_dict.get("body", "")}
                     )
                 elif event_name == "roc.saliency_attenuation":
-                    # Strip large nested fields (saliency_grid is already in
-                    # saliency.parquet; focus_points/history are verbose lists)
                     if body is not None:
                         attenuation = {
                             k: v
@@ -239,13 +237,11 @@ class RunStore:
             if event_list:
                 event_summary = event_list
 
-        # Get game metrics for this step
         game_metrics = None
         metrics_df = self.get_step(step, "metrics")
         if len(metrics_df) > 0:
             game_metrics = _parse_body(metrics_df.iloc[0].get("body"))
 
-        # Get logs for this step
         logs_df = self.get_step(step, "logs")
         logs = None
         if len(logs_df) > 0:
@@ -268,8 +264,16 @@ class RunStore:
             logs=logs,
         )
 
-    def reload(self) -> None:
-        """No-op -- DuckDB reads fresh data on each query."""
+    def _refresh_max_step(self) -> None:
+        """Update the cached max step value."""
+        try:
+            if not self._has_table("screens"):
+                return
+            src = self._read_sql("screens")
+            result = self._query(f"SELECT MAX(step) FROM {src}").fetchone()
+            self._last_max_step = result[0] if result and result[0] is not None else 0
+        except Exception:
+            pass
 
 
 def _parse_body(body: str | None) -> dict[str, Any] | None:

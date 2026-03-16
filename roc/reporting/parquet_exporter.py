@@ -1,107 +1,145 @@
-"""OTel log exporter that writes records to Parquet files partitioned by event type."""
+"""OTel log exporter that writes records to DuckLake via background thread."""
 
 from __future__ import annotations
 
+import threading
 from collections import defaultdict
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 
-import pyarrow as pa
-import pyarrow.parquet as pq
 from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
+
+from roc.reporting.ducklake_store import DuckLakeStore
 
 
 class ParquetExporter(LogExporter):
-    """Write OTel log records to Parquet files, partitioned by event type.
+    """Route OTel log records to DuckLake tables.
 
-    Records are buffered in memory and flushed to disk either when the number
-    of steps since the last flush reaches ``flush_interval``, or on shutdown.
+    ``export()`` converts records to dicts, routes them by event name,
+    and queues them for a background thread that does the DuckLake INSERT.
+    The game loop never blocks on database writes.
 
-    Buffer routing rules:
-        - ``roc.screen`` -> ``screens.parquet``
-        - ``roc.attention.saliency`` -> ``saliency.parquet``
-        - other named events -> ``events.parquet``
-        - unnamed (loguru) -> ``logs.parquet``
+    Pass ``background=False`` (used by tests) to write synchronously
+    in ``export()`` instead of queuing.
+
+    Routing rules:
+        - ``roc.screen`` -> ``screens``
+        - ``roc.attention.saliency`` -> ``saliency``
+        - ``roc.game_metrics`` -> ``metrics``
+        - other named events -> ``events``
+        - unnamed (loguru) -> ``logs``
     """
 
-    def __init__(self, run_dir: Path, flush_interval: int = 100) -> None:
-        self.run_dir = run_dir
-        self._buffers: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    def __init__(self, store: DuckLakeStore, *, background: bool = True) -> None:
+        self._store = store
+        self.run_dir = store.run_dir
         self._step_counter = 0
+        self._step_incremented = False
         self._game_counter = 0
-        self._flush_interval = flush_interval
-        self._steps_since_flush = 0
+
+        # Queue: list of (table_name, record_dict) tuples
+        self._queue: list[tuple[str, dict[str, Any]]] = []
+        self._lock = threading.Lock()
+        self._data_ready = threading.Event()
+        self._shutdown_event = threading.Event()
+        self._background = background
+
+        self._flush_thread: threading.Thread | None = None
+        if background:
+            self._flush_thread = threading.Thread(
+                target=self._background_loop,
+                daemon=True,
+                name="ducklake-writer",
+            )
+            self._flush_thread.start()
+
+    def _background_loop(self) -> None:
+        """Drain queue and INSERT into DuckLake, repeat until shutdown."""
+        while not self._shutdown_event.is_set():
+            self._data_ready.wait()
+            if self._shutdown_event.is_set():
+                break
+            self._data_ready.clear()
+            self._drain()
+
+    def _drain(self) -> None:
+        """Move queued records to DuckLake. Safe to call from any thread."""
+        with self._lock:
+            if not self._queue:
+                return
+            batch = self._queue
+            self._queue = []
+
+        # Group by table
+        by_table: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for table, record in batch:
+            by_table[table].append(record)
+
+        for table, records in by_table.items():
+            self._store.insert(table, records)
 
     def export(self, batch: Sequence[Any]) -> LogExportResult:
-        """Route log records to named buffers and flush when interval is reached."""
+        """Route log records to the queue (or write directly if no background thread)."""
         try:
-            for log_data in batch:
-                # Support both raw LogRecord and LogData wrapper
-                record = getattr(log_data, "log_record", log_data)
-                attrs = dict(record.attributes) if record.attributes else {}
-                event_name = attrs.get("event.name")
+            with self._lock:
+                for log_data in batch:
+                    record = getattr(log_data, "log_record", log_data)
+                    attrs = dict(record.attributes) if record.attributes else {}
+                    event_name = attrs.get("event.name")
 
-                # Detect game boundary
-                if event_name == "roc.game_start":
-                    self._game_counter += 1
+                    if event_name == "roc.game_start":
+                        self._game_counter += 1
+                    # Step counter: roc.screen is the primary tick marker;
+                    # fall back to roc.game_metrics when screen emission is off.
+                    if event_name == "roc.screen":
+                        self._step_counter += 1
+                        self._step_incremented = True
+                    elif event_name == "roc.game_metrics" and not self._step_incremented:
+                        self._step_counter += 1
+                    elif event_name == "roc.game_metrics":
+                        self._step_incremented = False  # reset for next tick
 
-                # Increment step on each screen event
-                if event_name == "roc.screen":
-                    self._step_counter += 1
-                    self._steps_since_flush += 1
+                    entry = self._record_to_dict(record, attrs)
+                    entry["step"] = self._step_counter
+                    entry["game_number"] = self._game_counter
 
-                entry = self._record_to_dict(record, attrs)
-                entry["step"] = self._step_counter
-                entry["game_number"] = self._game_counter
+                    table = self._route(event_name)
+                    self._queue.append((table, entry))
 
-                # Route to appropriate buffer
-                if event_name == "roc.screen":
-                    self._buffers["screens"].append(entry)
-                elif event_name == "roc.attention.saliency":
-                    self._buffers["saliency"].append(entry)
-                elif event_name == "roc.game_metrics":
-                    self._buffers["metrics"].append(entry)
-                elif event_name is not None:
-                    self._buffers["events"].append(entry)
-                else:
-                    self._buffers["logs"].append(entry)
-
-            # Periodic flush
-            if self._steps_since_flush >= self._flush_interval:
-                self._flush_all()
-                self._steps_since_flush = 0
+            if self._background:
+                self._data_ready.set()
+            else:
+                self._drain()
 
             return LogExportResult.SUCCESS
         except Exception:
             return LogExportResult.FAILURE
 
     def shutdown(self) -> None:
-        """Flush all remaining buffered data."""
-        self._flush_all()
+        """Stop background thread and write any remaining queued records."""
+        self._shutdown_event.set()
+        self._data_ready.set()
+        if self._flush_thread is not None:
+            self._flush_thread.join(timeout=5.0)
+        self._drain()
 
     def force_flush(self, timeout_millis: int = 0) -> bool:
-        """Flush all buffers immediately."""
-        self._flush_all()
+        """Write all queued records to DuckLake immediately."""
+        self._drain()
         return True
 
-    def _flush_all(self) -> None:
-        """Write each buffer to its Parquet file, appending if the file exists."""
-        if not any(self._buffers.values()):
-            return
-
-        self.run_dir.mkdir(parents=True, exist_ok=True)
-        for name, records in self._buffers.items():
-            if not records:
-                continue
-            table = pa.Table.from_pylist(records)
-            path = self.run_dir / f"{name}.parquet"
-            if path.exists():
-                existing = pq.read_table(path)
-                # Unify schemas before concatenating (handles missing columns)
-                table = pa.concat_tables([existing, table], promote_options="default")
-            pq.write_table(table, path, compression="snappy")
-        self._buffers.clear()
+    @staticmethod
+    def _route(event_name: str | None) -> str:
+        """Map an event name to a DuckLake table name."""
+        if event_name == "roc.screen":
+            return "screens"
+        if event_name == "roc.attention.saliency":
+            return "saliency"
+        if event_name == "roc.game_metrics":
+            return "metrics"
+        if event_name is not None:
+            return "events"
+        return "logs"
 
     @staticmethod
     def _record_to_dict(record: Any, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -114,7 +152,6 @@ class ParquetExporter(LogExporter):
             "trace_id": str(record.trace_id) if record.trace_id else None,
             "span_id": str(record.span_id) if record.span_id else None,
         }
-        # Flatten attributes into top-level columns
         for key, value in attrs.items():
             entry[key] = value
         return entry

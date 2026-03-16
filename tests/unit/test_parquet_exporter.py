@@ -3,75 +3,100 @@
 """Unit tests for roc/reporting/parquet_exporter.py."""
 
 import json
+import time
 from pathlib import Path
 
 import pandas as pd
 from helpers.otel import make_log_record
 
+from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.parquet_exporter import ParquetExporter
+
+
+def _read_table(store: DuckLakeStore, table: str) -> pd.DataFrame:
+    """Read all rows from a DuckLake table."""
+    if not store.has_table(table):
+        return pd.DataFrame()
+    return store.execute(f'SELECT * FROM lake."{table}" ORDER BY step').fetchdf()
+
+
+def _has_table(store: DuckLakeStore, table: str) -> bool:
+    """Check if a DuckLake table has any data."""
+    return store.has_table(table)
 
 
 class TestParquetExporterRouting:
     def test_export_creates_run_directory(self, tmp_path: Path):
         run_dir = tmp_path / "test-run"
-        exporter = ParquetExporter(run_dir=run_dir, flush_interval=1)
+        store = DuckLakeStore(run_dir)
+        exporter = ParquetExporter(store=store, background=False)
         record = make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')
         exporter.export([record])
+        exporter.force_flush()
         assert run_dir.exists()
 
-    def test_export_routes_screen_to_screens_parquet(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+    def test_export_routes_screen_to_screens(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         record = make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')
         exporter.export([record])
-        assert (tmp_path / "screens.parquet").exists()
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        assert _has_table(store, "screens")
+        df = _read_table(store, "screens")
         assert len(df) == 1
         assert df.iloc[0]["step"] == 1
 
-    def test_export_routes_saliency_to_saliency_parquet(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
-        # Need a screen event first to set step counter
+    def test_export_routes_saliency(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         screen = make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')
         sal = make_log_record(
             event_name="roc.attention.saliency", body='{"chars":[],"fg":[],"bg":[]}'
         )
         exporter.export([screen, sal])
-        assert (tmp_path / "saliency.parquet").exists()
-        df = pd.read_parquet(tmp_path / "saliency.parquet")
+        exporter.force_flush()
+        assert _has_table(store, "saliency")
+        df = _read_table(store, "saliency")
         assert len(df) == 1
 
-    def test_export_routes_named_events_to_events_parquet(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+    def test_export_routes_named_events(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         screen = make_log_record(event_name="roc.screen", body="x")
         record = make_log_record(event_name="roc.attention.features", body="Delta: 12")
         exporter.export([screen, record])
-        assert (tmp_path / "events.parquet").exists()
-        df = pd.read_parquet(tmp_path / "events.parquet")
+        exporter.force_flush()
+        assert _has_table(store, "events")
+        df = _read_table(store, "events")
         assert len(df) == 1
 
-    def test_export_routes_unnamed_to_logs_parquet(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+    def test_export_routes_unnamed_to_logs(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         screen = make_log_record(event_name="roc.screen", body="x")
         record = make_log_record(body="some loguru message")
         exporter.export([screen, record])
-        assert (tmp_path / "logs.parquet").exists()
-        df = pd.read_parquet(tmp_path / "logs.parquet")
+        exporter.force_flush()
+        assert _has_table(store, "logs")
+        df = _read_table(store, "logs")
         assert len(df) == 1
 
 
 class TestStepAndGameCounters:
     def test_step_counter_increments_on_screen_event(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         for _ in range(3):
             exporter.export(
                 [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
             )
         exporter.shutdown()
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        df = _read_table(store, "screens")
         assert list(df["step"]) == [1, 2, 3]
 
     def test_game_counter_increments_on_game_start(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
@@ -81,114 +106,139 @@ class TestStepAndGameCounters:
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
         exporter.shutdown()
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        df = _read_table(store, "screens")
         assert list(df["game_number"]) == [1, 2]
 
-    def test_parquet_has_step_and_game_columns(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+    def test_has_step_and_game_columns(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
-        for table_name in ["screens"]:
-            df = pd.read_parquet(tmp_path / f"{table_name}.parquet")
-            assert "step" in df.columns
-            assert "game_number" in df.columns
+        exporter.force_flush()
+        df = _read_table(store, "screens")
+        assert "step" in df.columns
+        assert "game_number" in df.columns
 
 
 class TestFlushBehavior:
-    def test_flush_interval_triggers_write(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=2)
-        # First screen -- no flush yet (steps_since_flush=1, interval=2)
+    def test_background_flush_writes_data(self, tmp_path: Path):
+        """Background thread should flush data without explicit call."""
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store)
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
-        assert not (tmp_path / "screens.parquet").exists()
-        # Second screen -- flush triggers (steps_since_flush=2, interval=2)
-        exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
-        )
-        assert (tmp_path / "screens.parquet").exists()
-
-    def test_shutdown_flushes_remaining(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
-        exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
-        )
-        assert not (tmp_path / "screens.parquet").exists()
+        time.sleep(0.3)
+        assert _has_table(store, "screens")
+        df = _read_table(store, "screens")
+        assert len(df) == 1
         exporter.shutdown()
-        assert (tmp_path / "screens.parquet").exists()
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+
+    def test_sync_mode_writes_immediately(self, tmp_path: Path):
+        """With background=False, export() writes directly to DuckLake."""
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        exporter.export(
+            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+        )
+        # Data visible immediately -- no flush needed
+        assert _has_table(store, "screens")
+        df = _read_table(store, "screens")
         assert len(df) == 1
 
-    def test_append_mode(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+    def test_shutdown_drains_remaining(self, tmp_path: Path):
+        """Shutdown writes any queued records from the background thread."""
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=True)
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
+        exporter.shutdown()
+        assert _has_table(store, "screens")
+        df = _read_table(store, "screens")
+        assert len(df) == 1
+
+    def test_multiple_flushes_accumulate(self, tmp_path: Path):
+        """Multiple flushes should accumulate data."""
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        exporter.export(
+            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+        )
+        exporter.force_flush()
+        df = _read_table(store, "screens")
         assert len(df) == 2
         assert list(df["step"]) == [1, 2]
 
 
 class TestRecordConversion:
     def test_record_to_dict_preserves_attributes(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         record = make_log_record(
             event_name="roc.screen",
             body="test",
             attributes={"custom.key": "custom_value"},
         )
         exporter.export([record])
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        df = _read_table(store, "screens")
         assert df.iloc[0]["custom.key"] == "custom_value"
 
     def test_record_to_dict_preserves_body(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         body_data = json.dumps({"chars": [[65, 66]], "fg": [["#fff"]], "bg": [["#000"]]})
         record = make_log_record(event_name="roc.screen", body=body_data)
         exporter.export([record])
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        df = _read_table(store, "screens")
         assert df.iloc[0]["body"] == body_data
 
     def test_record_to_dict_preserves_timestamp(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
-        ts = 1700000000000000000  # fixed nanosecond timestamp
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        ts = 1700000000000000000
         record = make_log_record(event_name="roc.screen", body="test", timestamp=ts)
         exporter.export([record])
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        df = _read_table(store, "screens")
         assert df.iloc[0]["timestamp"] == ts
 
     def test_record_to_dict_handles_none_body(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         record = make_log_record(event_name="roc.screen", body=None)
         exporter.export([record])
-        df = pd.read_parquet(tmp_path / "screens.parquet")
+        exporter.force_flush()
+        df = _read_table(store, "screens")
         assert df.iloc[0]["body"] is None
 
 
 class TestEdgeCases:
     def test_force_flush(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=True)
         exporter.export(
             [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
         )
-        assert not (tmp_path / "screens.parquet").exists()
         result = exporter.force_flush()
         assert result is True
-        assert (tmp_path / "screens.parquet").exists()
+        assert _has_table(store, "screens")
 
-    def test_flush_empty_buffers_is_noop(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
-        exporter._flush_all()
-        # No files created
-        assert not any(tmp_path.iterdir())
+    def test_drain_empty_queue_is_noop(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        exporter._drain()  # should not raise
 
     def test_export_failure_returns_failure(self, tmp_path: Path):
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=1)
-        # Pass something that isn't a LogRecord to trigger an exception
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         result = exporter.export([object()])
         from opentelemetry.sdk._logs.export import LogExportResult
 
@@ -197,9 +247,98 @@ class TestEdgeCases:
     def test_record_with_no_attributes(self, tmp_path: Path):
         from opentelemetry.sdk._logs import LogRecord as SDKLogRecord
 
-        exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
         record = SDKLogRecord(body="bare record", timestamp=1700000000000000000)
-        # This should route to logs (no event.name)
         exporter.export([record])
         exporter.shutdown()
-        assert (tmp_path / "logs.parquet").exists()
+        assert _has_table(store, "logs")
+
+
+class TestThreadSafety:
+    def test_periodic_flush_writes_partial_data(self, tmp_path: Path):
+        """Background thread should flush data before shutdown."""
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=True)
+        for _ in range(5):
+            exporter.export(
+                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            )
+        time.sleep(0.3)
+        assert _has_table(store, "screens")
+        df = _read_table(store, "screens")
+        assert len(df) == 5
+        exporter.shutdown()
+
+    def test_game_boundary_increments_game_number(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        for _ in range(3):
+            exporter.export(
+                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            )
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        for _ in range(2):
+            exporter.export(
+                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            )
+        exporter.shutdown()
+        df = _read_table(store, "screens")
+        assert list(df["game_number"]) == [1, 1, 1, 2, 2]
+
+    def test_flush_during_game_preserves_game_number(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export(
+            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+        )
+        exporter.export(
+            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+        )
+        exporter.force_flush()
+        exporter.export(
+            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+        )
+        exporter.shutdown()
+        df = _read_table(store, "screens")
+        assert list(df["game_number"]) == [1, 1, 1]
+        assert list(df["step"]) == [1, 2, 3]
+
+    def test_thread_safe_export(self, tmp_path: Path):
+        """Concurrent exports should not lose data."""
+        import threading
+
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+
+        def write_records():
+            for _ in range(10):
+                exporter.export(
+                    [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+                )
+
+        threads = [threading.Thread(target=write_records) for _ in range(3)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        exporter.shutdown()
+        df = _read_table(store, "screens")
+        assert len(df) == 30
+
+    def test_shutdown_stops_background_thread(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=True)
+        assert exporter._flush_thread is not None
+        assert exporter._flush_thread.is_alive()
+        exporter.shutdown()
+        assert not exporter._flush_thread.is_alive()
+
+    def test_no_background_thread_when_disabled(self, tmp_path: Path):
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        assert exporter._flush_thread is None

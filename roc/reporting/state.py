@@ -155,25 +155,29 @@ class State(ABC, Generic[StateType]):
     @staticmethod
     def emit_state_logs() -> None:
         """Emits current state values as OTel log records."""
+        from roc.config import Config
+
+        cfg = Config.get()
         current_states = State.get_states()
 
-        if current_states.screen.val is not None:
+        if cfg.emit_state_screen and current_states.screen.val is not None:
             from roc.reporting.screen_renderer import screen_to_html_vals
 
             screen_vals = screen_to_html_vals(current_states.screen.val)
             _emit_state_record("roc.screen", json.dumps(screen_vals, separators=(",", ":")))
 
-        if current_states.salency.val is not None:
+        if cfg.emit_state_saliency and current_states.salency.val is not None:
             saliency = current_states.salency.val
             saliency_vals = saliency.to_html_vals()
             _emit_state_record(
                 "roc.attention.saliency", json.dumps(saliency_vals, separators=(",", ":"))
             )
-            s = ""
-            features = saliency.feature_report()
-            for feat_name in features:
-                s += f"\t\t{feat_name}: {features[feat_name]}\n"
-            _emit_state_record("roc.attention.features", s)
+            if cfg.emit_state_features:
+                s = ""
+                features = saliency.feature_report()
+                for feat_name in features:
+                    s += f"\t\t{feat_name}: {features[feat_name]}\n"
+                _emit_state_record("roc.attention.features", s)
 
         if current_states.object.val is not None:
             _emit_state_record("roc.attention.object", str(current_states.object))
