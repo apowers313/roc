@@ -121,7 +121,49 @@ class Gym(Component, ABC):
                 loop_num += 1
                 State.get_states().loop.set(loop_num)
                 State.maybe_emit_snapshot(loop_num)
-                State.emit_state_logs()
+                if Config.get().emit_state:
+                    State.emit_state_logs()
+
+                # Push StepData to live dashboard buffer (cheap -- just dict refs)
+                from roc.reporting.step_buffer import get_step_buffer
+
+                _buf = get_step_buffer()
+                if _buf is not None:
+                    from time import time_ns as _time_ns
+
+                    from roc.event import Event
+                    from roc.graphdb import Edge, Node
+                    from roc.reporting.run_store import StepData
+
+                    _states = State.get_states()
+                    _screen_state = _states.screen.val
+                    _screen_vals = (
+                        screen_to_html_vals(_screen_state) if _screen_state is not None else None
+                    )
+                    _saliency_state = _states.salency.val
+                    _saliency_vals = (
+                        _saliency_state.to_html_vals() if _saliency_state is not None else None
+                    )
+                    _features = None
+                    if _saliency_state is not None:
+                        _feat_report = _saliency_state.feature_report()
+                        _features = [_feat_report] if _feat_report else None
+                    _object_info = None
+                    if _states.object.val is not None:
+                        _object_info = [{"raw": str(_states.object)}]
+                    _focus_points = None
+                    if _states.attention.val is not None:
+                        _focus_points = [{"raw": str(_states.attention.val.focus_points)}]
+                    _node_cache = Node.get_cache()
+                    _edge_cache = Edge.get_cache()
+                    _graph_summary = {
+                        "node_count": _node_cache.currsize,
+                        "node_max": _node_cache.maxsize,
+                        "edge_count": _edge_cache.currsize,
+                        "edge_max": _edge_cache.maxsize,
+                    }
+                    _step_counts = Event.get_step_counts()
+                    _event_summary = [_step_counts] if _step_counts else None
 
                 # Log per-tick game state to W&B
                 blstats = obs["blstats"]
@@ -149,6 +191,24 @@ class Gym(Component, ABC):
                     "roc.game_metrics",
                     _json.dumps(game_metrics, separators=(",", ":")),
                 )
+
+                # Push assembled StepData to live dashboard
+                if _buf is not None:
+                    _buf.push(
+                        StepData(
+                            step=loop_num,
+                            game_number=game_num,
+                            timestamp=_time_ns(),
+                            screen=_screen_vals,
+                            saliency=_saliency_vals,
+                            features=_features,
+                            object_info=_object_info,
+                            focus_points=_focus_points,
+                            graph_summary=_graph_summary,
+                            event_summary=_event_summary,
+                            game_metrics=game_metrics,
+                        )
+                    )
 
                 # Log screen as rich media to W&B
                 screen_state = State.get_states().screen.val
@@ -200,6 +260,9 @@ class Gym(Component, ABC):
 
         logger.info("NLE loop done, exiting.")
         WandbReporter.finish()
+        from roc.reporting.dashboard_server import stop_dashboard
+
+        stop_dashboard()
         Observability.shutdown()
         _dump_env_end()
 
