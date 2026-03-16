@@ -10,6 +10,7 @@ Components are created once and updated in place to avoid flicker during playbac
 from __future__ import annotations
 
 import argparse
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ from roc.reporting.components.grid_viewer import GridViewer
 from roc.reporting.components.resolution_inspector import ResolutionInspector
 from roc.reporting.components.theme import COMPACT_CELL_CSS
 from roc.reporting.run_store import RunStore, StepData
+from roc.reporting.step_buffer import StepBuffer
 
 #: Log severity levels ordered for filtering.
 _LOG_LEVELS = ["DEBUG", "INFO", "WARN", "ERROR"]
@@ -196,6 +198,157 @@ def _make_event_chart() -> tuple[pn.pane.Bokeh, Any]:
     return pane, (fig, renderer)
 
 
+_HELP_TEXT = """\
+| Key | Action |
+|-----|--------|
+| **Right** | Next step |
+| **Left** | Previous step |
+| **Home** | First step |
+| **End** | Last step |
+| **Space** | Play / pause |
+| **+** / **=** | Faster playback |
+| **-** | Slower playback |
+| **G** | Next game |
+| **B** | Toggle bookmark |
+| **N** / **]** | Next bookmark |
+| **P** / **[** | Previous bookmark |
+| **?** / **H** | Toggle this help |
+"""
+
+#: Keys handled by the keyboard listener (prevents default browser behavior).
+_HANDLED_KEYS = [
+    "ArrowRight",
+    "ArrowLeft",
+    "Home",
+    "End",
+    " ",
+    "+",
+    "-",
+    "=",
+    "b",
+    "g",
+    "n",
+    "p",
+    "[",
+    "]",
+    "?",
+    "h",
+]
+
+
+class KeyboardShortcuts(pn.custom.ReactComponent):
+    """Invisible component that captures keyboard shortcuts via React useEffect.
+
+    Renders nothing.  Attaches a ``keydown`` listener on ``window`` and sends
+    matched key names to Python via ``model.send_msg()``.  Uses React lifecycle
+    for proper cleanup.
+    """
+
+    shortcuts = param.List(
+        default=[{"name": k, "key": k} for k in _HANDLED_KEYS],
+        doc="List of shortcut dicts with 'name' and 'key' fields.",
+    )
+
+    _esm = """
+    function hashShortcut({ key, altKey, ctrlKey, metaKey, shiftKey }) {
+      return `${key}.${+!!altKey}.${+!!ctrlKey}.${+!!metaKey}.${+!!shiftKey}`;
+    }
+
+    export function render({ model }) {
+      const [shortcuts] = model.useState("shortcuts");
+      const keyedShortcuts = {};
+      for (const shortcut of shortcuts) {
+        keyedShortcuts[hashShortcut(shortcut)] = shortcut.name;
+      }
+
+      function onKeyDown(e) {
+        const tag = e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        const name = keyedShortcuts[hashShortcut(e)];
+        if (name) {
+          e.preventDefault();
+          e.stopPropagation();
+          model.send_msg(name);
+        }
+      }
+
+      React.useEffect(() => {
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+      });
+
+      return <></>;
+    }
+    """
+
+
+class BookmarkManager:
+    """Manages step bookmarks with JSON persistence in the run directory."""
+
+    def __init__(self, run_dir: Path) -> None:
+        self._file = run_dir / "bookmarks.json"
+        self._bookmarks: list[dict[str, Any]] = []
+        self.load()
+
+    def toggle(self, step: int, game: int, annotation: str = "") -> bool:
+        """Toggle bookmark at *step*. Returns ``True`` if added, ``False`` if removed."""
+        for i, bm in enumerate(self._bookmarks):
+            if bm["step"] == step:
+                self._bookmarks.pop(i)
+                self.save()
+                return False
+        self._bookmarks.append({"step": step, "game": game, "annotation": annotation})
+        self._bookmarks.sort(key=lambda b: b["step"])
+        self.save()
+        return True
+
+    def next_bookmark(self, current_step: int) -> int | None:
+        """Return the next bookmarked step after *current_step*, or ``None``."""
+        for bm in self._bookmarks:
+            if bm["step"] > current_step:
+                return int(bm["step"])
+        return None
+
+    def prev_bookmark(self, current_step: int) -> int | None:
+        """Return the previous bookmarked step before *current_step*, or ``None``."""
+        for bm in reversed(self._bookmarks):
+            if bm["step"] < current_step:
+                return int(bm["step"])
+        return None
+
+    def is_bookmarked(self, step: int) -> bool:
+        """Return whether *step* is bookmarked."""
+        return any(bm["step"] == step for bm in self._bookmarks)
+
+    def save(self) -> None:
+        """Persist bookmarks to ``bookmarks.json``."""
+        self._file.write_text(json.dumps(self._bookmarks, indent=2))
+
+    def load(self) -> None:
+        """Load bookmarks from ``bookmarks.json`` if it exists."""
+        if self._file.exists():
+            try:
+                self._bookmarks = json.loads(self._file.read_text())
+            except (json.JSONDecodeError, TypeError):
+                self._bookmarks = []
+
+    def as_list(self) -> list[dict[str, Any]]:
+        """Return a copy of the bookmark list."""
+        return list(self._bookmarks)
+
+    def as_df(self) -> pd.DataFrame:
+        """Return bookmarks as a DataFrame for Tabulator display."""
+        if not self._bookmarks:
+            return pd.DataFrame(
+                {
+                    "step": pd.Series(dtype=int),
+                    "game": pd.Series(dtype=int),
+                    "annotation": pd.Series(dtype=str),
+                }
+            )
+        return pd.DataFrame(self._bookmarks)
+
+
 class PanelDashboard(Viewer):
     """Debug dashboard for ROC game state inspection.
 
@@ -219,13 +372,23 @@ class PanelDashboard(Viewer):
     speed = param.String(default="5x", doc="Playback speed label")
     log_level = param.String(default="DEBUG", doc="Minimum log severity to display")
 
-    def __init__(self, store: RunStore, data_dir: Path | None = None, **params: Any) -> None:
+    def __init__(
+        self,
+        store: RunStore,
+        data_dir: Path | None = None,
+        step_buffer: StepBuffer | None = None,
+        **params: Any,
+    ) -> None:
         super().__init__(**params)
         self._store = store
         self._data_dir = data_dir or store.run_dir.parent
+        self._step_buffer = step_buffer
         self._speed_to_interval = dict(self.SPEEDS)
         self._updating_game = False
         self._last_data: StepData | None = None
+        self._last_seen_step: int = 0
+        self._live_mode = step_buffer is not None
+        self._user_paused = False
 
         min_step, max_step = store.step_range()
         self.run_name = store.run_dir.name
@@ -262,11 +425,11 @@ class PanelDashboard(Viewer):
         )
 
         games_df = store.list_games()
-        game_options: list[int] = list(games_df["game_number"]) if len(games_df) > 0 else [0]
+        game_options: list[int] = list(games_df["game_number"]) if len(games_df) > 0 else [1]
         self._game_selector = pn.widgets.Select(
             name="Game",
             options=[str(g) for g in game_options],
-            value=str(game_options[0]) if game_options else "0",
+            value=str(game_options[0]) if game_options else "1",
         )
 
         self._log_level_selector = pn.widgets.RadioButtonGroup(
@@ -276,6 +439,43 @@ class PanelDashboard(Viewer):
             button_type="default",
             button_style="outline",
         )
+
+        # -- Live mode --
+        self._live_badge = pn.pane.Markdown(
+            "**LIVE**",
+            visible=False,
+            styles={"color": "var(--panel-success-color, #2ecc71)", "font-size": "14px"},
+            sizing_mode="fixed",
+            width=60,
+        )
+        self._new_data_badge = pn.pane.Markdown(
+            "*New data available*",
+            visible=False,
+            styles={"color": "var(--panel-warning-color, #f39c12)", "font-size": "12px"},
+            sizing_mode="fixed",
+            width=150,
+        )
+
+        # -- Bookmarks, keyboard, help --
+        self._bookmarks = BookmarkManager(store.run_dir)
+
+        self._kb_shortcuts = KeyboardShortcuts()
+        self._kb_shortcuts.on_msg(self._on_keypress_msg)
+
+        self._help_pane = pn.pane.Markdown(_HELP_TEXT, visible=False, sizing_mode="stretch_width")
+
+        self._bookmark_table = pn.widgets.Tabulator(
+            self._bookmarks.as_df(),
+            theme="fast",
+            show_index=False,
+            header_filters=False,
+            stylesheets=[COMPACT_CELL_CSS],
+            sizing_mode="stretch_width",
+            disabled=True,
+            pagination=None,
+            height=150,
+        )
+        self._bookmark_table.on_click(self._on_bookmark_click)
 
         # -- Persistent component instances (created once, updated in place) --
         self._screen_viewer = GridViewer()
@@ -341,6 +541,7 @@ class PanelDashboard(Viewer):
 
         # -- Wire widgets to params --
         self._step_widget.param.watch(self._handle_step_widget, "value")
+        self._step_widget.param.watch(self._handle_direction_widget, "direction")
         self._speed_selector.param.watch(self._handle_speed_widget, "value")
         self._run_selector.param.watch(self._handle_run_widget, "value")
         self._game_selector.param.watch(self._handle_game_widget, "value")
@@ -352,6 +553,12 @@ class PanelDashboard(Viewer):
         self.param.watch(self._handle_game, ["game"])
         self.param.watch(self._handle_log_level, ["log_level"])
 
+        # In live mode, show "playing" state so the pause button works.
+        # Disable auto-advance timer -- live data comes from push callbacks.
+        if step_buffer is not None:
+            self._step_widget.interval = 2**31 - 1
+            self._step_widget.direction = 1
+
         # Initial render
         self.step = max(min_step, 1)
         self._on_step_change(self.step)
@@ -360,6 +567,15 @@ class PanelDashboard(Viewer):
 
     def _handle_step_widget(self, event: param.parameterized.Event) -> None:
         self.step = event.new
+
+    def _handle_direction_widget(self, event: param.parameterized.Event) -> None:
+        self._user_paused = event.new == 0
+        if self._user_paused and self._step_buffer is not None:
+            # Restore normal playback interval for review mode
+            label = self._speed_selector.value
+            self._step_widget.interval = self._speed_to_interval.get(
+                label, self._speed_to_interval[self._DEFAULT_SPEED]
+            )
 
     def _handle_speed_widget(self, event: param.parameterized.Event) -> None:
         self.speed = event.new
@@ -392,20 +608,101 @@ class PanelDashboard(Viewer):
     def _handle_log_level(self, event: param.parameterized.Event) -> None:
         self._on_log_level_change()
 
+    # -- Live mode --
+
+    def _is_following(self) -> bool:
+        """Return True if the player is at or near the latest step."""
+        return bool(self._step_widget.value >= self._step_widget.end)
+
+    def _on_new_data(self) -> None:
+        """Handle a push notification from the step buffer.
+
+        Called on the Tornado thread via ``call_soon_threadsafe``.
+        All widget mutations happen here -- single-threaded, no guards needed.
+        """
+        if self._step_buffer is None:
+            return
+        latest = self._step_buffer.get_latest()
+        if latest is None or latest.step <= self._last_seen_step:
+            return
+        # On the first notification after init from Parquet data, jump to live.
+        # The dashboard may init with end >> value (historical data in RunStore),
+        # making _is_following() False even though the user just opened the page.
+        first_notification = (
+            self._last_seen_step == 0
+            and self._step_widget.value <= 1
+        )
+        self._last_seen_step = latest.step
+
+        was_following = (
+            (self._is_following() and not self._user_paused)
+            or first_notification
+        )
+
+        # Always update slider end and game options (lightweight)
+        if latest.step > self._step_widget.end:
+            self._step_widget.end = latest.step
+
+        # Update game selector options from buffer
+        for g in self._step_buffer.game_numbers:
+            game_str = str(g)
+            if game_str not in (self._game_selector.options or []):
+                opts = list(self._game_selector.options or [])
+                opts.append(game_str)
+                self._game_selector.options = opts
+
+        if was_following:
+            # Following: advance slider, auto-switch game, let watcher chain update data
+            self._updating_game = True
+            try:
+                self._game_selector.value = str(latest.game_number)
+            finally:
+                self._updating_game = False
+            old_value = self._step_widget.value
+            self._step_widget.end = latest.step
+            self._step_widget.value = latest.step
+            # Keep auto-advance timer disabled while following live
+            if self._step_widget.interval < 2**31 - 1:
+                self._step_widget.interval = 2**31 - 1
+            # If step didn't change (e.g. first push at startup), the watcher
+            # won't fire so we must call _on_step_change directly.
+            if old_value == latest.step:
+                self._on_step_change(latest.step)
+
     # -- Business logic --
 
     def _on_step_change(self, step: int) -> None:
         """Fetch data for step and update all components in place."""
-        data = self._store.get_step_data(step)
+        # In live mode, try the step buffer first for recent steps
+        data: StepData | None = None
+        if self._step_buffer is not None:
+            data = self._step_buffer.get_step(step)
+        if data is None:
+            data = self._store.get_step_data(step)
+
+        self._apply_step_data(data)
+
+    def _apply_step_data(self, data: StepData) -> None:
+        """Update all dashboard widgets from a StepData instance."""
+        # Update live/new-data badges
+        following = self._is_following()
+        self._live_badge.visible = following
+        # Show badge when not at latest, clear when following or advancing
+        if not following and self._step_widget.value < self._step_widget.end:
+            self._new_data_badge.visible = True
+        elif following or (self._last_data is not None and data.step > self._last_data.step):
+            self._new_data_badge.visible = False
         self._last_data = data
 
         # Grid viewers (reactive via param)
         self._screen_viewer.grid_data = data.screen
         self._saliency_viewer.grid_data = data.saliency
 
-        # Info line
+        # Info line (with bookmark indicator)
+        mark = " [*]" if self._bookmarks.is_bookmarked(data.step) else ""
         self._info_pane.object = (
-            f"Step {data.step} | Game {data.game_number} | {_format_timestamp(data.timestamp)}"
+            f"Step {data.step} | Game {data.game_number} | "
+            f"{_format_timestamp(data.timestamp)}{mark}"
         )
 
         # Status indicators (update .value in place)
@@ -434,25 +731,11 @@ class PanelDashboard(Viewer):
             self._energy_indicator.format = f"{{value}}/{energy_max}"
             hunger = metrics.get("hunger", 0)
             self._hunger_indicator.value = int(hunger) if isinstance(hunger, (int, float)) else 0
-        else:
-            # Fallback: show step/game when no game metrics available
-            self._hp_indicator.name = "Step"
-            self._hp_indicator.value = data.step
-            self._hp_indicator.format = "{value}"
-            self._hp_indicator.colors = []
-            self._score_indicator.name = "Game"
-            self._score_indicator.value = data.game_number
-            self._depth_indicator.name = ""
-            self._depth_indicator.value = 0
-            self._gold_indicator.name = ""
-            self._gold_indicator.value = 0
-            self._energy_indicator.name = ""
-            self._energy_indicator.value = 0
-            self._energy_indicator.format = "{value}"
-            self._hunger_indicator.value = 0
+        # else: keep previous indicator values (metrics arrive slightly after screen)
 
         # KV tables (update DataFrame in place)
-        self._metrics_table.value = _dict_to_df(data.game_metrics)
+        if data.game_metrics:
+            self._metrics_table.value = _dict_to_df(data.game_metrics)
         self._graph_table.value = _dict_to_df(data.graph_summary)
         self._features_table.value = _dict_to_df(
             _parse_features(data.features) if data.features else None
@@ -497,18 +780,14 @@ class PanelDashboard(Viewer):
         # Log table (update DataFrame in place)
         self._log_table.value = _filter_logs(data.logs, self._log_level_selector.value)
 
-        # Sync game selector
-        game_str = str(data.game_number)
-        if game_str in (self._game_selector.options or []):
-            self._updating_game = True
-            self._game_selector.value = game_str
-            self._updating_game = False
-
     def _update_event_chart(self, event_data: dict[str, int]) -> None:
         """Update the Bokeh bar chart data source in place."""
         fig, renderer = self._events_chart_state
         names = list(event_data.keys())
         counts = list(event_data.values())
+
+        if not names or not counts:
+            return
 
         # Update the data source
         renderer.data_source.data = {"y": names, "right": counts}
@@ -516,9 +795,10 @@ class PanelDashboard(Viewer):
         # Update the y_range factors
         fig.y_range.factors = names
 
-        # Update x_range
+        # Update x_range in place (replacing the object breaks Bokeh sync)
         max_count = max(counts) if counts else 1
-        fig.x_range = Range1d(start=0, end=max_count * 1.1)
+        fig.x_range.start = 0
+        fig.x_range.end = max_count * 1.1
 
         # Update chart height
         chart_height = max(len(names) * 25, 80)
@@ -537,6 +817,10 @@ class PanelDashboard(Viewer):
         """Switch to a different run directory."""
         run_dir = self._data_dir / run_name
         self._store = RunStore(run_dir)
+        self._bookmarks = BookmarkManager(run_dir)
+        self._update_bookmark_list()
+        # Reset so new run's steps aren't skipped
+        self._last_seen_step = 0
         games_df = self._store.list_games()
         game_options = [str(g) for g in games_df["game_number"]] if len(games_df) > 0 else ["0"]
         self._game_selector.options = game_options
@@ -549,6 +833,9 @@ class PanelDashboard(Viewer):
     def _on_speed_change(self, event: object) -> None:
         """Update player interval from speed label."""
         label = getattr(event, "new", self._DEFAULT_SPEED)
+        # Don't override disabled timer when following live
+        if self._step_buffer is not None and not self._user_paused and self._is_following():
+            return
         self._step_widget.interval = self._speed_to_interval.get(
             label, self._speed_to_interval[self._DEFAULT_SPEED]
         )
@@ -567,6 +854,148 @@ class PanelDashboard(Viewer):
                 self._step_widget.value = min_step
         except Exception:
             pass
+
+    # -- Keyboard shortcuts --
+
+    def _on_keypress_msg(self, event: Any) -> None:
+        """Handle a keyboard shortcut message from ``KeyboardShortcuts``."""
+        key = event.data if hasattr(event, "data") else str(event)
+        if key:
+            self._dispatch_key(key)
+
+    def _on_keypress(self, event: param.parameterized.Event) -> None:
+        """Dispatch a keyboard event from a param watcher (legacy/test path)."""
+        key_str = event.new
+        if not key_str or key_str == "init":
+            return
+        key = key_str.split(":")[0]
+        self._dispatch_key(key)
+
+    def _dispatch_key(self, key: str) -> None:
+        """Route a key name to the appropriate handler."""
+        if key == "ArrowRight":
+            self._step_widget.value = min(self._step_widget.value + 1, self._step_widget.end)
+        elif key == "ArrowLeft":
+            self._step_widget.value = max(self._step_widget.value - 1, self._step_widget.start)
+        elif key == "Home":
+            self._step_widget.value = self._step_widget.start
+            if self._step_buffer is not None and self._step_widget.direction != 0:
+                self._step_widget.direction = 0
+        elif key == "End":
+            self._step_widget.value = self._step_widget.end
+            self._user_paused = False
+            if self._step_buffer is not None:
+                self._step_widget.interval = 2**31 - 1
+                if self._step_widget.direction != 1:
+                    self._step_widget.direction = 1
+        elif key == " ":
+            self._toggle_play()
+        elif key in ("+", "="):
+            self._increase_speed()
+        elif key == "-":
+            self._decrease_speed()
+        elif key == "g":
+            self._cycle_game()
+        elif key == "b":
+            self._toggle_bookmark()
+        elif key in ("n", "]"):
+            self._jump_next_bookmark()
+        elif key in ("p", "["):
+            self._jump_prev_bookmark()
+        elif key in ("?", "h"):
+            self._toggle_help()
+
+    def _increase_speed(self) -> None:
+        """Switch to the next faster speed option."""
+        options = [label for label, _ in self.SPEEDS]
+        try:
+            idx = options.index(self._speed_selector.value)
+        except ValueError:
+            return
+        if idx < len(options) - 1:
+            self._speed_selector.value = options[idx + 1]
+
+    def _decrease_speed(self) -> None:
+        """Switch to the next slower speed option."""
+        options = [label for label, _ in self.SPEEDS]
+        try:
+            idx = options.index(self._speed_selector.value)
+        except ValueError:
+            return
+        if idx > 0:
+            self._speed_selector.value = options[idx - 1]
+
+    def _toggle_play(self) -> None:
+        """Toggle play/pause via the Player widget's direction param."""
+        if self._step_widget.direction == 0:
+            self._step_widget.direction = 1
+        else:
+            self._step_widget.direction = 0
+
+    def _cycle_game(self) -> None:
+        """Jump to the next game (wraps around)."""
+        options = self._game_selector.options or []
+        if not options:
+            return
+        try:
+            idx = options.index(self._game_selector.value)
+        except ValueError:
+            return
+        next_idx = (idx + 1) % len(options)
+        self._game_selector.value = options[next_idx]
+
+    # -- Bookmarks --
+
+    def _toggle_bookmark(self, step: int | None = None, annotation: str = "") -> None:
+        """Add or remove a bookmark at *step* (defaults to current step)."""
+        if step is None:
+            step = self._step_widget.value
+        # Use the actual game_number from step data, not the selector value
+        game = self._last_data.game_number if self._last_data is not None else int(self.game)
+        self._bookmarks.toggle(step, game, annotation)
+        self._update_bookmark_list()
+        self._update_bookmark_indicator()
+
+    def _jump_next_bookmark(self) -> None:
+        """Jump to the next bookmarked step."""
+        target = self._bookmarks.next_bookmark(self._step_widget.value)
+        if target is not None:
+            self._step_widget.value = target
+
+    def _jump_prev_bookmark(self) -> None:
+        """Jump to the previous bookmarked step."""
+        target = self._bookmarks.prev_bookmark(self._step_widget.value)
+        if target is not None:
+            self._step_widget.value = target
+
+    def _update_bookmark_indicator(self) -> None:
+        """Update the info pane to reflect bookmark state for current step."""
+        data = self._last_data
+        if data is None:
+            return
+        mark = " [*]" if self._bookmarks.is_bookmarked(data.step) else ""
+        self._info_pane.object = (
+            f"Step {data.step} | Game {data.game_number} | "
+            f"{_format_timestamp(data.timestamp)}{mark}"
+        )
+
+    def _update_bookmark_list(self) -> None:
+        """Refresh the bookmark Tabulator from the bookmark manager."""
+        self._bookmark_table.value = self._bookmarks.as_df()
+
+    def _on_bookmark_click(self, event: Any) -> None:
+        """Jump to a bookmarked step when clicked in the bookmark table."""
+        row_idx = event.row
+        df = self._bookmark_table.value
+        if row_idx < len(df):
+            step = int(df.iloc[row_idx]["step"])
+            self._step_widget.value = step
+
+    # -- Help overlay --
+
+    def _toggle_help(self) -> None:
+        """Show or hide the keyboard shortcut help overlay."""
+        self._help_pane.visible = not self._help_pane.visible
 
     # -- Layout --
 
@@ -594,6 +1023,8 @@ class PanelDashboard(Viewer):
             self._step_widget,
             pn.Row(
                 self._info_pane,
+                self._live_badge,
+                self._new_data_badge,
                 status_row,
                 sizing_mode="stretch_width",
             ),
@@ -675,13 +1106,24 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
+        bookmarks_card = pn.Card(
+            self._bookmark_table,
+            title="Bookmarks",
+            collapsible=True,
+            collapsed=True,
+            sizing_mode="stretch_width",
+        )
+
         return pn.Column(
+            self._kb_shortcuts,
+            self._help_pane,
             transport_bar,
             game_state_card,
             perception_card,
             attention_card,
             object_card,
             log_card,
+            bookmarks_card,
             sizing_mode="stretch_width",
         )
 
@@ -732,3 +1174,7 @@ def main() -> None:
         serve_kwargs["ssl_keyfile"] = cfg.ssl_keyfile
 
     pn.serve(template, **serve_kwargs)
+
+
+if __name__ == "__main__":
+    main()

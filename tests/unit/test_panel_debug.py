@@ -15,6 +15,7 @@ import pytest
 from helpers.otel import make_log_record
 from opentelemetry._logs import SeverityNumber
 
+from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.parquet_exporter import ParquetExporter
 from roc.reporting.run_store import RunStore
 
@@ -22,7 +23,8 @@ from roc.reporting.run_store import RunStore
 @pytest.fixture()
 def populated_run_dir(tmp_path: Path) -> Path:
     """Create a run directory with known test data using ParquetExporter."""
-    exporter = ParquetExporter(run_dir=tmp_path, flush_interval=100)
+    store = DuckLakeStore(tmp_path)
+    exporter = ParquetExporter(store=store, background=False)
 
     exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
     for i in range(10):
@@ -237,16 +239,6 @@ class TestStepChange:
         dashboard._on_game_change(1)
         assert dashboard._step_widget.value == 1
 
-    def test_step_change_updates_game_selector(self, mock_store: RunStore):
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._on_step_change(5)
-        assert dashboard._game_selector.value == "1"
-
-        dashboard._on_step_change(12)
-        assert dashboard._game_selector.value == "2"
-
     def test_player_has_no_loop_controls(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
@@ -317,14 +309,18 @@ class TestStatusIndicators:
         dashboard._on_step_change(1)
         assert dashboard._hunger_indicator.name == "Hunger"
 
-    def test_fallback_when_no_metrics(self, mock_store: RunStore):
+    def test_keeps_previous_metrics_when_missing(self, mock_store: RunStore):
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
-        # Step 12 is in game 2 which has no metrics
+        # Step 5 has metrics (HP=12, score=40)
+        dashboard._on_step_change(5)
+        assert dashboard._hp_indicator.name == "HP"
+        prev_hp = dashboard._hp_indicator.value
+        # Step 12 is in game 2 which has no metrics -- indicators keep previous values
         dashboard._on_step_change(12)
-        assert dashboard._hp_indicator.name == "Step"
-        assert dashboard._score_indicator.name == "Game"
+        assert dashboard._hp_indicator.name == "HP"
+        assert dashboard._hp_indicator.value == prev_hp
 
 
 class TestDataPanels:
@@ -660,3 +656,1562 @@ class TestFullLayout:
         layout = dashboard.servable()
         indicators = list(layout.select(pn.indicators.Number))
         assert len(indicators) >= 5  # HP, Score, Depth, Gold, Energy, Hunger
+
+    def test_layout_has_bookmarks_card(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        layout = dashboard.servable()
+        cards = list(layout.select(pn.Card))
+        card_titles = [c.title for c in cards if hasattr(c, "title")]
+        assert "Bookmarks" in card_titles
+
+    def test_bookmarks_card_collapsed(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        layout = dashboard.servable()
+        cards = {c.title: c for c in layout.select(pn.Card) if hasattr(c, "title")}
+        assert cards["Bookmarks"].collapsed
+
+
+class TestBookmarkManager:
+    def test_toggle_adds_bookmark(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        added = mgr.toggle(step=5, game=1)
+        assert added is True
+        assert mgr.is_bookmarked(5)
+
+    def test_toggle_removes_existing(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=5, game=1)
+        removed = mgr.toggle(step=5, game=1)
+        assert removed is False
+        assert not mgr.is_bookmarked(5)
+
+    def test_persists_to_json(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=42, game=1, annotation="spike here")
+        bookmarks_file = populated_run_dir / "bookmarks.json"
+        assert bookmarks_file.exists()
+        data = json.loads(bookmarks_file.read_text())
+        assert len(data) == 1
+        assert data[0]["step"] == 42
+        assert data[0]["annotation"] == "spike here"
+
+    def test_loads_from_json(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr1 = BookmarkManager(populated_run_dir)
+        mgr1.toggle(step=3, game=1)
+        mgr1.toggle(step=7, game=1)
+
+        mgr2 = BookmarkManager(populated_run_dir)
+        assert mgr2.is_bookmarked(3)
+        assert mgr2.is_bookmarked(7)
+
+    def test_navigation_next(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=3, game=1)
+        mgr.toggle(step=7, game=1)
+        mgr.toggle(step=10, game=1)
+        assert mgr.next_bookmark(1) == 3
+        assert mgr.next_bookmark(3) == 7
+        assert mgr.next_bookmark(10) is None
+
+    def test_navigation_prev(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=3, game=1)
+        mgr.toggle(step=7, game=1)
+        mgr.toggle(step=10, game=1)
+        assert mgr.prev_bookmark(10) == 7
+        assert mgr.prev_bookmark(7) == 3
+        assert mgr.prev_bookmark(3) is None
+
+    def test_bookmarks_sorted(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=10, game=1)
+        mgr.toggle(step=3, game=1)
+        mgr.toggle(step=7, game=1)
+        steps = [bm["step"] for bm in mgr.as_list()]
+        assert steps == [3, 7, 10]
+
+    def test_as_df_empty(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        df = mgr.as_df()
+        assert len(df) == 0
+        assert "step" in df.columns
+        assert "annotation" in df.columns
+
+    def test_as_df_with_data(self, populated_run_dir: Path):
+        from roc.reporting.panel_debug import BookmarkManager
+
+        mgr = BookmarkManager(populated_run_dir)
+        mgr.toggle(step=5, game=1, annotation="test")
+        df = mgr.as_df()
+        assert len(df) == 1
+        assert df.iloc[0]["step"] == 5
+
+
+class TestBookmarkIntegration:
+    def test_toggle_bookmark_adds_and_removes(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        dashboard._toggle_bookmark()
+        assert dashboard._bookmarks.is_bookmarked(5)
+        assert "[*]" in dashboard._info_pane.object
+
+        dashboard._toggle_bookmark()
+        assert not dashboard._bookmarks.is_bookmarked(5)
+        assert "[*]" not in dashboard._info_pane.object
+
+    def test_toggle_bookmark_with_annotation(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._toggle_bookmark(step=7, annotation="interesting")
+        assert dashboard._bookmarks.is_bookmarked(7)
+        bms = dashboard._bookmarks.as_list()
+        assert bms[0]["annotation"] == "interesting"
+
+    def test_jump_next_bookmark(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._toggle_bookmark(step=5)
+        dashboard._toggle_bookmark(step=10)
+        dashboard._step_widget.value = 1
+        dashboard._jump_next_bookmark()
+        assert dashboard._step_widget.value == 5
+
+    def test_jump_prev_bookmark(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._toggle_bookmark(step=3)
+        dashboard._toggle_bookmark(step=8)
+        dashboard._step_widget.value = 10
+        dashboard._jump_prev_bookmark()
+        assert dashboard._step_widget.value == 8
+
+    def test_no_jump_when_no_bookmarks(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        dashboard._jump_next_bookmark()
+        assert dashboard._step_widget.value == 5
+
+    def test_bookmark_indicator_on_step_change(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._toggle_bookmark(step=3)
+        dashboard._on_step_change(3)
+        assert "[*]" in dashboard._info_pane.object
+        dashboard._on_step_change(4)
+        assert "[*]" not in dashboard._info_pane.object
+
+    def test_bookmark_list_updates(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert len(dashboard._bookmark_table.value) == 0
+        dashboard._toggle_bookmark(step=5)
+        assert len(dashboard._bookmark_table.value) == 1
+        dashboard._toggle_bookmark(step=5)
+        assert len(dashboard._bookmark_table.value) == 0
+
+    def test_bookmark_uses_step_data_game_number(self, mock_store: RunStore):
+        """Regression: bookmark should use the game_number from step data, not the selector."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        # Navigate to step 5 which is in game 1
+        dashboard._step_widget.value = 5
+        dashboard._on_step_change(5)
+        # Change game selector to game 2 (without navigating)
+        dashboard._game_selector.value = "2"
+        dashboard._updating_game = True  # prevent game change handler
+        dashboard._game_selector.value = "2"
+        dashboard._updating_game = False
+        # Bookmark should use the step data's game_number, not the selector
+        dashboard._toggle_bookmark()
+        bms = dashboard._bookmarks.as_list()
+        assert len(bms) == 1
+        # Step 5 is in game 1, so bookmark should say game 1
+        assert bms[0]["game"] == dashboard._last_data.game_number
+
+    def test_run_change_reloads_bookmarks(self, populated_run_dir: Path, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store, data_dir=populated_run_dir.parent)
+        dashboard._toggle_bookmark(step=5)
+        assert dashboard._bookmarks.is_bookmarked(5)
+        # Reload same run -- bookmarks should persist
+        dashboard._on_run_change(populated_run_dir.name)
+        assert dashboard._bookmarks.is_bookmarked(5)
+
+
+class TestKeyboardShortcuts:
+    def test_increase_speed(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert dashboard._speed_selector.value == "5x"
+        dashboard._increase_speed()
+        assert dashboard._speed_selector.value == "10x"
+
+    def test_decrease_speed(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert dashboard._speed_selector.value == "5x"
+        dashboard._decrease_speed()
+        assert dashboard._speed_selector.value == "2x"
+
+    def test_increase_speed_at_max(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._speed_selector.value = "20x"
+        dashboard._increase_speed()
+        assert dashboard._speed_selector.value == "20x"
+
+    def test_decrease_speed_at_min(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._speed_selector.value = "0.5x"
+        dashboard._decrease_speed()
+        assert dashboard._speed_selector.value == "0.5x"
+
+    def test_keypress_arrow_right(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        event = MagicMock()
+        event.new = "ArrowRight:123"
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.value == 6
+
+    def test_keypress_arrow_left(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        event = MagicMock()
+        event.new = "ArrowLeft:123"
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.value == 4
+
+    def test_keypress_home(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 10
+        event = MagicMock()
+        event.new = "Home:123"
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.value == dashboard._step_widget.start
+
+    def test_keypress_end(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 1
+        event = MagicMock()
+        event.new = "End:123"
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.value == dashboard._step_widget.end
+
+    def test_keypress_bookmark_toggle(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        event = MagicMock()
+        event.new = "b:123"
+        dashboard._on_keypress(event)
+        assert dashboard._bookmarks.is_bookmarked(5)
+
+    def test_keypress_help_toggle(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert not dashboard._help_pane.visible
+        event = MagicMock()
+        event.new = "?:123"
+        dashboard._on_keypress(event)
+        assert dashboard._help_pane.visible
+        dashboard._on_keypress(event)
+        assert not dashboard._help_pane.visible
+
+    def test_keypress_speed_plus(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert dashboard._speed_selector.value == "5x"
+        event = MagicMock()
+        event.new = "+:123"
+        dashboard._on_keypress(event)
+        assert dashboard._speed_selector.value == "10x"
+
+    def test_keypress_speed_minus(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert dashboard._speed_selector.value == "5x"
+        event = MagicMock()
+        event.new = "-:123"
+        dashboard._on_keypress(event)
+        assert dashboard._speed_selector.value == "2x"
+
+    def test_keypress_space_toggles_play(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert dashboard._step_widget.direction == 0
+        event = MagicMock()
+        event.new = " :123"
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.direction == 1
+        dashboard._on_keypress(event)
+        assert dashboard._step_widget.direction == 0
+
+    def test_keypress_g_cycles_game(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        initial_game = dashboard._game_selector.value
+        event = MagicMock()
+        event.new = "g:123"
+        dashboard._on_keypress(event)
+        assert dashboard._game_selector.value != initial_game
+
+    def test_keypress_g_wraps_around(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        options = dashboard._game_selector.options
+        # Cycle through all games and back to start
+        event = MagicMock()
+        event.new = "g:123"
+        for _ in range(len(options)):
+            dashboard._on_keypress(event)
+        assert dashboard._game_selector.value == options[0]
+
+    def test_keypress_empty_ignored(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        event = MagicMock()
+        event.new = ""
+        dashboard._on_keypress(event)  # Should not raise
+
+
+class TestLiveMode:
+    def test_live_mode_detects_new_steps(self, tmp_path: Path):
+        """Step count should increase after new data is written."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        for _ in range(10):
+            exporter.export(
+                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            )
+        exporter.force_flush()
+        store = RunStore(dl_store)
+        assert store.step_count() == 10
+        # Write 5 more steps
+        for _ in range(5):
+            exporter.export(
+                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            )
+        exporter.force_flush()
+        assert store.step_count() == 15
+
+    def test_poll_updates_dashboard_when_following(self, mock_store: RunStore):
+        """Poll-based live update should advance step when following."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        # Move to last step -- following mode
+        dashboard._step_widget.value = dashboard._step_widget.end
+        assert dashboard._is_following()
+
+        # Simulate a push from the game loop, then poll
+        new_step = dashboard._step_widget.end + 1
+        buf.push(StepData(step=new_step, game_number=1))
+        dashboard._on_new_data()
+
+        assert dashboard._step_widget.end == new_step
+        assert dashboard._step_widget.value == new_step
+
+    def test_live_mode_auto_advances_when_following(self, mock_store: RunStore):
+        """When at latest step, poll should auto-advance with new data."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        # Move to last step -- should be "following"
+        dashboard._step_widget.value = dashboard._step_widget.end
+        assert dashboard._is_following()
+
+    def test_live_mode_does_not_advance_when_reviewing(self, mock_store: RunStore):
+        """When not at latest step, should not be following."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+
+    def test_live_badge_visible_when_following(self, mock_store: RunStore):
+        """LIVE indicator should show when at the latest step."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = dashboard._step_widget.end
+        dashboard._on_step_change(dashboard._step_widget.end)
+        assert dashboard._live_badge.visible
+
+    def test_live_badge_hidden_when_reviewing(self, mock_store: RunStore):
+        """LIVE indicator should hide when not at latest step."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+        dashboard._on_step_change(5)
+        assert not dashboard._live_badge.visible
+
+    def test_game_selector_shows_games(self, mock_store: RunStore):
+        """Game dropdown should be populated with available games."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        options = dashboard._game_selector.options
+        assert len(options) >= 2
+        assert "1" in options
+        assert "2" in options
+
+    def test_game_change_updates_step_range(self, mock_store: RunStore):
+        """Switching game should adjust the slider range."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._on_game_change(2)
+        # Step widget should now show game 2's first step
+        assert dashboard._step_widget.value == 11
+
+    def test_game_selector_shows_summary(self, mock_store: RunStore):
+        """list_games should include step counts."""
+        games_df = mock_store.list_games()
+        assert len(games_df) >= 2
+        assert "steps" in games_df.columns
+        game1 = games_df[games_df["game_number"] == 1]
+        assert game1.iloc[0]["steps"] == 10
+
+    def test_poll_shows_new_data_badge_when_reviewing(self, mock_store: RunStore):
+        """Poll should show 'new data' badge when user is reviewing (not following)."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        # Step back from end -- not following
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+
+        # Push new data and poll
+        new_step = dashboard._step_widget.end + 1
+        buf.push(StepData(step=new_step, game_number=1))
+        dashboard._on_new_data()
+
+        # Slider end expands so user can play forward, value stays put
+        assert dashboard._step_widget.end == new_step
+        assert dashboard._step_widget.value == 5
+        # Badge shows on next user step change
+        dashboard._on_step_change(5)
+        assert dashboard._new_data_badge.visible
+
+    def test_poll_adds_new_game_to_selector(self, mock_store: RunStore):
+        """Poll with a new game_number should add it to the game selector."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        new_step = dashboard._step_widget.end + 1
+        buf.push(StepData(step=new_step, game_number=99))
+        dashboard._on_new_data()
+
+        assert "99" in dashboard._game_selector.options
+
+    def test_poll_while_reviewing_updates_slider_end(self, mock_store: RunStore):
+        """When not following, polls should still update step_widget.end so Play works."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+        original_end = dashboard._step_widget.end
+
+        # Push 10 steps while not following, then poll
+        for i in range(10):
+            buf.push(StepData(step=original_end + 1 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # Slider end should advance so Play can reach new steps
+        assert dashboard._step_widget.end == original_end + 10
+        # But value stays where the user left it
+        assert dashboard._step_widget.value == 5
+
+    def test_end_key_jumps_to_latest(self, mock_store: RunStore):
+        """Pressing End should jump to latest step."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = 5  # not following
+
+        # Push data while not following, then poll
+        for i in range(10):
+            buf.push(StepData(step=20 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # Press End via keyboard dispatch
+        dashboard._dispatch_key("End")
+
+        # Should jump to latest
+        assert dashboard._step_widget.end >= 29
+        assert dashboard._step_widget.value == dashboard._step_widget.end
+
+    def test_game_selector_not_auto_switched_during_review(self, mock_store: RunStore):
+        """Reviewing game 1 while game 3 is live should NOT auto-switch to game 3."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        # Simulate: user selects game 1 and navigates to step 5
+        dashboard._game_selector.value = "1"
+        dashboard._step_widget.value = 5
+
+        # Push game 3 data while not following, then poll
+        for i in range(5):
+            buf.push(StepData(step=100 + i, game_number=3))
+        dashboard._on_new_data()
+
+        # Game selector should still show "1" (user's choice)
+        assert dashboard._game_selector.value == "1"
+        # But game 3 should be in the options
+        assert "3" in dashboard._game_selector.options
+
+    def test_no_phantom_game_zero(self, mock_store: RunStore):
+        """Game selector should not contain a phantom '0' game."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        options = dashboard._game_selector.options
+        assert "0" not in options
+
+    def test_poll_new_game_preserves_existing_games(self, mock_store: RunStore):
+        """When a new game starts, previous games must stay in the selector."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push game 1, poll
+        buf.push(StepData(step=100, game_number=1))
+        dashboard._on_new_data()
+        assert "1" in dashboard._game_selector.options
+
+        # Push game 2, poll -- game 1 must NOT disappear
+        buf.push(StepData(step=101, game_number=2))
+        dashboard._on_new_data()
+        assert "1" in dashboard._game_selector.options
+        assert "2" in dashboard._game_selector.options
+
+        # Push game 3, poll -- games 1 and 2 must still be there
+        buf.push(StepData(step=102, game_number=3))
+        dashboard._on_new_data()
+        assert "1" in dashboard._game_selector.options
+        assert "2" in dashboard._game_selector.options
+        assert "3" in dashboard._game_selector.options
+
+    def test_poll_buffer_noop_when_no_new_data(self, mock_store: RunStore):
+        """Poll should do nothing if no new data has arrived."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        original_end = dashboard._step_widget.end
+        original_value = dashboard._step_widget.value
+
+        dashboard._on_new_data()
+
+        assert dashboard._step_widget.end == original_end
+        assert dashboard._step_widget.value == original_value
+
+    def test_poll_coalesces_multiple_pushes(self, mock_store: RunStore):
+        """Multiple pushes between polls should coalesce to a single update."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        call_count = 0
+        orig_apply = dashboard._apply_step_data
+
+        def counting_apply(data: StepData) -> None:
+            nonlocal call_count
+            call_count += 1
+            orig_apply(data)
+
+        dashboard._apply_step_data = counting_apply  # type: ignore[assignment]
+
+        # Push 5 steps without polling
+        base = dashboard._step_widget.end
+        for i in range(5):
+            buf.push(
+                StepData(
+                    step=base + 1 + i,
+                    game_number=1,
+                    game_metrics={"hp": 10, "hp_max": 16},
+                )
+            )
+
+        # Single poll should only trigger _apply_step_data once
+        dashboard._on_new_data()
+        assert call_count == 1
+        # Should be at the latest step
+        assert dashboard._step_widget.value == base + 5
+
+    def test_on_new_data_idempotent_for_same_step(self, mock_store: RunStore):
+        """Calling _on_new_data twice with same buffer state should only apply once."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        call_count = 0
+        orig_apply = dashboard._apply_step_data
+
+        def counting_apply(data: StepData) -> None:
+            nonlocal call_count
+            call_count += 1
+            orig_apply(data)
+
+        dashboard._apply_step_data = counting_apply  # type: ignore[assignment]
+
+        base = dashboard._step_widget.end
+        buf.push(StepData(step=base + 1, game_number=1))
+        dashboard._on_new_data()
+        dashboard._on_new_data()  # same step, should be no-op
+        dashboard._on_new_data()  # same step, should be no-op
+        assert call_count == 1
+
+    def test_step_buffer_data_available_during_replay(self, mock_store: RunStore):
+        """Steps in the buffer should be retrievable when user navigates back."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push several steps with screen data
+        base = dashboard._step_widget.end
+        pushed_steps = []
+        for i in range(5):
+            step = base + 1 + i
+            pushed_steps.append(step)
+            buf.push(
+                StepData(
+                    step=step,
+                    game_number=1,
+                    screen={"chars": [[65 + i]], "fg": [["ffffff"]], "bg": [["000000"]]},
+                    game_metrics={"hp": 10, "hp_max": 16},
+                )
+            )
+        dashboard._on_new_data()
+
+        # Navigate back to a buffered step -- should still have screen data
+        target_step = pushed_steps[1]  # second pushed step
+        dashboard._on_step_change(target_step)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.step == target_step
+        assert dashboard._last_data.screen is not None
+
+    def test_empty_store_defaults_game_one(self, tmp_path: Path):
+        """With no Parquet data, game selector should default to '1', not '0'."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        store = RunStore(tmp_path)
+        dashboard = PanelDashboard(store)
+        assert dashboard._game_selector.value == "1"
+        assert "0" not in dashboard._game_selector.options
+
+
+class TestHelpOverlay:
+    def test_help_starts_hidden(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        assert not dashboard._help_pane.visible
+
+    def test_toggle_help_shows_and_hides(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._toggle_help()
+        assert dashboard._help_pane.visible
+        dashboard._toggle_help()
+        assert not dashboard._help_pane.visible
+
+    def test_help_content_has_shortcuts(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        content = dashboard._help_pane.object
+        assert "Next step" in content
+        assert "Previous step" in content
+        assert "Play / pause" in content
+        assert "Next game" in content
+        assert "Toggle bookmark" in content
+        assert "Toggle this help" in content
+
+    def test_help_in_layout(self, mock_store: RunStore):
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        layout = dashboard.servable()
+        md_panes = list(layout.select(pn.pane.Markdown))
+        help_panes = [p for p in md_panes if "Next step" in str(p.object)]
+        assert len(help_panes) == 1
+
+
+class TestPollEdgeCases:
+    """Regression tests for pull-based polling edge cases."""
+
+    def test_first_poll_same_step_as_init(self, tmp_path: Path):
+        """Bug regression: first poll where step==1 matches initial slider value.
+
+        If _step_widget.value is already 1 and poll sets it to 1, the param
+        watcher won't fire. _on_new_data must detect this and call
+        _on_step_change directly.
+        """
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        # Empty store: slider starts at value=1, end=1
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+        assert dashboard._step_widget.value == 1
+        assert dashboard._step_widget.end == 1
+
+        # Push step 1 (same as slider value) and poll
+        buf.push(
+            StepData(
+                step=1,
+                game_number=1,
+                game_metrics={"hp": 16, "hp_max": 16},
+                screen={"chars": [[65]], "fg": [["ffffff"]], "bg": [["000000"]]},
+            )
+        )
+        dashboard._on_new_data()
+
+        # _apply_step_data must have been called despite value not changing
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.step == 1
+        assert dashboard._hp_indicator.value == 16
+
+    def test_poll_same_step_not_retriggered(self, mock_store: RunStore):
+        """Second poll with no new data should be a no-op."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        buf.push(StepData(step=100, game_number=1, game_metrics={"hp": 10, "hp_max": 16}))
+        dashboard._on_new_data()
+        assert dashboard._last_seen_step == 100
+
+        # Second poll with same data -- should return early
+        call_count = 0
+        orig = dashboard._apply_step_data
+
+        def counting(data):
+            nonlocal call_count
+            call_count += 1
+            orig(data)
+
+        dashboard._apply_step_data = counting  # type: ignore[assignment]
+        dashboard._on_new_data()
+        assert call_count == 0
+
+    def test_poll_empty_buffer(self, mock_store: RunStore):
+        """Poll on an empty buffer should do nothing."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        original_step = dashboard._step_widget.value
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == original_step
+
+    def test_poll_no_buffer(self, mock_store: RunStore):
+        """Poll with step_buffer=None should do nothing."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store, step_buffer=None)
+        dashboard._on_new_data()  # Should not raise
+
+    def test_updating_game_flag_reset_on_error(self, mock_store: RunStore):
+        """Bug regression: _updating_game must reset even if _on_game_change raises."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push data and poll to trigger the game selector update
+        buf.push(StepData(step=100, game_number=1))
+        dashboard._on_new_data()
+
+        # Verify the try/finally pattern is working by checking that
+        # _updating_game is always False after _on_new_data completes
+        assert not dashboard._updating_game
+
+        # Push a game change and verify flag resets
+        buf.push(StepData(step=101, game_number=99))
+        dashboard._on_new_data()
+        assert not dashboard._updating_game
+
+    def test_poll_rapid_game_transitions(self, mock_store: RunStore):
+        """Multiple game transitions between polls should all appear in selector."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push steps spanning 5 games between polls
+        base = dashboard._step_widget.end
+        for i in range(50):
+            buf.push(StepData(step=base + 1 + i, game_number=10 + (i // 10)))
+
+        dashboard._on_new_data()
+
+        # All 5 games should be in selector
+        options = dashboard._game_selector.options
+        for g in [10, 11, 12, 13, 14]:
+            assert str(g) in options, f"Game {g} missing from options {options}"
+
+    def test_poll_following_then_review_then_following(self, mock_store: RunStore):
+        """Full lifecycle: follow -> review -> follow should work cleanly."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+        assert dashboard._is_following()
+
+        # Phase 1: Follow mode -- push and poll
+        base = dashboard._step_widget.end
+        for i in range(5):
+            buf.push(StepData(step=base + 1 + i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == base + 5
+        assert dashboard._is_following()
+        assert dashboard._live_badge.visible
+
+        # Phase 2: User reviews -- go back
+        dashboard._step_widget.value = base + 2
+        assert not dashboard._is_following()
+
+        # Push more while reviewing
+        for i in range(5):
+            buf.push(StepData(step=base + 6 + i, game_number=1))
+        dashboard._on_new_data()
+        # Slider end should advance, but value stays
+        assert dashboard._step_widget.end == base + 10
+        assert dashboard._step_widget.value == base + 2
+
+        # Phase 3: User presses End to return to live
+        dashboard._dispatch_key("End")
+        assert dashboard._step_widget.value == dashboard._step_widget.end
+        assert dashboard._is_following()
+
+        # New data should auto-advance again
+        for i in range(3):
+            buf.push(StepData(step=base + 11 + i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == base + 13
+
+    def test_poll_game_switch_during_review_no_jump(self, mock_store: RunStore):
+        """Switching games manually while reviewing should not be overridden by poll."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        # Push data for games 1 and 2
+        for i in range(10):
+            buf.push(StepData(step=100 + i, game_number=1))
+        for i in range(10):
+            buf.push(StepData(step=110 + i, game_number=2))
+        dashboard._on_new_data()
+
+        # User switches to game 1 and goes to step 105
+        dashboard._game_selector.value = "1"
+        dashboard._step_widget.value = 105
+        assert not dashboard._is_following()
+
+        # More game 2 data arrives
+        for i in range(5):
+            buf.push(StepData(step=120 + i, game_number=2))
+        dashboard._on_new_data()
+
+        # User's game selection and step must be preserved
+        assert dashboard._game_selector.value == "1"
+        assert dashboard._step_widget.value == 105
+
+    def test_buffer_game_numbers_property(self):
+        """game_numbers should return sorted unique game numbers."""
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        assert buf.game_numbers == []
+
+        buf.push(StepData(step=1, game_number=3))
+        buf.push(StepData(step=2, game_number=1))
+        buf.push(StepData(step=3, game_number=2))
+        buf.push(StepData(step=4, game_number=1))
+
+        assert buf.game_numbers == [1, 2, 3]
+
+    def test_buffer_capacity_eviction(self):
+        """Ring buffer should evict oldest entries when full."""
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=5)
+        for i in range(10):
+            buf.push(StepData(step=i + 1, game_number=1))
+
+        assert len(buf) == 5
+        assert buf.min_step == 6
+        assert buf.max_step == 10
+        # Evicted steps should return None
+        assert buf.get_step(1) is None
+        assert buf.get_step(5) is None
+        # Recent steps should be present
+        assert buf.get_step(6) is not None
+        assert buf.get_step(10) is not None
+
+    def test_poll_slider_play_catches_up(self, mock_store: RunStore):
+        """After pausing in review, pressing Play should be able to catch up."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=1000)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        # Push many steps
+        base = dashboard._step_widget.end
+        for i in range(100):
+            buf.push(StepData(step=base + 1 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # User goes to step 5 (way behind)
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+
+        # Slider end should be far ahead
+        assert dashboard._step_widget.end == base + 100
+
+        # User can step forward to catch up
+        for _ in range(10):
+            dashboard._step_widget.value = min(
+                dashboard._step_widget.value + 1, dashboard._step_widget.end
+            )
+        assert dashboard._step_widget.value == 15
+
+    def test_on_new_data_tracks_last_seen(self, mock_store: RunStore):
+        """_on_new_data should track the last seen step to skip duplicates."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        buf.push(StepData(step=100, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._last_seen_step == 100
+
+        # Same step again should be skipped
+        dashboard._on_new_data()
+        assert dashboard._last_seen_step == 100
+
+    def test_poll_with_only_game_metrics_change(self, mock_store: RunStore):
+        """Poll should update even when only metrics change, not step number."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push step with HP=16
+        base = dashboard._step_widget.end
+        buf.push(
+            StepData(step=base + 1, game_number=1, game_metrics={"hp": 16, "hp_max": 16})
+        )
+        dashboard._on_new_data()
+        assert dashboard._hp_indicator.value == 16
+
+        # Push next step with HP=10
+        buf.push(
+            StepData(step=base + 2, game_number=1, game_metrics={"hp": 10, "hp_max": 16})
+        )
+        dashboard._on_new_data()
+        assert dashboard._hp_indicator.value == 10
+
+    def test_pause_stops_live_following(self, tmp_path: Path):
+        """Regression: pause button must stop live follow via _on_new_data.
+
+        In LIVE mode, step advancement comes from push callbacks, not the
+        Player's auto-advance timer.  Clicking pause sets direction=0 but
+        _on_new_data kept advancing because _is_following() only checks
+        value >= end.  The fix adds _user_paused flag.
+        """
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        # Push a few steps to get into live mode
+        for i in range(1, 4):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 3
+        assert dashboard._is_following()
+
+        # User clicks the pause button (Player widget sets direction=0)
+        dashboard._step_widget.direction = 0
+        assert dashboard._user_paused is True
+
+        # Push more data -- should NOT advance because user paused
+        buf.push(StepData(step=4, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 3  # stayed at 3
+        assert dashboard._step_widget.end == 4  # slider end grew
+
+        buf.push(StepData(step=5, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 3  # still at 3
+
+        # User presses End to return to live
+        dashboard._dispatch_key("End")
+        assert dashboard._user_paused is False
+        assert dashboard._step_widget.value == 5
+
+        # Now pushes should advance again
+        buf.push(StepData(step=6, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 6  # following again
+
+    def test_pause_then_play_resumes_following(self, tmp_path: Path):
+        """After pause+play, live following should resume."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        for i in range(1, 4):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 3
+
+        # User clicks pause button
+        dashboard._step_widget.direction = 0
+        assert dashboard._user_paused is True
+
+        # Push -- should not advance
+        buf.push(StepData(step=4, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 3
+
+        # User clicks play button -- but still at step 3, not at end (4)
+        dashboard._step_widget.direction = 1
+        assert dashboard._user_paused is False
+
+        # Go to end so we're following again
+        dashboard._dispatch_key("End")
+        assert dashboard._step_widget.value == 4
+
+        # Now pushes should advance
+        buf.push(StepData(step=5, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 5
+
+
+class TestRealWorldSimulations:
+    """Simulate realistic debugging workflows end-to-end."""
+
+    def test_investigate_death_across_games(self, mock_store: RunStore):
+        """User investigates a death: switch game, step backward, bookmark, return to live."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=1000)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        # Move to end so we're in following mode
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Game is live in game 3
+        base = dashboard._step_widget.end
+        for i in range(50):
+            game = 1 + i // 20  # games 1, 2, 3
+            buf.push(
+                StepData(
+                    step=base + 1 + i,
+                    game_number=game,
+                    game_metrics={"hp": max(16 - i % 20, 0), "hp_max": 16},
+                )
+            )
+        dashboard._on_new_data()
+        assert dashboard._is_following()
+        assert dashboard._step_widget.value == base + 50
+
+        # User switches to game 1 to investigate
+        dashboard._game_selector.value = "1"
+        # _on_game_change should jump to game 1's first step
+        assert not dashboard._is_following()
+
+        # User steps through looking for HP drop
+        for _ in range(5):
+            dashboard._dispatch_key("ArrowRight")
+
+        # Bookmark the interesting step
+        current_step = dashboard._step_widget.value
+        dashboard._dispatch_key("b")
+        assert dashboard._bookmarks.is_bookmarked(current_step)
+
+        # Step forward a few more
+        for _ in range(3):
+            dashboard._dispatch_key("ArrowRight")
+
+        # Jump back to bookmark
+        dashboard._dispatch_key("[")
+        assert dashboard._step_widget.value == current_step
+
+        # Meanwhile, more live data arrives
+        for i in range(10):
+            buf.push(StepData(step=base + 51 + i, game_number=3))
+        dashboard._on_new_data()
+
+        # User's review position must be preserved
+        assert dashboard._step_widget.value == current_step
+        assert not dashboard._is_following()
+
+        # Return to live
+        dashboard._dispatch_key("End")
+        assert dashboard._is_following()
+
+    def test_rapid_home_end_toggling(self, mock_store: RunStore):
+        """Rapidly toggle Home/End while live data arrives."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=1000)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        base = dashboard._step_widget.end
+        for i in range(20):
+            buf.push(StepData(step=base + 1 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # Rapid Home/End/Home/End
+        dashboard._dispatch_key("Home")
+        assert dashboard._step_widget.value == dashboard._step_widget.start
+        assert not dashboard._is_following()
+
+        dashboard._dispatch_key("End")
+        assert dashboard._step_widget.value == dashboard._step_widget.end
+        assert dashboard._is_following()
+
+        dashboard._dispatch_key("Home")
+        assert not dashboard._is_following()
+
+        # Push more data while at Home
+        for i in range(5):
+            buf.push(StepData(step=base + 21 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # Value should stay at Home
+        assert dashboard._step_widget.value == dashboard._step_widget.start
+        # But slider end should have advanced
+        assert dashboard._step_widget.end == base + 25
+
+        dashboard._dispatch_key("End")
+        assert dashboard._step_widget.value == base + 25
+        assert dashboard._is_following()
+
+    def test_play_from_review_position(self, mock_store: RunStore):
+        """Press Play while reviewing mid-game, verify slider advances."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=1000)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        base = dashboard._step_widget.end
+        for i in range(50):
+            buf.push(StepData(step=base + 1 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # User presses Home then navigates to step 5 to review
+        dashboard._dispatch_key("Home")
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+
+        # User presses Space to play
+        dashboard._dispatch_key(" ")
+        assert dashboard._step_widget.direction == 1
+
+        # Simulate player advancing a few steps (Player widget auto-increments)
+        for _ in range(3):
+            dashboard._step_widget.value += 1
+
+        assert dashboard._step_widget.value == 8
+
+        # Pause
+        dashboard._dispatch_key(" ")
+        assert dashboard._step_widget.direction == 0
+        assert dashboard._step_widget.value == 8
+
+    def test_game_boundary_stepping(self, mock_store: RunStore):
+        """Step through the exact boundary where games change."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push game 1 (steps 100-109) and game 2 (steps 110-119)
+        base = dashboard._step_widget.end
+        for i in range(20):
+            game = 1 if i < 10 else 2
+            buf.push(
+                StepData(
+                    step=base + 1 + i,
+                    game_number=game,
+                    game_metrics={"hp": 16 - i, "hp_max": 16},
+                )
+            )
+        dashboard._on_new_data()
+
+        # Navigate to step just before game boundary
+        boundary_step = base + 10  # last step of game 1
+        dashboard._step_widget.value = boundary_step
+        dashboard._on_step_change(boundary_step)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.game_number == 1
+
+        # Step forward into game 2
+        dashboard._dispatch_key("ArrowRight")
+        dashboard._on_step_change(boundary_step + 1)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.game_number == 2
+
+        # Step backward back to game 1
+        dashboard._dispatch_key("ArrowLeft")
+        dashboard._on_step_change(boundary_step)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.game_number == 1
+
+    def test_speed_change_during_playback(self, mock_store: RunStore):
+        """Change speed while Player is actively playing."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+
+        # Start playing
+        dashboard._dispatch_key(" ")
+        assert dashboard._step_widget.direction == 1
+        assert dashboard._step_widget.interval == 200  # 5x default
+
+        # Increase speed twice
+        dashboard._dispatch_key("+")
+        assert dashboard._step_widget.interval == 100  # 10x
+        dashboard._dispatch_key("+")
+        assert dashboard._step_widget.interval == 50  # 20x
+
+        # Decrease speed
+        dashboard._dispatch_key("-")
+        assert dashboard._step_widget.interval == 100  # 10x
+
+        # Still playing
+        assert dashboard._step_widget.direction == 1
+
+        # Pause
+        dashboard._dispatch_key(" ")
+        assert dashboard._step_widget.direction == 0
+
+    def test_rapid_game_cycling_with_g_key(self, mock_store: RunStore):
+        """Rapidly press G to cycle through all games."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        initial = dashboard._game_selector.value
+        num_games = len(dashboard._game_selector.options)
+
+        # Cycle through all games
+        visited = [initial]
+        for _ in range(num_games * 2):  # go around twice
+            dashboard._dispatch_key("g")
+            visited.append(dashboard._game_selector.value)
+
+        # Should wrap around and visit all games
+        unique_visited = set(visited)
+        assert len(unique_visited) == num_games
+
+        # After 2 full cycles, should be back at initial
+        assert dashboard._game_selector.value == initial
+
+    def test_run_change_resets_poll_state(self, populated_run_dir: Path, mock_store: RunStore):
+        """Bug regression: _last_seen_step must reset when switching runs."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf, data_dir=populated_run_dir.parent)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Advance poll state to a high step
+        buf.push(StepData(step=500, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._last_seen_step == 500
+
+        # Switch runs -- _last_seen_step must reset
+        dashboard._on_run_change(populated_run_dir.name)
+        assert dashboard._last_seen_step == 0
+
+    def test_multiple_bookmarks_navigation(self, mock_store: RunStore):
+        """Create several bookmarks, navigate forward and backward between them."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+
+        # Create bookmarks at steps 3, 7, 12
+        dashboard._toggle_bookmark(step=3)
+        dashboard._toggle_bookmark(step=7)
+        dashboard._toggle_bookmark(step=12)
+
+        # Start at step 1
+        dashboard._step_widget.value = 1
+
+        # Navigate forward through bookmarks
+        dashboard._dispatch_key("]")
+        assert dashboard._step_widget.value == 3
+
+        dashboard._dispatch_key("]")
+        assert dashboard._step_widget.value == 7
+
+        dashboard._dispatch_key("]")
+        assert dashboard._step_widget.value == 12
+
+        # No more bookmarks forward
+        dashboard._dispatch_key("]")
+        assert dashboard._step_widget.value == 12
+
+        # Navigate backward
+        dashboard._dispatch_key("[")
+        assert dashboard._step_widget.value == 7
+
+        dashboard._dispatch_key("[")
+        assert dashboard._step_widget.value == 3
+
+        # No more bookmarks backward
+        dashboard._dispatch_key("[")
+        assert dashboard._step_widget.value == 3
+
+    def test_help_toggle_during_interaction(self, mock_store: RunStore):
+        """Toggle help overlay, ensure other shortcuts still work."""
+        from roc.reporting.panel_debug import PanelDashboard
+
+        dashboard = PanelDashboard(mock_store)
+        dashboard._step_widget.value = 5
+
+        # Show help
+        dashboard._dispatch_key("?")
+        assert dashboard._help_pane.visible
+
+        # Other shortcuts should still work while help is shown
+        dashboard._dispatch_key("ArrowRight")
+        assert dashboard._step_widget.value == 6
+
+        # Hide help
+        dashboard._dispatch_key("h")
+        assert not dashboard._help_pane.visible
+
+    def test_poll_during_game_switch(self, mock_store: RunStore):
+        """Poll arrives while user is mid-game-switch (game selector open)."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        # User is in game 1, reviewing step 5
+        dashboard._game_selector.value = "1"
+        dashboard._step_widget.value = 5
+        assert not dashboard._is_following()
+
+        # Poll arrives with game 3 data
+        buf.push(StepData(step=200, game_number=3))
+        dashboard._on_new_data()
+
+        # User's review position must be preserved
+        assert dashboard._game_selector.value == "1"
+        assert dashboard._step_widget.value == 5
+
+        # Game 3 should be in options
+        assert "3" in dashboard._game_selector.options
+
+    def test_evicted_step_falls_back_to_store(self, mock_store: RunStore):
+        """When buffer evicts a step, navigation should fall back to RunStore."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        # Tiny buffer that evicts quickly
+        buf = StepBuffer(capacity=5)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._step_widget.value = dashboard._step_widget.end
+
+        # Push 10 steps -- first 5 get evicted
+        base = dashboard._step_widget.end
+        for i in range(10):
+            buf.push(StepData(step=base + 1 + i, game_number=1))
+        dashboard._on_new_data()
+
+        # Navigate to step 3 (which is in the RunStore, not buffer)
+        dashboard._on_step_change(3)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.step == 3
+
+        # Navigate to a buffered step
+        dashboard._on_step_change(base + 8)
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.step == base + 8
+
+    def test_live_badge_and_new_data_badge_mutual_exclusion(self, mock_store: RunStore):
+        """LIVE and 'New data available' badges should never both be visible."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+
+        # Following -- LIVE should show
+        dashboard._step_widget.value = dashboard._step_widget.end
+        dashboard._on_step_change(dashboard._step_widget.end)
+        assert dashboard._live_badge.visible
+        assert not dashboard._new_data_badge.visible
+
+        # Push new data and go to review
+        base = dashboard._step_widget.end
+        buf.push(StepData(step=base + 1, game_number=1))
+        dashboard._on_new_data()
+
+        # Still following -- should still be LIVE
+        assert dashboard._live_badge.visible
+
+        # Go back to review
+        dashboard._step_widget.value = 5
+        dashboard._on_step_change(5)
+        assert not dashboard._live_badge.visible
+
+        # Push more data while reviewing
+        buf.push(StepData(step=base + 2, game_number=1))
+        dashboard._on_new_data()
+        dashboard._on_step_change(5)
+        assert dashboard._new_data_badge.visible
+        assert not dashboard._live_badge.visible
