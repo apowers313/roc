@@ -856,6 +856,7 @@ class TestBookmarkIntegration:
         bms = dashboard._bookmarks.as_list()
         assert len(bms) == 1
         # Step 5 is in game 1, so bookmark should say game 1
+        assert dashboard._last_data is not None
         assert bms[0]["game"] == dashboard._last_data.game_number
 
     def test_run_change_reloads_bookmarks(self, populated_run_dir: Path, mock_store: RunStore):
@@ -1306,7 +1307,7 @@ class TestLiveMode:
             call_count += 1
             orig_apply(data)
 
-        dashboard._apply_step_data = counting_apply  # type: ignore[assignment]
+        dashboard._apply_step_data = counting_apply  # type: ignore[method-assign]
 
         # Push 5 steps without polling
         base = dashboard._step_widget.end
@@ -1343,7 +1344,7 @@ class TestLiveMode:
             call_count += 1
             orig_apply(data)
 
-        dashboard._apply_step_data = counting_apply  # type: ignore[assignment]
+        dashboard._apply_step_data = counting_apply  # type: ignore[method-assign]
 
         base = dashboard._step_widget.end
         buf.push(StepData(step=base + 1, game_number=1))
@@ -1493,7 +1494,7 @@ class TestPollEdgeCases:
             call_count += 1
             orig(data)
 
-        dashboard._apply_step_data = counting  # type: ignore[assignment]
+        dashboard._apply_step_data = counting  # type: ignore[method-assign]
         dashboard._on_new_data()
         assert call_count == 0
 
@@ -1725,16 +1726,12 @@ class TestPollEdgeCases:
 
         # Push step with HP=16
         base = dashboard._step_widget.end
-        buf.push(
-            StepData(step=base + 1, game_number=1, game_metrics={"hp": 16, "hp_max": 16})
-        )
+        buf.push(StepData(step=base + 1, game_number=1, game_metrics={"hp": 16, "hp_max": 16}))
         dashboard._on_new_data()
         assert dashboard._hp_indicator.value == 16
 
         # Push next step with HP=10
-        buf.push(
-            StepData(step=base + 2, game_number=1, game_metrics={"hp": 10, "hp_max": 16})
-        )
+        buf.push(StepData(step=base + 2, game_number=1, game_metrics={"hp": 10, "hp_max": 16}))
         dashboard._on_new_data()
         assert dashboard._hp_indicator.value == 10
 
@@ -1763,7 +1760,7 @@ class TestPollEdgeCases:
 
         # User clicks the pause button (Player widget sets direction=0)
         dashboard._step_widget.direction = 0
-        assert dashboard._user_paused is True
+        assert dashboard._user_paused == True  # watcher set it
 
         # Push more data -- should NOT advance because user paused
         buf.push(StepData(step=4, game_number=1))
@@ -1777,7 +1774,7 @@ class TestPollEdgeCases:
 
         # User presses End to return to live
         dashboard._dispatch_key("End")
-        assert dashboard._user_paused is False
+        assert dashboard._user_paused is False  # End resets it
         assert dashboard._step_widget.value == 5
 
         # Now pushes should advance again
@@ -1802,7 +1799,7 @@ class TestPollEdgeCases:
 
         # User clicks pause button
         dashboard._step_widget.direction = 0
-        assert dashboard._user_paused is True
+        assert dashboard._user_paused == True  # watcher set it
 
         # Push -- should not advance
         buf.push(StepData(step=4, game_number=1))
@@ -1811,7 +1808,7 @@ class TestPollEdgeCases:
 
         # User clicks play button -- but still at step 3, not at end (4)
         dashboard._step_widget.direction = 1
-        assert dashboard._user_paused is False
+        assert dashboard._user_paused == False  # watcher cleared it
 
         # Go to end so we're following again
         dashboard._dispatch_key("End")

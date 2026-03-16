@@ -37,9 +37,7 @@ class DuckLakeStore:
         self._conn.execute("LOAD ducklake; LOAD sqlite;")
         catalog = str(self._catalog_path).replace("'", "''")
         data = str(self._data_path).replace("'", "''")
-        self._conn.execute(
-            f"ATTACH 'ducklake:sqlite:{catalog}' AS lake (DATA_PATH '{data}')"
-        )
+        self._conn.execute(f"ATTACH 'ducklake:sqlite:{catalog}' AS lake (DATA_PATH '{data}')")
         if not read_only:
             # Always write to Parquet (no data inlining in SQLite catalog)
             self._conn.execute("CALL lake.set_option('data_inlining_row_limit', '0')")
@@ -80,9 +78,7 @@ class DuckLakeStore:
             # Insert via arrow scan
             self._conn.register("_arrow_batch", arrow_table)
             try:
-                self._conn.execute(
-                    f'INSERT INTO lake."{table}" BY NAME SELECT * FROM _arrow_batch'
-                )
+                self._conn.execute(f'INSERT INTO lake."{table}" BY NAME SELECT * FROM _arrow_batch')
             finally:
                 self._conn.unregister("_arrow_batch")
 
@@ -123,9 +119,7 @@ class DuckLakeStore:
     def _table_exists(self, table: str) -> bool:
         """Check table existence (must hold lock)."""
         try:
-            self._conn.execute(
-                f'SELECT 1 FROM lake."{table}" LIMIT 0'
-            )
+            self._conn.execute(f'SELECT 1 FROM lake."{table}" LIMIT 0')
             return True
         except duckdb.CatalogException:
             return False
@@ -143,7 +137,7 @@ class DuckLakeStore:
     def _get_columns(self, table: str) -> list[str]:
         """Get column names for a table (must hold lock)."""
         result = self._conn.execute(
-            f'SELECT column_name FROM information_schema.columns '
+            f"SELECT column_name FROM information_schema.columns "
             f"WHERE table_schema = 'main' AND table_name = '{table}'"
         ).fetchall()
         return [row[0] for row in result]

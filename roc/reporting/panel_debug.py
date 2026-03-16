@@ -628,16 +628,10 @@ class PanelDashboard(Viewer):
         # On the first notification after init from Parquet data, jump to live.
         # The dashboard may init with end >> value (historical data in RunStore),
         # making _is_following() False even though the user just opened the page.
-        first_notification = (
-            self._last_seen_step == 0
-            and self._step_widget.value <= 1
-        )
+        first_notification = self._last_seen_step == 0 and self._step_widget.value <= 1
         self._last_seen_step = latest.step
 
-        was_following = (
-            (self._is_following() and not self._user_paused)
-            or first_notification
-        )
+        was_following = (self._is_following() and not self._user_paused) or first_notification
 
         # Always update slider end and game options (lightweight)
         if latest.step > self._step_widget.end:
