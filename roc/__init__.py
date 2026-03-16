@@ -57,6 +57,11 @@ def init(config: dict[str, Any] | None = None) -> None:
     State.init()
     WandbReporter.init(Config.get())
 
+    # Start live dashboard in a background thread
+    from .reporting.dashboard_server import start_dashboard
+
+    start_dashboard()
+
 
 def start() -> None:
     """Starts the agent."""

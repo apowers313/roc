@@ -84,6 +84,11 @@ class TestScreenDataEmittedViaOtelLogger:
 
         import numpy as np
 
+        from roc.config import Config
+
+        cfg = Config.get()
+        cfg.emit_state_screen = True
+
         with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             from roc.event import Event
             from roc.reporting.state import State, states

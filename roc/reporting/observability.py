@@ -146,8 +146,11 @@ class Observability(metaclass=ObservabilityBase):
             # Parquet exporter (always active -- source of truth for per-step data)
             from pathlib import Path
 
+            from roc.reporting.ducklake_store import DuckLakeStore
+
             run_dir = Path(settings.data_dir) / instance_id
-            self._parquet_exporter = ParquetExporter(run_dir=run_dir)
+            self._ducklake_store = DuckLakeStore(run_dir)
+            self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
             logger_provider.add_log_record_processor(
                 SimpleLogRecordProcessor(self._parquet_exporter)
             )
@@ -193,8 +196,11 @@ class Observability(metaclass=ObservabilityBase):
                 # Parquet exporter (always active)
                 from pathlib import Path
 
+                from roc.reporting.ducklake_store import DuckLakeStore
+
                 run_dir = Path(settings.data_dir) / instance_id
-                self._parquet_exporter = ParquetExporter(run_dir=run_dir)
+                self._ducklake_store = DuckLakeStore(run_dir)
+                self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
                 logger_provider.add_log_record_processor(
                     SimpleLogRecordProcessor(self._parquet_exporter)
                 )
@@ -269,9 +275,23 @@ class Observability(metaclass=ObservabilityBase):
         Observability()
         Observability._configure_debug_exporters()
 
-    @staticmethod
-    def shutdown() -> None:
-        """Flushes and shuts down profiling to ensure data is sent before exit."""
+    @classmethod
+    def get_ducklake_store(cls) -> Any:
+        """Return the DuckLakeStore if Parquet export is configured, else None."""
+        instance = ObservabilityBase._instances.get(cls)
+        if instance is not None and hasattr(instance, "_ducklake_store"):
+            return instance._ducklake_store
+        return None
+
+    @classmethod
+    def shutdown(cls) -> None:
+        """Flush exporters, close DuckLake store, and shut down profiling."""
+        instance = ObservabilityBase._instances.get(cls)
+        if instance is not None:
+            if hasattr(instance, "_parquet_exporter"):
+                instance._parquet_exporter.shutdown()
+            if hasattr(instance, "_ducklake_store"):
+                instance._ducklake_store.close()
         try:
             pyroscope.shutdown()
         except Exception:
@@ -317,8 +337,11 @@ class Observability(metaclass=ObservabilityBase):
         if needs_parquet:
             from pathlib import Path
 
+            from roc.reporting.ducklake_store import DuckLakeStore
+
             run_dir = Path(settings.data_dir) / instance_id
-            parquet_exporter = ParquetExporter(run_dir=run_dir)
+            ducklake_store = DuckLakeStore(run_dir)
+            parquet_exporter = ParquetExporter(store=ducklake_store)
             provider.add_log_record_processor(SimpleLogRecordProcessor(parquet_exporter))
             cls._parquet_configured = True
 
