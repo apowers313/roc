@@ -1,8 +1,7 @@
-"""Unified metrics abstraction for dual-emission to OTel and W&B.
+"""Unified metrics abstraction for OTel emission.
 
-RocMetrics provides static methods that route numeric metrics to both
-the existing OTel pipeline and WandbReporter. This eliminates duplicate
-instrumentation while keeping both backends in sync.
+RocMetrics provides static methods that route numeric metrics to the
+OTel pipeline (Prometheus/Grafana).
 """
 
 from __future__ import annotations
@@ -10,7 +9,6 @@ from __future__ import annotations
 from typing import Any
 
 from .observability import Observability
-from .wandb_reporter import WandbReporter
 
 # Cache for OTel instruments to avoid re-creating them
 _histograms: dict[str, Any] = {}
@@ -18,7 +16,7 @@ _counters: dict[str, Any] = {}
 
 
 class RocMetrics:
-    """Central dispatch for numeric metrics to OTel + W&B."""
+    """Central dispatch for numeric metrics to OTel."""
 
     @staticmethod
     def _get_histogram(name: str, description: str = "") -> Any:
@@ -42,19 +40,9 @@ class RocMetrics:
         *,
         description: str = "",
     ) -> None:
-        """Record a histogram value to both OTel and W&B.
-
-        Args:
-            name: Metric name (e.g. "roc.saliency_attenuation.peak_count").
-            value: The value to record.
-            attributes: Optional OTel attributes.
-            description: Optional description for instrument creation.
-        """
+        """Record a histogram value to OTel."""
         histogram = RocMetrics._get_histogram(name, description)
         histogram.record(value, attributes=attributes)
-
-        # Also send to W&B as a per-step metric
-        WandbReporter.log_step({name: value})
 
     @staticmethod
     def increment_counter(
@@ -64,47 +52,11 @@ class RocMetrics:
         *,
         description: str = "",
     ) -> None:
-        """Increment a counter in both OTel and W&B.
-
-        Args:
-            name: Metric name.
-            amount: Amount to increment by.
-            attributes: Optional OTel attributes.
-            description: Optional description for instrument creation.
-        """
+        """Increment a counter in OTel."""
         counter = RocMetrics._get_counter(name, description)
         counter.add(amount, attributes=attributes)
 
-        # Also send to W&B as a per-step metric
-        WandbReporter.log_step({name: amount})
-
     @staticmethod
     def log_step(data: dict[str, Any]) -> None:
-        """Log a dict of metrics to W&B only (not OTel).
-
-        Use this for metrics that don't map to OTel instruments,
-        like composite game-state snapshots.
-
-        Args:
-            data: Dictionary of metric names to values.
-        """
-        WandbReporter.log_step(data)
-
-    @staticmethod
-    def log_media(key: str, html: str) -> None:
-        """Log HTML media content to W&B only.
-
-        Args:
-            key: The media key (e.g. "screen", "saliency_map").
-            html: HTML string to log.
-        """
-        WandbReporter.log_media(key, html)
-
-    @staticmethod
-    def flush_step() -> None:
-        """Flush all buffered step data as a single W&B log call.
-
-        Call once per tick after all ``log_step()`` and ``log_media()``
-        calls for that tick are complete.
-        """
-        WandbReporter.flush_step()
+        """Log a dict of metrics (no-op, kept for API compatibility)."""
+        pass

@@ -51,16 +51,6 @@ dependencies = [
   "graphviz>=0.20.3",
   "dash>=3.0.3",
   "dash-cytoscape>=1.0.2",
-  "panel>=1.6.2",
-  "hvplot>=0.11.2",
-  "jupyter-bokeh>=4.0.5",
-  "bokeh>=3.7.2",
-  "bokeh-sampledata>=2024.2",
-  "plotly>=5.24.1",
-  "plotly-resampler>=0.10.0",
-  "cosmograph>=0.0.47",
-  "dash-bootstrap-components>=2.0.2",
-  "wandb>=0.25.1",
   "pyarrow>=15.0.0",
   "duckdb>=1.0.0",
   "python-statemachine>=3.0.0",
@@ -141,7 +131,6 @@ repository = "https://github.com/apowers313/roc"
 
 [project.scripts]
 play = "roc.script:cli"
-panel-debug = "roc.reporting.panel_debug:main"
 
 [tool.uv]
 default-groups = ["dev"]
