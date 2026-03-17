@@ -56,12 +56,32 @@ class RunStore:
             self._store = None
             self._conn = duckdb.connect()
             self.run_dir = store_or_dir
+            # Register views once so DuckDB caches file metadata instead of
+            # re-globbing ~5000 parquet files on every query.
+            self._register_views()
         self._last_max_step: int = 0
         self._refresh_max_step()
 
     def _table_glob(self, table: str) -> str:
         """Glob pattern for a table's Parquet files."""
         return str(self.run_dir / "data" / "main" / table / "*.parquet")
+
+    def _register_views(self) -> None:
+        """Create DuckDB views for each table so file metadata is cached."""
+        if self._conn is None:
+            return
+        for table in self._TABLES:
+            glob = self._table_glob(table)
+            if globmod.glob(glob):
+                self._conn.execute(
+                    f'CREATE OR REPLACE VIEW "{table}" AS '
+                    f"SELECT * FROM read_parquet('{glob}', union_by_name=true)"
+                )
+
+    def refresh_views(self) -> None:
+        """Re-register views to pick up new parquet files (live mode)."""
+        self._register_views()
+        self._refresh_max_step()
 
     def _has_table(self, table: str) -> bool:
         """Check if any Parquet files exist for a table."""
@@ -81,7 +101,7 @@ class RunStore:
         """SQL fragment to read a table's data."""
         if self._store is not None:
             return f'lake."{table}"'
-        return f"read_parquet('{self._table_glob(table)}', union_by_name=true)"
+        return f'"{table}"'
 
     def get_step(self, step: int, table: str) -> pd.DataFrame:
         """Return all rows for a given step from the specified table."""

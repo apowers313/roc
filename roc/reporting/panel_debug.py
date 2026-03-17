@@ -26,6 +26,10 @@ from panel.viewable import Viewer
 from roc.reporting.components.grid_viewer import GridViewer
 from roc.reporting.components.resolution_inspector import ResolutionInspector
 from roc.reporting.components.theme import COMPACT_CELL_CSS
+from roc.reporting.playback_machine import (
+    PlaybackListener,
+    PlaybackMachine,
+)
 from roc.reporting.run_store import RunStore, StepData
 from roc.reporting.step_buffer import StepBuffer
 
@@ -384,11 +388,8 @@ class PanelDashboard(Viewer):
         self._data_dir = data_dir or store.run_dir.parent
         self._step_buffer = step_buffer
         self._speed_to_interval = dict(self.SPEEDS)
-        self._updating_game = False
         self._last_data: StepData | None = None
         self._last_seen_step: int = 0
-        self._live_mode = step_buffer is not None
-        self._user_paused = False
 
         min_step, max_step = store.step_range()
         self.run_name = store.run_dir.name
@@ -539,6 +540,13 @@ class PanelDashboard(Viewer):
         # Log table (created once, updated via .value = new_df)
         self._log_table = _make_log_tabulator()
 
+        # Playback state machine -- must be created after widgets exist so that
+        # on_enter_historical can access _step_widget during initialization.
+        self._pb_listener = PlaybackListener(self)
+        self._playback = PlaybackMachine(dashboard=self, listeners=[self._pb_listener])
+        self._push_updating = False
+        self._sm_updating = False
+
         # -- Wire widgets to params --
         self._step_widget.param.watch(self._handle_step_widget, "value")
         self._step_widget.param.watch(self._handle_direction_widget, "direction")
@@ -553,11 +561,10 @@ class PanelDashboard(Viewer):
         self.param.watch(self._handle_game, ["game"])
         self.param.watch(self._handle_log_level, ["log_level"])
 
-        # In live mode, show "playing" state so the pause button works.
-        # Disable auto-advance timer -- live data comes from push callbacks.
+        # Transition to live mode if a step buffer was provided.
+        # Entry action sets interval=TIMER_DISABLED and direction=1.
         if step_buffer is not None:
-            self._step_widget.interval = 2**31 - 1
-            self._step_widget.direction = 1
+            self._playback.send("go_live")
 
         # Initial render
         self.step = max(min_step, 1)
@@ -566,16 +573,43 @@ class PanelDashboard(Viewer):
     # -- Widget -> param sync --
 
     def _handle_step_widget(self, event: param.parameterized.Event) -> None:
+        # Ignore changes driven by _on_new_data push updates or state
+        # machine entry actions.
+        if getattr(self, "_push_updating", False):
+            return
+        if getattr(self, "_sm_updating", False):
+            return
+        print(f"[WIDGET] step_widget changed: {event.old} -> {event.new}", flush=True)
+        # Determine if the user navigated to the live edge or away from it.
+        at_end = event.new >= self._step_widget.end
+        if self._playback.live_following.is_active:
+            if not at_end:
+                self._playback.send("user_navigate")
+        elif at_end:
+            # From paused/catchup, jumping to end returns to following.
+            self._playback.send("jump_to_end")
+        # Always call _on_step_change directly -- param watchers only fire
+        # on change, so setting self.step to the same value (e.g. clicking
+        # "first" when already at step 1) would be a silent no-op.
         self.step = event.new
+        self._on_step_change(event.new)
 
     def _handle_direction_widget(self, event: param.parameterized.Event) -> None:
-        self._user_paused = event.new == 0
-        if self._user_paused and self._step_buffer is not None:
-            # Restore normal playback interval for review mode
-            label = self._speed_selector.value
-            self._step_widget.interval = self._speed_to_interval.get(
-                label, self._speed_to_interval[self._DEFAULT_SPEED]
-            )
+        """Handle Player widget play/pause button clicks.
+
+        Must ignore programmatic direction changes from the state machine's
+        entry actions (on_enter_live_paused sets direction=0, etc.) to
+        avoid infinite feedback loops.
+        """
+        if getattr(self, "_sm_updating", False):
+            return
+        print(f"[DIRECTION] direction changed: {event.old} -> {event.new}", flush=True)
+        if event.new == 0:
+            # User clicked pause button
+            self._dispatch_key(" ")
+        elif event.new == 1 and not self._playback.live_following.is_active:
+            # User clicked play button while not following
+            self._dispatch_key(" ")
 
     def _handle_speed_widget(self, event: param.parameterized.Event) -> None:
         self.speed = event.new
@@ -584,6 +618,8 @@ class PanelDashboard(Viewer):
         self.run_name = event.new
 
     def _handle_game_widget(self, event: param.parameterized.Event) -> None:
+        if getattr(self, "_push_updating", False):
+            return
         if event.new and event.new.isdigit():
             self.game = event.new
 
@@ -610,10 +646,6 @@ class PanelDashboard(Viewer):
 
     # -- Live mode --
 
-    def _is_following(self) -> bool:
-        """Return True if the player is at or near the latest step."""
-        return bool(self._step_widget.value >= self._step_widget.end)
-
     def _on_new_data(self) -> None:
         """Handle a push notification from the step buffer.
 
@@ -625,13 +657,11 @@ class PanelDashboard(Viewer):
         latest = self._step_buffer.get_latest()
         if latest is None or latest.step <= self._last_seen_step:
             return
-        # On the first notification after init from Parquet data, jump to live.
-        # The dashboard may init with end >> value (historical data in RunStore),
-        # making _is_following() False even though the user just opened the page.
-        first_notification = self._last_seen_step == 0 and self._step_widget.value <= 1
+        print(
+            f"[PUSH] latest={latest.step} last_seen={self._last_seen_step}",
+            flush=True,
+        )
         self._last_seen_step = latest.step
-
-        was_following = (self._is_following() and not self._user_paused) or first_notification
 
         # Always update slider end and game options (lightweight)
         if latest.step > self._step_widget.end:
@@ -645,23 +675,30 @@ class PanelDashboard(Viewer):
                 opts.append(game_str)
                 self._game_selector.options = opts
 
-        if was_following:
-            # Following: advance slider, auto-switch game, let watcher chain update data
-            self._updating_game = True
-            try:
-                self._game_selector.value = str(latest.game_number)
-            finally:
-                self._updating_game = False
-            old_value = self._step_widget.value
-            self._step_widget.end = latest.step
-            self._step_widget.value = latest.step
-            # Keep auto-advance timer disabled while following live
-            if self._step_widget.interval < 2**31 - 1:
-                self._step_widget.interval = 2**31 - 1
-            # If step didn't change (e.g. first push at startup), the watcher
-            # won't fire so we must call _on_step_change directly.
-            if old_value == latest.step:
-                self._on_step_change(latest.step)
+        # Let the state machine decide the mode transition.
+        # If we're in catchup and at the edge, this transitions to following.
+        was_following = self._playback.live_following.is_active
+        self._playback.send("push_arrived")
+        is_following = self._playback.live_following.is_active
+
+        if is_following:
+            # Snap to latest: update display directly without setting
+            # _step_widget.value on every push.  Frequent server-side
+            # value updates create a client-side race that swallows user
+            # clicks (prev/next) before they reach the server.
+            self._push_updating = True
+            self._game_selector.value = str(latest.game_number)
+            self._push_updating = False
+            if latest.step > self._step_widget.end:
+                self._step_widget.end = latest.step
+            # Do NOT set _step_widget.value here. Server-side value updates
+            # race with client-side button clicks (prev/next), causing user
+            # interactions to be swallowed. The LIVE badge tells the user
+            # they're at the live edge; the slider position is cosmetic.
+            self._on_step_change(latest.step)
+        elif not was_following:
+            # Not following -- show badge so user knows new data exists
+            self._new_data_badge.visible = True
 
     # -- Business logic --
 
@@ -674,23 +711,28 @@ class PanelDashboard(Viewer):
         if data is None:
             data = self._store.get_step_data(step)
 
+        has_screen = data.screen is not None and bool(data.screen)
+        print(
+            f"[STEP] step={step} data.step={data.step} has_screen={has_screen}"
+            f" game={data.game_number} from_buffer={self._step_buffer is not None}",
+            flush=True,
+        )
         self._apply_step_data(data)
 
     def _apply_step_data(self, data: StepData) -> None:
         """Update all dashboard widgets from a StepData instance."""
-        # Update live/new-data badges
-        following = self._is_following()
-        self._live_badge.visible = following
-        # Show badge when not at latest, clear when following or advancing
-        if not following and self._step_widget.value < self._step_widget.end:
-            self._new_data_badge.visible = True
-        elif following or (self._last_data is not None and data.step > self._last_data.step):
+        # Badge visibility is driven by the state machine's entry actions.
+        # Clear the "new data" badge when the user advances (they've seen it).
+        following = self._playback.live_following.is_active
+        if following or (self._last_data is not None and data.step > self._last_data.step):
             self._new_data_badge.visible = False
         self._last_data = data
 
         # Grid viewers (reactive via param)
         self._screen_viewer.grid_data = data.screen
-        self._saliency_viewer.grid_data = data.saliency
+        # Saliency viewer is inside the attention card -- defer if collapsed.
+        if not getattr(self, "_attention_card", None) or not self._attention_card.collapsed:
+            self._saliency_viewer.grid_data = data.saliency
 
         # Info line (with bookmark indicator)
         mark = " [*]" if self._bookmarks.is_bookmarked(data.step) else ""
@@ -728,42 +770,57 @@ class PanelDashboard(Viewer):
         # else: keep previous indicator values (metrics arrive slightly after screen)
 
         # KV tables (update DataFrame in place)
+        # Game State card is always expanded -- update unconditionally.
         if data.game_metrics:
             self._metrics_table.value = _dict_to_df(data.game_metrics)
         self._graph_table.value = _dict_to_df(data.graph_summary)
-        self._features_table.value = _dict_to_df(
-            _parse_features(data.features) if data.features else None
-        )
-        self._attenuation_table.value = _dict_to_df(data.attenuation)
-        self._resolution_inspector.decision = data.resolution_metrics
+        # Collapsed-card tables: skip updates while collapsed to avoid
+        # Panel/Bokeh console errors. Data refreshes when the card expands
+        # via _on_card_expand(). Before servable() is called, cards don't
+        # exist yet, so update unconditionally (no browser connected).
+        perception_ok = not getattr(self, "_perception_card", None) or not self._perception_card.collapsed
+        attention_ok = not getattr(self, "_attention_card", None) or not self._attention_card.collapsed
+        object_ok = not getattr(self, "_object_card", None) or not self._object_card.collapsed
+        log_ok = not getattr(self, "_log_card", None) or not self._log_card.collapsed
 
-        # Object info (text, update .object)
-        if data.object_info:
-            parts = []
-            for item in data.object_info:
-                if isinstance(item.get("raw"), str):
-                    parts.append(str(item["raw"]).strip())
-                else:
-                    for k, v in item.items():
-                        if k not in ("step", "game_number"):
-                            parts.append(f"{k}: {v}")
-            self._object_pane.object = "\n".join(parts) if parts else "No object data"
-        else:
-            self._object_pane.object = "No object data"
+        if perception_ok:
+            self._features_table.value = _dict_to_df(
+                _parse_features(data.features) if data.features else None
+            )
+        if attention_ok:
+            self._attenuation_table.value = _dict_to_df(data.attenuation)
+        if object_ok:
+            self._resolution_inspector.decision = data.resolution_metrics
 
-        # Focus points (text, update .object)
-        if data.focus_points:
-            parts = []
-            for item in data.focus_points:
-                if isinstance(item.get("raw"), str):
-                    parts.append(str(item["raw"]).strip())
-                else:
-                    for k, v in item.items():
-                        if k not in ("step", "game_number"):
-                            parts.append(f"{k}: {v}")
-            self._focus_pane.object = "\n".join(parts) if parts else "No focus data"
-        else:
-            self._focus_pane.object = "No focus data"
+        # Object info (text, update .object) -- inside object_card
+        if object_ok:
+            if data.object_info:
+                parts = []
+                for item in data.object_info:
+                    if isinstance(item.get("raw"), str):
+                        parts.append(str(item["raw"]).strip())
+                    else:
+                        for k, v in item.items():
+                            if k not in ("step", "game_number"):
+                                parts.append(f"{k}: {v}")
+                self._object_pane.object = "\n".join(parts) if parts else "No object data"
+            else:
+                self._object_pane.object = "No object data"
+
+        # Focus points (text, update .object) -- inside attention_card
+        if attention_ok:
+            if data.focus_points:
+                parts = []
+                for item in data.focus_points:
+                    if isinstance(item.get("raw"), str):
+                        parts.append(str(item["raw"]).strip())
+                    else:
+                        for k, v in item.items():
+                            if k not in ("step", "game_number"):
+                                parts.append(f"{k}: {v}")
+                self._focus_pane.object = "\n".join(parts) if parts else "No focus data"
+            else:
+                self._focus_pane.object = "No focus data"
 
         # Event bar chart (update Bokeh data source in place)
         if data.event_summary:
@@ -771,8 +828,9 @@ class PanelDashboard(Viewer):
             if event_data:
                 self._update_event_chart(event_data)
 
-        # Log table (update DataFrame in place)
-        self._log_table.value = _filter_logs(data.logs, self._log_level_selector.value)
+        # Log table (update DataFrame in place) -- inside log_card
+        if log_ok:
+            self._log_table.value = _filter_logs(data.logs, self._log_level_selector.value)
 
     def _update_event_chart(self, event_data: dict[str, int]) -> None:
         """Update the Bokeh bar chart data source in place."""
@@ -798,6 +856,48 @@ class PanelDashboard(Viewer):
         chart_height = max(len(names) * 25, 80)
         fig.height = chart_height
         self._events_pane.height = chart_height
+
+    def _on_card_expand(self, event: param.parameterized.Event) -> None:
+        """Refresh deferred widget data when a collapsed card is expanded."""
+        if event.new or self._last_data is None:
+            return  # collapsed=True or no data yet
+        data = self._last_data
+        card = event.obj
+        if card is self._perception_card:
+            self._features_table.value = _dict_to_df(
+                _parse_features(data.features) if data.features else None
+            )
+        elif card is self._attention_card:
+            self._saliency_viewer.grid_data = data.saliency
+            self._attenuation_table.value = _dict_to_df(data.attenuation)
+            if data.focus_points:
+                parts = []
+                for item in data.focus_points:
+                    if isinstance(item.get("raw"), str):
+                        parts.append(str(item["raw"]).strip())
+                    else:
+                        for k, v in item.items():
+                            if k not in ("step", "game_number"):
+                                parts.append(f"{k}: {v}")
+                self._focus_pane.object = "\n".join(parts) if parts else "No focus data"
+            else:
+                self._focus_pane.object = "No focus data"
+        elif card is self._object_card:
+            self._resolution_inspector.decision = data.resolution_metrics
+            if data.object_info:
+                parts = []
+                for item in data.object_info:
+                    if isinstance(item.get("raw"), str):
+                        parts.append(str(item["raw"]).strip())
+                    else:
+                        for k, v in item.items():
+                            if k not in ("step", "game_number"):
+                                parts.append(f"{k}: {v}")
+                self._object_pane.object = "\n".join(parts) if parts else "No object data"
+            else:
+                self._object_pane.object = "No object data"
+        elif card is self._log_card:
+            self._log_table.value = _filter_logs(data.logs, self._log_level_selector.value)
 
     def _on_log_level_change(self) -> None:
         """Re-filter logs with new severity level."""
@@ -827,8 +927,8 @@ class PanelDashboard(Viewer):
     def _on_speed_change(self, event: object) -> None:
         """Update player interval from speed label."""
         label = getattr(event, "new", self._DEFAULT_SPEED)
-        # Don't override disabled timer when following live
-        if self._step_buffer is not None and not self._user_paused and self._is_following():
+        # Don't override disabled timer when following live -- push-driven
+        if self._playback.live_following.is_active:
             return
         self._step_widget.interval = self._speed_to_interval.get(
             label, self._speed_to_interval[self._DEFAULT_SPEED]
@@ -836,8 +936,8 @@ class PanelDashboard(Viewer):
 
     def _on_game_change(self, game_number: int) -> None:
         """Jump to the first step of a game."""
-        if self._updating_game:
-            return
+        # User changing game while following leaves live mode.
+        self._playback.send("user_navigate")
         try:
             min_step, max_step = self._store.step_range(game_number=game_number)
             if min_step > 0:
@@ -873,15 +973,12 @@ class PanelDashboard(Viewer):
             self._step_widget.value = max(self._step_widget.value - 1, self._step_widget.start)
         elif key == "Home":
             self._step_widget.value = self._step_widget.start
-            if self._step_buffer is not None and self._step_widget.direction != 0:
-                self._step_widget.direction = 0
+            if not self._playback.historical.is_active and not self._playback.live_paused.is_active:
+                self._playback.send("pause")
         elif key == "End":
             self._step_widget.value = self._step_widget.end
-            self._user_paused = False
-            if self._step_buffer is not None:
-                self._step_widget.interval = 2**31 - 1
-                if self._step_widget.direction != 1:
-                    self._step_widget.direction = 1
+            if self._playback.live_paused.is_active or self._playback.live_catchup.is_active:
+                self._playback.send("jump_to_end")
         elif key == " ":
             self._toggle_play()
         elif key in ("+", "="):
@@ -920,11 +1017,23 @@ class PanelDashboard(Viewer):
             self._speed_selector.value = options[idx - 1]
 
     def _toggle_play(self) -> None:
-        """Toggle play/pause via the Player widget's direction param."""
-        if self._step_widget.direction == 0:
-            self._step_widget.direction = 1
-        else:
-            self._step_widget.direction = 0
+        """Toggle play/pause."""
+        if self._playback.historical.is_active:
+            # Historical mode: just toggle the widget direction.
+            # Guard with _sm_updating so _handle_direction_widget doesn't
+            # re-enter _dispatch_key(" ") and cause infinite recursion.
+            self._sm_updating = True
+            if self._step_widget.direction == 0:
+                self._step_widget.direction = 1
+            else:
+                self._step_widget.direction = 0
+            self._sm_updating = False
+        elif self._playback.live_following.is_active:
+            self._playback.send("pause")
+        elif self._playback.live_paused.is_active:
+            self._playback.send("resume")
+        elif self._playback.live_catchup.is_active:
+            self._playback.send("pause")
 
     def _cycle_game(self) -> None:
         """Jump to the next game (wraps around)."""
@@ -1045,7 +1154,7 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
-        perception_card = pn.Card(
+        self._perception_card = pn.Card(
             self._features_table,
             title="Perception",
             collapsible=True,
@@ -1053,7 +1162,7 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
-        attention_card = pn.Card(
+        self._attention_card = pn.Card(
             pn.Row(
                 self._saliency_viewer,
                 pn.Column(
@@ -1071,7 +1180,7 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
-        object_card = pn.Card(
+        self._object_card = pn.Card(
             pn.Row(
                 pn.Column(
                     pn.pane.Markdown("**Object Info**"),
@@ -1091,7 +1200,7 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
-        log_card = pn.Card(
+        self._log_card = pn.Card(
             pn.Row(self._log_level_selector),
             self._log_table,
             title="Log Messages",
@@ -1100,7 +1209,7 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
-        bookmarks_card = pn.Card(
+        self._bookmarks_card = pn.Card(
             self._bookmark_table,
             title="Bookmarks",
             collapsible=True,
@@ -1108,16 +1217,26 @@ class PanelDashboard(Viewer):
             sizing_mode="stretch_width",
         )
 
+        # Refresh deferred widgets when collapsed cards are expanded.
+        for card in (
+            self._perception_card,
+            self._attention_card,
+            self._object_card,
+            self._log_card,
+            self._bookmarks_card,
+        ):
+            card.param.watch(self._on_card_expand, ["collapsed"])
+
         return pn.Column(
             self._kb_shortcuts,
             self._help_pane,
             transport_bar,
             game_state_card,
-            perception_card,
-            attention_card,
-            object_card,
-            log_card,
-            bookmarks_card,
+            self._perception_card,
+            self._attention_card,
+            self._object_card,
+            self._log_card,
+            self._bookmarks_card,
             sizing_mode="stretch_width",
         )
 

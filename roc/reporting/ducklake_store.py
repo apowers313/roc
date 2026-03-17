@@ -28,18 +28,19 @@ class DuckLakeStore:
     def __init__(self, run_dir: Path, *, read_only: bool = False) -> None:
         self.run_dir = run_dir
         run_dir.mkdir(parents=True, exist_ok=True)
-        self._catalog_path = run_dir / "catalog.sqlite"
+        self._catalog_path = run_dir / "catalog.duckdb"
         self._data_path = run_dir / "data"
         self._lock = threading.Lock()
 
         self._conn = duckdb.connect()
-        self._conn.execute("INSTALL ducklake; INSTALL sqlite;")
-        self._conn.execute("LOAD ducklake; LOAD sqlite;")
+        self._conn.execute("INSTALL ducklake;")
+        self._conn.execute("LOAD ducklake;")
         catalog = str(self._catalog_path).replace("'", "''")
         data = str(self._data_path).replace("'", "''")
-        self._conn.execute(f"ATTACH 'ducklake:sqlite:{catalog}' AS lake (DATA_PATH '{data}')")
+        self._conn.execute(f"ATTACH 'ducklake:{catalog}' AS lake (DATA_PATH '{data}')")
         if not read_only:
-            # Always write to Parquet (no data inlining in SQLite catalog)
+            # Disable data inlining so every insert creates a parquet file.
+            # Parquet files are the archival format and must always exist.
             self._conn.execute("CALL lake.set_option('data_inlining_row_limit', '0')")
 
         self._known_columns: dict[str, list[str]] = {}
@@ -103,7 +104,7 @@ class DuckLakeStore:
     @staticmethod
     def is_valid_run(run_dir: Path) -> bool:
         """Check if a directory contains a valid DuckLake catalog."""
-        return (run_dir / "catalog.sqlite").exists()
+        return (run_dir / "catalog.duckdb").exists() or (run_dir / "catalog.sqlite").exists()
 
     def close(self) -> None:
         """Detach the catalog and close the connection."""

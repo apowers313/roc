@@ -21,7 +21,11 @@ def maybe_start_debugpy() -> None:
 
         import debugpy
 
-        debugpy.listen(("127.0.0.1", settings.debug_port))
+        try:
+            debugpy.listen(("127.0.0.1", settings.debug_port))
+        except RuntimeError as exc:
+            logger.warning(f"debugpy failed to listen on port {settings.debug_port}: {exc}")
+            return
         logger.info(f"debugpy listening on port {settings.debug_port}")
 
         if settings.debug_wait:

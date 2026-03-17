@@ -260,7 +260,7 @@ class Gym(Component, ABC):
 
         logger.info("NLE loop done, exiting.")
         WandbReporter.finish()
-        from roc.reporting.dashboard_server import stop_dashboard
+        from roc.reporting.api_server import stop_dashboard
 
         stop_dashboard()
         Observability.shutdown()

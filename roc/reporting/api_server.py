@@ -1,0 +1,417 @@
+"""FastAPI + Socket.io server for the React debug dashboard.
+
+Replaces the Panel/Bokeh dashboard_server.py with a clean separation:
+- REST endpoints serve step data from StepBuffer (live) or DuckLake (historical)
+- Socket.io pushes live step metadata to connected browsers
+- In production, serves the React static build from dashboard-ui/dist/
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import json
+import threading
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import socketio
+import uvicorn
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from roc.logger import logger
+from roc.reporting.ducklake_store import DuckLakeStore
+from roc.reporting.run_store import RunStore, StepData
+from roc.reporting.step_buffer import StepBuffer, register_step_buffer
+
+# ---------------------------------------------------------------------------
+# Socket.io server
+# ---------------------------------------------------------------------------
+
+sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+
+# ---------------------------------------------------------------------------
+# FastAPI app
+# ---------------------------------------------------------------------------
+
+app = FastAPI(title="ROC Debug Dashboard API")
+
+
+_server_ready = threading.Event()
+
+
+@app.on_event("startup")
+async def _capture_event_loop() -> None:
+    """Capture the asyncio event loop and signal that the server is ready.
+
+    Called by uvicorn after the event loop is fully initialized.
+    The threading.Event unblocks start_dashboard() so the game loop
+    doesn't push to the StepBuffer before the async infrastructure
+    can handle cross-thread coroutine submissions.
+    """
+    import asyncio
+
+    global _sio_loop
+    _sio_loop = asyncio.get_running_loop()
+    _server_ready.set()
+
+# Module-level state set by start_dashboard()
+_data_dir: Path | None = None
+_step_buffer: StepBuffer | None = None
+_live_run_name: str | None = None
+_live_store: DuckLakeStore | None = None
+_run_stores: dict[str, RunStore] = {}
+_store_lock = threading.Lock()
+
+
+def _get_store(run_name: str) -> RunStore:
+    """Get or create a RunStore for a run.
+
+    For the live run, uses a path-based RunStore (direct parquet reads via
+    DuckDB views) to avoid conflicting with the game's DuckLake catalog.
+    For historical runs, uses DuckLakeStore for catalog-accelerated queries.
+    """
+    if _data_dir is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+
+    with _store_lock:
+        if run_name not in _run_stores:
+            run_dir = _data_dir / run_name
+            if not run_dir.is_dir():
+                raise HTTPException(status_code=404, detail=f"Run not found: {run_name}")
+            if run_name == _live_run_name:
+                # Path-based: separate DuckDB connection, no catalog conflict
+                _run_stores[run_name] = RunStore(run_dir)
+            else:
+                # Catalog-based: fast with data inlining for completed runs
+                duck_store = DuckLakeStore(run_dir, read_only=True)
+                _run_stores[run_name] = RunStore(duck_store)
+        return _run_stores[run_name]
+
+
+def _get_step_data(run_name: str, step: int) -> StepData:
+    """Get step data -- from StepBuffer if live, else from parquet/DuckLake.
+
+    For the live run, tries StepBuffer first (in-memory, instant).
+    Falls back to a separate DuckDB connection reading parquet files
+    directly (bypasses the game's DuckLakeStore to avoid thread-safety issues).
+    """
+    # Try StepBuffer first for the live run
+    if run_name == _live_run_name and _step_buffer is not None:
+        buf_data = _step_buffer.get_step(step)
+        if buf_data is not None:
+            return buf_data
+        # Step evicted from buffer -- fall through to parquet
+
+    # Read from parquet via RunStore (separate DuckDB connection, thread-safe)
+    store = _get_store(run_name)
+    return store.get_step_data(step)
+
+
+# ---------------------------------------------------------------------------
+# Response models
+# ---------------------------------------------------------------------------
+
+
+class RunSummary(BaseModel):
+    name: str
+    games: int
+    steps: int
+
+
+class GameSummary(BaseModel):
+    game_number: int
+    steps: int
+    start_ts: int | None
+    end_ts: int | None
+
+
+class StepRange(BaseModel):
+    min: int
+    max: int
+
+
+class Bookmark(BaseModel):
+    step: int
+    game: int
+    annotation: str
+    created: str
+
+
+# ---------------------------------------------------------------------------
+# REST endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/runs")
+def list_runs() -> list[RunSummary]:
+    """List available runs with metadata."""
+    if _data_dir is None:
+        return []
+    names = RunStore.list_runs(_data_dir)
+    names.reverse()  # newest first
+    return [RunSummary(name=name, games=0, steps=0) for name in names]
+
+
+@app.get("/api/runs/{run_name}/games")
+def list_games(run_name: str) -> list[GameSummary]:
+    """List games in a run."""
+    # For live run, use step buffer game numbers
+    if run_name == _live_run_name and _step_buffer is not None:
+        game_nums = _step_buffer.game_numbers
+        return [
+            GameSummary(game_number=g, steps=0, start_ts=None, end_ts=None)
+            for g in game_nums
+        ]
+    store = _get_store(run_name)
+    df = store.list_games()
+    return [
+        GameSummary(
+            game_number=int(row["game_number"]),
+            steps=int(row["steps"]),
+            start_ts=int(row["start_ts"]) if row.get("start_ts") is not None else None,
+            end_ts=int(row["end_ts"]) if row.get("end_ts") is not None else None,
+        )
+        for _, row in df.iterrows()
+    ]
+
+
+def _convert_numpy(obj: Any) -> Any:
+    """Recursively convert numpy types to native Python types for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: _convert_numpy(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_convert_numpy(v) for v in obj]
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        return float(obj)
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()
+    if isinstance(obj, np.bool_):
+        return bool(obj)
+    return obj
+
+
+@app.get("/api/runs/{run_name}/step/{step}")
+def get_step(
+    run_name: str,
+    step: int,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get all data for a specific step."""
+    step_data = _get_step_data(run_name, step)
+    data = _convert_numpy(dataclasses.asdict(step_data))
+    return JSONResponse(content=data)
+
+
+@app.get("/api/runs/{run_name}/step-range")
+def get_step_range(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> StepRange:
+    """Get min/max step for a run or game."""
+    # For live run, use step buffer range
+    if run_name == _live_run_name and _step_buffer is not None and len(_step_buffer) > 0:
+        return StepRange(min=_step_buffer.min_step, max=_step_buffer.max_step)
+    store = _get_store(run_name)
+    min_step, max_step = store.step_range(game)
+    return StepRange(min=min_step, max=max_step)
+
+
+@app.get("/api/runs/{run_name}/bookmarks")
+def get_bookmarks(run_name: str) -> list[Bookmark]:
+    """Get bookmarks for a run."""
+    if _data_dir is None:
+        return []
+    bookmarks_file = _data_dir / run_name / "bookmarks.json"
+    if not bookmarks_file.exists():
+        return []
+    try:
+        data = json.loads(bookmarks_file.read_text())
+        return [Bookmark(**b) for b in data]
+    except Exception:
+        return []
+
+
+@app.post("/api/runs/{run_name}/bookmarks")
+def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> dict[str, str]:
+    """Save bookmarks for a run."""
+    if _data_dir is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    bookmarks_file = _data_dir / run_name / "bookmarks.json"
+    bookmarks_file.parent.mkdir(parents=True, exist_ok=True)
+    bookmarks_file.write_text(json.dumps([b.model_dump() for b in bookmarks], indent=2))
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Live mode endpoints
+# ---------------------------------------------------------------------------
+
+
+class LiveStatus(BaseModel):
+    active: bool
+    run_name: str | None
+    step: int
+    game_number: int
+    step_min: int
+    step_max: int
+    game_numbers: list[int]
+
+
+@app.get("/api/live/status")
+def live_status() -> LiveStatus:
+    """Get current live run status."""
+    if _step_buffer is None or len(_step_buffer) == 0:
+        return LiveStatus(
+            active=False, run_name=None, step=0, game_number=0,
+            step_min=0, step_max=0, game_numbers=[],
+        )
+    latest = _step_buffer.get_latest()
+    return LiveStatus(
+        active=True,
+        run_name=_live_run_name,
+        step=latest.step if latest else 0,
+        game_number=latest.game_number if latest else 0,
+        step_min=_step_buffer.min_step,
+        step_max=_step_buffer.max_step,
+        game_numbers=_step_buffer.game_numbers,
+    )
+
+
+@app.get("/api/live/step/{step}")
+def live_step(step: int) -> JSONResponse:
+    """Get step data from the live StepBuffer (in-memory)."""
+    if _step_buffer is None:
+        raise HTTPException(status_code=404, detail="No live session")
+    step_data = _step_buffer.get_step(step)
+    if step_data is None:
+        raise HTTPException(status_code=404, detail=f"Step {step} not in buffer")
+    data = _convert_numpy(dataclasses.asdict(step_data))
+    return JSONResponse(content=data)
+
+
+# ---------------------------------------------------------------------------
+# Socket.io events
+# ---------------------------------------------------------------------------
+
+
+@sio.event  # type: ignore[misc]
+async def connect(sid: str, environ: dict[str, Any]) -> None:
+    """Client connected."""
+    logger.debug("Dashboard client connected: {}", sid)
+
+
+@sio.event  # type: ignore[misc]
+async def disconnect(sid: str) -> None:
+    """Client disconnected."""
+    logger.debug("Dashboard client disconnected: {}", sid)
+
+
+_sio_loop: Any = None  # set when uvicorn starts
+
+
+def _notify_new_step(step_data: StepData) -> None:
+    """Push full step data to all connected clients (called from game thread).
+
+    Sends the complete StepData so the browser can render immediately
+    without a REST round-trip. This eliminates flicker in live-following mode.
+    """
+    import asyncio
+
+    try:
+        if _sio_loop is not None and _sio_loop.is_running():
+            data = _convert_numpy(dataclasses.asdict(step_data))
+            asyncio.run_coroutine_threadsafe(
+                sio.emit("new_step", data),
+                _sio_loop,
+            )
+    except Exception:
+        pass  # socket errors must not break the game loop
+
+
+# ---------------------------------------------------------------------------
+# Server lifecycle
+# ---------------------------------------------------------------------------
+
+_started = False
+
+
+def start_dashboard() -> None:
+    """Start the FastAPI dashboard server.
+
+    Creates a StepBuffer and registers it globally so the game loop
+    can push StepData. Socket.io broadcasts push notifications to
+    all connected browser clients.
+    """
+    global _started, _data_dir, _step_buffer, _live_run_name, _live_store
+    if _started:
+        return
+
+    from roc.config import Config
+    from roc.reporting.observability import Observability
+
+    cfg = Config.get()
+    if not cfg.dashboard_enabled:
+        return
+
+    store = Observability.get_ducklake_store()
+    if store is None:
+        logger.warning("Dashboard enabled but no DuckLakeStore available; skipping.")
+        return
+
+    _data_dir = store.run_dir.parent
+    _live_run_name = store.run_dir.name
+
+    # Create step buffer for live push
+    # Large capacity so historical navigation can always read from memory.
+    # With data inlining, parquet files don't exist during live sessions,
+    # so the StepBuffer is the only source of step data.
+    _step_buffer = StepBuffer(capacity=100_000)
+    register_step_buffer(_step_buffer)
+    _step_buffer.add_listener(lambda: _notify_new_step(_step_buffer.get_latest()))  # type: ignore[arg-type]
+
+    # Mount the ASGI app (FastAPI + Socket.io)
+    sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
+    # Try to mount React static build if it exists
+    dist_dir = Path(__file__).parent.parent.parent / "dashboard-ui" / "dist"
+    if dist_dir.is_dir():
+        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="static")
+
+    # Start uvicorn in a background thread and wait for the event loop
+    # to be fully initialized before returning. This prevents the game
+    # loop from pushing to the StepBuffer (which triggers Socket.io emits
+    # via run_coroutine_threadsafe) before the async infrastructure is ready.
+    config = uvicorn.Config(
+        sio_app,
+        host="0.0.0.0",
+        port=cfg.dashboard_port,
+        log_level="warning",
+        ssl_certfile=cfg.ssl_certfile if cfg.ssl_certfile else None,
+        ssl_keyfile=cfg.ssl_keyfile if cfg.ssl_keyfile else None,
+    )
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    # Block until the FastAPI startup event has captured the event loop.
+    # Timeout after 10s to avoid hanging if uvicorn fails to start.
+    if not _server_ready.wait(timeout=10):
+        logger.warning("Dashboard server did not become ready within 10s")
+
+    _started = True
+    proto = "https" if cfg.ssl_certfile else "http"
+    logger.info(f"Dashboard API at {proto}://0.0.0.0:{cfg.dashboard_port}")
+
+
+def stop_dashboard() -> None:
+    """Stop the dashboard and clean up."""
+    from roc.reporting.step_buffer import clear_step_buffer
+
+    clear_step_buffer()
+    logger.debug("Dashboard API stopped.")

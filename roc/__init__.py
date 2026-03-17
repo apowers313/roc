@@ -57,8 +57,8 @@ def init(config: dict[str, Any] | None = None) -> None:
     State.init()
     WandbReporter.init(Config.get())
 
-    # Start live dashboard in a background thread
-    from .reporting.dashboard_server import start_dashboard
+    # Start live dashboard API server in a background thread
+    from .reporting.api_server import start_dashboard
 
     start_dashboard()
 

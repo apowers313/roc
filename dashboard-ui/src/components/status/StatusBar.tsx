@@ -1,0 +1,100 @@
+/** Status bar -- compact row of key game metrics. */
+
+import { Badge, Group, Progress, Text } from "@mantine/core";
+
+import type { StepData } from "../../types/step-data";
+
+interface StatusBarProps {
+    data: StepData | undefined;
+    playbackState: string;
+}
+
+function hpColor(hp: number, hpMax: number): string {
+    if (hpMax <= 0) return "gray";
+    const ratio = hp / hpMax;
+    if (ratio > 0.5) return "green";
+    if (ratio > 0.25) return "yellow";
+    return "red";
+}
+
+export function StatusBar({ data, playbackState }: StatusBarProps) {
+    const metrics = data?.game_metrics;
+    const isLive = playbackState === "live_following";
+    const isPaused =
+        playbackState === "live_paused" || playbackState === "live_catchup";
+
+    return (
+        <Group gap="md" px={8} py={4}>
+            {isLive && (
+                <Badge color="red" size="xs" variant="filled">
+                    LIVE
+                </Badge>
+            )}
+            {isPaused && (
+                <Badge color="yellow" size="xs" variant="outline">
+                    {playbackState === "live_catchup"
+                        ? "CATCHING UP"
+                        : "PAUSED"}
+                </Badge>
+            )}
+
+            {metrics ? (
+                <>
+                    <Group gap={4}>
+                        <Text size="xs" c="dimmed">
+                            HP
+                        </Text>
+                        <Progress
+                            value={
+                                ((metrics.hp as number) /
+                                    Math.max(
+                                        metrics.hp_max as number,
+                                        1,
+                                    )) *
+                                100
+                            }
+                            color={hpColor(
+                                metrics.hp as number,
+                                metrics.hp_max as number,
+                            )}
+                            size="xs"
+                            style={{ width: 60 }}
+                        />
+                        <Text size="xs" fw={500}>
+                            {String(metrics.hp)}/{String(metrics.hp_max)}
+                        </Text>
+                    </Group>
+                    <StatItem label="Score" value={metrics.score} />
+                    <StatItem label="Depth" value={metrics.depth} />
+                    <StatItem label="Gold" value={metrics.gold} />
+                    <StatItem label="Energy" value={metrics.energy} />
+                    <StatItem label="Hunger" value={metrics.hunger} />
+                </>
+            ) : (
+                <Text size="xs" c="dimmed">
+                    Step {data?.step ?? "--"} | Game{" "}
+                    {data?.game_number ?? "--"}
+                </Text>
+            )}
+        </Group>
+    );
+}
+
+function StatItem({
+    label,
+    value,
+}: {
+    label: string;
+    value: unknown;
+}) {
+    return (
+        <Group gap={4}>
+            <Text size="xs" c="dimmed">
+                {label}
+            </Text>
+            <Text size="xs" fw={500}>
+                {value != null ? String(value) : "--"}
+            </Text>
+        </Group>
+    );
+}

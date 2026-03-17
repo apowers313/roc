@@ -846,11 +846,8 @@ class TestBookmarkIntegration:
         # Navigate to step 5 which is in game 1
         dashboard._step_widget.value = 5
         dashboard._on_step_change(5)
-        # Change game selector to game 2 (without navigating)
-        dashboard._game_selector.value = "2"
-        dashboard._updating_game = True  # prevent game change handler
-        dashboard._game_selector.value = "2"
-        dashboard._updating_game = False
+        # Note: game selector value doesn't affect bookmark game_number;
+        # bookmarks always use the game_number from the current step data.
         # Bookmark should use the step data's game_number, not the selector
         dashboard._toggle_bookmark()
         bms = dashboard._bookmarks.as_list()
@@ -1059,7 +1056,7 @@ class TestLiveMode:
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
         # Move to last step -- following mode
         dashboard._step_widget.value = dashboard._step_widget.end
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
         # Simulate a push from the game loop, then poll
         new_step = dashboard._step_widget.end + 1
@@ -1067,41 +1064,83 @@ class TestLiveMode:
         dashboard._on_new_data()
 
         assert dashboard._step_widget.end == new_step
-        assert dashboard._step_widget.value == new_step
+        assert dashboard._last_data.step == new_step
 
     def test_live_mode_auto_advances_when_following(self, mock_store: RunStore):
-        """When at latest step, poll should auto-advance with new data."""
+        """When in live_following, push should auto-advance with new data."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        buf.push(StepData(step=1, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+        # Push more data -- should auto-advance display
+        buf.push(StepData(step=2, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._last_data.step == 2
+
+    def test_live_mode_does_not_advance_when_paused(self, mock_store: RunStore):
+        """When paused in live mode, push should not advance the display."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        buf.push(StepData(step=1, game_number=1))
+        dashboard._on_new_data()
+        dashboard._playback.send("pause")
+        buf.push(StepData(step=2, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._last_data.step == 1  # display stayed at step 1
+
+    def test_historical_mode_never_following(self, mock_store: RunStore):
+        """Historical (no step buffer) mode is never in live_following."""
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
-        # Move to last step -- should be "following"
         dashboard._step_widget.value = dashboard._step_widget.end
-        assert dashboard._is_following()
-
-    def test_live_mode_does_not_advance_when_reviewing(self, mock_store: RunStore):
-        """When not at latest step, should not be following."""
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
+        assert dashboard._playback.historical.is_active
 
     def test_live_badge_visible_when_following(self, mock_store: RunStore):
-        """LIVE indicator should show when at the latest step."""
+        """LIVE indicator should show when in live_following state."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        # Push data so we're in live following mode
+        buf.push(StepData(step=1, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+        assert dashboard._live_badge.visible
+
+    def test_live_badge_hidden_when_reviewing(self, mock_store: RunStore):
+        """LIVE indicator should hide when not following."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        buf.push(StepData(step=1, game_number=1))
+        dashboard._on_new_data()
+        # Pause to exit following
+        dashboard._playback.send("pause")
+        assert not dashboard._live_badge.visible
+
+    def test_live_badge_hidden_in_historical_mode(self, mock_store: RunStore):
+        """LIVE indicator should never show in historical (non-live) mode."""
         from roc.reporting.panel_debug import PanelDashboard
 
         dashboard = PanelDashboard(mock_store)
         dashboard._step_widget.value = dashboard._step_widget.end
         dashboard._on_step_change(dashboard._step_widget.end)
-        assert dashboard._live_badge.visible
-
-    def test_live_badge_hidden_when_reviewing(self, mock_store: RunStore):
-        """LIVE indicator should hide when not at latest step."""
-        from roc.reporting.panel_debug import PanelDashboard
-
-        dashboard = PanelDashboard(mock_store)
-        dashboard._step_widget.value = 5
-        dashboard._on_step_change(5)
         assert not dashboard._live_badge.visible
 
     def test_game_selector_shows_games(self, mock_store: RunStore):
@@ -1139,9 +1178,10 @@ class TestLiveMode:
 
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
-        # Step back from end -- not following
+        # Pause and step back -- not following
+        dashboard._playback.send("pause")
         dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Push new data and poll
         new_step = dashboard._step_widget.end + 1
@@ -1151,8 +1191,7 @@ class TestLiveMode:
         # Slider end expands so user can play forward, value stays put
         assert dashboard._step_widget.end == new_step
         assert dashboard._step_widget.value == 5
-        # Badge shows on next user step change
-        dashboard._on_step_change(5)
+        # Badge was set by _on_new_data when not following
         assert dashboard._new_data_badge.visible
 
     def test_poll_adds_new_game_to_selector(self, mock_store: RunStore):
@@ -1179,8 +1218,9 @@ class TestLiveMode:
 
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
+        dashboard._playback.send("pause")
         dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
         original_end = dashboard._step_widget.end
 
         # Push 10 steps while not following, then poll
@@ -1224,7 +1264,8 @@ class TestLiveMode:
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
 
-        # Simulate: user selects game 1 and navigates to step 5
+        # Simulate: user pauses, selects game 1 and navigates to step 5
+        dashboard._playback.send("pause")
         dashboard._game_selector.value = "1"
         dashboard._step_widget.value = 5
 
@@ -1323,8 +1364,8 @@ class TestLiveMode:
         # Single poll should only trigger _apply_step_data once
         dashboard._on_new_data()
         assert call_count == 1
-        # Should be at the latest step
-        assert dashboard._step_widget.value == base + 5
+        # Should be displaying the latest step
+        assert dashboard._last_data.step == base + 5
 
     def test_on_new_data_idempotent_for_same_step(self, mock_store: RunStore):
         """Calling _on_new_data twice with same buffer state should only apply once."""
@@ -1516,8 +1557,8 @@ class TestPollEdgeCases:
         dashboard = PanelDashboard(mock_store, step_buffer=None)
         dashboard._on_new_data()  # Should not raise
 
-    def test_updating_game_flag_reset_on_error(self, mock_store: RunStore):
-        """Bug regression: _updating_game must reset even if _on_game_change raises."""
+    def test_live_following_ignores_game_change(self, mock_store: RunStore):
+        """Game changes from _on_new_data don't re-enter _on_game_change in live following."""
         from roc.reporting.panel_debug import PanelDashboard
         from roc.reporting.run_store import StepData
         from roc.reporting.step_buffer import StepBuffer
@@ -1526,18 +1567,18 @@ class TestPollEdgeCases:
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
         dashboard._step_widget.value = dashboard._step_widget.end
 
-        # Push data and poll to trigger the game selector update
+        # Push data with game change -- should update selector without triggering
+        # _on_game_change (which would jump to the game's first step)
         buf.push(StepData(step=100, game_number=1))
         dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+        assert dashboard._last_data.step == 100
 
-        # Verify the try/finally pattern is working by checking that
-        # _updating_game is always False after _on_new_data completes
-        assert not dashboard._updating_game
-
-        # Push a game change and verify flag resets
+        # Push another game change
         buf.push(StepData(step=101, game_number=99))
         dashboard._on_new_data()
-        assert not dashboard._updating_game
+        assert dashboard._playback.live_following.is_active
+        assert dashboard._last_data.step == 101
 
     def test_poll_rapid_game_transitions(self, mock_store: RunStore):
         """Multiple game transitions between polls should all appear in selector."""
@@ -1570,20 +1611,21 @@ class TestPollEdgeCases:
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
         dashboard._step_widget.value = dashboard._step_widget.end
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
         # Phase 1: Follow mode -- push and poll
         base = dashboard._step_widget.end
         for i in range(5):
             buf.push(StepData(step=base + 1 + i, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == base + 5
-        assert dashboard._is_following()
+        assert dashboard._last_data.step == base + 5
+        assert dashboard._playback.live_following.is_active
         assert dashboard._live_badge.visible
 
-        # Phase 2: User reviews -- go back
+        # Phase 2: User pauses and reviews -- go back
+        dashboard._playback.send("pause")
         dashboard._step_widget.value = base + 2
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Push more while reviewing
         for i in range(5):
@@ -1596,13 +1638,13 @@ class TestPollEdgeCases:
         # Phase 3: User presses End to return to live
         dashboard._dispatch_key("End")
         assert dashboard._step_widget.value == dashboard._step_widget.end
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
-        # New data should auto-advance again
+        # New data should auto-advance display again
         for i in range(3):
             buf.push(StepData(step=base + 11 + i, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == base + 13
+        assert dashboard._last_data.step == base + 13
 
     def test_poll_game_switch_during_review_no_jump(self, mock_store: RunStore):
         """Switching games manually while reviewing should not be overridden by poll."""
@@ -1620,10 +1662,11 @@ class TestPollEdgeCases:
             buf.push(StepData(step=110 + i, game_number=2))
         dashboard._on_new_data()
 
-        # User switches to game 1 and goes to step 105
+        # User pauses, switches to game 1 and goes to step 105
+        dashboard._playback.send("pause")
         dashboard._game_selector.value = "1"
         dashboard._step_widget.value = 105
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # More game 2 data arrives
         for i in range(5):
@@ -1683,9 +1726,10 @@ class TestPollEdgeCases:
             buf.push(StepData(step=base + 1 + i, game_number=1))
         dashboard._on_new_data()
 
-        # User goes to step 5 (way behind)
+        # User pauses and goes to step 5 (way behind)
+        dashboard._playback.send("pause")
         dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Slider end should be far ahead
         assert dashboard._step_widget.end == base + 100
@@ -1739,9 +1783,8 @@ class TestPollEdgeCases:
         """Regression: pause button must stop live follow via _on_new_data.
 
         In LIVE mode, step advancement comes from push callbacks, not the
-        Player's auto-advance timer.  Clicking pause sets direction=0 but
-        _on_new_data kept advancing because _is_following() only checks
-        value >= end.  The fix adds _user_paused flag.
+        Player's auto-advance timer.  The playback state machine tracks
+        the mode so _on_new_data respects the paused state.
         """
         from roc.reporting.panel_debug import PanelDashboard
         from roc.reporting.run_store import StepData
@@ -1755,32 +1798,32 @@ class TestPollEdgeCases:
         for i in range(1, 4):
             buf.push(StepData(step=i, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 3
-        assert dashboard._is_following()
+        assert dashboard._last_data.step == 3
+        assert dashboard._playback.live_following.is_active
 
-        # User clicks the pause button (Player widget sets direction=0)
-        dashboard._step_widget.direction = 0
-        assert dashboard._user_paused == True  # watcher set it
+        # User clicks the pause button
+        dashboard._playback.send("pause")
+        assert dashboard._playback.live_paused.is_active
 
         # Push more data -- should NOT advance because user paused
         buf.push(StepData(step=4, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 3  # stayed at 3
+        assert dashboard._last_data.step == 3  # display stayed at 3
         assert dashboard._step_widget.end == 4  # slider end grew
 
         buf.push(StepData(step=5, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 3  # still at 3
+        assert dashboard._last_data.step == 3  # still at 3
 
         # User presses End to return to live
         dashboard._dispatch_key("End")
-        assert dashboard._user_paused is False  # End resets it
+        assert dashboard._playback.live_following.is_active
         assert dashboard._step_widget.value == 5
 
-        # Now pushes should advance again
+        # Now pushes should advance display again
         buf.push(StepData(step=6, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 6  # following again
+        assert dashboard._last_data.step == 6  # following again
 
     def test_pause_then_play_resumes_following(self, tmp_path: Path):
         """After pause+play, live following should resume."""
@@ -1795,29 +1838,171 @@ class TestPollEdgeCases:
         for i in range(1, 4):
             buf.push(StepData(step=i, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 3
+        assert dashboard._last_data.step == 3
 
         # User clicks pause button
-        dashboard._step_widget.direction = 0
-        assert dashboard._user_paused == True  # watcher set it
+        dashboard._playback.send("pause")
+        assert dashboard._playback.live_paused.is_active
 
-        # Push -- should not advance
+        # Push -- should not advance display
         buf.push(StepData(step=4, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 3
+        assert dashboard._last_data.step == 3
 
-        # User clicks play button -- but still at step 3, not at end (4)
-        dashboard._step_widget.direction = 1
-        assert dashboard._user_paused == False  # watcher cleared it
+        # User clicks play button -- enters catchup (behind live edge)
+        dashboard._playback.send("resume")
+        assert dashboard._playback.live_catchup.is_active
 
         # Go to end so we're following again
         dashboard._dispatch_key("End")
         assert dashboard._step_widget.value == 4
 
-        # Now pushes should advance
+        # Now pushes should advance display
         buf.push(StepData(step=5, game_number=1))
         dashboard._on_new_data()
-        assert dashboard._step_widget.value == 5
+        assert dashboard._last_data.step == 5
+
+
+    def test_step_back_while_following_pauses(self, tmp_path: Path):
+        """Regression: clicking prev/slider while live should auto-pause.
+
+        Without this, _on_new_data snaps the user back to the live edge
+        within ~200ms of any navigation, making it impossible to review
+        historical steps during a live session.
+        """
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        # Push enough steps so navigating back triggers user_navigate
+        # (needs to be > 30 steps from end to be outside the near_end threshold)
+        for i in range(1, 51):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+
+        # Simulate user clicking to a step far from the end (>30 away)
+        dashboard._step_widget.value = 10
+        assert dashboard._playback.live_paused.is_active
+
+        # Push more data -- should NOT snap back
+        buf.push(StepData(step=51, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._step_widget.value == 10  # stayed
+        assert dashboard._step_widget.end == 51  # end grew
+
+    def test_game_change_while_following_pauses(self, tmp_path: Path):
+        """Regression: changing game selector while live should auto-pause."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        for i in range(1, 4):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+
+        # User changes game -- should pause
+        dashboard._playback.send("user_navigate")
+        assert dashboard._playback.live_paused.is_active
+
+    def test_catchup_timer_does_not_reenter_pause(self, tmp_path: Path):
+        """Regression: timer-driven step advancement in catchup must not
+        trigger user_navigate which would immediately re-pause.
+
+        The timer increments _step_widget.value by 1 each tick. Since
+        new < end, _handle_step_widget must NOT send user_navigate in
+        catchup mode.
+        """
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        for i in range(1, 20):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+        assert dashboard._playback.live_following.is_active
+
+        # Pause, then resume -> catchup
+        dashboard._playback.send("pause")
+        dashboard._playback.send("resume")
+        assert dashboard._playback.live_catchup.is_active
+
+        # Simulate timer ticks incrementing the slider
+        for step in range(dashboard._step_widget.value + 1, 15):
+            dashboard._step_widget.value = step
+            # Must stay in catchup -- NOT transition to paused
+            assert dashboard._playback.live_catchup.is_active, (
+                f"Step {step}: expected catchup, got "
+                f"{dashboard._playback.current_state}"
+            )
+
+    def test_first_button_updates_display(self, tmp_path: Path):
+        """Regression: clicking 'first' while paused must update display
+        data, even if self.step is already 1 (param watcher no-op)."""
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        for i in range(1, 10):
+            buf.push(StepData(step=i, game_number=1))
+        dashboard._on_new_data()
+
+        # Pause and navigate to step 5
+        dashboard._playback.send("pause")
+        dashboard._step_widget.value = 5
+        assert dashboard._last_data is not None
+        step_5_data = dashboard._last_data.step
+
+        # Now click "first" -- value goes to 1
+        dashboard._step_widget.value = 1
+        assert dashboard._last_data is not None
+        assert dashboard._last_data.step != step_5_data  # data actually changed
+
+    def test_push_does_not_update_slider_value(self, tmp_path: Path):
+        """Push updates must not set _step_widget.value while following.
+
+        Server-side value updates race with client-side button clicks,
+        causing user interactions (prev/next) to be swallowed.
+        """
+        from roc.reporting.panel_debug import PanelDashboard
+        from roc.reporting.run_store import StepData
+        from roc.reporting.step_buffer import StepBuffer
+
+        store = RunStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        dashboard = PanelDashboard(store, step_buffer=buf)
+
+        buf.push(StepData(step=1, game_number=1))
+        dashboard._on_new_data()
+        initial_value = dashboard._step_widget.value
+
+        # Push many more steps
+        for i in range(2, 50):
+            buf.push(StepData(step=i, game_number=1))
+            dashboard._on_new_data()
+
+        # Slider end should have grown but value should not have been
+        # updated by pushes (only by on_enter_live_following on first entry)
+        assert dashboard._step_widget.end == 49
+        # Value stays at wherever on_enter_live_following set it (1)
+        assert dashboard._step_widget.value == initial_value
 
 
 class TestRealWorldSimulations:
@@ -1846,13 +2031,14 @@ class TestRealWorldSimulations:
                 )
             )
         dashboard._on_new_data()
-        assert dashboard._is_following()
-        assert dashboard._step_widget.value == base + 50
+        assert dashboard._playback.live_following.is_active
+        assert dashboard._last_data.step == base + 50
 
-        # User switches to game 1 to investigate
+        # User pauses to investigate, then switches to game 1
+        dashboard._playback.send("pause")
         dashboard._game_selector.value = "1"
         # _on_game_change should jump to game 1's first step
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # User steps through looking for HP drop
         for _ in range(5):
@@ -1878,11 +2064,11 @@ class TestRealWorldSimulations:
 
         # User's review position must be preserved
         assert dashboard._step_widget.value == current_step
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Return to live
         dashboard._dispatch_key("End")
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
     def test_rapid_home_end_toggling(self, mock_store: RunStore):
         """Rapidly toggle Home/End while live data arrives."""
@@ -1901,14 +2087,14 @@ class TestRealWorldSimulations:
         # Rapid Home/End/Home/End
         dashboard._dispatch_key("Home")
         assert dashboard._step_widget.value == dashboard._step_widget.start
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         dashboard._dispatch_key("End")
         assert dashboard._step_widget.value == dashboard._step_widget.end
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
         dashboard._dispatch_key("Home")
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Push more data while at Home
         for i in range(5):
@@ -1922,7 +2108,7 @@ class TestRealWorldSimulations:
 
         dashboard._dispatch_key("End")
         assert dashboard._step_widget.value == base + 25
-        assert dashboard._is_following()
+        assert dashboard._playback.live_following.is_active
 
     def test_play_from_review_position(self, mock_store: RunStore):
         """Press Play while reviewing mid-game, verify slider advances."""
@@ -1941,7 +2127,7 @@ class TestRealWorldSimulations:
         # User presses Home then navigates to step 5 to review
         dashboard._dispatch_key("Home")
         dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # User presses Space to play
         dashboard._dispatch_key(" ")
@@ -2135,10 +2321,11 @@ class TestRealWorldSimulations:
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
 
-        # User is in game 1, reviewing step 5
+        # User pauses and reviews game 1, step 5
+        dashboard._playback.send("pause")
         dashboard._game_selector.value = "1"
         dashboard._step_widget.value = 5
-        assert not dashboard._is_following()
+        assert not dashboard._playback.live_following.is_active
 
         # Poll arrives with game 3 data
         buf.push(StepData(step=200, game_number=3))
@@ -2187,13 +2374,12 @@ class TestRealWorldSimulations:
         buf = StepBuffer(capacity=100)
         dashboard = PanelDashboard(mock_store, step_buffer=buf)
 
-        # Following -- LIVE should show
-        dashboard._step_widget.value = dashboard._step_widget.end
-        dashboard._on_step_change(dashboard._step_widget.end)
+        # Following -- LIVE should show (state machine enters live_following on init)
+        assert dashboard._playback.live_following.is_active
         assert dashboard._live_badge.visible
         assert not dashboard._new_data_badge.visible
 
-        # Push new data and go to review
+        # Push new data
         base = dashboard._step_widget.end
         buf.push(StepData(step=base + 1, game_number=1))
         dashboard._on_new_data()
@@ -2201,14 +2387,13 @@ class TestRealWorldSimulations:
         # Still following -- should still be LIVE
         assert dashboard._live_badge.visible
 
-        # Go back to review
+        # Pause and go back to review
+        dashboard._playback.send("pause")
         dashboard._step_widget.value = 5
-        dashboard._on_step_change(5)
         assert not dashboard._live_badge.visible
 
         # Push more data while reviewing
         buf.push(StepData(step=base + 2, game_number=1))
         dashboard._on_new_data()
-        dashboard._on_step_change(5)
         assert dashboard._new_data_badge.visible
         assert not dashboard._live_badge.visible

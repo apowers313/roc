@@ -130,8 +130,8 @@ class Config(BaseSettings):
     dashboard_enabled: bool = Field(default=True)
     dashboard_port: int = Field(default=9042)
     emit_state: bool = Field(default=True)
-    emit_state_screen: bool = Field(default=False)
-    emit_state_saliency: bool = Field(default=False)
+    emit_state_screen: bool = Field(default=True)
+    emit_state_saliency: bool = Field(default=True)
     emit_state_features: bool = Field(default=True)
     # gym config
     num_games: int = Field(default=5)
@@ -144,9 +144,7 @@ class Config(BaseSettings):
     # experiment modules
     expmod_dirs: list[str] = ["experiments/modules"]
     expmods: list[str] = []
-    expmods_use: list[tuple[str, str]] = [
-        ("action", "weighted"),
-    ]
+    expmods_use: list[tuple[str, str]] = [("action", "weighted")]
     # saliency-attenuation/linear-decline config
     saliency_attenuation_capacity: int = 5
     saliency_attenuation_radius: int = 3
