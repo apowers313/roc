@@ -20,7 +20,6 @@ from .perception import Perception, PerceptionData
 from .predict import Predict
 from .reporting.observability import Observability
 from .reporting.state import State
-from .reporting.wandb_reporter import WandbReporter
 
 __all__ = [
     # Component Exports
@@ -55,8 +54,6 @@ def init(config: dict[str, Any] | None = None) -> None:
     ExpMod.init()
     RocJupyterMagics.init()
     State.init()
-    WandbReporter.init(Config.get())
-
     # Start live dashboard API server in a background thread
     from .reporting.api_server import start_dashboard
 

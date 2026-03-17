@@ -210,18 +210,6 @@ class Config(BaseSettings):
     debug_remote_log_url: str = Field(default="https://dev.ato.ms:9080/log")
     # snapshot controls
     debug_snapshot_interval: int = Field(default=0)  # emit snapshot every N ticks (0 = disabled)
-    # W&B integration
-    wandb_enabled: bool = Field(default=False)
-    wandb_project: str = Field(default="ROC")
-    wandb_entity: str = Field(default="")
-    wandb_host: str = Field(default="")
-    wandb_api_key: str = Field(default="")
-    wandb_tags: list[str] = Field(default=[])
-    wandb_log_screens: bool = Field(default=True)
-    wandb_log_saliency: bool = Field(default=True)
-    wandb_log_interval: int = Field(default=1)
-    wandb_artifacts: list[str] = Field(default=[])
-    wandb_mode: str = Field(default="online")
     # significance config
     significance_weights: dict[str, float] = Field(
         default={

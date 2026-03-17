@@ -24,9 +24,8 @@ from .logger import logger
 from .perception import AuditoryData, Perception, ProprioceptiveData, VisionData
 from .reporting.metrics import RocMetrics
 from .reporting.observability import Observability
-from .reporting.screen_renderer import render_grid_html, screen_to_html_vals
+from .reporting.screen_renderer import screen_to_html_vals
 from .reporting.state import State, _emit_state_record
-from .reporting.wandb_reporter import WandbReporter
 
 
 class Gym(Component, ABC):
@@ -84,7 +83,6 @@ class Gym(Component, ABC):
             "roc.obs_total", unit="observations", description="total number of observations"
         )
         game_counter.add(1)
-        WandbReporter.start_game(game_num)
         _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
 
         # main environment loop
@@ -210,13 +208,6 @@ class Gym(Component, ABC):
                         )
                     )
 
-                # Log screen as rich media to W&B
-                screen_state = State.get_states().screen.val
-                if screen_state is not None:
-                    screen_vals = screen_to_html_vals(screen_state)
-                    screen_html = render_grid_html(screen_vals)
-                    RocMetrics.log_media("screen", screen_html)
-
                 if done or truncated:
                     # log game over info
                     screen = ""
@@ -235,31 +226,19 @@ class Gym(Component, ABC):
                     blstats = obs["blstats"]
                     score = int(blstats[blstat_offsets.SCORE])
                     outcome = "done" if done else "truncated"
-                    WandbReporter.end_game(
-                        outcome=outcome,
-                        final_score=score,
-                    )
                     _emit_state_record(
                         "roc.game_end",
                         f'{{"game_number": {game_num}, "outcome": "{outcome}", "score": {score}}}',
                     )
-
-                # Flush all buffered W&B data as one log call so all panels
-                # (metrics, screen, saliency_map) share the same step counter.
-                # end_game() buffers into the same step; start_game() buffers
-                # into the next tick's step. Exactly one wandb.log() per tick.
-                RocMetrics.flush_step()
 
                 if done or truncated:
                     # restart and prepare to go again
                     self.env.reset()
                     game_counter.add(1)
                     game_num += 1
-                    WandbReporter.start_game(game_num)
                     _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
 
         logger.info("NLE loop done, exiting.")
-        WandbReporter.finish()
         from roc.reporting.api_server import stop_dashboard
 
         stop_dashboard()
