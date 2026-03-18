@@ -103,48 +103,6 @@ def screen_to_html_vals(screen: dict[str, Any]) -> dict[str, list[list[str | int
     return {"chars": chars, "fg": fg, "bg": bg}
 
 
-def render_grid_pane(grid_data: dict[str, list[list[str | int]]]) -> str:
-    """Render a ``{chars, fg, bg}`` dict as inline HTML suitable for Panel embedding.
-
-    Unlike ``render_grid_html()`` which produces a full HTML document with JS,
-    this produces a static HTML string of ``<span>`` elements that can be
-    placed directly into a ``pn.pane.HTML`` widget.
-
-    Args:
-        grid_data: Dict with ``chars`` (2D ints), ``fg`` (2D hex strings),
-            ``bg`` (2D hex strings).
-
-    Returns:
-        HTML fragment string with colored ``<span>`` elements.
-    """
-    import html as html_mod
-
-    chars = grid_data["chars"]
-    fg = grid_data["fg"]
-    bg = grid_data["bg"]
-    rows = len(chars)
-    parts: list[str] = [
-        "<div style=\"font-family: 'DejaVu Sans Mono', 'Courier New', monospace;"
-        " font-size: 9px; line-height: 1.15; letter-spacing: 0;"
-        ' background: #000; padding: 2px;">'
-    ]
-    for y in range(rows):
-        # Each row in its own div with white-space:pre to preserve spaces
-        parts.append('<div style="white-space:pre;">')
-        cols = len(chars[y])
-        for x in range(cols):
-            ch = chr(int(chars[y][x])) if int(chars[y][x]) >= 32 else " "
-            fg_hex = fg[y][x]
-            bg_hex = bg[y][x]
-            parts.append(
-                f'<span style="color:#{fg_hex};background-color:#{bg_hex}">'
-                f"{html_mod.escape(ch)}</span>"
-            )
-        parts.append("</div>")
-    parts.append("</div>")
-    return "".join(parts)
-
-
 def render_grid_html(grid_data: dict[str, list[list[str | int]]]) -> str:
     """Wrap a ``{chars, fg, bg}`` dict in a self-contained HTML document.
 
