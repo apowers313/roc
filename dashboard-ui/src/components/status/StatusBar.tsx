@@ -1,4 +1,4 @@
-/** Status bar -- compact row of key game metrics. */
+/** Status bar -- compact row of key game metrics + live badge. */
 
 import { Badge, Group, Progress, Text } from "@mantine/core";
 
@@ -7,6 +7,7 @@ import type { StepData } from "../../types/step-data";
 interface StatusBarProps {
     data: StepData | undefined;
     playbackState: string;
+    onGoLive?: () => void;
 }
 
 function hpColor(hp: number, hpMax: number): string {
@@ -17,10 +18,10 @@ function hpColor(hp: number, hpMax: number): string {
     return "red";
 }
 
-export function StatusBar({ data, playbackState }: StatusBarProps) {
+export function StatusBar({ data, playbackState, onGoLive }: StatusBarProps) {
     const metrics = data?.game_metrics;
     const isLive = playbackState === "live_following";
-    const isPaused =
+    const canGoLive =
         playbackState === "live_paused" || playbackState === "live_catchup";
 
     return (
@@ -30,11 +31,15 @@ export function StatusBar({ data, playbackState }: StatusBarProps) {
                     LIVE
                 </Badge>
             )}
-            {isPaused && (
-                <Badge color="yellow" size="xs" variant="outline">
-                    {playbackState === "live_catchup"
-                        ? "CATCHING UP"
-                        : "PAUSED"}
+            {canGoLive && (
+                <Badge
+                    color="yellow"
+                    size="xs"
+                    variant="filled"
+                    style={{ cursor: "pointer" }}
+                    onClick={onGoLive}
+                >
+                    GO LIVE
                 </Badge>
             )}
 

@@ -280,16 +280,18 @@ step's data while the new step loads. Historical mode never falls back to liveDa
   server startup
 - [x] Panel/wandb removal -- all Panel, Bokeh, and wandb code deleted
 
-### Remaining
-- [ ] Phase 4: Keyboard Shortcuts + Bookmarks
+- [x] Phase 4: Keyboard Shortcuts + Bookmarks
   - react-hotkeys-hook for Left/Right/Space/Home/End/Shift+arrows
-  - Keyboard help overlay (Mantine Modal, toggled by ? or h)
-  - Bookmark CRUD UI (toggle, navigate next/prev, annotate)
-  - Visual bookmark indicators on slider
-- [ ] Phase 5: Polish
-  - Recharts charts (HP/score trends, event activity bar chart)
-  - Object Resolution inspector (decision + candidates table)
-  - Error boundaries and loading states
+  - Keyboard help overlay (Mantine Modal, toggled by ?)
+  - Bookmark toggle (B), navigate next/prev (]/[)
+  - Visual bookmark markers on slider track
+  - Vite resolve alias to deduplicate React (pnpm hoisting fix)
+
+- [x] Phase 5: Polish
+  - Recharts LineChart for HP/score/energy trends (MetricsChart + metrics-history API)
+  - Recharts BarChart for event activity (EventSummary)
+  - Object Resolution inspector with structured table (auto-detected columns)
+  - Error boundaries wrapping every panel
   - Production build (`vite build` served from FastAPI static mount)
-  - Log message severity filtering
-  - Responsive layout testing
+  - Log message severity filtering (dropdown + color-coded rows)
+  - Responsive layout (Grid.Col with `base: 12, md: 8/4` breakpoints)

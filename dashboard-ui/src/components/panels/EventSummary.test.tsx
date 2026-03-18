@@ -17,13 +17,19 @@ describe("EventSummary", () => {
         expect(screen.getByText("No event data")).toBeInTheDocument();
     });
 
-    it("renders event counts from first entry", () => {
+    it("renders Events heading when data is present", () => {
         const data = makeStepData({
-            event_summary: [{ perception: 5, attention: 3 }],
+            event_summary: [{ "roc.perception": 5, "roc.attention": 3 }],
         });
         renderWithProviders(<EventSummary data={data} />);
         expect(screen.getByText("Events")).toBeInTheDocument();
-        expect(screen.getByText("perception")).toBeInTheDocument();
-        expect(screen.getByText("5")).toBeInTheDocument();
+    });
+
+    it("shows 'No event data' when first entry has only raw field", () => {
+        const data = makeStepData({
+            event_summary: [{ raw: "something" }],
+        });
+        renderWithProviders(<EventSummary data={data} />);
+        expect(screen.getByText("No event data")).toBeInTheDocument();
     });
 });

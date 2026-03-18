@@ -1,9 +1,16 @@
 /** TanStack Query hooks for data fetching with caching. */
 
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
-import { fetchGames, fetchRuns, fetchStep, fetchStepRange } from "./client";
+import {
+    fetchEventHistory,
+    fetchGames,
+    fetchGraphHistory,
+    fetchMetricsHistory,
+    fetchRuns,
+    fetchStep,
+    fetchStepRange,
+} from "./client";
 
 export function useRuns() {
     return useQuery({
@@ -44,35 +51,39 @@ export function useStepRange(run: string, game?: number) {
     });
 }
 
-/** Debounced prefetch of adjacent steps for smooth scrubbing. */
-export function usePrefetchAdjacentSteps(
-    run: string,
-    step: number,
-    game?: number,
-) {
-    const queryClient = useQueryClient();
-    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+// History queries cache for 5 minutes. Data is keyed by [run, game] so
+// switching runs/games triggers a fresh fetch. Within the same game the
+// data only grows as new steps arrive during live play -- a 5-minute
+// window avoids redundant refetches while ensuring the chart eventually
+// picks up new data. TanStack Query's gcTime (default 5 min) evicts
+// entries once they lose all active observers, preventing memory buildup
+// when browsing many runs.
+const HISTORY_STALE_MS = 5 * 60_000;
 
-    useEffect(() => {
-        if (!run || step <= 0) return;
-
-        // Debounce: only prefetch after user stops clicking for 300ms
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => {
-            for (const offset of [-1, 1]) {
-                const target = step + offset;
-                if (target > 0) {
-                    void queryClient.prefetchQuery({
-                        queryKey: ["step", run, target, game],
-                        queryFn: () => fetchStep(run, target, game),
-                        staleTime: Infinity,
-                    });
-                }
-            }
-        }, 300);
-
-        return () => {
-            if (timerRef.current) clearTimeout(timerRef.current);
-        };
-    }, [queryClient, run, step, game]);
+export function useMetricsHistory(run: string, game?: number, fields?: string[]) {
+    return useQuery({
+        queryKey: ["metrics-history", run, game, fields],
+        queryFn: () => fetchMetricsHistory(run, game, fields),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
 }
+
+export function useGraphHistory(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["graph-history", run, game],
+        queryFn: () => fetchGraphHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useEventHistory(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["event-history", run, game],
+        queryFn: () => fetchEventHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+

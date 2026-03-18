@@ -2,10 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
     fetchBookmarks,
+    fetchEventHistory,
     fetchGames,
+    fetchGraphHistory,
+    fetchMetricsHistory,
     fetchRuns,
     fetchStep,
     fetchStepRange,
+    fetchStepsBatch,
     saveBookmarks,
 } from "./client";
 
@@ -119,6 +123,93 @@ describe("API client", () => {
             expect(result).toEqual(bookmarks);
             expect(mockFetch).toHaveBeenCalledWith(
                 "/api/runs/run1/bookmarks",
+            );
+        });
+    });
+
+    describe("fetchStepsBatch", () => {
+        it("fetches multiple steps", async () => {
+            const data = { "1": { step: 1 }, "2": { step: 2 } };
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchStepsBatch("run1", [1, 2]);
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/steps?steps=1%2C2",
+            );
+        });
+
+        it("includes game parameter", async () => {
+            mockFetch.mockReturnValue(okJson({}));
+
+            await fetchStepsBatch("run1", [1], 3);
+            const url = mockFetch.mock.calls[0]![0] as string;
+            expect(url).toContain("game=3");
+        });
+    });
+
+    describe("fetchMetricsHistory", () => {
+        it("fetches metrics history without filters", async () => {
+            const data = [{ step: 1, hp: 10 }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchMetricsHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/metrics-history",
+            );
+        });
+
+        it("includes game and fields parameters", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchMetricsHistory("run1", 2, ["hp", "score"]);
+            const url = mockFetch.mock.calls[0]![0] as string;
+            expect(url).toContain("game=2");
+            expect(url).toContain("fields=hp%2Cscore");
+        });
+    });
+
+    describe("fetchGraphHistory", () => {
+        it("fetches graph history", async () => {
+            const data = [{ step: 1, node_count: 10, node_max: 100, edge_count: 20, edge_max: 200 }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchGraphHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/graph-history",
+            );
+        });
+
+        it("includes game parameter", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchGraphHistory("run1", 2);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/graph-history?game=2",
+            );
+        });
+    });
+
+    describe("fetchEventHistory", () => {
+        it("fetches event history", async () => {
+            const data = [{ step: 1, "roc.perception": 5 }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchEventHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/event-history",
+            );
+        });
+
+        it("includes game parameter", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchEventHistory("run1", 1);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/event-history?game=1",
             );
         });
     });

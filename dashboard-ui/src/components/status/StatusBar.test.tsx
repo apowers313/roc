@@ -1,5 +1,5 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeStepData, renderWithProviders } from "../../test-utils";
 import { StatusBar } from "./StatusBar";
@@ -47,18 +47,36 @@ describe("StatusBar", () => {
         expect(screen.getByText("LIVE")).toBeInTheDocument();
     });
 
-    it("shows PAUSED badge when live_paused", () => {
+    it("LIVE badge is not clickable", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_paused" />,
+            <StatusBar data={undefined} playbackState="live_following" />,
         );
-        expect(screen.getByText("PAUSED")).toBeInTheDocument();
+        const badge = screen.getByText("LIVE");
+        // Should not have a click handler / button role
+        expect(badge.closest("button")).toBeNull();
     });
 
-    it("shows CATCHING UP badge when live_catchup", () => {
+    it("shows GO LIVE badge when live_paused", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_catchup" />,
+            <StatusBar data={undefined} playbackState="live_paused" onGoLive={() => {}} />,
         );
-        expect(screen.getByText("CATCHING UP")).toBeInTheDocument();
+        expect(screen.getByText("GO LIVE")).toBeInTheDocument();
+    });
+
+    it("shows GO LIVE badge when live_catchup", () => {
+        renderWithProviders(
+            <StatusBar data={undefined} playbackState="live_catchup" onGoLive={() => {}} />,
+        );
+        expect(screen.getByText("GO LIVE")).toBeInTheDocument();
+    });
+
+    it("GO LIVE badge is clickable and calls onGoLive", () => {
+        const onGoLive = vi.fn();
+        renderWithProviders(
+            <StatusBar data={undefined} playbackState="live_paused" onGoLive={onGoLive} />,
+        );
+        fireEvent.click(screen.getByText("GO LIVE"));
+        expect(onGoLive).toHaveBeenCalledOnce();
     });
 
     it("shows no badge for historical playback", () => {
@@ -66,6 +84,6 @@ describe("StatusBar", () => {
             <StatusBar data={undefined} playbackState="historical" />,
         );
         expect(screen.queryByText("LIVE")).not.toBeInTheDocument();
-        expect(screen.queryByText("PAUSED")).not.toBeInTheDocument();
+        expect(screen.queryByText("GO LIVE")).not.toBeInTheDocument();
     });
 });

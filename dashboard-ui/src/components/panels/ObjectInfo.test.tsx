@@ -17,7 +17,7 @@ describe("ObjectInfo", () => {
         expect(screen.getByText("No object data")).toBeInTheDocument();
     });
 
-    it("renders objects with raw field", () => {
+    it("renders objects with raw field as simple text", () => {
         const data = makeStepData({
             object_info: [{ raw: "Object #1 at (3,5)" }],
         });
@@ -25,13 +25,39 @@ describe("ObjectInfo", () => {
         expect(screen.getByText("Object #1 at (3,5)")).toBeInTheDocument();
     });
 
-    it("renders objects as JSON when no raw field", () => {
+    it("renders structured objects as a table with column headers", () => {
         const data = makeStepData({
-            object_info: [{ id: 1, name: "player" }],
+            object_info: [
+                { id: 1, name: "goblin", type: "monster" },
+                { id: 2, name: "sword", type: "weapon" },
+            ],
         });
         renderWithProviders(<ObjectInfo data={data} />);
-        expect(
-            screen.getByText('{"id":1,"name":"player"}'),
-        ).toBeInTheDocument();
+        // Column headers
+        expect(screen.getByText("id")).toBeInTheDocument();
+        expect(screen.getByText("name")).toBeInTheDocument();
+        expect(screen.getByText("type")).toBeInTheDocument();
+        // Cell values
+        expect(screen.getByText("goblin")).toBeInTheDocument();
+        expect(screen.getByText("sword")).toBeInTheDocument();
+    });
+
+    it("formats float values with 3 decimal places", () => {
+        const data = makeStepData({
+            object_info: [{ score: 0.12345 }],
+        });
+        renderWithProviders(<ObjectInfo data={data} />);
+        expect(screen.getByText("0.123")).toBeInTheDocument();
+    });
+
+    it("shows -- for null values in structured mode", () => {
+        const data = makeStepData({
+            object_info: [
+                { id: 1, name: "goblin" },
+                { id: 2, name: null },
+            ],
+        });
+        renderWithProviders(<ObjectInfo data={data} />);
+        expect(screen.getByText("--")).toBeInTheDocument();
     });
 });

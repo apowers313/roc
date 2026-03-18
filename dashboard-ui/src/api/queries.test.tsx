@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
-import { useGames, useRuns, useStepData, useStepRange } from "./queries";
+import { useEventHistory, useGames, useGraphHistory, useMetricsHistory, useRuns, useStepData, useStepRange } from "./queries";
 
 // Mock the client module
 vi.mock("./client", () => ({
@@ -11,14 +11,20 @@ vi.mock("./client", () => ({
     fetchGames: vi.fn(),
     fetchStep: vi.fn(),
     fetchStepRange: vi.fn(),
+    fetchMetricsHistory: vi.fn(),
+    fetchGraphHistory: vi.fn(),
+    fetchEventHistory: vi.fn(),
 }));
 
-import { fetchRuns, fetchGames, fetchStep, fetchStepRange } from "./client";
+import { fetchRuns, fetchGames, fetchStep, fetchStepRange, fetchMetricsHistory, fetchGraphHistory, fetchEventHistory } from "./client";
 
 const mockFetchRuns = vi.mocked(fetchRuns);
 const mockFetchGames = vi.mocked(fetchGames);
 const mockFetchStep = vi.mocked(fetchStep);
 const mockFetchStepRange = vi.mocked(fetchStepRange);
+const mockFetchMetricsHistory = vi.mocked(fetchMetricsHistory);
+const mockFetchGraphHistory = vi.mocked(fetchGraphHistory);
+const mockFetchEventHistory = vi.mocked(fetchEventHistory);
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -126,6 +132,72 @@ describe("TanStack Query hooks", () => {
 
         it("does not fetch when run is empty", () => {
             const { result } = renderHook(() => useStepRange(""), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+        });
+    });
+
+    describe("useMetricsHistory", () => {
+        it("fetches metrics history", async () => {
+            const data = [{ step: 1, hp: 10 }];
+            mockFetchMetricsHistory.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useMetricsHistory("run1"), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data).toEqual(data);
+        });
+
+        it("does not fetch when run is empty", () => {
+            const { result } = renderHook(() => useMetricsHistory(""), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+        });
+    });
+
+    describe("useGraphHistory", () => {
+        it("fetches graph history", async () => {
+            const data = [{ step: 1, node_count: 10, node_max: 100, edge_count: 20, edge_max: 200 }];
+            mockFetchGraphHistory.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useGraphHistory("run1"), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data).toEqual(data);
+        });
+
+        it("does not fetch when run is empty", () => {
+            const { result } = renderHook(() => useGraphHistory(""), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+        });
+    });
+
+    describe("useEventHistory", () => {
+        it("fetches event history", async () => {
+            const data = [{ step: 1, "roc.perception": 5 }];
+            mockFetchEventHistory.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useEventHistory("run1"), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data).toEqual(data);
+        });
+
+        it("does not fetch when run is empty", () => {
+            const { result } = renderHook(() => useEventHistory(""), {
                 wrapper: createWrapper(),
             });
 
