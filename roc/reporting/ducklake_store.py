@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import duckdb
+import pandas as pd
 import pyarrow as pa
 
 
@@ -25,23 +26,33 @@ class DuckLakeStore:
 
     TABLES = ("screens", "saliency", "events", "logs", "metrics")
 
-    def __init__(self, run_dir: Path, *, read_only: bool = False) -> None:
+    def __init__(
+        self,
+        run_dir: Path,
+        *,
+        read_only: bool = False,
+        alias: str = "lake",
+    ) -> None:
         self.run_dir = run_dir
         run_dir.mkdir(parents=True, exist_ok=True)
         self._catalog_path = run_dir / "catalog.duckdb"
         self._data_path = run_dir / "data"
         self._lock = threading.Lock()
+        self._alias = alias
 
         self._conn = duckdb.connect()
         self._conn.execute("INSTALL ducklake;")
         self._conn.execute("LOAD ducklake;")
         catalog = str(self._catalog_path).replace("'", "''")
         data = str(self._data_path).replace("'", "''")
-        self._conn.execute(f"ATTACH 'ducklake:{catalog}' AS lake (DATA_PATH '{data}')")
+        self._conn.execute(f"ATTACH 'ducklake:{catalog}' AS {alias} (DATA_PATH '{data}')")
         if not read_only:
-            # Disable data inlining so every insert creates a parquet file.
-            # Parquet files are the archival format and must always exist.
-            self._conn.execute("CALL lake.set_option('data_inlining_row_limit', '0')")
+            # Enable data inlining: small inserts (< 500 rows) are stored
+            # in the catalog rather than creating individual parquet files.
+            # Periodic CHECKPOINT calls flush inlined data to parquet and
+            # merge small files.  This avoids the "7000 tiny files" problem
+            # that caused 5-11s query times with raw parquet reads.
+            self._conn.execute(f"CALL {alias}.set_option('data_inlining_row_limit', '500')")
 
         self._known_columns: dict[str, list[str]] = {}
 
@@ -71,7 +82,7 @@ class DuckLakeStore:
                 if field.name not in existing_cols:
                     duck_type = self._arrow_to_duck_type(field.type)
                     self._conn.execute(
-                        f'ALTER TABLE lake."{table}" ADD COLUMN "{field.name}" {duck_type}'
+                        f'ALTER TABLE {self._alias}."{table}" ADD COLUMN "{field.name}" {duck_type}'
                     )
             # Refresh known columns after any evolution
             self._known_columns[table] = self._get_columns(table)
@@ -79,7 +90,9 @@ class DuckLakeStore:
             # Insert via arrow scan
             self._conn.register("_arrow_batch", arrow_table)
             try:
-                self._conn.execute(f'INSERT INTO lake."{table}" BY NAME SELECT * FROM _arrow_batch')
+                self._conn.execute(
+                    f'INSERT INTO {self._alias}."{table}" BY NAME SELECT * FROM _arrow_batch'
+                )
             finally:
                 self._conn.unregister("_arrow_batch")
 
@@ -88,13 +101,32 @@ class DuckLakeStore:
     def execute(self, sql: str, params: list[Any] | None = None) -> duckdb.DuckDBPyConnection:
         """Execute a SQL query against the lake.
 
-        The caller is responsible for calling ``.fetchdf()`` / ``.fetchone()``
-        on the returned cursor.
+        .. warning:: The returned cursor is only valid while no other
+           thread uses this connection.  Prefer ``query_df`` / ``query_one``
+           for thread-safe reads.
         """
         with self._lock:
             if params:
                 return self._conn.execute(sql, params)
             return self._conn.execute(sql)
+
+    def query_df(self, sql: str, params: list[Any] | None = None) -> pd.DataFrame:
+        """Execute a query and return a DataFrame, holding the lock for the full cycle."""
+        with self._lock:
+            if params:
+                return self._conn.execute(sql, params).fetchdf()
+            return self._conn.execute(sql).fetchdf()
+
+    def query_one(
+        self,
+        sql: str,
+        params: list[Any] | None = None,
+    ) -> tuple[Any, ...] | None:
+        """Execute a query and return a single row, holding the lock for the full cycle."""
+        with self._lock:
+            if params:
+                return self._conn.execute(sql, params).fetchone()
+            return self._conn.execute(sql).fetchone()
 
     def has_table(self, table: str) -> bool:
         """Check whether a table exists in the DuckLake catalog."""
@@ -106,11 +138,16 @@ class DuckLakeStore:
         """Check if a directory contains a valid DuckLake catalog."""
         return (run_dir / "catalog.duckdb").exists() or (run_dir / "catalog.sqlite").exists()
 
+    def checkpoint(self) -> None:
+        """Run DuckLake maintenance: flush inlined data, merge small files."""
+        with self._lock:
+            self._conn.execute(f"CHECKPOINT {self._alias}")
+
     def close(self) -> None:
         """Detach the catalog and close the connection."""
         with self._lock:
             try:
-                self._conn.execute("DETACH lake")
+                self._conn.execute(f"DETACH {self._alias}")
             except duckdb.Error:
                 pass
             self._conn.close()
@@ -120,7 +157,7 @@ class DuckLakeStore:
     def _table_exists(self, table: str) -> bool:
         """Check table existence (must hold lock)."""
         try:
-            self._conn.execute(f'SELECT 1 FROM lake."{table}" LIMIT 0')
+            self._conn.execute(f'SELECT 1 FROM {self._alias}."{table}" LIMIT 0')
             return True
         except duckdb.CatalogException:
             return False
@@ -132,7 +169,7 @@ class DuckLakeStore:
             duck_type = self._arrow_to_duck_type(field.type)
             cols.append(f'"{field.name}" {duck_type}')
         col_defs = ", ".join(cols)
-        self._conn.execute(f'CREATE TABLE lake."{table}" ({col_defs})')
+        self._conn.execute(f'CREATE TABLE {self._alias}."{table}" ({col_defs})')
         self._known_columns[table] = [f.name for f in schema]
 
     def _get_columns(self, table: str) -> list[str]:

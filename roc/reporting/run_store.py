@@ -1,13 +1,11 @@
-"""Query layer for ROC run data stored as DuckLake-managed Parquet files."""
+"""Query layer for ROC run data stored in DuckLake catalogs."""
 
 from __future__ import annotations
 
-import glob as globmod
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-import duckdb
 import pandas as pd
 
 from roc.reporting.ducklake_store import DuckLakeStore
@@ -34,74 +32,28 @@ class StepData:
 
 
 class RunStore:
-    """Read-only query layer over DuckLake-managed Parquet files.
+    """Read-only query layer over a DuckLake catalog.
 
-    Uses a standalone DuckDB connection to read Parquet files directly
-    from the ``data/main/<table>/`` directories.  Does not open the
-    DuckLake SQLite catalog, so it never conflicts with the writer.
-
-    Can also accept a ``DuckLakeStore`` for in-process use (tests).
+    All queries go through the DuckLakeStore's thread-safe ``query_df``
+    and ``query_one`` methods, which hold the connection lock for the
+    full execute+fetch cycle.  This is safe for concurrent use from
+    FastAPI's thread pool and for sharing with a live game writer.
     """
 
     _TABLES = ("screens", "saliency", "events", "logs", "metrics")
 
-    def __init__(self, store_or_dir: DuckLakeStore | Path) -> None:
-        if isinstance(store_or_dir, DuckLakeStore):
-            # In-process mode (tests): query through the shared store
-            self._store: DuckLakeStore | None = store_or_dir
-            self._conn: duckdb.DuckDBPyConnection | None = None
-            self.run_dir = store_or_dir.run_dir
-        else:
-            # Reader mode (dashboard): direct Parquet reads, no catalog
-            self._store = None
-            self._conn = duckdb.connect()
-            self.run_dir = store_or_dir
-            # Register views once so DuckDB caches file metadata instead of
-            # re-globbing ~5000 parquet files on every query.
-            self._register_views()
-        self._last_max_step: int = 0
-        self._refresh_max_step()
-
-    def _table_glob(self, table: str) -> str:
-        """Glob pattern for a table's Parquet files."""
-        return str(self.run_dir / "data" / "main" / table / "*.parquet")
-
-    def _register_views(self) -> None:
-        """Create DuckDB views for each table so file metadata is cached."""
-        if self._conn is None:
-            return
-        for table in self._TABLES:
-            glob = self._table_glob(table)
-            if globmod.glob(glob):
-                self._conn.execute(
-                    f'CREATE OR REPLACE VIEW "{table}" AS '
-                    f"SELECT * FROM read_parquet('{glob}', union_by_name=true)"
-                )
-
-    def refresh_views(self) -> None:
-        """Re-register views to pick up new parquet files (live mode)."""
-        self._register_views()
-        self._refresh_max_step()
-
-    def _has_table(self, table: str) -> bool:
-        """Check if any Parquet files exist for a table."""
-        if self._store is not None:
-            return self._store.has_table(table)
-        return bool(globmod.glob(self._table_glob(table)))
-
-    def _query(self, sql: str, params: list[Any] | None = None) -> duckdb.DuckDBPyConnection:
-        """Execute a query via the appropriate connection."""
-        if self._store is not None:
-            return self._store.execute(sql, params)
-        if params:
-            return self._conn.execute(sql, params)  # type: ignore[union-attr]
-        return self._conn.execute(sql)  # type: ignore[union-attr]
+    def __init__(self, store: DuckLakeStore) -> None:
+        self._store = store
+        self.run_dir = store.run_dir
+        self._alias = store._alias
 
     def _read_sql(self, table: str) -> str:
         """SQL fragment to read a table's data."""
-        if self._store is not None:
-            return f'lake."{table}"'
-        return f'"{table}"'
+        return f'{self._alias}."{table}"'
+
+    def _has_table(self, table: str) -> bool:
+        """Check if a table exists in the catalog."""
+        return self._store.has_table(table)
 
     def get_step(self, step: int, table: str) -> pd.DataFrame:
         """Return all rows for a given step from the specified table."""
@@ -109,8 +61,8 @@ class RunStore:
             return pd.DataFrame()
         try:
             src = self._read_sql(table)
-            return self._query(f"SELECT * FROM {src} WHERE step = ?", [step]).fetchdf()
-        except (duckdb.CatalogException, duckdb.InvalidInputException):
+            return self._store.query_df(f"SELECT * FROM {src} WHERE step = ?", [step])
+        except Exception:
             return pd.DataFrame()
 
     def _step_table(self) -> str | None:
@@ -131,12 +83,12 @@ class RunStore:
             return 0
         src = self._read_sql(table)
         if game_number is not None:
-            result = self._query(
+            result = self._store.query_one(
                 f"SELECT COUNT(*) FROM {src} WHERE game_number = ?",
                 [game_number],
-            ).fetchone()
+            )
         else:
-            result = self._query(f"SELECT MAX(step) FROM {src}").fetchone()
+            result = self._store.query_one(f"SELECT MAX(step) FROM {src}")
         return result[0] if result and result[0] is not None else 0
 
     def step_range(self, game_number: int | None = None) -> tuple[int, int]:
@@ -146,12 +98,12 @@ class RunStore:
             return (0, 0)
         src = self._read_sql(table)
         if game_number is not None:
-            result = self._query(
+            result = self._store.query_one(
                 f"SELECT MIN(step), MAX(step) FROM {src} WHERE game_number = ?",
                 [game_number],
-            ).fetchone()
+            )
         else:
-            result = self._query(f"SELECT MIN(step), MAX(step) FROM {src}").fetchone()
+            result = self._store.query_one(f"SELECT MIN(step), MAX(step) FROM {src}")
         if result and result[0] is not None:
             return (result[0], result[1])
         return (0, 0)
@@ -162,7 +114,7 @@ class RunStore:
         if table is None:
             return pd.DataFrame(columns=["game_number", "steps", "start_ts", "end_ts"])
         src = self._read_sql(table)
-        return self._query(
+        return self._store.query_df(
             f"""
             SELECT
                 game_number,
@@ -173,7 +125,7 @@ class RunStore:
             GROUP BY game_number
             ORDER BY game_number
             """,
-        ).fetchdf()
+        )
 
     @staticmethod
     def list_runs(data_dir: Path) -> list[str]:
@@ -262,8 +214,8 @@ class RunStore:
         if len(metrics_df) > 0:
             game_metrics = _parse_body(metrics_df.iloc[0].get("body"))
 
-        logs_df = self.get_step(step, "logs")
         logs = None
+        logs_df = self.get_step(step, "logs")
         if len(logs_df) > 0:
             logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
 
@@ -283,17 +235,6 @@ class RunStore:
             game_metrics=game_metrics,
             logs=logs,
         )
-
-    def _refresh_max_step(self) -> None:
-        """Update the cached max step value."""
-        try:
-            if not self._has_table("screens"):
-                return
-            src = self._read_sql("screens")
-            result = self._query(f"SELECT MAX(step) FROM {src}").fetchone()
-            self._last_max_step = result[0] if result and result[0] is not None else 0
-        except Exception:
-            pass
 
 
 def _parse_body(body: str | None) -> dict[str, Any] | None:

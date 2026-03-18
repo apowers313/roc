@@ -157,7 +157,7 @@ def render_grid_html(grid_data: dict[str, list[list[str | int]]]) -> str:
             or ``SaliencyMap.to_html_vals()``.
 
     Returns:
-        Self-contained HTML string suitable for ``wandb.Html()``.
+        Self-contained HTML string.
     """
     data_json = json.dumps(grid_data, separators=(",", ":"))
     script = _RENDER_JS.replace("__DATA__", data_json)

@@ -350,13 +350,6 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
             )
         )
 
-        # Log saliency heatmap as rich media to W&B
-        if saliency_grid:
-            from .reporting.screen_renderer import render_grid_html
-
-            saliency_html = render_grid_html(saliency_grid)
-            RocMetrics.log_media("saliency_map", saliency_html)
-
         attenuation.notify_focus(ds)
         return ds
 

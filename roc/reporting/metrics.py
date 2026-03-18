@@ -59,4 +59,3 @@ class RocMetrics:
     @staticmethod
     def log_step(data: dict[str, Any]) -> None:
         """Log a dict of metrics (no-op, kept for API compatibility)."""
-        pass

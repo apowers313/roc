@@ -30,7 +30,13 @@ class ParquetExporter(LogExporter):
         - unnamed (loguru) -> ``logs``
     """
 
-    def __init__(self, store: DuckLakeStore, *, background: bool = True) -> None:
+    def __init__(
+        self,
+        store: DuckLakeStore,
+        *,
+        background: bool = True,
+        checkpoint_interval: int = 200,
+    ) -> None:
         self._store = store
         self.run_dir = store.run_dir
         self._step_counter = 0
@@ -43,6 +49,8 @@ class ParquetExporter(LogExporter):
         self._data_ready = threading.Event()
         self._shutdown_event = threading.Event()
         self._background = background
+        self._checkpoint_interval = checkpoint_interval
+        self._last_checkpoint_step = 0
 
         self._flush_thread: threading.Thread | None = None
         if background:
@@ -61,6 +69,14 @@ class ParquetExporter(LogExporter):
                 break
             self._data_ready.clear()
             self._drain()
+            # Periodically run CHECKPOINT to flush inlined data to
+            # parquet and merge small files for faster historical reads.
+            if self._step_counter - self._last_checkpoint_step >= self._checkpoint_interval:
+                self._last_checkpoint_step = self._step_counter
+                try:
+                    self._store.checkpoint()
+                except Exception:
+                    pass  # checkpoint errors must not break the game loop
 
     def _drain(self) -> None:
         """Move queued records to DuckLake. Safe to call from any thread."""
@@ -122,6 +138,12 @@ class ParquetExporter(LogExporter):
         if self._flush_thread is not None:
             self._flush_thread.join(timeout=5.0)
         self._drain()
+        # Final checkpoint: flush inlined data to parquet so historical
+        # reads can find all data.
+        try:
+            self._store.checkpoint()
+        except Exception:
+            pass
 
     def force_flush(self, timeout_millis: int = 0) -> bool:
         """Write all queued records to DuckLake immediately."""

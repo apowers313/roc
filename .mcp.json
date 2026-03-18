@@ -11,15 +11,6 @@
       "command": "uvx",
       "args": ["mcp-grafana"],
       "env": {}
-    },
-    "wandb": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/wandb/wandb-mcp-server", "wandb_mcp_server"],
-      "env": {
-        "WANDB_API_KEY": "local-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",
-        "WANDB_BASE_URL": "http://hal.ato.ms:8080"
-      }
     }
   }
 }

@@ -95,9 +95,25 @@ class StepBuffer:
         with self._lock:
             return sorted({d.game_number for d in self._buf})
 
+    def steps_per_game(self) -> dict[int, int]:
+        """Return a mapping of game_number -> step count."""
+        with self._lock:
+            counts: dict[int, int] = {}
+            for d in self._buf:
+                counts[d.game_number] = counts.get(d.game_number, 0) + 1
+            return counts
+
+    def step_range_for_game(self, game_number: int) -> tuple[int, int]:
+        """Return (min_step, max_step) for a specific game, or (0, 0)."""
+        with self._lock:
+            steps = [d.step for d in self._buf if d.game_number == game_number]
+            if not steps:
+                return (0, 0)
+            return (min(steps), max(steps))
+
 
 def register_step_buffer(buf: StepBuffer) -> None:
-    """Register the global step buffer (called by dashboard_server)."""
+    """Register the global step buffer (called by api_server)."""
     global _step_buffer
     with _buffer_lock:
         _step_buffer = buf

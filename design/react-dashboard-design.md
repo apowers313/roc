@@ -2,7 +2,7 @@
 
 ## Why React Replaces Panel
 
-The Panel/Bokeh dashboard has a fundamental architectural flaw: two control paths for the
+The Panel/Bokeh dashboard had a fundamental architectural flaw: two control paths for the
 same state. Button clicks change widget properties via the Bokeh websocket protocol, while
 server push updates change the same properties from Python. These race because Bokeh's
 protocol doesn't distinguish "user action" from "server update."
@@ -17,23 +17,75 @@ React eliminates this by cleanly separating concerns:
 
 ## Requirements
 
-All requirements from `design/panel-design.md` (R1-R21) carry over. The data layer
-(ParquetExporter, RunStore, StepBuffer, StepData) is unchanged. Only the UI layer and
-server layer are replaced.
+### Navigation and Synchronization
+- **R1: Synchronized step navigation** -- a single step control (slider + buttons) updates all
+  panels simultaneously. First/Prev/Play/Pause/Next/Last buttons, slider scrubbing, and
+  keyboard shortcuts all operate on one shared step cursor.
+- **R14: Run selection** -- dropdown to switch between completed runs (newest first). Each run
+  is a timestamped directory of parquet files under `data_dir`.
+- **R16: Keyboard shortcuts** -- Left/Right for step, Space for play/pause, Home/End for
+  first/last, Shift+Left/Right for -10/+10 steps.
+- **R17: Bookmarks** -- mark interesting steps with optional annotations. Navigate between
+  bookmarks with keyboard. Persisted as JSON alongside run data.
+- **R19: Multi-game runs** -- game selector dropdown filters steps to a single game within a
+  run. Step range updates to show only that game's steps.
+- **R20: Performance** -- step transitions under 200ms. Achieved via TanStack Query caching
+  (`staleTime: Infinity` since step data is immutable), prefetch of adjacent steps, and
+  debounced slider input.
 
-Key requirements summary:
-- R1: Synchronized step navigation (single control updates all panels)
-- R2-R6: Data panels (screen, saliency, features, objects, focus points)
-- R7-R12: Metrics panels (game metrics, attenuation, graph DB, events, resolution)
-- R13: Parquet + DuckDB storage (unchanged)
-- R14: Run selection
-- R15: Pipeline-organized layout
-- R16: Keyboard shortcuts
-- R17: Bookmarks
-- R18: Live mode with push updates
-- R19: Multi-game runs
-- R20: Performance (<200ms step transitions)
-- R21: Server management
+### Live Mode
+- **R18: Live mode** -- when the game loop is running, Socket.io pushes full StepData to the
+  browser. The dashboard auto-follows at the live edge unless the user navigates away.
+  - **Following**: renders push data directly (no REST round-trip), step counter auto-advances.
+  - **Paused**: shows PAUSED badge, REST fetches historical data, live pushes update stepMax
+    only.
+  - **Catch-up**: auto-plays from paused position toward live edge, transitions to following
+    when caught up.
+  - **Historical**: no live session active, browse completed runs via REST only.
+
+### Data Panels
+
+Each panel renders a section of the StepData dataclass. All panels update together when the
+step changes.
+
+- **R2: Game screen** -- 24x80 colored character grid (NetHack tty output). Rendered as HTML
+  spans with per-cell foreground/background colors using `dangerouslySetInnerHTML` for
+  performance. Fixed-height container (260px) prevents layout shifts.
+- **R3: Saliency map** -- same grid format as game screen but with heatmap colors showing
+  attention weights. Rendered by the same CharGrid component.
+- **R4: Features** -- feature extraction counts per type (Flood, Line, Single, Distance, Color,
+  Shape, Delta, Motion). Always shows all 8 feature types with "--" for missing values to
+  prevent layout shifts.
+- **R5: Objects** -- object info from the resolution pipeline. Raw string display.
+- **R6: Focus points** -- attention focus point coordinates. Raw string display.
+- **R7: Game metrics** -- key-value table: score, hp, hp_max, energy, energy_max, depth, gold,
+  x, y, hunger, xp_level, experience, ac. Right-aligned tabular numbers.
+- **R8: Attenuation** -- saliency attenuation parameters (excluding large grid data).
+- **R9: Graph DB summary** -- node/edge cache counts and limits.
+- **R10: Event summary** -- per-step event bus activity counts.
+- **R11: Resolution metrics** -- object resolution decision details.
+- **R12: Log messages** -- OTel log records for the step. Severity-colored rows.
+
+### Infrastructure
+- **R13: Parquet + DuckDB storage** -- game data is stored as parquet files via DuckLake
+  (OTel LogExporter -> ParquetExporter). RunStore queries via DuckDB. StepBuffer (100K
+  capacity) provides in-memory access for the live run.
+- **R15: Pipeline-organized layout** -- panels grouped by processing stage in collapsible
+  accordion sections: Game State, Perception, Attention, Object Resolution, Log Messages.
+- **R21: Server management** -- API server starts as a daemon thread in the game process.
+  Synchronized startup via `threading.Event` ensures the asyncio event loop is ready before
+  the game loop begins pushing data.
+
+## Design Principles
+
+From the @graphty/compact-mantine theme:
+- **Dark background**: `#1a1b1e` base with `#25262b` surface cards
+- **Dense layout**: minimal padding, tight line-height, small fonts (xs = 11px)
+- **Information-rich**: show data, not chrome. Compact KV tables with titled cards, fixed
+  column widths, tabular-nums for stable number alignment
+- **Stable rendering**: fixed-height containers, always-present rows (null = "--"), fixed table
+  layouts to prevent content shifts between frames
+- **No dead space**: 6px card padding, 0px table cell padding, 150px max-width KV tables
 
 ## Technology Stack
 
@@ -53,129 +105,71 @@ Key requirements summary:
 | Tables | Mantine Table | Built-in, themed, sufficient for our needs |
 | State | React useReducer | 4-state playback machine, no external lib needed |
 | Layout | Mantine AppShell + Accordion | Header/main areas, collapsible sections |
-| CSS | Mantine props + CSS modules | No additional CSS-in-JS |
+| CSS | Mantine props + inline styles | No additional CSS-in-JS, no global overrides |
 
 ### Backend (roc/reporting/)
 | Category | Choice | Why |
 |----------|--------|-----|
 | API Server | FastAPI + uvicorn | Async, WebSocket support, lightweight |
 | Real-time | python-socketio | Server-side Socket.io |
-| Data layer | RunStore (DuckDB/Parquet) | Unchanged from current |
-| Live push | StepBuffer | Unchanged from current |
-
-### Dependencies to Add
-
-**Python (pyproject.toml)**:
-- `fastapi`
-- `python-socketio`
-- `uvicorn[standard]`
-
-**JavaScript (dashboard-ui/package.json)**:
-```json
-{
-  "dependencies": {
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
-    "@mantine/core": "^8.0.0",
-    "@mantine/hooks": "^8.0.0",
-    "@graphty/compact-mantine": "^0.5.1",
-    "@tanstack/react-query": "^5.0.0",
-    "recharts": "^2.15.0",
-    "socket.io-client": "^4.8.0",
-    "react-hotkeys-hook": "^4.6.0",
-    "lucide-react": "^0.500.0"
-  },
-  "devDependencies": {
-    "vite": "^6.0.0",
-    "@vitejs/plugin-react": "^4.0.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0",
-    "@testing-library/react": "^16.0.0",
-    "@testing-library/jest-dom": "^6.0.0",
-    "jsdom": "^26.0.0"
-  }
-}
-```
-
-### Dependencies to Remove (after migration complete)
-
-**Python**:
-- `panel`
-- `bokeh`
-- `python-statemachine` (playback machine moves to React useReducer)
+| Data layer | RunStore (DuckDB/Parquet) | Reads parquet files via DuckDB views |
+| Live push | StepBuffer (100K ring buffer) | Thread-safe deque, in-memory access for live run |
+| Storage | DuckLake + ParquetExporter | OTel logs -> parquet archival files |
 
 ## Project Structure
 
 ```
-roc/                              # Python project root
+roc/
   roc/
     reporting/
-      api_server.py               # NEW: FastAPI + Socket.io server
-      run_store.py                # Unchanged
-      step_buffer.py              # Unchanged
-      parquet_exporter.py         # Unchanged
-      screen_renderer.py          # Unchanged (used by API to pre-render)
-      observability.py            # Unchanged
-      panel_debug.py              # DELETE (replaced by React)
-      playback_machine.py         # DELETE (replaced by React useReducer)
-      dashboard_server.py         # DELETE (replaced by api_server.py)
-      components/                 # DELETE (Panel components)
+      api_server.py               # FastAPI + Socket.io server
+      run_store.py                # DuckDB query layer over parquet files
+      step_buffer.py              # Thread-safe ring buffer for live data
+      ducklake_store.py           # DuckLake catalog + parquet write path
+      parquet_exporter.py         # OTel LogExporter -> DuckLake
+      screen_renderer.py          # Screen dict -> {chars, fg, bg} conversion
+      metrics.py                  # OTel histogram/counter dispatch
+      observability.py            # OTel setup (traces, metrics, logs)
+      state.py                    # Runtime state tracking + OTel emission
 
-dashboard-ui/                     # NEW: React project root
+dashboard-ui/
   package.json
   tsconfig.json
-  vite.config.ts
+  vite.config.ts                  # Dev server with HTTPS + API proxy
   vitest.config.ts
   index.html
   src/
-    main.tsx                      # Entry point, providers
-    App.tsx                       # AppShell layout, routing
+    main.tsx                      # Entry point, providers (Mantine, TanStack, Context)
+    App.tsx                       # AppShell layout, data flow orchestration
     api/
-      client.ts                   # REST API client (fetch wrappers)
-      socket.ts                   # Socket.io client setup
+      client.ts                   # REST API client (typed fetch wrappers)
       queries.ts                  # TanStack Query hooks (useStepData, useRuns, etc.)
     state/
-      playback.ts                 # useReducer playback state machine
-      context.ts                  # DashboardContext provider (step, game, run, playback)
+      playback.ts                 # useReducer playback state machine (4 states)
+      playback.test.ts            # State transition tests
+      context.tsx                 # DashboardContext (step, game, run, playback, range)
     components/
       transport/
-        TransportBar.tsx          # Step controls (play/pause/speed/slider)
-        StepSlider.tsx            # Range slider with current position
-        SpeedSelector.tsx         # Playback speed dropdown
+        TransportBar.tsx          # Run/game selectors, step controls, slider, speed
       status/
-        StatusBar.tsx             # HP, Score, Depth, etc. with Mantine Progress
-        LiveBadge.tsx             # LIVE indicator + new data badge
+        StatusBar.tsx             # HP bar, Score, Depth, Gold, Energy, Hunger, LIVE badge
       panels/
-        GameScreen.tsx            # 21x79 colored character grid
-        SaliencyMap.tsx           # Heatmap character grid
-        FeatureTable.tsx          # Feature extraction KV table
-        FocusPoints.tsx           # Focus point list
-        AttenuationDetails.tsx    # Saliency attenuation KV table
-        ObjectResolution.tsx      # Resolution decision + candidates
-        GameMetrics.tsx           # Vitals KV table
+        GameScreen.tsx            # Fixed-height wrapper around CharGrid
+        SaliencyMap.tsx           # CharGrid with heatmap colors
+        FeatureTable.tsx          # Fixed 8-row feature counts (stable layout)
+        GameMetrics.tsx           # KVTable card with game stats
+        LogMessages.tsx           # Severity-colored log table
+        FocusPoints.tsx           # Focus point display
         GraphSummary.tsx          # Node/edge counts
-        EventActivity.tsx         # Event bus bar chart (Recharts)
-        LogMessages.tsx           # Filterable log table
-      layout/
-        SectionAccordion.tsx      # Accordion wrapper with summary headers
       common/
-        KVTable.tsx               # Reusable key-value Mantine Table
-        CharGrid.tsx              # Colored character grid renderer
-      bookmarks/
-        BookmarkList.tsx          # Bookmark panel
-        BookmarkButton.tsx        # Toggle bookmark on current step
-      help/
-        KeyboardHelp.tsx          # Shortcut overlay (Mantine Modal)
+        KVTable.tsx               # Reusable key-value table with optional titled Card
+        CharGrid.tsx              # Colored character grid (dangerouslySetInnerHTML)
     hooks/
-      useKeyboardShortcuts.ts     # react-hotkeys-hook wrappers
-      useLiveUpdates.ts           # Socket.io subscription hook
-      useBookmarks.ts             # Bookmark CRUD + navigation
+      useDebouncedValue.ts        # Debounce hook for slider/step changes
+      useLiveUpdates.ts           # Socket.io connection + live status polling
     types/
-      step-data.ts                # StepData TypeScript type (mirrors Python dataclass)
-      api.ts                      # API response types
-    utils/
-      colors.ts                   # HP color thresholds, severity colors
-      grid-renderer.ts            # Character grid HTML generation
+      step-data.ts                # StepData TypeScript interface (mirrors Python dataclass)
+      api.ts                      # API response types (RunSummary, GameSummary, etc.)
 ```
 
 ## Architecture
@@ -183,356 +177,119 @@ dashboard-ui/                     # NEW: React project root
 ### Data Flow
 
 ```
-Historical mode:
+Live following mode:
+  Game loop pushes StepData to StepBuffer
+    -> StepBuffer listener calls _notify_new_step()
+    -> asyncio.run_coroutine_threadsafe(sio.emit("new_step", data))
+    -> Socket.io pushes full StepData to browser
+    -> onNewStep callback: setLiveData(pushData), setStep(pushData.step)
+    -> data = liveData (instant, no REST round-trip)
+    -> All panels re-render
+
+Historical / paused mode:
   User clicks step control
     -> React state update (immediate, no server)
+    -> useDebouncedValue (150ms) -> useStepData query fires
     -> TanStack Query: fetch(/api/runs/{run}/step/{n})
-    -> Cache hit? Render immediately. Cache miss? Show loading, fetch, render.
+    -> Cache hit? Render immediately. Cache miss? Show previous data (placeholderData),
+       fetch in background, render when ready.
     -> All panels re-render with new StepData
 
-Live mode (following):
-  Socket.io receives "new_step" event
-    -> Update step range in React state
-    -> If following: auto-advance current step, fetch new data
-    -> If paused: show "new data available" badge, don't advance
-
-Live mode (user navigates away):
-  User clicks prev/slider/game change
-    -> React state: transition to "live_paused" (instant, client-side)
-    -> Fetch historical step data via REST
-    -> Socket.io still receives pushes, updates badge count
+REST API path (server side):
+  GET /api/runs/{run}/step/{n}
+    -> _get_step_data(run, n)
+    -> Try StepBuffer first (in-memory, instant) for live run
+    -> Fall back to RunStore (DuckDB over parquet files) for evicted/historical steps
+    -> dataclasses.asdict() + _convert_numpy() -> JSON response
 ```
 
-### Playback State Machine (Client-Side)
+### Playback State Machine (Client-Side useReducer)
 
-```typescript
-type PlaybackState = "historical" | "live_following" | "live_paused" | "live_catchup";
-
-type PlaybackAction =
-    | { type: "GO_LIVE" }
-    | { type: "PAUSE" }
-    | { type: "RESUME" }
-    | { type: "JUMP_TO_END" }
-    | { type: "USER_NAVIGATE" }
-    | { type: "PUSH_ARRIVED"; atEdge: boolean }
-    | { type: "TOGGLE_PLAY" };
-
-function playbackReducer(state: PlaybackState, action: PlaybackAction): PlaybackState {
-    switch (state) {
-        case "historical":
-            switch (action.type) {
-                case "GO_LIVE": return "live_following";
-                case "TOGGLE_PLAY": return "historical"; // no-op, handled by timer
-                case "USER_NAVIGATE": return "historical"; // no-op
-                case "JUMP_TO_END": return "historical"; // no-op
-                default: return state;
-            }
-        case "live_following":
-            switch (action.type) {
-                case "PAUSE": return "live_paused";
-                case "USER_NAVIGATE": return "live_paused";
-                case "PUSH_ARRIVED": return "live_following"; // stay
-                case "JUMP_TO_END": return "live_following"; // no-op
-                default: return state;
-            }
-        case "live_paused":
-            switch (action.type) {
-                case "RESUME": return "live_catchup";
-                case "JUMP_TO_END": return "live_following";
-                case "PUSH_ARRIVED": return "live_paused"; // stay, update badge
-                case "USER_NAVIGATE": return "live_paused"; // no-op
-                default: return state;
-            }
-        case "live_catchup":
-            switch (action.type) {
-                case "PAUSE": return "live_paused";
-                case "USER_NAVIGATE": return "live_paused";
-                case "JUMP_TO_END": return "live_following";
-                case "PUSH_ARRIVED":
-                    return action.atEdge ? "live_following" : "live_catchup";
-                default: return state;
-            }
-    }
-}
+```
+                    GO_LIVE
+  historical ─────────────────> live_following
+       |                            |
+       | (no live session)          | USER_NAVIGATE / PAUSE
+       |                            v
+       |                       live_paused
+       |                            |
+       |                            | RESUME
+       |                            v
+       |                       live_catchup
+       |                            |
+       |                            | PUSH_ARRIVED(atEdge=true)
+       |                            v
+       └────────────────────── live_following
 ```
 
-### API Server (FastAPI)
+Transitions:
+- `historical` + `GO_LIVE` -> `live_following` (auto-select on first live status)
+- `live_following` + `USER_NAVIGATE` -> `live_paused` (user clicked step/slider)
+- `live_paused` + `JUMP_TO_END` -> `live_following` (return to live edge)
+- `live_paused` + `RESUME` -> `live_catchup` (auto-play toward live)
+- `live_catchup` + `PUSH_ARRIVED(atEdge)` -> `live_following` (caught up)
 
-```python
-# roc/reporting/api_server.py (~200 lines)
+### API Endpoints
 
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-import socketio
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/runs` | List runs (newest first) |
+| GET | `/api/runs/{run}/games` | List games with step counts |
+| GET | `/api/runs/{run}/step/{n}` | Full StepData for step n |
+| GET | `/api/runs/{run}/step-range` | Min/max step (optional game filter) |
+| GET | `/api/runs/{run}/bookmarks` | Bookmarks for a run |
+| POST | `/api/runs/{run}/bookmarks` | Save bookmarks |
+| GET | `/api/live/status` | Live session info (polled every 3s) |
+| GET | `/api/live/step/{n}` | Step from StepBuffer (in-memory only) |
+| WS | `/socket.io` | Socket.io: emits `new_step` with full StepData |
 
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
-app = FastAPI()
-sio_app = socketio.ASGIApp(sio, other_app=app)
+### Server Lifecycle
 
-@app.get("/api/runs")
-async def list_runs() -> list[RunSummary]:
-    """List available runs with metadata."""
+1. `roc.init()` calls `start_dashboard()`
+2. Creates StepBuffer (100K capacity), registers globally
+3. Adds listener: on push, emit via Socket.io
+4. Starts uvicorn in daemon thread
+5. **Waits** for `threading.Event` from FastAPI startup handler (prevents pthread crash)
+6. Returns to game loop -- StepBuffer pushes are now safe
+7. On game end, `stop_dashboard()` clears the buffer
 
-@app.get("/api/runs/{run_name}/games")
-async def list_games(run_name: str) -> list[GameSummary]:
-    """List games in a run with step counts."""
+### Key UI Patterns
 
-@app.get("/api/runs/{run_name}/step/{step}")
-async def get_step(run_name: str, step: int, game: int | None = None) -> StepDataResponse:
-    """Get all data for a specific step."""
+**KVTable card**: Reusable `<KVTable data={...} title="Metrics" />` component. When `title`
+is provided, wraps in a bordered Mantine Card. Fixed 150px max-width, zero cell padding,
+tabular-nums for stable number columns. Used for Metrics, Feature Counts, Attenuation, and
+Resolution panels.
 
-@app.get("/api/runs/{run_name}/step-range")
-async def get_step_range(run_name: str, game: int | None = None) -> StepRange:
-    """Get min/max step for a run or game."""
+**CharGrid**: Renders 24x80 colored spans via `dangerouslySetInnerHTML`. No React.memo (parent
+controls re-renders via data flow). DejaVu Sans Mono at 9px.
 
-@app.get("/api/runs/{run_name}/bookmarks")
-async def get_bookmarks(run_name: str) -> list[Bookmark]:
-    """Get bookmarks for a run."""
+**Stable layout**: GameScreen has 260px min-height. FeatureTable always renders all 8 feature
+types (missing = "--"). Tables use `layout="fixed"`. All prevents accordion content from
+jumping between frames.
 
-@app.post("/api/runs/{run_name}/bookmarks")
-async def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> None:
-    """Save bookmarks for a run."""
+**Flicker-free scrubbing**: TanStack Query `placeholderData: keepPreviousData` shows the old
+step's data while the new step loads. Historical mode never falls back to liveData.
 
-# Socket.io: push new step data to connected clients
-@sio.event
-async def connect(sid, environ):
-    """Client connected."""
+## Implementation Status
 
-def notify_new_step(step_data: StepData) -> None:
-    """Called by StepBuffer listener when new data arrives."""
-    sio.start_background_task(sio.emit, "new_step", step_data.to_dict())
+### Completed
+- [x] Phase 1: Skeleton + Screen (MVP) -- FastAPI, REST, TanStack Query, CharGrid
+- [x] Phase 2: Data Panels -- StatusBar, FeatureTable, SaliencyMap, GameMetrics, LogMessages,
+  KVTable card component, Accordion layout
+- [x] Phase 3: Live Mode -- Socket.io push, playback state machine, auto-follow, synchronized
+  server startup
+- [x] Panel/wandb removal -- all Panel, Bokeh, and wandb code deleted
 
-# Serve React static build in production
-app.mount("/", StaticFiles(directory="dashboard-ui/dist", html=True))
-```
-
-### TanStack Query Integration
-
-```typescript
-// api/queries.ts
-
-export function useStepData(run: string, step: number, game?: number) {
-    return useQuery({
-        queryKey: ["step", run, step, game],
-        queryFn: () => fetchStep(run, step, game),
-        staleTime: Infinity, // Step data never changes
-        // Prefetch adjacent steps for smooth scrubbing
-        placeholderData: keepPreviousData,
-    });
-}
-
-export function useRuns() {
-    return useQuery({
-        queryKey: ["runs"],
-        queryFn: fetchRuns,
-        refetchInterval: 5000, // Poll for new runs
-    });
-}
-
-export function useGames(run: string) {
-    return useQuery({
-        queryKey: ["games", run],
-        queryFn: () => fetchGames(run),
-    });
-}
-
-// Prefetch adjacent steps when user is scrubbing
-export function usePrefetchAdjacentSteps(run: string, step: number, game?: number) {
-    const queryClient = useQueryClient();
-    useEffect(() => {
-        for (const offset of [-2, -1, 1, 2]) {
-            queryClient.prefetchQuery({
-                queryKey: ["step", run, step + offset, game],
-                queryFn: () => fetchStep(run, step + offset, game),
-            });
-        }
-    }, [run, step, game]);
-}
-```
-
-### Layout (Mantine AppShell + Accordion)
-
-```tsx
-// App.tsx
-
-<MantineProvider theme={compactTheme} defaultColorScheme="dark">
-    <QueryClientProvider client={queryClient}>
-        <DashboardProvider>
-            <AppShell header={{ height: 120 }}>
-                <AppShell.Header>
-                    <TransportBar />
-                </AppShell.Header>
-                <AppShell.Main>
-                    <StatusBar />
-                    <Accordion multiple defaultValue={["game-state", "perception"]}>
-                        <Accordion.Item value="game-state">
-                            <Accordion.Control>Game State</Accordion.Control>
-                            <Accordion.Panel>
-                                <GameScreen /> <GameMetrics /> <GraphSummary />
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                        <Accordion.Item value="perception">
-                            <Accordion.Control>Perception</Accordion.Control>
-                            <Accordion.Panel>
-                                <FeatureTable />
-                            </Accordion.Panel>
-                        </Accordion.Item>
-                        {/* ... more sections */}
-                    </Accordion>
-                </AppShell.Main>
-            </AppShell>
-        </DashboardProvider>
-    </QueryClientProvider>
-</MantineProvider>
-```
-
-### Character Grid Component
-
-```tsx
-// components/common/CharGrid.tsx
-
-interface CharGridProps {
-    chars: number[][];   // 21x79 character codes
-    fg: string[][];      // 21x79 hex foreground colors
-    bg: string[][];      // 21x79 hex background colors
-}
-
-export const CharGrid = React.memo(function CharGrid({ chars, fg, bg }: CharGridProps) {
-    const html = useMemo(() => {
-        const rows: string[] = [];
-        for (let r = 0; r < chars.length; r++) {
-            const spans: string[] = [];
-            for (let c = 0; c < chars[r].length; c++) {
-                const ch = String.fromCharCode(chars[r][c]);
-                const fgColor = fg[r][c];
-                const bgColor = bg[r][c];
-                const escaped = ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch === "&" ? "&amp;" : ch;
-                spans.push(`<span style="color:${fgColor};background:${bgColor}">${escaped}</span>`);
-            }
-            rows.push(spans.join(""));
-        }
-        return rows.join("<br/>");
-    }, [chars, fg, bg]);
-
-    return (
-        <div
-            style={{
-                fontFamily: "'DejaVu Sans Mono', monospace",
-                fontSize: "9px",
-                lineHeight: 1.15,
-                background: "#000",
-                padding: "4px",
-                whiteSpace: "pre",
-            }}
-            dangerouslySetInnerHTML={{ __html: html }}
-        />
-    );
-});
-```
-
-## Implementation Phases
-
-### Phase 1: Skeleton + Screen (MVP)
-
-**Goal**: React app that displays the game screen synced to a step slider. Proves the
-full pipeline: FastAPI -> REST -> TanStack Query -> React render.
-
-**Backend**:
-- `api_server.py`: FastAPI with GET /api/runs, /api/runs/{run}/games,
-  /api/runs/{run}/step/{n}, /api/runs/{run}/step-range
-- Serve React dev build via Vite proxy
-
-**Frontend**:
-- Vite + React + TypeScript project scaffold
-- MantineProvider with compactTheme
-- AppShell with header (run selector, game selector, step slider)
-- CharGrid component rendering game screen
-- TanStack Query for step data fetching
-- useReducer playback state (historical mode only)
-
-**Tests**:
-- API: test endpoints return correct data shapes
-- CharGrid: renders correct number of spans
-- Playback reducer: state transitions
-- Step data query: cache behavior
-
-**Deliverable**: Browse to dashboard, select run/game, scrub through steps, see game screen
-update.
-
-### Phase 2: All Data Panels
-
-**Goal**: Add all remaining data panels to match the Panel dashboard feature set.
-
-- StatusBar (HP, Score, Depth with Mantine Progress for HP/Energy)
-- FeatureTable (KV table)
-- SaliencyMap (CharGrid with heatmap colors + legend)
-- FocusPoints (KV table)
-- AttenuationDetails (KV table)
-- ObjectResolution (decision + candidates table)
-- GameMetrics (KV table)
-- GraphSummary (KV table)
-- EventActivity (Recharts horizontal bar chart)
-- LogMessages (filterable Mantine Table with severity coloring)
-- Accordion sections with summary headers when collapsed
-
-**Tests**:
-- Each panel component renders with mock data
-- Each panel handles null/missing data gracefully
-- Log level filter works
-
-### Phase 3: Live Mode
-
-**Goal**: Socket.io push updates, LIVE badge, follow/pause/catchup behavior.
-
-**Backend**:
-- Add python-socketio to api_server.py
-- Wire StepBuffer listener to emit Socket.io events
-- Emit "new_step" with step number and metadata (full data fetched on demand)
-
-**Frontend**:
-- Socket.io client connection in useLiveUpdates hook
-- Full playback state machine (all 4 states)
-- LIVE badge component
-- "New data available" badge when paused
-- Auto-advance when following
-- Step range expansion on push
-
-**Tests**:
-- Playback reducer: all state transitions including PUSH_ARRIVED
-- Live badge visibility per state
-- Socket reconnection behavior
-
-### Phase 4: Keyboard Shortcuts + Bookmarks
-
-**Goal**: Keyboard-driven navigation and persistent bookmarks.
-
-- react-hotkeys-hook for all shortcuts (R16)
-- Keyboard help overlay (Mantine Modal, toggled by ? or h)
-- Bookmark CRUD (toggle, navigate next/prev, annotate)
-- Bookmark persistence via API (GET/POST /api/runs/{run}/bookmarks)
-- Bookmark list panel
-- Visual bookmark indicators on slider
-
-**Tests**:
-- Shortcut key -> correct action dispatched
-- Bookmark toggle adds/removes
-- Bookmark navigation (next/prev wrapping)
-- Bookmark persistence round-trip
-
-### Phase 5: Polish + Panel Removal
-
-**Goal**: Production-ready, remove all Panel code.
-
-- Error boundaries and loading states
-- Responsive layout (test on iPad width)
-- Performance optimization (prefetch adjacent steps, React.memo)
-- ServHerd integration for api_server.py
-- Entry point: `uv run dashboard` starts FastAPI serving React build
-- Delete: panel_debug.py, playback_machine.py, dashboard_server.py, components/
-- Delete: tests/unit/test_panel_debug.py, tests/unit/test_playback_machine.py
-- Remove Python deps: panel, bokeh, python-statemachine
-- Update CLAUDE.md panel dashboard section
-
-**Tests**:
-- Integration test: start server, fetch step, verify response
-- No remaining Panel imports in codebase
+### Remaining
+- [ ] Phase 4: Keyboard Shortcuts + Bookmarks
+  - react-hotkeys-hook for Left/Right/Space/Home/End/Shift+arrows
+  - Keyboard help overlay (Mantine Modal, toggled by ? or h)
+  - Bookmark CRUD UI (toggle, navigate next/prev, annotate)
+  - Visual bookmark indicators on slider
+- [ ] Phase 5: Polish
+  - Recharts charts (HP/score trends, event activity bar chart)
+  - Object Resolution inspector (decision + candidates table)
+  - Error boundaries and loading states
+  - Production build (`vite build` served from FastAPI static mount)
+  - Log message severity filtering
+  - Responsive layout testing

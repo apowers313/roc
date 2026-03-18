@@ -26,13 +26,17 @@ const SPEED_OPTIONS = [
     { value: "500", label: "2x" },
     { value: "200", label: "5x" },
     { value: "100", label: "10x" },
+    { value: "50", label: "20x" },
+    { value: "16", label: "60x" },
 ];
 
 interface TransportBarProps {
     connected?: boolean;
+    /** Ref that indicates whether the current step's data has loaded. */
+    stepDataReadyRef?: React.RefObject<boolean>;
 }
 
-export function TransportBar({ connected }: TransportBarProps) {
+export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps) {
     const {
         run,
         setRun,
@@ -49,46 +53,82 @@ export function TransportBar({ connected }: TransportBarProps) {
         setSpeed,
         playback,
         dispatchPlayback,
+        liveRunName,
     } = useDashboard();
 
     const { data: runs } = useRuns();
     const { data: games } = useGames(run);
-    const { data: stepRange } = useStepRange(run, game || undefined);
+    const { data: stepRangeData } = useStepRange(run, game || undefined);
 
-    // Update step range when data arrives
+    // Derive effective step range: prefer REST query data, fall back to context
+    // (which is updated by live pushes). This avoids stale context values when
+    // switching runs -- the REST response is authoritative.
+    const effectiveMin = stepRangeData?.min ?? stepMin;
+    const effectiveMax = stepRangeData?.max ?? stepMax;
+
+    // Sync to context so other components (App.tsx) see the range
     useEffect(() => {
-        if (stepRange) {
-            setStepRange(stepRange.min, stepRange.max);
+        if (stepRangeData) {
+            setStepRange(stepRangeData.min, stepRangeData.max);
         }
-    }, [stepRange, setStepRange]);
+    }, [stepRangeData, setStepRange]);
 
     // Auto-select first run (API returns newest-first)
     useEffect(() => {
         if (runs && runs.length > 0 && !run) {
-            setRun(runs[0]!.name);
+            const name = runs[0]!.name;
+            setRun(name);
+            // Eagerly fetch step-range
+            void fetch(`/api/runs/${encodeURIComponent(name)}/step-range?game=1`)
+                .then((r) => r.json())
+                .then((d: { min: number; max: number }) => {
+                    if (d.max > 0) {
+                        setStepRange(d.min, d.max);
+                    }
+                })
+                .catch(() => {});
         }
-    }, [runs, run, setRun]);
+    }, [runs, run, setRun, setStepRange]);
 
-    // Auto-play timer -- uses refs to avoid stale closures
-    const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Auto-play timer -- uses setTimeout loop that waits for the current
+    // step's data to load before advancing. This prevents request pileup
+    // at high speeds (10x+) where the fetch time exceeds the interval.
+    const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const stepRef = useRef(step);
     stepRef.current = step;
+    const stepMaxRef = useRef(stepMax);
+    stepMaxRef.current = stepMax;
+    const playingRef = useRef(playing);
+    playingRef.current = playing;
 
     useEffect(() => {
-        if (playing) {
-            timerRef.current = setInterval(() => {
-                const next = stepRef.current + 1;
-                if (next > stepMax) {
-                    setPlaying(false);
-                } else {
-                    setStep(next);
-                }
-            }, speed);
-        }
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
+        if (!playing) return;
+
+        const advance = () => {
+            if (!playingRef.current) return;
+
+            // Wait for data before advancing: poll every 5ms until
+            // stepDataReadyRef signals the fetch completed.
+            if (stepDataReadyRef?.current === false) {
+                timerRef.current = setTimeout(advance, 5);
+                return;
+            }
+
+            const next = stepRef.current + 1;
+            if (next > stepMaxRef.current) {
+                setPlaying(false);
+            } else {
+                setStep(next);
+                // Schedule next advance after the speed interval
+                timerRef.current = setTimeout(advance, speed);
+            }
         };
-    }, [playing, speed, stepMax, setStep, setPlaying]);
+
+        timerRef.current = setTimeout(advance, speed);
+        return () => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+        };
+    }, [playing, speed, setStep, setPlaying, stepDataReadyRef]);
 
     const togglePlay = useCallback(() => {
         if (playback === "historical") {
@@ -98,33 +138,38 @@ export function TransportBar({ connected }: TransportBarProps) {
     }, [playing, playback, setPlaying, dispatchPlayback]);
 
     const stepForward = useCallback(() => {
-        setStep((prev) => (prev < stepMax ? prev + 1 : prev));
+        setStep((prev) => (prev < effectiveMax ? prev + 1 : prev));
         if (playback === "live_following") {
             dispatchPlayback({ type: "USER_NAVIGATE" });
         }
-    }, [stepMax, setStep, playback, dispatchPlayback]);
+    }, [effectiveMax, setStep, playback, dispatchPlayback]);
 
     const stepBack = useCallback(() => {
-        setStep((prev) => (prev > stepMin ? prev - 1 : prev));
+        setStep((prev) => (prev > effectiveMin ? prev - 1 : prev));
         if (playback === "live_following") {
             dispatchPlayback({ type: "USER_NAVIGATE" });
         }
-    }, [stepMin, setStep, playback, dispatchPlayback]);
+    }, [effectiveMin, setStep, playback, dispatchPlayback]);
 
     const jumpToStart = useCallback(() => {
-        setStep(stepMin);
+        setStep(effectiveMin);
         if (
             playback === "live_following" ||
             playback === "live_catchup"
         ) {
             dispatchPlayback({ type: "USER_NAVIGATE" });
         }
-    }, [stepMin, setStep, playback, dispatchPlayback]);
+    }, [effectiveMin, setStep, playback, dispatchPlayback]);
 
     const jumpToEnd = useCallback(() => {
-        setStep(stepMax);
-        dispatchPlayback({ type: "JUMP_TO_END" });
-    }, [stepMax, setStep, dispatchPlayback]);
+        setStep(effectiveMax);
+        // Only return to live-following when viewing the live run
+        // without a game filter. Otherwise just jump to the end of
+        // the current range without changing playback state.
+        if (run === liveRunName && !game) {
+            dispatchPlayback({ type: "JUMP_TO_END" });
+        }
+    }, [effectiveMax, setStep, run, liveRunName, game, dispatchPlayback]);
 
     const handleSliderChange = useCallback(
         (value: number) => {
@@ -150,11 +195,28 @@ export function TransportBar({ connected }: TransportBarProps) {
                 <Select
                     size="xs"
                     placeholder="Run"
+                    searchable
                     value={run || null}
                     onChange={(v) => {
                         if (v) {
                             setRun(v);
                             setStep(1);
+                            setGame(1);
+                            // Switching away from live run enters historical mode
+                            if (v !== liveRunName) {
+                                dispatchPlayback({ type: "USER_NAVIGATE" });
+                            }
+                            // Eagerly fetch step-range for the new run so the
+                            // slider updates immediately without waiting for
+                            // TanStack Query to re-render.
+                            void fetch(`/api/runs/${encodeURIComponent(v)}/step-range?game=1`)
+                                .then((r) => r.json())
+                                .then((d: { min: number; max: number }) => {
+                                    if (d.max > 0) {
+                                        setStepRange(d.min, d.max);
+                                    }
+                                })
+                                .catch(() => {});
                         }
                     }}
                     data={runOptions}
@@ -166,8 +228,27 @@ export function TransportBar({ connected }: TransportBarProps) {
                     value={game ? String(game) : null}
                     onChange={(v) => {
                         if (v) {
-                            setGame(Number(v));
-                            setStep(1);
+                            const gameNum = Number(v);
+                            setGame(gameNum);
+                            // Selecting a specific game exits live-following
+                            if (playback === "live_following") {
+                                dispatchPlayback({ type: "USER_NAVIGATE" });
+                            }
+                            // Eagerly fetch step range for the game so
+                            // we can jump to the game's first step.
+                            void fetch(
+                                `/api/runs/${encodeURIComponent(run)}/step-range?game=${gameNum}`,
+                            )
+                                .then((r) => r.json())
+                                .then((d: { min: number; max: number }) => {
+                                    if (d.max > 0) {
+                                        setStepRange(d.min, d.max);
+                                        setStep(d.min);
+                                    }
+                                })
+                                .catch(() => {
+                                    setStep(1);
+                                });
                         }
                     }}
                     data={gameOptions}
@@ -239,16 +320,16 @@ export function TransportBar({ connected }: TransportBarProps) {
 
                 <Slider
                     size="xs"
-                    min={stepMin}
-                    max={stepMax}
+                    min={effectiveMin}
+                    max={effectiveMax}
                     value={step}
                     onChange={handleSliderChange}
                     style={{ flex: 1, minWidth: 200 }}
-                    label={(v) => String(v)}
+                    label={(v) => String(v - effectiveMin + 1)}
                 />
 
                 <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                    {step} / {stepMax}
+                    {step - effectiveMin + 1} / {effectiveMax - effectiveMin + 1}
                 </Text>
             </Group>
         </div>

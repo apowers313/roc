@@ -1,10 +1,6 @@
 /** TanStack Query hooks for data fetching with caching. */
 
-import {
-    keepPreviousData,
-    useQuery,
-    useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
 import { fetchGames, fetchRuns, fetchStep, fetchStepRange } from "./client";
@@ -32,7 +28,11 @@ export function useStepData(run: string, step: number, game?: number) {
         enabled: run !== "" && step > 0,
         staleTime: Infinity, // step data is immutable
         retry: false, // don't retry on rapid navigation cancellations
-        placeholderData: keepPreviousData, // show old step while new one loads
+        // Keep previous step's data visible while the next step loads.
+        // This prevents flicker (alternating "No data" / data) during
+        // playback.  Safe because the DuckLake catalog always returns
+        // correct data for each query key.
+        placeholderData: keepPreviousData,
     });
 }
 

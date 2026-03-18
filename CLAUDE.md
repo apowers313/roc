@@ -179,15 +179,14 @@ roc_graphdb_flush=true     # Flush cache to Memgraph on game end
 4. **Need aggregate metrics across runs?** -> Grafana MCP (#4)
 5. **Quick sanity check?** -> Loguru terminal output (#5)
 
-## Panel Dashboard
+## React Dashboard
 
-The debug dashboard (`roc/reporting/`) uses HoloViz Panel. When writing or modifying Panel code, follow the best practices in `design/panel-best-practices.md`. Key rules:
+The debug dashboard is a React app in `dashboard-ui/` with a FastAPI + Socket.io backend in `roc/reporting/api_server.py`. Key architecture:
 
-- Use Panel's design system (`design=`, `theme=`, `--design-*` CSS variables) instead of global CSS overrides
-- Use `pn.indicators.*` (Number, Trend, Gauge) instead of raw HTML badges
-- Use `pn.pane.Markdown`/`pn.pane.Str` instead of `pn.pane.HTML` with inline-styled strings
-- Use Tabulator built-in themes + scoped `stylesheets=` instead of global `.bk-*` overrides
-- Never use `!important` to override Panel/Bokeh internal CSS classes
+- **Frontend**: React + Mantine (compact-mantine theme) + TanStack Query + Vite
+- **Backend**: FastAPI REST API + Socket.io live push via StepBuffer
+- **Data flow**: Game loop pushes StepData to StepBuffer, Socket.io broadcasts to browsers
+- **Dev server**: `cd dashboard-ui && pnpm dev` (proxies API to the game's FastAPI server)
 
 ## Testing Notes
 

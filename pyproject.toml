@@ -131,6 +131,7 @@ repository = "https://github.com/apowers313/roc"
 
 [project.scripts]
 play = "roc.script:cli"
+dashboard = "roc.dashboard_cli:main"
 
 [tool.uv]
 default-groups = ["dev"]
@@ -149,7 +150,6 @@ exclude = [
   "experiments",
   ".fttemplates",
   "tmp",
-  "wandb",
 ]
 ignore = ["DEP003"]
 
@@ -158,7 +158,7 @@ DEP001 = ["gymnasium"]
 # pydot: optional dependency for networkx
 # psutil: used in test conftest.py (excluded from scan)
 # visualization libs: used in experiments/ and marimo notebooks (excluded from scan)
-DEP002 = ["pydot", "psutil", "dash", "dash-cytoscape", "panel", "hvplot", "jupyter-bokeh", "bokeh", "bokeh-sampledata", "plotly", "plotly-resampler", "cosmograph", "dash-bootstrap-components"]
+DEP002 = ["pydot", "psutil", "dash", "dash-cytoscape"]
 
 
 [tool.interrogate]

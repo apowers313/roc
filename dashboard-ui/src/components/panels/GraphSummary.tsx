@@ -8,5 +8,5 @@ interface GraphSummaryProps {
 }
 
 export function GraphSummary({ data }: GraphSummaryProps) {
-    return <KVTable data={data?.graph_summary} emptyText="No graph data" />;
+    return <KVTable data={data?.graph_summary} emptyText="No graph data" title="Graph DB" />;
 }

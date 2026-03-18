@@ -3,6 +3,9 @@
 """Unit tests for roc/reporting/run_store.py."""
 
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import pytest
@@ -14,8 +17,8 @@ from roc.reporting.run_store import RunStore, StepData
 
 
 @pytest.fixture()
-def populated_run_dir(tmp_path: Path) -> Path:
-    """Create a run directory with known test data using ParquetExporter."""
+def populated_store(tmp_path: Path) -> DuckLakeStore:
+    """Create a DuckLakeStore with known test data using ParquetExporter."""
     store = DuckLakeStore(tmp_path)
     exporter = ParquetExporter(store=store, background=False)
 
@@ -50,41 +53,41 @@ def populated_run_dir(tmp_path: Path) -> Path:
         exporter.export([make_log_record(event_name="roc.screen", body=screen_body)])
 
     exporter.shutdown()
-    return tmp_path
+    return store
 
 
 class TestStepCount:
-    def test_step_count_returns_max_step(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_count_returns_max_step(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         assert store.step_count() == 15
 
-    def test_step_count_filtered_by_game(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_count_filtered_by_game(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         assert store.step_count(game_number=1) == 10
         assert store.step_count(game_number=2) == 5
 
 
 class TestGetStep:
-    def test_get_step_returns_matching_rows(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_get_step_returns_matching_rows(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         df = store.get_step(step=5, table="events")
         assert all(df["step"] == 5)
 
-    def test_get_step_returns_empty_for_missing(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_get_step_returns_empty_for_missing(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         df = store.get_step(step=999, table="screens")
         assert len(df) == 0
 
-    def test_get_step_from_screens(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_get_step_from_screens(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         df = store.get_step(step=1, table="screens")
         assert len(df) == 1
         assert df.iloc[0]["step"] == 1
 
 
 class TestListGames:
-    def test_list_games_returns_summary(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_list_games_returns_summary(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         games = store.list_games()
         assert len(games) == 2
         assert list(games["game_number"]) == [1, 2]
@@ -98,8 +101,8 @@ class TestListRuns:
         # Create two valid run dirs
         for name in ["run-1", "run-2"]:
             run_dir = tmp_path / name
-            store = DuckLakeStore(run_dir)
-            exporter = ParquetExporter(store=store, background=False)
+            dl_store = DuckLakeStore(run_dir)
+            exporter = ParquetExporter(store=dl_store, background=False)
             exporter.export([make_log_record(event_name="roc.screen", body="x")])
             exporter.shutdown()
 
@@ -111,12 +114,12 @@ class TestListRuns:
     def test_list_runs_ignores_incomplete(self, tmp_path: Path):
         # Valid run
         valid = tmp_path / "valid-run"
-        store = DuckLakeStore(valid)
-        exporter = ParquetExporter(store=store, background=False)
+        dl_store = DuckLakeStore(valid)
+        exporter = ParquetExporter(store=dl_store, background=False)
         exporter.export([make_log_record(event_name="roc.screen", body="x")])
         exporter.shutdown()
 
-        # Incomplete run (no catalog.sqlite)
+        # Incomplete run (no catalog.duckdb)
         incomplete = tmp_path / "incomplete-run"
         incomplete.mkdir()
 
@@ -125,8 +128,8 @@ class TestListRuns:
 
 
 class TestGetStepData:
-    def test_get_step_data_assembles_all_sources(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_get_step_data_assembles_all_sources(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         sd = store.get_step_data(1)
         assert isinstance(sd, StepData)
         assert sd.step == 1
@@ -149,17 +152,104 @@ class TestGetStepData:
         assert sd.logs is None
 
 
+class TestConcurrentAccess:
+    """Regression: DuckDB connections are not thread-safe.
+
+    Before the fix, concurrent requests from FastAPI's thread pool would
+    share a RunStore's DuckDB connection without synchronization, causing
+    corrupted query results (e.g. game_number=0 and screen=None for a run
+    that actually has data).
+    """
+
+    def test_concurrent_get_step_data_returns_correct_results(
+        self,
+        populated_store: DuckLakeStore,
+    ):
+        """Multiple threads reading different steps must each get correct data."""
+        store = RunStore(populated_store)
+        errors: list[str] = []
+
+        def read_step(step: int) -> None:
+            sd = store.get_step_data(step)
+            if sd.step != step:
+                errors.append(f"step {step}: got sd.step={sd.step}")
+            if sd.game_number == 0:
+                errors.append(f"step {step}: game_number was 0 (corrupted)")
+            if step <= 10 and sd.screen is None:
+                errors.append(f"step {step}: screen was None (corrupted)")
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(read_step, s) for s in range(1, 16)]
+            for f in as_completed(futures):
+                f.result()  # propagate exceptions
+
+        assert errors == [], f"Concurrent access errors: {errors}"
+
+    def test_concurrent_step_range_returns_consistent_results(
+        self,
+        populated_store: DuckLakeStore,
+    ):
+        """Multiple threads calling step_range must all get the same answer."""
+        store = RunStore(populated_store)
+        results: list[tuple[int, int]] = []
+        lock = threading.Lock()
+
+        def read_range() -> None:
+            r = store.step_range()
+            with lock:
+                results.append(r)
+
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = [pool.submit(read_range) for _ in range(20)]
+            for f in as_completed(futures):
+                f.result()
+
+        assert all(r == (1, 15) for r in results), f"Inconsistent ranges: {set(results)}"
+
+    def test_concurrent_read_write(self, tmp_path: Path):
+        """Reads and writes on the same DuckLakeStore must not crash."""
+        dl_store = DuckLakeStore(tmp_path)
+        # Seed initial data
+        for i in range(1, 51):
+            dl_store.insert("screens", [{"step": i, "game_number": 1, "body": "x"}])
+
+        reader = RunStore(dl_store)
+        errors: list[str] = []
+
+        def write_loop() -> None:
+            for i in range(51, 101):
+                dl_store.insert("screens", [{"step": i, "game_number": 2, "body": "x"}])
+
+        def read_loop() -> None:
+            for i in range(1, 51):
+                sd = reader.get_step_data(i)
+                if sd.game_number == 0:
+                    errors.append(f"step {i}: corrupted")
+
+        w = threading.Thread(target=write_loop)
+        r = threading.Thread(target=read_loop)
+        w.start()
+        r.start()
+        w.join()
+        r.join()
+
+        assert errors == [], f"Concurrent read/write errors: {errors}"
+
+
 class TestEdgeCases:
-    def test_step_count_no_screens_file(self, tmp_path: Path):
-        store = RunStore(tmp_path)
+    def test_step_count_no_tables(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
         assert store.step_count() == 0
 
-    def test_step_range_no_screens_file(self, tmp_path: Path):
-        store = RunStore(tmp_path)
+    def test_step_range_no_tables(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
         assert store.step_range() == (0, 0)
 
-    def test_list_games_no_screens_file(self, tmp_path: Path):
-        store = RunStore(tmp_path)
+    def test_list_games_no_tables(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
         games = store.list_games()
         assert len(games) == 0
 
@@ -167,38 +257,109 @@ class TestEdgeCases:
         runs = RunStore.list_runs(tmp_path / "nonexistent")
         assert runs == []
 
-    def test_get_step_missing_table_file(self, tmp_path: Path):
-        store = RunStore(tmp_path)
+    def test_get_step_missing_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
         df = store.get_step(1, "nonexistent")
         assert len(df) == 0
 
-    def test_parse_body_non_json(self, populated_run_dir: Path):
+    def test_parse_body_non_json(self, populated_store: DuckLakeStore):
         """StepData handles non-JSON body strings gracefully."""
-        store = RunStore(populated_run_dir)
-        # Logs have non-JSON bodies -- check that they're populated
+        store = RunStore(populated_store)
         sd = store.get_step_data(1)
         assert sd.logs is not None
 
-    def test_step_count_stable(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_count_stable(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         assert store.step_count() == 15
 
 
 class TestStepRange:
-    def test_step_range_for_game(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_range_for_game(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         min_step, max_step = store.step_range(game_number=1)
         assert min_step == 1
         assert max_step == 10
 
-    def test_step_range_overall(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_range_overall(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         min_step, max_step = store.step_range()
         assert min_step == 1
         assert max_step == 15
 
-    def test_step_range_game_2(self, populated_run_dir: Path):
-        store = RunStore(populated_run_dir)
+    def test_step_range_game_2(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
         min_step, max_step = store.step_range(game_number=2)
         assert min_step == 11
         assert max_step == 15
+
+
+# ---------------------------------------------------------------------------
+# Performance regression tests
+# ---------------------------------------------------------------------------
+
+_STEP_TIME_LIMIT = 0.300  # seconds
+
+
+class TestPerformanceHistorical:
+    """Performance: DuckLake catalog step access must be < 300ms."""
+
+    def test_get_step_data_under_limit(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
+        # Warm up
+        store.get_step_data(1)
+
+        times = []
+        for step in range(2, 12):
+            t0 = time.perf_counter()
+            sd = store.get_step_data(step)
+            elapsed = time.perf_counter() - t0
+            times.append(elapsed)
+            assert sd.step == step
+
+        avg = sum(times) / len(times)
+        worst = max(times)
+        assert worst < _STEP_TIME_LIMIT, (
+            f"Worst step time {worst:.3f}s exceeds {_STEP_TIME_LIMIT}s (avg={avg:.3f}s)"
+        )
+
+    def test_step_range_under_limit(self, populated_store: DuckLakeStore):
+        store = RunStore(populated_store)
+        # Warm up
+        store.step_range()
+
+        t0 = time.perf_counter()
+        for _ in range(10):
+            store.step_range()
+        elapsed = (time.perf_counter() - t0) / 10
+        assert elapsed < _STEP_TIME_LIMIT, (
+            f"step_range avg {elapsed:.3f}s exceeds {_STEP_TIME_LIMIT}s"
+        )
+
+
+class TestPerformanceLive:
+    """Performance: live StepBuffer access must be < 300ms."""
+
+    def test_step_buffer_get_step_under_limit(self):
+        from roc.reporting.step_buffer import StepBuffer
+
+        buf = StepBuffer(capacity=10_000)
+        for i in range(1, 1001):
+            buf.push(StepData(step=i, game_number=1))
+
+        # Warm up
+        buf.get_step(500)
+
+        times = []
+        for step in range(100, 1000, 100):
+            t0 = time.perf_counter()
+            sd = buf.get_step(step)
+            elapsed = time.perf_counter() - t0
+            times.append(elapsed)
+            assert sd is not None
+            assert sd.step == step
+
+        worst = max(times)
+        assert worst < _STEP_TIME_LIMIT, (
+            f"StepBuffer worst step time {worst:.3f}s exceeds {_STEP_TIME_LIMIT}s"
+        )
