@@ -42,3 +42,6 @@ wandb/
 
 # Graph exports
 *.gml
+
+# Node.js
+node_modules/
