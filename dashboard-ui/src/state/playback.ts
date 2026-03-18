@@ -19,11 +19,12 @@ export function playbackReducer(
     state: PlaybackState,
     action: PlaybackAction,
 ): PlaybackState {
+    // GO_LIVE transitions to live_following from any state
+    if (action.type === "GO_LIVE") return "live_following";
+
     switch (state) {
         case "historical":
             switch (action.type) {
-                case "GO_LIVE":
-                    return "live_following";
                 case "TOGGLE_PLAY":
                 case "USER_NAVIGATE":
                 case "JUMP_TO_END":
@@ -37,7 +38,6 @@ export function playbackReducer(
                 case "USER_NAVIGATE":
                     return "live_paused";
                 case "PUSH_ARRIVED":
-                case "JUMP_TO_END":
                     return "live_following";
                 default:
                     return state;
@@ -46,8 +46,6 @@ export function playbackReducer(
             switch (action.type) {
                 case "RESUME":
                     return "live_catchup";
-                case "JUMP_TO_END":
-                    return "live_following";
                 case "PUSH_ARRIVED":
                 case "USER_NAVIGATE":
                     return "live_paused";
@@ -59,8 +57,6 @@ export function playbackReducer(
                 case "PAUSE":
                 case "USER_NAVIGATE":
                     return "live_paused";
-                case "JUMP_TO_END":
-                    return "live_following";
                 case "PUSH_ARRIVED":
                     return action.atEdge ? "live_following" : "live_catchup";
                 default:

@@ -64,8 +64,8 @@ describe("playbackReducer", () => {
             ).toBe("live_following");
         });
 
-        it("stays following on JUMP_TO_END", () => {
-            expect(playbackReducer(state, { type: "JUMP_TO_END" })).toBe(
+        it("transitions to live_following on GO_LIVE", () => {
+            expect(playbackReducer(state, { type: "GO_LIVE" })).toBe(
                 "live_following",
             );
         });
@@ -80,8 +80,8 @@ describe("playbackReducer", () => {
             );
         });
 
-        it("transitions to live_following on JUMP_TO_END", () => {
-            expect(playbackReducer(state, { type: "JUMP_TO_END" })).toBe(
+        it("transitions to live_following on GO_LIVE", () => {
+            expect(playbackReducer(state, { type: "GO_LIVE" })).toBe(
                 "live_following",
             );
         });
@@ -117,8 +117,8 @@ describe("playbackReducer", () => {
             );
         });
 
-        it("transitions to live_following on JUMP_TO_END", () => {
-            expect(playbackReducer(state, { type: "JUMP_TO_END" })).toBe(
+        it("transitions to live_following on GO_LIVE", () => {
+            expect(playbackReducer(state, { type: "GO_LIVE" })).toBe(
                 "live_following",
             );
         });

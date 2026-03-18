@@ -163,13 +163,12 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
 
     const jumpToEnd = useCallback(() => {
         setStep(effectiveMax);
-        // Only return to live-following when viewing the live run
-        // without a game filter. Otherwise just jump to the end of
-        // the current range without changing playback state.
-        if (run === liveRunName && !game) {
-            dispatchPlayback({ type: "JUMP_TO_END" });
+        // Pure navigation -- just go to end of current game's range.
+        // Use "L" or click "GO LIVE" badge to return to live-following.
+        if (playback === "live_following") {
+            dispatchPlayback({ type: "USER_NAVIGATE" });
         }
-    }, [effectiveMax, setStep, run, liveRunName, game, dispatchPlayback]);
+    }, [effectiveMax, setStep, playback, dispatchPlayback]);
 
     const handleSliderChange = useCallback(
         (value: number) => {
@@ -318,18 +317,45 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
                     <ChevronLast size={14} />
                 </ActionIcon>
 
-                <Slider
-                    size="xs"
-                    min={effectiveMin}
-                    max={effectiveMax}
-                    value={step}
-                    onChange={handleSliderChange}
+                {/* Intercept nav keys on the slider wrapper to prevent the
+                    Slider's internal handler from also advancing the step.
+                    We stop propagation + prevent default, then call the
+                    appropriate step handler directly (since the event won't
+                    reach the document-level useHotkeys listener). */}
+                <div
                     style={{ flex: 1, minWidth: 200 }}
-                    label={(v) => String(v - effectiveMin + 1)}
-                />
+                    onKeyDownCapture={(e) => {
+                        if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            stepForward();
+                        } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            stepBack();
+                        } else if (e.key === "Home") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            jumpToStart();
+                        } else if (e.key === "End") {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            jumpToEnd();
+                        }
+                    }}
+                >
+                    <Slider
+                        size="xs"
+                        min={effectiveMin}
+                        max={effectiveMax}
+                        value={step}
+                        onChange={handleSliderChange}
+                        label={(v) => String(v - effectiveMin + 1)}
+                    />
+                </div>
 
                 <Text size="xs" c="dimmed" style={{ whiteSpace: "nowrap" }}>
-                    {step - effectiveMin + 1} / {effectiveMax - effectiveMin + 1}
+                    {Math.min(step, effectiveMax) - effectiveMin + 1} / {effectiveMax - effectiveMin + 1}
                 </Text>
             </Group>
         </div>

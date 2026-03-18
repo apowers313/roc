@@ -174,4 +174,31 @@ describe("TransportBar", () => {
             expect(screen.getByText("1 / 50")).toBeInTheDocument();
         });
     });
+
+    // Regression: clicking the slider then pressing arrow keys moved 2 steps
+    // because the Slider's native arrow key behavior fired alongside our
+    // global keyboard shortcuts. The fix: capture-phase onKeyDown on the
+    // slider wrapper that stops propagation + prevents default for nav keys.
+    describe("slider keyboard isolation", () => {
+        it("arrow keys on focused slider are stopped by capture handler", () => {
+            mockUseStepRange.mockReturnValue({
+                data: { min: 1, max: 100 },
+            } as ReturnType<typeof useStepRange>);
+
+            renderWithProviders(<TransportBar />);
+            const slider = screen.getByRole("slider");
+
+            // Focus the slider thumb
+            slider.focus();
+
+            // Fire an ArrowRight on the slider -- should be prevented
+            const event = new KeyboardEvent("keydown", {
+                key: "ArrowRight",
+                bubbles: true,
+                cancelable: true,
+            });
+            const wasPrevented = !slider.dispatchEvent(event);
+            expect(wasPrevented).toBe(true);
+        });
+    });
 });

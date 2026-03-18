@@ -1,5 +1,7 @@
+import { remoteLoggerPlugin } from "@graphty/remote-logger/vite";
 import react from "@vitejs/plugin-react";
 import { existsSync, readFileSync } from "fs";
+import { resolve } from "path";
 import { defineConfig } from "vite";
 
 const SSL_CERT = "/home/apowers/ssl/atoms.crt";
@@ -14,7 +16,13 @@ const apiTarget = hasSSL
     : `http://localhost:${API_PORT}`;
 
 export default defineConfig({
-    plugins: [react()],
+    plugins: [react(), remoteLoggerPlugin()],
+    resolve: {
+        alias: {
+            react: resolve(__dirname, "node_modules/react"),
+            "react-dom": resolve(__dirname, "node_modules/react-dom"),
+        },
+    },
     server: {
         host: HOST,
         port: PORT,
