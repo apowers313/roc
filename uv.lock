@@ -129,15 +129,6 @@ wheels = [
 ]
 
 [[package]]
-name = "blinker"
-version = "1.9.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/21/28/9b3f50ce0e048515135495f198351908d99540d69bfdc8c1d15b73dc55ce/blinker-1.9.0.tar.gz", hash = "sha256:b4ce2265a7abece45e7cc896e98dbebe6cead56bcf805a3d23136d145f5445bf", size = 22460 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/10/cb/f2ad4230dc2eb1a74edf38f1a38b9b52277f75bef262d8908e60d957e13c/blinker-1.9.0-py3-none-any.whl", hash = "sha256:ba0efaa9080b619ff2f3459d1d500c57bddea4a6b424b60a91141db6fd2f08bc", size = 8458 },
-]
-
-[[package]]
 name = "cachetools"
 version = "5.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -465,35 +456,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dash"
-version = "3.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "flask" },
-    { name = "importlib-metadata" },
-    { name = "nest-asyncio" },
-    { name = "plotly" },
-    { name = "requests" },
-    { name = "retrying" },
-    { name = "setuptools" },
-    { name = "typing-extensions" },
-    { name = "werkzeug" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/14/f6/c337e0f019a6faaeb2cf42ae846f4736136e62de5522b02ae1acad1bb26f/dash-3.0.3.tar.gz", hash = "sha256:86d3038ae9f09e1f246937afbab5451c9db5a3832911c325d2e1f0bcefe2b7c9", size = 7603520 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/62/4f7ed64d193fe8a3d13abe03694bd752ca3c34fce8b025af794585f3cc2a/dash-3.0.3-py3-none-any.whl", hash = "sha256:9c6577e056971590c002c07fd26376d3d501bddb39804466e401876fb1e043ac", size = 7952319 },
-]
-
-[[package]]
-name = "dash-cytoscape"
-version = "1.0.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "dash" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ea/b7/0d511af853024241dc3192bea77e4753ea606187bd2dd777a8209a5b01bb/dash_cytoscape-1.0.2.tar.gz", hash = "sha256:a61019d2184d63a2b3b5c06d056d3b867a04223a674cc3c7cf900a561a9a59aa", size = 3992593 }
-
-[[package]]
 name = "dateparser"
 version = "1.1.8"
 source = { registry = "https://pypi.org/simple" }
@@ -712,22 +674,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/57/52/9a2b2375004560863c37b76292cb62aaa949f46cae76406f369356fb39e8/findpeaks-2.6.4.tar.gz", hash = "sha256:caf1ae76e7ecc5bb1816474d111d272d7d7e931732769880162fec9fec4b1070", size = 52746 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/35/21/4555f111a05bb00e7921d18539761af07c17b70a85d3930e835f14d3e05a/findpeaks-2.6.4-py3-none-any.whl", hash = "sha256:c4a6cacef501424cbfaead8fe3ea4c5fc9c43bc40a0006e2183f1f8707521553", size = 62630 },
-]
-
-[[package]]
-name = "flask"
-version = "3.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "blinker" },
-    { name = "click" },
-    { name = "itsdangerous" },
-    { name = "jinja2" },
-    { name = "werkzeug" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/41/e1/d104c83026f8d35dfd2c261df7d64738341067526406b40190bc063e829a/flask-3.0.3.tar.gz", hash = "sha256:ceb27b0af3823ea2737928a4d99d125a06175b8512c445cbd9a9ce200ef76842", size = 676315 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/61/80/ffe1da13ad9300f87c93af113edd0638c75138c42a0994becfacac078c06/flask-3.0.3-py3-none-any.whl", hash = "sha256:34e815dfaa43340d1d15a5c3a02b8476004037eb4840b34910c6e21679d288f3", size = 101735 },
 ]
 
 [[package]]
@@ -2431,18 +2377,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e9/5c/d5385ca59fd065e3c6a5fe19f9bc9d5ea7f2509fa8c9c22fb6b2031dd953/pydocstyle-6.3.0.tar.gz", hash = "sha256:7ce43f0c0ac87b07494eb9c0b462c0b73e6ff276807f204d6b53edc72b7e44e1", size = 36796 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/36/ea/99ddefac41971acad68f14114f38261c1f27dac0b3ec529824ebc739bdaa/pydocstyle-6.3.0-py3-none-any.whl", hash = "sha256:118762d452a49d6b05e194ef344a55822987a462831ade91ec5c06fd2169d019", size = 38038 },
-]
-
-[[package]]
-name = "pydot"
-version = "3.0.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyparsing" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/66/dd/e0e6a4fb84c22050f6a9701ad9fd6a67ef82faa7ba97b97eb6fdc6b49b34/pydot-3.0.4.tar.gz", hash = "sha256:3ce88b2558f3808b0376f22bfa6c263909e1c3981e2a7b629b65b451eee4a25d", size = 168167 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/5f/1ebfd430df05c4f9e438dd3313c4456eab937d976f6ab8ce81a98f9fb381/pydot-3.0.4-py3-none-any.whl", hash = "sha256:bfa9c3fc0c44ba1d132adce131802d7df00429d1a79cc0346b0a5cd374dbe9c6", size = 35776 },
 ]
 
 [[package]]
@@ -5195,15 +5129,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-statemachine"
-version = "3.0.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/f4/a6/d0626b1efb56d9502fe8686fa5dbf23d444b5985adac974be2aa8780c956/python_statemachine-3.0.0.tar.gz", hash = "sha256:91523f9ead73c1d6fecc975d5c6e0bfe363fbf537c5f0bf309bcd0f94f9441b2", size = 852800 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/a2/ba/9863be42c209d66623e188223484c1502f25a2412f258f00505c613f6e5d/python_statemachine-3.0.0-py3-none-any.whl", hash = "sha256:f967ee864cfd26375c91f49560e790357613482811efcec8b2020c1f874a5eaf", size = 103801 },
-]
-
-[[package]]
 name = "pyttsx3"
 version = "2.98"
 source = { registry = "https://pypi.org/simple" }
@@ -5427,18 +5352,6 @@ wheels = [
 ]
 
 [[package]]
-name = "retrying"
-version = "1.3.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ce/70/15ce8551d65b324e18c5aa6ef6998880f21ead51ebe5ed743c0950d7d9dd/retrying-1.3.4.tar.gz", hash = "sha256:345da8c5765bd982b1d1915deb9102fd3d1f7ad16bd84a9700b85f64d24e8f3e", size = 10929 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/04/9e36f28be4c0532c0e9207ff9dc01fb13a2b0eb036476a213b0000837d0e/retrying-1.3.4-py3-none-any.whl", hash = "sha256:8cc4d43cb8e1125e0ff3344e9de678fefd85db3b750b81b2240dc0183af37b35", size = 11602 },
-]
-
-[[package]]
 name = "rich"
 version = "13.9.4"
 source = { registry = "https://pypi.org/simple" }
@@ -5459,8 +5372,6 @@ dependencies = [
     { name = "cachetools" },
     { name = "click" },
     { name = "colored" },
-    { name = "dash" },
-    { name = "dash-cytoscape" },
     { name = "duckdb" },
     { name = "fastapi" },
     { name = "flexihumanhash" },
@@ -5480,11 +5391,9 @@ dependencies = [
     { name = "pyarrow" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
-    { name = "pydot" },
     { name = "pymgclient" },
     { name = "pyroscope-io" },
     { name = "python-socketio" },
-    { name = "python-statemachine" },
     { name = "reactivex" },
     { name = "rich" },
     { name = "scikit-image" },
@@ -5559,8 +5468,6 @@ requires-dist = [
     { name = "cachetools", specifier = ">=5.3.1,<6.0.0" },
     { name = "click", specifier = ">=8.1.4,<9.0.0" },
     { name = "colored", specifier = ">=2.2.4,<3.0.0" },
-    { name = "dash", specifier = ">=3.0.3" },
-    { name = "dash-cytoscape", specifier = ">=1.0.2" },
     { name = "debugpy", marker = "extra == 'debug'", specifier = ">=1.8.0" },
     { name = "duckdb", specifier = ">=1.0.0" },
     { name = "fastapi", specifier = ">=0.135.1" },
@@ -5581,11 +5488,9 @@ requires-dist = [
     { name = "pyarrow", specifier = ">=15.0.0" },
     { name = "pydantic", specifier = ">=2.10.3,<3.0.0" },
     { name = "pydantic-settings", specifier = ">=2.0.3,<3.0.0" },
-    { name = "pydot", specifier = ">=3.0.1,<4.0.0" },
     { name = "pymgclient", specifier = ">=1.3.1,<2.0.0" },
     { name = "pyroscope-io", specifier = ">=1.0.4" },
     { name = "python-socketio", specifier = ">=5.16.1" },
-    { name = "python-statemachine", specifier = ">=3.0.0" },
     { name = "reactivex", specifier = ">=4.0.4,<5.0.0" },
     { name = "rich", specifier = ">=13.5.2,<14.0.0" },
     { name = "scikit-image", specifier = ">=0.24.0,<1.0.0" },
