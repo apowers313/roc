@@ -1,6 +1,6 @@
 """FastAPI + Socket.io server for the React debug dashboard.
 
-Replaces the Panel/Bokeh dashboard_server.py with a clean separation:
+Provides a clean separation of concerns:
 - REST endpoints serve step data from StepBuffer (live) or DuckLake (historical)
 - Socket.io pushes live step metadata to connected browsers
 - In production, serves the React static build from dashboard-ui/dist/
@@ -11,6 +11,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -58,6 +59,7 @@ async def _capture_event_loop() -> None:
     _sio_loop = asyncio.get_running_loop()
     _server_ready.set()
 
+
 # Module-level state set by start_dashboard()
 _data_dir: Path | None = None
 _step_buffer: StepBuffer | None = None
@@ -70,25 +72,26 @@ _store_lock = threading.Lock()
 def _get_store(run_name: str) -> RunStore:
     """Get or create a RunStore for a run.
 
-    For the live run, uses a path-based RunStore (direct parquet reads via
-    DuckDB views) to avoid conflicting with the game's DuckLake catalog.
-    For historical runs, uses DuckLakeStore for catalog-accelerated queries.
+    For the live run, shares the game's DuckLakeStore (concurrent
+    read+write through the store's lock).  For historical runs,
+    opens a read-only DuckLakeStore with a unique alias.
     """
     if _data_dir is None:
         raise HTTPException(status_code=503, detail="Dashboard not initialized")
 
     with _store_lock:
         if run_name not in _run_stores:
-            run_dir = _data_dir / run_name
-            if not run_dir.is_dir():
-                raise HTTPException(status_code=404, detail=f"Run not found: {run_name}")
-            if run_name == _live_run_name:
-                # Path-based: separate DuckDB connection, no catalog conflict
-                _run_stores[run_name] = RunStore(run_dir)
+            # For the live run, reuse the game's DuckLakeStore
+            if run_name == _live_run_name and _live_store is not None:
+                _run_stores[run_name] = RunStore(_live_store)
             else:
-                # Catalog-based: fast with data inlining for completed runs
-                duck_store = DuckLakeStore(run_dir, read_only=True)
-                _run_stores[run_name] = RunStore(duck_store)
+                run_dir = _data_dir / run_name
+                if not run_dir.is_dir():
+                    raise HTTPException(status_code=404, detail=f"Run not found: {run_name}")
+                # Unique alias per run avoids DuckDB catalog collisions
+                safe_alias = "r_" + run_name.replace("-", "_").replace(".", "_")
+                dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
+                _run_stores[run_name] = RunStore(dl_store)
         return _run_stores[run_name]
 
 
@@ -159,12 +162,12 @@ def list_runs() -> list[RunSummary]:
 @app.get("/api/runs/{run_name}/games")
 def list_games(run_name: str) -> list[GameSummary]:
     """List games in a run."""
-    # For live run, use step buffer game numbers
+    # For live run, use step buffer game data
     if run_name == _live_run_name and _step_buffer is not None:
-        game_nums = _step_buffer.game_numbers
+        counts = _step_buffer.steps_per_game()
         return [
-            GameSummary(game_number=g, steps=0, start_ts=None, end_ts=None)
-            for g in game_nums
+            GameSummary(game_number=g, steps=counts.get(g, 0), start_ts=None, end_ts=None)
+            for g in sorted(counts.keys())
         ]
     store = _get_store(run_name)
     df = store.list_games()
@@ -203,8 +206,23 @@ def get_step(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get all data for a specific step."""
-    step_data = _get_step_data(run_name, step)
+    t0 = time.monotonic()
+    try:
+        step_data = _get_step_data(run_name, step)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    t1 = time.monotonic()
     data = _convert_numpy(dataclasses.asdict(step_data))
+    t2 = time.monotonic()
+    logger.debug(
+        "GET step {} fetch={:.1f}ms serialize={:.1f}ms total={:.1f}ms",
+        step,
+        (t1 - t0) * 1000,
+        (t2 - t1) * 1000,
+        (t2 - t0) * 1000,
+    )
     return JSONResponse(content=data)
 
 
@@ -216,9 +234,18 @@ def get_step_range(
     """Get min/max step for a run or game."""
     # For live run, use step buffer range
     if run_name == _live_run_name and _step_buffer is not None and len(_step_buffer) > 0:
-        return StepRange(min=_step_buffer.min_step, max=_step_buffer.max_step)
-    store = _get_store(run_name)
-    min_step, max_step = store.step_range(game)
+        if game is not None:
+            smin, smax = _step_buffer.step_range_for_game(game)
+        else:
+            smin, smax = _step_buffer.min_step, _step_buffer.max_step
+        return StepRange(min=smin, max=smax)
+    try:
+        store = _get_store(run_name)
+        min_step, max_step = store.step_range(game)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return StepRange(min=min_step, max=max_step)
 
 
@@ -268,8 +295,13 @@ def live_status() -> LiveStatus:
     """Get current live run status."""
     if _step_buffer is None or len(_step_buffer) == 0:
         return LiveStatus(
-            active=False, run_name=None, step=0, game_number=0,
-            step_min=0, step_max=0, game_numbers=[],
+            active=False,
+            run_name=None,
+            step=0,
+            game_number=0,
+            step_min=0,
+            step_max=0,
+            game_numbers=[],
         )
     latest = _step_buffer.get_latest()
     return LiveStatus(
@@ -300,13 +332,13 @@ def live_step(step: int) -> JSONResponse:
 # ---------------------------------------------------------------------------
 
 
-@sio.event  # type: ignore[misc]
+@sio.event
 async def connect(sid: str, environ: dict[str, Any]) -> None:
     """Client connected."""
     logger.debug("Dashboard client connected: {}", sid)
 
 
-@sio.event  # type: ignore[misc]
+@sio.event
 async def disconnect(sid: str) -> None:
     """Client disconnected."""
     logger.debug("Dashboard client disconnected: {}", sid)
@@ -366,11 +398,11 @@ def start_dashboard() -> None:
 
     _data_dir = store.run_dir.parent
     _live_run_name = store.run_dir.name
+    _live_store = store
 
-    # Create step buffer for live push
-    # Large capacity so historical navigation can always read from memory.
-    # With data inlining, parquet files don't exist during live sessions,
-    # so the StepBuffer is the only source of step data.
+    # Create step buffer for live push.
+    # Large capacity so live-following mode can read from memory (instant).
+    # Evicted steps fall through to DuckLake catalog reads (~8ms).
     _step_buffer = StepBuffer(capacity=100_000)
     register_step_buffer(_step_buffer)
     _step_buffer.add_listener(lambda: _notify_new_step(_step_buffer.get_latest()))  # type: ignore[arg-type]

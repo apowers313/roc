@@ -9,6 +9,7 @@ import {
     createContext,
     useCallback,
     useContext,
+    useEffect,
     useReducer,
     useState,
     type Dispatch,
@@ -37,18 +38,22 @@ interface DashboardState {
     setPlaying: (playing: boolean) => void;
     speed: number;
     setSpeed: (speed: number) => void;
+    /** The name of the currently-live run (set by live status poll). */
+    liveRunName: string;
+    setLiveRunName: (name: string) => void;
 }
 
 const DashboardContext = createContext<DashboardState | null>(null);
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
     const [run, setRun] = useState("");
-    const [game, setGame] = useState(0);
+    const [game, setGame] = useState(1);
     const [step, setStep] = useState(1);
     const [stepMin, setStepMin] = useState(1);
     const [stepMax, setStepMax] = useState(1);
     const [playing, setPlaying] = useState(false);
     const [speed, setSpeed] = useState(200); // ms interval
+    const [liveRunName, setLiveRunName] = useState("");
     const [playback, dispatchPlayback] = useReducer(
         playbackReducer,
         "historical" as PlaybackState,
@@ -58,6 +63,13 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         setStepMin(min);
         setStepMax(max);
     }, []);
+
+    // Expose setStep for e2e testing (Playwright can call window.__testSetStep)
+    useEffect(() => {
+        const w = window as unknown as Record<string, unknown>;
+        w.__testSetStep = setStep;
+        return () => { delete w.__testSetStep; };
+    }, [setStep]);
 
     return (
         <DashboardContext.Provider
@@ -77,6 +89,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 setPlaying,
                 speed,
                 setSpeed,
+                liveRunName,
+                setLiveRunName,
             }}
         >
             {children}
