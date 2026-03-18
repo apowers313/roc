@@ -318,7 +318,9 @@ class TestGraphHistory:
             [
                 make_log_record(
                     event_name="roc.graphdb.summary",
-                    body=json.dumps({"node_count": 5, "node_max": 50, "edge_count": 10, "edge_max": 100}),
+                    body=json.dumps(
+                        {"node_count": 5, "node_max": 50, "edge_count": 10, "edge_max": 100}
+                    ),
                 )
             ]
         )
@@ -329,7 +331,9 @@ class TestGraphHistory:
             [
                 make_log_record(
                     event_name="roc.graphdb.summary",
-                    body=json.dumps({"node_count": 20, "node_max": 50, "edge_count": 40, "edge_max": 100}),
+                    body=json.dumps(
+                        {"node_count": 20, "node_max": 50, "edge_count": 40, "edge_max": 100}
+                    ),
                 )
             ]
         )
@@ -366,6 +370,192 @@ class TestEventHistory:
         assert history[0]["roc.perception"] == 2
         assert history[2]["roc.attention"] == 3
         assert all("step" in h for h in history)
+
+
+class TestMetricsHistory:
+    def test_returns_empty_when_no_metrics_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_metrics_history() == []
+
+    def test_returns_all_fields_when_no_filter(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        for i in range(1, 4):
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.game_metrics",
+                        body=json.dumps({"hp": 10 + i, "score": i * 100, "depth": 1}),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_metrics_history()
+        assert len(history) == 3
+        assert "hp" in history[0]
+        assert "score" in history[0]
+        assert "depth" in history[0]
+        assert history[0]["hp"] == 11
+
+    def test_returns_filtered_fields(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.game_metrics",
+                    body=json.dumps({"hp": 15, "score": 200, "depth": 2}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_metrics_history(fields=["hp", "score"])
+        assert len(history) == 1
+        assert "hp" in history[0]
+        assert "score" in history[0]
+        assert "depth" not in history[0]
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [make_log_record(event_name="roc.game_metrics", body=json.dumps({"hp": 10}))]
+        )
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [make_log_record(event_name="roc.game_metrics", body=json.dumps({"hp": 20}))]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_metrics_history(game_number=2)
+        assert len(history) == 1
+        assert history[0]["hp"] == 20
+
+
+class TestGetStepDataEvents:
+    """Test get_step_data event parsing branches for various event types."""
+
+    def test_includes_object_info(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.attention.object",
+                    body=json.dumps({"id": 1, "type": "monster"}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.object_info is not None
+        assert len(sd.object_info) == 1
+        assert sd.object_info[0]["type"] == "monster"
+
+    def test_includes_focus_points(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.attention.focus_points",
+                    body=json.dumps({"x": 5, "y": 10}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.focus_points is not None
+        assert sd.focus_points[0]["x"] == 5
+
+    def test_includes_attenuation(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.saliency_attenuation",
+                    body=json.dumps(
+                        {"base": 0.5, "decay": 0.1, "saliency_grid": [], "focus_points": []}
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.attenuation is not None
+        assert sd.attenuation["base"] == 0.5
+        # saliency_grid and focus_points should be filtered out
+        assert "saliency_grid" not in sd.attenuation
+
+    def test_includes_resolution_decision(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "match", "matched_object_id": 42}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.resolution_metrics is not None
+        assert sd.resolution_metrics["outcome"] == "match"
+
+    def test_includes_graph_summary(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.graphdb.summary",
+                    body=json.dumps({"node_count": 10, "edge_count": 20}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.graph_summary is not None
+        assert sd.graph_summary["node_count"] == 10
+
+    def test_includes_event_summary(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.event.summary",
+                    body=json.dumps({"roc.perception": 5}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.event_summary is not None
+        assert len(sd.event_summary) == 1
+        assert sd.event_summary[0]["roc.perception"] == 5
 
 
 class TestStepRange:
