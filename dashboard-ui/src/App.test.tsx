@@ -17,10 +17,14 @@ vi.mock("./api/queries", () => ({
         isLoading: false,
         isPlaceholderData: false,
     })),
-    usePrefetchAdjacentSteps: vi.fn(),
     useRuns: vi.fn(() => ({ data: undefined })),
     useGames: vi.fn(() => ({ data: undefined })),
     useStepRange: vi.fn(() => ({ data: undefined })),
+}));
+
+// Mock prefetch window hook
+vi.mock("./hooks/usePrefetchWindow", () => ({
+    usePrefetchWindow: vi.fn(),
 }));
 
 import { renderWithProviders, makeStepData, makeGridData } from "./test-utils";
