@@ -274,6 +274,100 @@ class TestEdgeCases:
         assert store.step_count() == 15
 
 
+class TestGraphHistory:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_graph_history() == []
+
+    def test_returns_graph_summary_entries(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        for i in range(1, 4):
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.graphdb.summary",
+                        body=json.dumps(
+                            {
+                                "node_count": i * 10,
+                                "node_max": 100,
+                                "edge_count": i * 20,
+                                "edge_max": 200,
+                            }
+                        ),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_graph_history()
+        assert len(history) == 3
+        assert history[0]["node_count"] == 10
+        assert history[2]["edge_count"] == 60
+        assert all("step" in h for h in history)
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        # Game 1
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.graphdb.summary",
+                    body=json.dumps({"node_count": 5, "node_max": 50, "edge_count": 10, "edge_max": 100}),
+                )
+            ]
+        )
+        # Game 2
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.graphdb.summary",
+                    body=json.dumps({"node_count": 20, "node_max": 50, "edge_count": 40, "edge_max": 100}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_graph_history(game_number=1)
+        assert len(history) == 1
+        assert history[0]["node_count"] == 5
+
+
+class TestEventHistory:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_event_history() == []
+
+    def test_returns_event_summary_entries(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        for i in range(1, 4):
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.event.summary",
+                        body=json.dumps({"roc.perception": i * 2, "roc.attention": i}),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_event_history()
+        assert len(history) == 3
+        assert history[0]["roc.perception"] == 2
+        assert history[2]["roc.attention"] == 3
+        assert all("step" in h for h in history)
+
+
 class TestStepRange:
     def test_step_range_for_game(self, populated_store: DuckLakeStore):
         store = RunStore(populated_store)

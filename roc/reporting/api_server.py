@@ -226,6 +226,35 @@ def get_step(
     return JSONResponse(content=data)
 
 
+@app.get("/api/runs/{run_name}/steps")
+def get_steps_batch(
+    run_name: str,
+    steps: str = Query(description="Comma-separated step numbers"),
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get data for multiple steps in a single request.
+
+    Returns a dict mapping step number (as string key) to StepData.
+    Steps that fail to load are silently skipped.
+    """
+    t0 = time.monotonic()
+    step_nums = [int(s.strip()) for s in steps.split(",") if s.strip()]
+    result: dict[str, Any] = {}
+    for step in step_nums:
+        try:
+            step_data = _get_step_data(run_name, step)
+            result[str(step)] = _convert_numpy(dataclasses.asdict(step_data))
+        except Exception:
+            pass  # skip steps that fail
+    t1 = time.monotonic()
+    logger.debug(
+        "GET steps batch ({} steps) total={:.1f}ms",
+        len(result),
+        (t1 - t0) * 1000,
+    )
+    return JSONResponse(content=result)
+
+
 @app.get("/api/runs/{run_name}/step-range")
 def get_step_range(
     run_name: str,
@@ -247,6 +276,41 @@ def get_step_range(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return StepRange(min=min_step, max=max_step)
+
+
+@app.get("/api/runs/{run_name}/metrics-history")
+def get_metrics_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+    fields: str | None = Query(default=None, description="Comma-separated field names"),
+) -> JSONResponse:
+    """Get game_metrics for all steps in a game (for charting trends)."""
+    store = _get_store(run_name)
+    field_list = [f.strip() for f in fields.split(",") if f.strip()] if fields else None
+    data = store.get_metrics_history(game, field_list)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/graph-history")
+def get_graph_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get graph_summary for all steps in a game (for charting cache utilization)."""
+    store = _get_store(run_name)
+    data = store.get_graph_history(game)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/event-history")
+def get_event_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get event_summary for all steps in a game (for charting event activity)."""
+    store = _get_store(run_name)
+    data = store.get_event_history(game)
+    return JSONResponse(content=_convert_numpy(data))
 
 
 @app.get("/api/runs/{run_name}/bookmarks")

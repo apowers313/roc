@@ -82,6 +82,62 @@ class TestStepRange:
         assert resp.status_code == 404
 
 
+class TestGraphHistory:
+    def test_returns_404_for_missing_run(self, client: TestClient) -> None:
+        resp = client.get("/api/runs/nonexistent/graph-history")
+        assert resp.status_code == 404
+
+    def test_returns_data_from_store(self, client: TestClient) -> None:
+        mock_data = [
+            {"step": 1, "node_count": 10, "node_max": 100, "edge_count": 20, "edge_max": 200},
+        ]
+        with patch("roc.reporting.api_server._get_store") as mock_store:
+            store = MagicMock()
+            store.get_graph_history.return_value = mock_data
+            mock_store.return_value = store
+            resp = client.get("/api/runs/test-run/graph-history")
+            assert resp.status_code == 200
+            assert resp.json() == mock_data
+            store.get_graph_history.assert_called_once_with(None)
+
+    def test_passes_game_filter(self, client: TestClient) -> None:
+        with patch("roc.reporting.api_server._get_store") as mock_store:
+            store = MagicMock()
+            store.get_graph_history.return_value = []
+            mock_store.return_value = store
+            resp = client.get("/api/runs/test-run/graph-history?game=2")
+            assert resp.status_code == 200
+            store.get_graph_history.assert_called_once_with(2)
+
+
+class TestEventHistory:
+    def test_returns_404_for_missing_run(self, client: TestClient) -> None:
+        resp = client.get("/api/runs/nonexistent/event-history")
+        assert resp.status_code == 404
+
+    def test_returns_data_from_store(self, client: TestClient) -> None:
+        mock_data = [
+            {"step": 1, "roc.perception": 5, "roc.attention": 3},
+        ]
+        with patch("roc.reporting.api_server._get_store") as mock_store:
+            store = MagicMock()
+            store.get_event_history.return_value = mock_data
+            mock_store.return_value = store
+            resp = client.get("/api/runs/test-run/event-history")
+            assert resp.status_code == 200
+            assert resp.json() == mock_data
+            store.get_event_history.assert_called_once_with(None)
+
+    def test_passes_game_filter(self, client: TestClient) -> None:
+        with patch("roc.reporting.api_server._get_store") as mock_store:
+            store = MagicMock()
+            store.get_event_history.return_value = []
+            mock_store.return_value = store
+            resp = client.get("/api/runs/test-run/event-history?game=1")
+            assert resp.status_code == 200
+            store.get_event_history.assert_called_once_with(1)
+
+
 class TestGetStep:
     def test_returns_404_for_missing_run(self, client: TestClient) -> None:
         resp = client.get("/api/runs/nonexistent/step/1")

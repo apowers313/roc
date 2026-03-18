@@ -138,6 +138,106 @@ class RunStore:
                 runs.append(child.name)
         return runs
 
+    def get_metrics_history(
+        self,
+        game_number: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return game_metrics for all steps in a game (or the whole run).
+
+        Each entry has ``step`` plus the parsed metric fields.  Returns an
+        empty list when no metrics table exists.
+        """
+        if not self._has_table("metrics"):
+            return []
+        src = self._read_sql("metrics")
+        if game_number is not None:
+            df = self._store.query_df(
+                f"SELECT step, body FROM {src} WHERE game_number = ? ORDER BY step",
+                [game_number],
+            )
+        else:
+            df = self._store.query_df(f"SELECT step, body FROM {src} ORDER BY step")
+
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            entry: dict[str, Any] = {"step": int(row["step"])}
+            if fields:
+                for f in fields:
+                    if f in body:
+                        entry[f] = body[f]
+            else:
+                entry.update(body)
+            results.append(entry)
+        return results
+
+    def get_graph_history(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return graph_summary for all steps in a game (or the whole run).
+
+        Each entry has ``step`` plus ``node_count``, ``node_max``,
+        ``edge_count``, ``edge_max``.  Returns an empty list when the
+        events table does not exist.
+
+        Uses DuckDB JSON extraction to avoid Python-side parsing.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.graphdb.summary'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"""SELECT step,
+                       CAST(body::JSON->>'node_count' AS INTEGER) AS node_count,
+                       CAST(body::JSON->>'node_max' AS INTEGER) AS node_max,
+                       CAST(body::JSON->>'edge_count' AS INTEGER) AS edge_count,
+                       CAST(body::JSON->>'edge_max' AS INTEGER) AS edge_max
+                FROM {src}
+                WHERE {where}
+                ORDER BY step""",
+            params or None,
+        )
+        return cast(list[dict[str, Any]], df.to_dict("records"))
+
+    def get_event_history(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return event_summary for all steps in a game (or the whole run).
+
+        Each entry has ``step`` plus per-bus event counts.  Returns an
+        empty list when the events table does not exist.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.event.summary'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"SELECT step, body FROM {src} WHERE {where} ORDER BY step",
+            params or None,
+        )
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            entry: dict[str, Any] = {"step": int(row["step"])}
+            entry.update(body)
+            results.append(entry)
+        return results
+
     def get_step_data(self, step: int) -> StepData:
         """Assemble all available data for a single step."""
         screen_df = self.get_step(step, "screens")
