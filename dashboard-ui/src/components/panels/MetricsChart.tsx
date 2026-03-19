@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { useMetricsHistory } from "../../api/queries";
+import { ClickableChart } from "../common/ClickableChart";
 
 const CHART_FIELDS = ["hp", "hp_max", "score", "energy", "energy_max"];
 const LINE_COLORS: Record<string, string> = {
@@ -28,9 +29,10 @@ interface MetricsChartProps {
     run: string;
     game?: number;
     currentStep: number;
+    onStepClick?: (step: number) => void;
 }
 
-export function MetricsChart({ run, game, currentStep }: MetricsChartProps) {
+export function MetricsChart({ run, game, currentStep, onStepClick }: MetricsChartProps) {
     const { data: history } = useMetricsHistory(run, game, CHART_FIELDS);
 
     if (!history || history.length === 0) {
@@ -41,7 +43,7 @@ export function MetricsChart({ run, game, currentStep }: MetricsChartProps) {
         );
     }
 
-    return (
+    const chart = (
         <ResponsiveContainer width="100%" height={180}>
             <LineChart data={history} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -76,4 +78,13 @@ export function MetricsChart({ run, game, currentStep }: MetricsChartProps) {
             </LineChart>
         </ResponsiveContainer>
     );
+
+    if (onStepClick) {
+        return (
+            <ClickableChart onStepClick={onStepClick} data={history}>
+                {chart}
+            </ClickableChart>
+        );
+    }
+    return chart;
 }

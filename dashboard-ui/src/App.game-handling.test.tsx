@@ -31,6 +31,8 @@ vi.mock("./api/queries", () => ({
     useRuns: vi.fn(() => ({ data: undefined })),
     useGames: vi.fn(() => ({ data: undefined })),
     useStepRange: vi.fn(() => ({ data: undefined })),
+    useResolutionHistory: vi.fn(() => ({ data: undefined })),
+    useAllObjects: vi.fn(() => ({ data: undefined })),
 }));
 
 // Mock prefetch window
@@ -188,6 +190,38 @@ describe("Per-game step handling", () => {
             await waitFor(() => {
                 const counter = screen.getByText(/\/ 46$/);
                 expect(counter).toBeInTheDocument();
+            });
+        });
+    });
+
+    describe("historical game within live run", () => {
+        it("viewing game 1 in live run uses REST range, not live game's context range", async () => {
+            // Regression: when viewing game 1 (historical) within the live run
+            // where game 3 is active, the step counter must show game 1's range
+            // from REST, not the live game's range from context. The old code
+            // used isViewingLiveRun (run === liveRunName) which was true for
+            // ALL games in the live run, causing context stepMax (from live
+            // game 3 pushes) to override REST data for historical game 1.
+            mockLiveStatus({
+                active: true,
+                run_name: "live-run",
+                step: 9300,
+                game_number: 3,
+                step_min: 1,
+                step_max: 9300,
+                game_numbers: [1, 2, 3],
+            });
+            // User is viewing game 1 which has 46 steps
+            mockUseStepRange.mockReturnValue({
+                data: { min: 1, max: 46 },
+            } as ReturnType<typeof useStepRange>);
+
+            renderWithProviders(<App />);
+
+            // The step range should show game 1's range (46), not game 3's
+            // global step count (9300)
+            await waitFor(() => {
+                expect(screen.getByText(/\/ 46$/)).toBeInTheDocument();
             });
         });
     });

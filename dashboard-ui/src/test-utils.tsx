@@ -6,6 +6,7 @@ import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 
 import { DashboardProvider } from "./state/context";
+import { HighlightProvider } from "./state/highlight";
 import type { GridData, LogEntry, StepData } from "./types/step-data";
 
 /** Wraps components with Mantine + QueryClient + DashboardProvider. */
@@ -16,7 +17,9 @@ function AllProviders({ children }: { children: ReactNode }) {
     return (
         <MantineProvider>
             <QueryClientProvider client={queryClient}>
-                <DashboardProvider>{children}</DashboardProvider>
+                <DashboardProvider>
+                    <HighlightProvider>{children}</HighlightProvider>
+                </DashboardProvider>
             </QueryClientProvider>
         </MantineProvider>
     );
@@ -47,6 +50,13 @@ export function makeStepData(overrides: Partial<StepData> = {}): StepData {
         event_summary: null,
         game_metrics: null,
         logs: null,
+        intrinsics: null,
+        significance: null,
+        action_taken: null,
+        transform_summary: null,
+        prediction: null,
+        message: null,
+        inventory: null,
         ...overrides,
     };
 }

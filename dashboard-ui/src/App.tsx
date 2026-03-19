@@ -6,11 +6,14 @@ import {
     Grid,
     Text,
 } from "@mantine/core";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStepData, useGames } from "./api/queries";
 import { ErrorBoundary } from "./components/common/ErrorBoundary";
-import { KVTable } from "./components/common/KVTable";
+import { useHighlight } from "./state/highlight";
+import { ActionPanel } from "./components/panels/ActionPanel";
+import { AllObjects } from "./components/panels/AllObjects";
+import { AttenuationPanel } from "./components/panels/AttenuationPanel";
 import { BookmarkTable } from "./components/panels/BookmarkTable";
 import { EventHistory } from "./components/panels/EventHistory";
 import { EventSummary } from "./components/panels/EventSummary";
@@ -19,12 +22,17 @@ import { FocusPoints } from "./components/panels/FocusPoints";
 import { GameMetrics } from "./components/panels/GameMetrics";
 import { GameScreen } from "./components/panels/GameScreen";
 import { GraphHistory } from "./components/panels/GraphHistory";
-import { GraphSummary } from "./components/panels/GraphSummary";
+import { IntrinsicsChart } from "./components/panels/IntrinsicsChart";
+import { IntrinsicsPanel } from "./components/panels/IntrinsicsPanel";
+import { InventoryPanel } from "./components/panels/InventoryPanel";
 import { LogMessages } from "./components/panels/LogMessages";
-import { MetricsChart } from "./components/panels/MetricsChart";
+import { MessageLog } from "./components/panels/MessageLog";
 import { ObjectInfo } from "./components/panels/ObjectInfo";
+import { PipelineStatus } from "./components/panels/PipelineStatus";
+import { ResolutionChart } from "./components/panels/ResolutionChart";
 import { ResolutionInspector } from "./components/panels/ResolutionInspector";
 import { SaliencyMap } from "./components/panels/SaliencyMap";
+import { TransformPanel } from "./components/panels/TransformPanel";
 import { StatusBar } from "./components/status/StatusBar";
 import { BookmarkBar } from "./components/transport/BookmarkBar";
 import { KeyboardHelp } from "./components/transport/KeyboardHelp";
@@ -56,9 +64,16 @@ export function App() {
         setSpeed,
         liveRunName,
         setLiveRunName,
+        setLiveGameNumber,
     } = useDashboard();
 
     const { data: games } = useGames(run);
+
+    // Clear point highlights when step changes
+    const { clear: clearHighlights } = useHighlight();
+    useEffect(() => {
+        clearHighlights();
+    }, [step, clearHighlights]);
 
     useRemoteLogger();
 
@@ -69,6 +84,41 @@ export function App() {
 
     // Keyboard help overlay
     const [helpOpen, setHelpOpen] = useState(false);
+
+    // Accordion state -- persisted to sessionStorage
+    const ACCORDION_KEY = "roc-dashboard-accordion";
+    const ACCORDION_DEFAULT = useMemo(() => ["pipeline", "game-state", "perception"], []);
+    const [openSections, setOpenSections] = useState<string[]>(() => {
+        try {
+            const saved = sessionStorage.getItem(ACCORDION_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved) as unknown;
+                if (Array.isArray(parsed)) return parsed as string[];
+            }
+        } catch { /* private browsing */ }
+        return ACCORDION_DEFAULT;
+    });
+    const handleAccordionChange = useCallback((value: string[]) => {
+        setOpenSections(value);
+        try { sessionStorage.setItem(ACCORDION_KEY, JSON.stringify(value)); }
+        catch { /* private browsing */ }
+    }, []);
+
+    // Auto-open bookmarks section when bookmarks exist, collapse when empty
+    const hasBookmarks = bm.bookmarks.length > 0;
+    const prevHasBookmarks = useRef(hasBookmarks);
+    useEffect(() => {
+        if (hasBookmarks && !prevHasBookmarks.current) {
+            // Bookmarks appeared -- open the section
+            setOpenSections((prev) =>
+                prev.includes("bookmarks") ? prev : [...prev, "bookmarks"],
+            );
+        } else if (!hasBookmarks && prevHasBookmarks.current) {
+            // Bookmarks removed -- close the section
+            setOpenSections((prev) => prev.filter((s) => s !== "bookmarks"));
+        }
+        prevHasBookmarks.current = hasBookmarks;
+    }, [hasBookmarks]);
 
     // Live push data -- always updated from Socket.io push, regardless of
     // playback mode. This eliminates the race where isFollowingRef is stale
@@ -98,6 +148,8 @@ export function App() {
         (pushData: StepData) => {
             // Always store the latest push data for live-following mode
             setLiveData(pushData);
+            // Track which game is currently live
+            setLiveGameNumber(pushData.game_number);
 
             const isViewingLiveRun =
                 runRef.current === liveRunNameRef.current;
@@ -125,7 +177,7 @@ export function App() {
             // If viewing a different game than what's live, do nothing --
             // the user is browsing historical data for another game.
         },
-        [setStep, setGame, setStepRange, dispatchPlayback],
+        [setStep, setGame, setStepRange, dispatchPlayback, setLiveGameNumber],
     );
 
     const { connected, liveStatus } = useLiveUpdates({ onNewStep });
@@ -289,12 +341,13 @@ export function App() {
         cycleGame,
     });
 
-    // Track the live run name from status polls
+    // Track the live run name and game number from status polls
     useEffect(() => {
         if (liveStatus?.active && liveStatus.run_name) {
             setLiveRunName(liveStatus.run_name);
+            setLiveGameNumber(liveStatus.game_number);
         }
-    }, [liveStatus, setLiveRunName]);
+    }, [liveStatus, setLiveRunName, setLiveGameNumber]);
 
     // Auto-select the live run when a game starts.
     // Sets the run and game to match the live session, then GO_LIVE
@@ -337,6 +390,17 @@ export function App() {
     // historical step loads.
     const data = isFollowing ? liveData ?? restData : restData;
 
+    // Click-to-navigate handler for history charts
+    const handleChartStepClick = useCallback(
+        (clickedStep: number) => {
+            setStep(clickedStep);
+            if (playback === "live_following") {
+                dispatchPlayback({ type: "USER_NAVIGATE" });
+            }
+        },
+        [setStep, playback, dispatchPlayback],
+    );
+
     usePrefetchWindow(run, step, stepMin, stepMax, game || undefined);
 
     return (
@@ -368,9 +432,33 @@ export function App() {
 
                 <Accordion
                     multiple
-                    defaultValue={["game-state", "perception"]}
+                    value={openSections}
+                    onChange={handleAccordionChange}
                     variant="separated"
                 >
+                    <Accordion.Item value="pipeline">
+                        <Accordion.Control>Pipeline Status</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <PipelineStatus data={data} />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="bookmarks">
+                        <Accordion.Control>Bookmarks</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <BookmarkTable
+                                    bookmarks={bm.bookmarks}
+                                    currentStep={step}
+                                    onNavigate={navigateToBookmark}
+                                    onUpdateBookmark={bm.updateBookmark}
+                                />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
                     <Accordion.Item value="game-state">
                         <Accordion.Control>Game State</Accordion.Control>
                         <Accordion.Panel>
@@ -389,11 +477,38 @@ export function App() {
                         </Accordion.Panel>
                     </Accordion.Item>
 
-                    <Accordion.Item value="metrics">
-                        <Accordion.Control>Metrics Trends</Accordion.Control>
+                    <Accordion.Item value="log-messages">
+                        <Accordion.Control>Log Messages</Accordion.Control>
                         <Accordion.Panel>
                             <ErrorBoundary>
-                                <MetricsChart run={run} game={game || undefined} currentStep={step} />
+                                <LogMessages data={data} />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="intrinsics">
+                        <Accordion.Control>Intrinsics & Significance</Accordion.Control>
+                        <Accordion.Panel>
+                            <Grid>
+                                <Grid.Col span={{ base: 12, md: 6 }}>
+                                    <ErrorBoundary>
+                                        <IntrinsicsPanel data={data} />
+                                    </ErrorBoundary>
+                                </Grid.Col>
+                                <Grid.Col span={{ base: 12, md: 6 }}>
+                                    <ErrorBoundary>
+                                        <IntrinsicsChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                    </ErrorBoundary>
+                                </Grid.Col>
+                            </Grid>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="inventory">
+                        <Accordion.Control>Inventory</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <InventoryPanel data={data} />
                             </ErrorBoundary>
                         </Accordion.Panel>
                     </Accordion.Item>
@@ -402,6 +517,11 @@ export function App() {
                         <Accordion.Control>Perception</Accordion.Control>
                         <Accordion.Panel>
                             <Grid>
+                                <Grid.Col span={12}>
+                                    <ErrorBoundary>
+                                        <MessageLog data={data} />
+                                    </ErrorBoundary>
+                                </Grid.Col>
                                 <Grid.Col span={{ base: 12, md: 4 }}>
                                     <ErrorBoundary>
                                         <FeatureTable data={data} />
@@ -427,11 +547,7 @@ export function App() {
                                 </Grid.Col>
                                 <Grid.Col span={{ base: 12, md: 4 }}>
                                     <ErrorBoundary>
-                                        <KVTable
-                                            data={data?.attenuation}
-                                            emptyText="No attenuation data"
-                                            title="Attenuation"
-                                        />
+                                        <AttenuationPanel data={data} />
                                         <div style={{ marginTop: 8 }}>
                                             <FocusPoints data={data} />
                                         </div>
@@ -447,22 +563,49 @@ export function App() {
                         </Accordion.Control>
                         <Accordion.Panel>
                             <Grid>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
+                                <Grid.Col span={{ base: 12, md: 6 }}>
                                     <ErrorBoundary>
                                         <ResolutionInspector data={data} />
                                     </ErrorBoundary>
                                 </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
+                                <Grid.Col span={{ base: 12, md: 6 }}>
                                     <ErrorBoundary>
-                                        <GraphSummary data={data} />
+                                        <ResolutionChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
                                     </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
-                                    <ErrorBoundary>
-                                        <EventSummary data={data} />
-                                    </ErrorBoundary>
+                                    <div style={{ marginTop: 8 }}>
+                                        <ErrorBoundary>
+                                            <EventSummary data={data} />
+                                        </ErrorBoundary>
+                                    </div>
                                 </Grid.Col>
                             </Grid>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="all-objects">
+                        <Accordion.Control>All Objects</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="transforms">
+                        <Accordion.Control>Transforms & Prediction</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <TransformPanel data={data} />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
+                    <Accordion.Item value="actions">
+                        <Accordion.Control>Actions</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <ActionPanel data={data} />
+                            </ErrorBoundary>
                         </Accordion.Panel>
                     </Accordion.Item>
 
@@ -472,38 +615,15 @@ export function App() {
                             <Grid>
                                 <Grid.Col span={{ base: 12, md: 6 }}>
                                     <ErrorBoundary>
-                                        <GraphHistory run={run} game={game || undefined} currentStep={step} />
+                                        <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
                                     </ErrorBoundary>
                                 </Grid.Col>
                                 <Grid.Col span={{ base: 12, md: 6 }}>
                                     <ErrorBoundary>
-                                        <EventHistory run={run} game={game || undefined} currentStep={step} />
+                                        <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
                                     </ErrorBoundary>
                                 </Grid.Col>
                             </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
-
-                    <Accordion.Item value="log-messages">
-                        <Accordion.Control>Log Messages</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <LogMessages data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
-
-                    <Accordion.Item value="bookmarks">
-                        <Accordion.Control>Bookmarks</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <BookmarkTable
-                                    bookmarks={bm.bookmarks}
-                                    currentStep={step}
-                                    onNavigate={navigateToBookmark}
-                                    onUpdateBookmark={bm.updateBookmark}
-                                />
-                            </ErrorBoundary>
                         </Accordion.Panel>
                     </Accordion.Item>
                 </Accordion>

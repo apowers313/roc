@@ -20,6 +20,8 @@ vi.mock("./api/queries", () => ({
     useRuns: vi.fn(() => ({ data: undefined })),
     useGames: vi.fn(() => ({ data: undefined })),
     useStepRange: vi.fn(() => ({ data: undefined })),
+    useResolutionHistory: vi.fn(() => ({ data: undefined })),
+    useAllObjects: vi.fn(() => ({ data: undefined })),
 }));
 
 // Mock prefetch window hook

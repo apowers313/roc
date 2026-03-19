@@ -17,12 +17,10 @@ describe("SaliencyMap", () => {
         expect(screen.getByText("No saliency data")).toBeInTheDocument();
     });
 
-    it("renders CharGrid and legend when saliency data exists", () => {
+    it("renders CharGrid when saliency data exists", () => {
         const data = makeStepData({ saliency: makeGridData() });
         const { container } = renderWithProviders(<SaliencyMap data={data} />);
 
         expect(container.querySelector("pre")).toBeTruthy();
-        expect(screen.getByText("Low")).toBeInTheDocument();
-        expect(screen.getByText("High")).toBeInTheDocument();
     });
 });

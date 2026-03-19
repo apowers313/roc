@@ -1,6 +1,6 @@
-/** Saliency map panel -- heatmap character grid with legend. */
+/** Saliency map panel -- heatmap character grid. */
 
-import { Group, Text } from "@mantine/core";
+import { Text } from "@mantine/core";
 
 import type { StepData } from "../../types/step-data";
 import { CharGrid } from "../common/CharGrid";
@@ -18,26 +18,5 @@ export function SaliencyMap({ data }: SaliencyMapProps) {
         );
     }
 
-    return (
-        <div>
-            <CharGrid data={data.saliency} />
-            <Group gap={4} mt={2} style={{ fontSize: "10px" }}>
-                <Text size="xs" c="dimmed">
-                    Low
-                </Text>
-                <div
-                    style={{
-                        height: "8px",
-                        flex: 1,
-                        background:
-                            "linear-gradient(to right, #0000bb, #00bbbb, #00bb00, #bbbb00, #bb0000)",
-                        borderRadius: "2px",
-                    }}
-                />
-                <Text size="xs" c="dimmed">
-                    High
-                </Text>
-            </Group>
-        </div>
-    );
+    return <CharGrid data={data.saliency} />;
 }
