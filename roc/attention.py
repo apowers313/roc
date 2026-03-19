@@ -350,6 +350,13 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
             )
         )
 
+        # Update live state for dashboard (exclude saliency_grid -- too large)
+        from roc.reporting.state import State
+
+        State.get_states().attenuation_data.set(
+            {k: v for k, v in log_record.items() if k != "saliency_grid"}
+        )
+
         attenuation.notify_focus(ds)
         return ds
 

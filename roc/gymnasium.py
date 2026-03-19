@@ -162,6 +162,84 @@ class Gym(Component, ABC):
                     }
                     _step_counts = Event.get_step_counts()
                     _event_summary = [_step_counts] if _step_counts else None
+                    _resolution_metrics = _states.resolution.val
+                    _attenuation = _states.attenuation_data.val
+
+                    # New pipeline state fields
+                    _intrinsics = None
+                    _significance = None
+                    _action_taken = None
+                    _transform_summary = None
+                    _prediction = None
+                    _message = None
+                    _inventory = None
+
+                    if _states.intrinsic.val is not None:
+                        _intr = _states.intrinsic.val
+                        _intrinsics = {
+                            "raw": _intr.intrinsics,
+                            "normalized": _intr.normalized_intrinsics,
+                        }
+
+                    if _states.significance.val is not None:
+                        _significance = _states.significance.val.significance
+
+                    if _states.action.val is not None:
+                        _act_id = int(_states.action.val.action)
+                        _action_taken_dict: dict[str, Any] = {"action_id": _act_id}
+                        try:
+                            _gym_actions = Config.get().gym_actions
+                            if _gym_actions and _act_id < len(_gym_actions):
+                                _act_enum = _gym_actions[_act_id]
+                                _action_taken_dict["action_name"] = str(
+                                    getattr(_act_enum, "name", _act_enum)
+                                )
+                        except Exception:
+                            pass
+                        _action_taken = _action_taken_dict
+
+                    if _states.transform.val is not None:
+                        _t = _states.transform.val.transform
+                        _changes = [str(e.dst) for e in _t.src_edges]
+                        _transform_summary = {
+                            "count": len(_changes),
+                            "changes": _changes,
+                        }
+
+                    if _states.predict.val is not None:
+                        from roc.predict import NoPrediction as _NP
+
+                        _prediction = {
+                            "made": not isinstance(_states.predict.val, _NP),
+                        }
+
+                    if _states.message.val is not None:
+                        _msg = _states.message.val.strip()
+                        if _msg:
+                            _message = _msg
+
+                    # Inventory from obs
+                    try:
+                        _inv_strs = obs["inv_strs"]
+                        _inv_letters = obs["inv_letters"]
+                        _inv_glyphs = obs["inv_glyphs"]
+                        _inv_items: list[dict[str, Any]] = []
+                        for _i in range(len(_inv_strs)):
+                            _item_str = "".join(chr(ch) for ch in _inv_strs[_i]).strip("\x00 ")
+                            _glyph = int(_inv_glyphs[_i])
+                            if not _item_str or _glyph == 5976:
+                                continue
+                            _inv_items.append(
+                                {
+                                    "letter": chr(int(_inv_letters[_i])),
+                                    "item": _item_str,
+                                    "glyph": _glyph,
+                                }
+                            )
+                        if _inv_items:
+                            _inventory = _inv_items
+                    except Exception:
+                        pass
 
                 # Log per-tick game state to W&B
                 blstats = obs["blstats"]
@@ -190,6 +268,13 @@ class Gym(Component, ABC):
                     _json.dumps(game_metrics, separators=(",", ":")),
                 )
 
+                # Emit inventory as OTel log record
+                if _buf is not None and _inventory is not None:
+                    _emit_state_record(
+                        "roc.inventory",
+                        _json.dumps(_inventory, separators=(",", ":")),
+                    )
+
                 # Push assembled StepData to live dashboard
                 if _buf is not None:
                     _buf.push(
@@ -202,9 +287,18 @@ class Gym(Component, ABC):
                             features=_features,
                             object_info=_object_info,
                             focus_points=_focus_points,
+                            attenuation=_attenuation,
+                            resolution_metrics=_resolution_metrics,
                             graph_summary=_graph_summary,
                             event_summary=_event_summary,
                             game_metrics=game_metrics,
+                            intrinsics=_intrinsics,
+                            significance=_significance,
+                            action_taken=_action_taken,
+                            transform_summary=_transform_summary,
+                            prediction=_prediction,
+                            message=_message,
+                            inventory=_inventory,
                         )
                     )
 

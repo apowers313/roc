@@ -157,6 +157,23 @@ class ResolutionContext:
     tick: int
 
 
+def _extract_visual_attrs(obj: Object) -> dict[str, Any]:
+    """Extract glyph char, color name, and glyph ID from an Object's features."""
+    from .feature_extractors.color import ColorNode
+    from .feature_extractors.shape import ShapeNode
+    from .feature_extractors.single import SingleNode
+
+    result: dict[str, Any] = {}
+    for f in obj.features:
+        if isinstance(f, ShapeNode):
+            result["char"] = chr(f.type)
+        elif isinstance(f, ColorNode) and f.attr_strs:
+            result["color"] = f.attr_strs[0]
+        elif isinstance(f, SingleNode):
+            result["glyph"] = f.type
+    return result
+
+
 class ObjectResolutionExpMod(ExpMod):
     """Base class for object resolution experiment modules.
 
@@ -254,7 +271,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         """Emit an OTel log record describing this resolution decision."""
         record: dict[str, Any] = {
             "event": "resolution_decision",
-            "algorithm": "symmetric-difference",
+            "algorithm": self.name,
             "outcome": outcome,
             "tick": context.tick,
             "x": int(context.x),
@@ -265,9 +282,15 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         }
         if best_distance is not None:
             record["best_distance"] = best_distance
+        if matched_obj is not None:
+            record["matched_attrs"] = _extract_visual_attrs(matched_obj)
         if candidates:
             record["candidate_distances"] = [
                 (str(obj.id), round(dist, 2)) for obj, dist in candidates[:5]
+            ]
+            record["candidate_details"] = [
+                {"id": str(obj.id), "distance": round(dist, 2), **_extract_visual_attrs(obj)}
+                for obj, dist in candidates[:5]
             ]
 
         span_context = otel_trace.get_current_span().get_span_context()
@@ -283,6 +306,11 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
                 trace_flags=span_context.trace_flags,
             )
         )
+
+        # Update live state for dashboard
+        from roc.reporting.state import State
+
+        State.get_states().resolution.set(record)
 
     @Observability.tracer.start_as_current_span("find_candidate_objects")
     def _find_candidates(
@@ -457,10 +485,11 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         return candidates
 
     def _filter_features(self, feature_nodes: Collection[FeatureNode]) -> list[FeatureNode]:
-        """Remove features whose labels intersect excluded_feature_labels."""
-        if not self.excluded_feature_labels:
-            return list(feature_nodes)
-        return [f for f in feature_nodes if not (f.labels & self.excluded_feature_labels)]
+        """Keep only PHYSICAL features, then remove any in excluded_feature_labels."""
+        result = [f for f in feature_nodes if f.kind == FeatureKind.PHYSICAL]
+        if self.excluded_feature_labels:
+            result = [f for f in result if not (f.labels & self.excluded_feature_labels)]
+        return result
 
     def _spatial_weight(self, obj: Object, context: ResolutionContext) -> float:
         """Exponential decay weight based on manhattan distance."""
@@ -482,25 +511,18 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
     def _compute_priors(
         self, candidates: list[Object], context: ResolutionContext
     ) -> dict[NodeId | str, float]:
-        """Spatial and temporal exponential decay priors.
+        """Uniform priors over candidates and the new-object hypothesis.
 
-        Computes unnormalized prior weights for each candidate (spatial * temporal
-        decay) and the "new object" hypothesis (weight 1.0 -- Option C from design,
-        where the new-object hypothesis competes purely on likelihood). All weights
-        are then normalized so they sum to 1.
+        All candidates and the "new" hypothesis get equal prior weight.
+        Resolution is driven entirely by the Dirichlet feature likelihoods.
 
         Returns dict mapping object_id -> log_prior, plus "new" -> log_prior.
         """
         unnormalized: dict[NodeId | str, float] = {}
 
         for obj in candidates:
-            spatial_w = self._spatial_weight(obj, context)
-            temporal_w = self._temporal_weight(obj, context)
-            unnormalized[obj.id] = spatial_w * temporal_w + 1e-300
+            unnormalized[obj.id] = 1.0
 
-        # New object prior weight: 1.0 (Option C -- likelihood-driven).
-        # The new-object hypothesis has no spatial/temporal context, so it gets
-        # a uniform weight. It competes with existing objects purely on likelihood.
         unnormalized["new"] = 1.0
 
         # Normalize to probabilities
@@ -632,6 +654,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
 
         record: dict[str, Any] = {
             "event": "resolution_decision",
+            "algorithm": self.name,
             "outcome": outcome,
             "reason": reason,
             "tick": context.tick,
@@ -646,9 +669,22 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         }
 
         if matched_obj is not None:
+            record["matched_attrs"] = _extract_visual_attrs(matched_obj)
             alphas = self._alphas.get(matched_obj.id, {})
             record["matched_alpha_sum"] = round(sum(alphas.values()), 1)
             record["matched_alpha_count"] = len(alphas)
+
+        if candidates:
+            # Build lookup from posteriors for candidate details
+            candidate_details = []
+            for obj in candidates[:5]:
+                lp = log_posteriors.get(obj.id, float("-inf"))
+                candidate_details.append({
+                    "id": str(obj.id),
+                    "probability": round(math.exp(lp), 6),
+                    **_extract_visual_attrs(obj),
+                })
+            record["candidate_details"] = candidate_details
 
         span_context = otel_trace.get_current_span().get_span_context()
         _otel_logger.emit(
@@ -663,6 +699,11 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
                 trace_flags=span_context.trace_flags,
             )
         )
+
+        # Update live state for dashboard
+        from roc.reporting.state import State
+
+        State.get_states().resolution.set(record)
 
 
 @dataclass
@@ -753,6 +794,31 @@ class ObjectResolver(Component):
             if hasattr(resolution, "initialize_alphas"):
                 feature_strs = [str(f) for f in fg.feature_nodes]
                 resolution.initialize_alphas(o.id, feature_strs)
+
+            # Update the resolution state with the new object's ID so the
+            # dashboard can track all objects by their node ID.
+            from roc.reporting.state import State
+
+            current_res = State.get_states().resolution.val
+            if isinstance(current_res, dict):
+                current_res["new_object_id"] = o.id
+
+            # Emit a lightweight OTel event linking this step to the new object ID.
+            # The resolution _log_decision fires before the object exists, so this
+            # supplements it with the node ID for historical queries.
+            span_context = otel_trace.get_current_span().get_span_context()
+            _otel_logger.emit(
+                LogRecord(
+                    timestamp=time_ns(),
+                    severity_number=SeverityNumber.INFO,
+                    severity_text="INFO",
+                    body=json.dumps({"new_object_id": o.id}, default=str),
+                    attributes={"event.name": "roc.resolution.new_object_id"},
+                    trace_id=span_context.trace_id,
+                    span_id=span_context.span_id,
+                    trace_flags=span_context.trace_flags,
+                )
+            )
 
         o.last_x = XLoc(int(x))
         o.last_y = YLoc(int(y))

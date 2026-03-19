@@ -126,7 +126,6 @@ class DefaultActionLeft(DefaultActionExpMod):
         return idx
 
 
-# @DefaultActionExpMod.register("weighted")
 class WeightedAction(DefaultActionExpMod):
     name = "weighted"
 

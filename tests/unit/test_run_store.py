@@ -558,6 +558,175 @@ class TestGetStepDataEvents:
         assert sd.event_summary[0]["roc.perception"] == 5
 
 
+class TestGetStepDataNewEvents:
+    """Regression tests for new pipeline event parsing (task 11)."""
+
+    def test_includes_intrinsics(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.intrinsics",
+                    body=json.dumps({"raw": {"hp": 14}, "normalized": {"hp": 0.5}}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.intrinsics is not None
+        assert sd.intrinsics["raw"]["hp"] == 14
+        assert sd.intrinsics["normalized"]["hp"] == 0.5
+
+    def test_includes_significance(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.significance",
+                    body=json.dumps({"significance": 10.5}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.significance is not None
+        assert sd.significance == 10.5
+
+    def test_includes_action(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.action",
+                    body=json.dumps({"action_id": 4, "action_name": "NE"}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.action_taken is not None
+        assert sd.action_taken["action_id"] == 4
+        assert sd.action_taken["action_name"] == "NE"
+
+    def test_includes_transform_summary(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.transform_summary",
+                    body=json.dumps({"count": 2, "changes": ["a", "b"]}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.transform_summary is not None
+        assert sd.transform_summary["count"] == 2
+        assert len(sd.transform_summary["changes"]) == 2
+
+    def test_includes_prediction(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.prediction",
+                    body=json.dumps({"made": True}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.prediction is not None
+        assert sd.prediction["made"] is True
+
+    def test_includes_message(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export([make_log_record(event_name="roc.message", body="It's a wall.")])
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.message is not None
+        assert sd.message == "It's a wall."
+
+    def test_includes_inventory(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        inv = [{"letter": "a", "item": "a sword", "glyph": 1234}]
+        exporter.export([make_log_record(event_name="roc.inventory", body=json.dumps(inv))])
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.inventory is not None
+        assert len(sd.inventory) == 1
+        assert sd.inventory[0]["letter"] == "a"
+
+    def test_attenuation_includes_history_and_focus_points(self, tmp_path: Path):
+        """Regression: attenuation filter was excluding history and focus_points."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.saliency_attenuation",
+                    body=json.dumps(
+                        {
+                            "flavor": "linear-decline",
+                            "peak_count": 5,
+                            "saliency_grid": [[1, 2]],
+                            "focus_points": [{"x": 10, "y": 20}],
+                            "history": [{"x": 1, "y": 2, "tick": 100}],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.attenuation is not None
+        # saliency_grid should still be filtered out (too large)
+        assert "saliency_grid" not in sd.attenuation
+        # But history and focus_points should now be included
+        assert "history" in sd.attenuation
+        assert "focus_points" in sd.attenuation
+        assert sd.attenuation["history"][0]["tick"] == 100
+
+    def test_missing_events_leave_fields_none(self, tmp_path: Path):
+        """All new fields default to None when no events present."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        sd = store.get_step_data(1)
+        assert sd.intrinsics is None
+        assert sd.significance is None
+        assert sd.action_taken is None
+        assert sd.transform_summary is None
+        assert sd.prediction is None
+        assert sd.message is None
+        assert sd.inventory is None
+
+
 class TestStepRange:
     def test_step_range_for_game(self, populated_store: DuckLakeStore):
         store = RunStore(populated_store)

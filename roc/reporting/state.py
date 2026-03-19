@@ -16,15 +16,21 @@ from opentelemetry import trace as otel_trace
 from opentelemetry._logs import SeverityNumber
 from opentelemetry.sdk._logs import LogRecord
 
+from roc.action import Action, ActionData, TakeAction
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
 from roc.component import Component
 from roc.config import Config
 from roc.event import Event
 from roc.graphdb import Edge, Node, Schema
+from roc.intrinsic import Intrinsic, IntrinsicData
 from roc.logger import logger
 from roc.object import Object, ObjectResolver, ResolvedObject
+from roc.perception import AuditoryData, Perception, PerceptionData
+from roc.predict import NoPrediction, Predict, PredictData
 from roc.reporting.observability import Observability, Observation, instance_id, resource
 from roc.sequencer import Sequencer  # noqa: F401
+from roc.significance import Significance, SignificanceData
+from roc.transformer import TransformResult, Transformer
 
 StateType = TypeVar("StateType")
 _state_init_done = False
@@ -100,6 +106,60 @@ class State(ABC, Generic[StateType]):
             states.object.set(e.data)
 
         obj_conn.listen(obj_evt_handler, filter=lambda e: isinstance(e.data, Object))
+
+        # intrinsics
+        intr_conn = Intrinsic.bus.connect(state_component)
+
+        def intr_evt_handler(e: Event[IntrinsicData]) -> None:
+            assert isinstance(e.data, IntrinsicData)
+            states.intrinsic.set(e.data)
+
+        intr_conn.listen(intr_evt_handler, filter=lambda e: isinstance(e.data, IntrinsicData))
+
+        # significance
+        sig_conn = Significance.bus.connect(state_component)
+
+        def sig_evt_handler(e: Event[SignificanceData]) -> None:
+            assert isinstance(e.data, SignificanceData)
+            states.significance.set(e.data)
+
+        sig_conn.listen(sig_evt_handler, filter=lambda e: isinstance(e.data, SignificanceData))
+
+        # action
+        act_conn = Action.bus.connect(state_component)
+
+        def act_evt_handler(e: Event[ActionData]) -> None:
+            assert isinstance(e.data, TakeAction)
+            states.action.set(e.data)
+
+        act_conn.listen(act_evt_handler, filter=lambda e: isinstance(e.data, TakeAction))
+
+        # transformer
+        txf_conn = Transformer.bus.connect(state_component)
+
+        def txf_evt_handler(e: Event[TransformResult]) -> None:
+            assert isinstance(e.data, TransformResult)
+            states.transform.set(e.data)
+
+        txf_conn.listen(txf_evt_handler, filter=lambda e: isinstance(e.data, TransformResult))
+
+        # predict
+        pred_conn = Predict.bus.connect(state_component)
+
+        def pred_evt_handler(e: Event[PredictData]) -> None:
+            if not isinstance(e.data, NoPrediction):
+                states.predict.set(e.data)
+
+        pred_conn.listen(pred_evt_handler, filter=lambda e: not isinstance(e.data, NoPrediction))
+
+        # auditory messages
+        msg_conn = Perception.bus.connect(state_component)
+
+        def msg_evt_handler(e: Event[PerceptionData]) -> None:
+            assert isinstance(e.data, AuditoryData)
+            states.message.set(e.data.msg.strip("\x00").strip())
+
+        msg_conn.listen(msg_evt_handler, filter=lambda e: isinstance(e.data, AuditoryData))
 
         State.print_startup_info()
 
@@ -186,6 +246,97 @@ class State(ABC, Generic[StateType]):
             _emit_state_record(
                 "roc.attention.focus_points", str(current_states.attention.val.focus_points)
             )
+
+        # Intrinsics
+        if current_states.intrinsic.val is not None:
+            intr_data = current_states.intrinsic.val
+            _emit_state_record(
+                "roc.intrinsics",
+                json.dumps(
+                    {
+                        "raw": intr_data.intrinsics,
+                        "normalized": intr_data.normalized_intrinsics,
+                    },
+                    separators=(",", ":"),
+                    default=str,
+                ),
+            )
+
+        # Significance
+        if current_states.significance.val is not None:
+            _emit_state_record(
+                "roc.significance",
+                json.dumps(
+                    {"significance": current_states.significance.val.significance},
+                    separators=(",", ":"),
+                ),
+            )
+
+        # Action
+        if current_states.action.val is not None:
+            action_val = current_states.action.val.action
+            action_dict: dict[str, Any] = {"action_id": int(action_val)}
+            try:
+                gym_actions = cfg.gym_actions
+                if gym_actions and int(action_val) < len(gym_actions):
+                    act_enum = gym_actions[int(action_val)]
+                    action_dict["action_name"] = str(getattr(act_enum, "name", act_enum))
+            except Exception:
+                pass
+            try:
+                from roc.action import DefaultActionExpMod
+
+                action_dict["expmod_name"] = DefaultActionExpMod.get(default="pass").name
+            except Exception:
+                pass
+            _emit_state_record(
+                "roc.action",
+                json.dumps(action_dict, separators=(",", ":")),
+            )
+
+        # Transform summary
+        if current_states.transform.val is not None:
+            t = current_states.transform.val.transform
+            changes = []
+            for edge in t.src_edges:
+                changes.append(str(edge.dst))
+            _emit_state_record(
+                "roc.transform_summary",
+                json.dumps(
+                    {"count": len(changes), "changes": changes},
+                    separators=(",", ":"),
+                    default=str,
+                ),
+            )
+
+        # Prediction
+        if current_states.predict.val is not None:
+            pred = current_states.predict.val
+            pred_dict: dict[str, Any] = {"made": not isinstance(pred, NoPrediction)}
+            try:
+                from roc.predict import (
+                    PredictionCandidateFramesExpMod,
+                    PredictionConfidenceExpMod,
+                )
+
+                pred_dict["candidate_expmod"] = PredictionCandidateFramesExpMod.get(
+                    default="object-based"
+                ).name
+                pred_dict["confidence_expmod"] = PredictionConfidenceExpMod.get(
+                    default="naive"
+                ).name
+            except Exception:
+                pass
+            _emit_state_record(
+                "roc.prediction",
+                json.dumps(pred_dict, separators=(",", ":")),
+            )
+
+        # Message
+        if current_states.message.val is not None:
+            msg = current_states.message.val.strip()
+            if msg:
+                _emit_state_record("roc.message", msg)
 
         # Graph DB summary
         node_cache = Node.get_cache()
@@ -407,6 +558,142 @@ class CurrentObjectState(State[ResolvedObject]):
             return "Current Object: None"
 
 
+class CurrentIntrinsicState(State[IntrinsicData]):
+    """Tracks the most recent intrinsic data."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-intrinsic", display_name="Current Intrinsics")
+
+    def set(self, data: IntrinsicData) -> None:
+        """Sets the current intrinsic data."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Intrinsics:\n{repr(self.val)}\n"
+        else:
+            return "Current Intrinsics: None"
+
+
+class CurrentSignificanceState(State[SignificanceData]):
+    """Tracks the most recent significance score."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-significance", display_name="Current Significance")
+
+    def set(self, data: SignificanceData) -> None:
+        """Sets the current significance data."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Significance: {self.val.significance}"
+        else:
+            return "Current Significance: None"
+
+
+class CurrentActionState(State[TakeAction]):
+    """Tracks the most recent action taken."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-action", display_name="Current Action")
+
+    def set(self, data: TakeAction) -> None:
+        """Sets the current action."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Action: {self.val.action}"
+        else:
+            return "Current Action: None"
+
+
+class CurrentTransformState(State[TransformResult]):
+    """Tracks the most recent transform result."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-transform", display_name="Current Transform")
+
+    def set(self, data: TransformResult) -> None:
+        """Sets the current transform result."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Transform:\n{str(self.val.transform)}\n"
+        else:
+            return "Current Transform: None"
+
+
+class CurrentPredictState(State[PredictData]):
+    """Tracks the most recent prediction result."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-predict", display_name="Current Prediction")
+
+    def set(self, data: PredictData) -> None:
+        """Sets the current prediction data."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Prediction: {type(self.val).__name__}"
+        else:
+            return "Current Prediction: None"
+
+
+class CurrentMessageState(State[str]):
+    """Tracks the most recent auditory message."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-message", display_name="Current Message")
+
+    def set(self, msg: str) -> None:
+        """Sets the current message."""
+        self.val = msg
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Message: {self.val}"
+        else:
+            return "Current Message: None"
+
+
+class CurrentResolutionState(State[dict[str, Any]]):
+    """Tracks the most recent object resolution decision (set from OTel emission site)."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-resolution", display_name="Current Resolution")
+
+    def set(self, data: dict[str, Any]) -> None:
+        """Sets the current resolution decision data."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Resolution: {self.val.get('outcome', 'unknown')}"
+        else:
+            return "Current Resolution: None"
+
+
+class CurrentAttenuationState(State[dict[str, Any]]):
+    """Tracks the most recent attenuation data (set from OTel emission site)."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-attenuation", display_name="Current Attenuation")
+
+    def set(self, data: dict[str, Any]) -> None:
+        """Sets the current attenuation data."""
+        self.val = data
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Attenuation: {self.val.get('flavor', 'unknown')}"
+        else:
+            return "Current Attenuation: None"
+
+
 class ComponentsState(State[list[str]]):
     """Tracks the list of loaded components."""
 
@@ -439,6 +726,14 @@ class StateList:
     salency: CurrentSaliencyMapState = CurrentSaliencyMapState()
     attention: CurrentAttentionState = CurrentAttentionState()
     object: CurrentObjectState = CurrentObjectState()
+    intrinsic: CurrentIntrinsicState = CurrentIntrinsicState()
+    significance: CurrentSignificanceState = CurrentSignificanceState()
+    action: CurrentActionState = CurrentActionState()
+    transform: CurrentTransformState = CurrentTransformState()
+    predict: CurrentPredictState = CurrentPredictState()
+    message: CurrentMessageState = CurrentMessageState()
+    resolution: CurrentResolutionState = CurrentResolutionState()
+    attenuation_data: CurrentAttenuationState = CurrentAttenuationState()
     components: ComponentsState = ComponentsState()
 
 

@@ -29,6 +29,13 @@ class StepData:
     event_summary: list[dict[str, Any]] | None = None
     game_metrics: dict[str, Any] | None = None
     logs: list[dict[str, Any]] | None = None
+    intrinsics: dict[str, Any] | None = None
+    significance: float | None = None
+    action_taken: dict[str, Any] | None = None
+    transform_summary: dict[str, Any] | None = None
+    prediction: dict[str, Any] | None = None
+    message: str | None = None
+    inventory: list[dict[str, Any]] | None = None
 
 
 class RunStore:
@@ -238,6 +245,240 @@ class RunStore:
             results.append(entry)
         return results
 
+    def get_intrinsics_history(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return intrinsics for all steps in a game (or the whole run).
+
+        Each entry has ``step`` plus raw and normalized intrinsic values.
+        Returns an empty list when no events table exists.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.intrinsics'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"SELECT step, body FROM {src} WHERE {where} ORDER BY step",
+            params or None,
+        )
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            entry: dict[str, Any] = {"step": int(row["step"])}
+            entry.update(body)
+            results.append(entry)
+        return results
+
+    def get_action_history(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return action taken for all steps in a game (or the whole run).
+
+        Each entry has ``step`` plus ``action_id`` and optionally ``action_name``.
+        Returns an empty list when no events table exists.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.action'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"SELECT step, body FROM {src} WHERE {where} ORDER BY step",
+            params or None,
+        )
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            entry: dict[str, Any] = {"step": int(row["step"])}
+            entry.update(body)
+            results.append(entry)
+        return results
+
+    def get_resolution_history(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return resolution accuracy history for all steps in a game.
+
+        Each entry has ``step``, ``outcome`` (match/new_object/low_confidence),
+        and ``correct`` (bool | None) indicating whether observed non-relational
+        features match the stored object's features.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.resolution.decision'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"SELECT step, body FROM {src} WHERE {where} ORDER BY step",
+            params or None,
+        )
+        results: list[dict[str, Any]] = []
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            outcome = body.get("outcome", "unknown")
+            entry: dict[str, Any] = {"step": int(row["step"]), "outcome": outcome}
+
+            # Compute correctness for matches by comparing non-relational attrs
+            if outcome == "match":
+                matched_attrs = body.get("matched_attrs")
+                features = body.get("features", [])
+                if matched_attrs and isinstance(features, list):
+                    # Parse observed attrs from feature strings
+                    obs_shape = obs_color = obs_glyph = None
+                    for f in features:
+                        s = str(f)
+                        if s.startswith("ShapeNode(") and s.endswith(")"):
+                            obs_shape = s[10:-1]
+                        elif s.startswith("ColorNode(") and s.endswith(")"):
+                            obs_color = s[10:-1]
+                        elif s.startswith("SingleNode(") and s.endswith(")"):
+                            obs_glyph = s[11:-1]
+                    # Compare with matched object's stored attrs
+                    m_shape = matched_attrs.get("char")
+                    m_color = matched_attrs.get("color")
+                    m_glyph = str(matched_attrs.get("glyph", ""))
+                    correct = True
+                    if obs_shape and m_shape and obs_shape != m_shape:
+                        correct = False
+                    if obs_color and m_color and obs_color != m_color:
+                        correct = False
+                    if obs_glyph and m_glyph and obs_glyph != m_glyph:
+                        correct = False
+                    entry["correct"] = correct
+                else:
+                    entry["correct"] = None  # unknown -- no matched_attrs available
+            results.append(entry)
+        return results
+
+    def get_all_objects(
+        self,
+        game_number: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return a list of all resolved objects with their attributes.
+
+        Built from resolution events: new_object events create entries (with
+        new_object_id if available), match events increment match counts.
+        """
+        if not self._has_table("events"):
+            return []
+        src = self._read_sql("events")
+        where = "\"event.name\" = 'roc.resolution.decision'"
+        params: list[Any] = []
+        if game_number is not None:
+            where += " AND game_number = ?"
+            params.append(game_number)
+        df = self._store.query_df(
+            f"SELECT step, body FROM {src} WHERE {where} ORDER BY step",
+            params or None,
+        )
+
+        def _parse_attrs(features: list[Any]) -> tuple[str | None, str | None, str | None]:
+            shape = color = glyph = None
+            for f in features:
+                s = str(f)
+                if s.startswith("ShapeNode(") and s.endswith(")"):
+                    shape = s[10:-1]
+                elif s.startswith("ColorNode(") and s.endswith(")"):
+                    color = s[10:-1]
+                elif s.startswith("SingleNode(") and s.endswith(")"):
+                    glyph = s[11:-1]
+            return shape, color, glyph
+
+        # Pass 1: collect new_object entries keyed by step
+        objects: dict[str, dict[str, Any]] = {}
+        step_to_key: dict[int, str] = {}
+        match_events: list[dict[str, Any]] = []
+
+        for _, row in df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            step = int(row["step"])
+            outcome = body.get("outcome")
+            features = body.get("features", [])
+            shape, color, glyph = _parse_attrs(features)
+
+            if outcome == "new_object":
+                key = f"new@{step}"
+                step_to_key[step] = key
+                objects[key] = {
+                    "shape": shape,
+                    "glyph": glyph,
+                    "color": color,
+                    "node_id": None,
+                    "step_added": step,
+                    "match_count": 0,
+                }
+            elif outcome == "match":
+                match_events.append({
+                    "matched_id": body.get("matched_object_id"),
+                    "matched_attrs": body.get("matched_attrs", {}),
+                    "shape": shape, "glyph": glyph, "color": color,
+                })
+
+        # Pass 2: read new_object_id events to link node IDs
+        id_df = self._store.query_df(
+            f"SELECT step, body FROM {src} "
+            f"WHERE \"event.name\" = 'roc.resolution.new_object_id'"
+            + (" AND game_number = ?" if game_number is not None else "")
+            + " ORDER BY step",
+            [game_number] if game_number is not None else None,
+        )
+        for _, row in id_df.iterrows():
+            body = _parse_body(row.get("body"))
+            if body is None:
+                continue
+            step = int(row["step"])
+            nid = body.get("new_object_id")
+            if nid is None:
+                continue
+            mid = str(nid)
+            old_key = step_to_key.get(step)
+            if old_key and old_key in objects:
+                obj = objects.pop(old_key)
+                obj["node_id"] = mid
+                objects[mid] = obj
+
+        # Pass 3: process match events (now that objects are keyed by node ID)
+        for m in match_events:
+            matched_id = m["matched_id"]
+            if matched_id is None:
+                continue
+            mid = str(matched_id)
+            if mid in objects:
+                objects[mid]["match_count"] += 1
+            else:
+                ma = m["matched_attrs"]
+                objects[mid] = {
+                    "shape": ma.get("char", m["shape"]),
+                    "glyph": str(ma["glyph"]) if ma.get("glyph") else m["glyph"],
+                    "color": ma.get("color", m["color"]),
+                    "node_id": mid,
+                    "step_added": None,
+                    "match_count": 1,
+                }
+
+        return list(objects.values())
+
     def get_step_data(self, step: int) -> StepData:
         """Assemble all available data for a single step."""
         screen_df = self.get_step(step, "screens")
@@ -263,6 +504,13 @@ class RunStore:
         resolution_metrics = None
         graph_summary = None
         event_summary: list[dict[str, Any]] | None = None
+        intrinsics = None
+        significance = None
+        action_taken = None
+        transform_summary = None
+        prediction = None
+        message = None
+        inventory = None
         if len(events_df) > 0:
             event_list: list[dict[str, Any]] = []
             for _, row in events_df.iterrows():
@@ -288,11 +536,7 @@ class RunStore:
                     )
                 elif event_name == "roc.saliency_attenuation":
                     if body is not None:
-                        attenuation = {
-                            k: v
-                            for k, v in body.items()
-                            if k not in ("saliency_grid", "focus_points", "history")
-                        }
+                        attenuation = {k: v for k, v in body.items() if k not in ("saliency_grid",)}
                     else:
                         attenuation = body
                 elif event_name == "roc.resolution.decision":
@@ -303,6 +547,31 @@ class RunStore:
                     event_list.append(
                         body if body is not None else {"raw": row_dict.get("body", "")}
                     )
+                elif event_name == "roc.intrinsics":
+                    intrinsics = body
+                elif event_name == "roc.significance":
+                    if body is not None and "significance" in body:
+                        significance = float(body["significance"])
+                elif event_name == "roc.action":
+                    action_taken = body
+                elif event_name == "roc.transform_summary":
+                    transform_summary = body
+                elif event_name == "roc.prediction":
+                    prediction = body
+                elif event_name == "roc.message":
+                    raw_body = row_dict.get("body", "")
+                    message = str(raw_body).strip() if raw_body else None
+                elif event_name == "roc.inventory":
+                    raw_inv = row_dict.get("body", "")
+                    if raw_inv:
+                        try:
+                            import json as _json
+
+                            parsed_inv = _json.loads(raw_inv)
+                            if isinstance(parsed_inv, list):
+                                inventory = parsed_inv
+                        except (ValueError, TypeError):
+                            pass
                 else:
                     event_list.append(row_dict)
 
@@ -334,6 +603,13 @@ class RunStore:
             event_summary=event_summary,
             game_metrics=game_metrics,
             logs=logs,
+            intrinsics=intrinsics,
+            significance=significance,
+            action_taken=action_taken,
+            transform_summary=transform_summary,
+            prediction=prediction,
+            message=message,
+            inventory=inventory,
         )
 
 
