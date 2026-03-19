@@ -11,6 +11,7 @@ import { compactTheme } from "@graphty/compact-mantine";
 
 import { App } from "./App";
 import { DashboardProvider } from "./state/context";
+import { HighlightProvider } from "./state/highlight";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -28,7 +29,9 @@ if (root) {
             <MantineProvider theme={compactTheme} defaultColorScheme="dark">
                 <QueryClientProvider client={queryClient}>
                     <DashboardProvider>
-                        <App />
+                        <HighlightProvider>
+                            <App />
+                        </HighlightProvider>
                     </DashboardProvider>
                 </QueryClientProvider>
             </MantineProvider>
