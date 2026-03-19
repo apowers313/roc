@@ -15,6 +15,7 @@ import {
 } from "recharts";
 
 import { useEventHistory } from "../../api/queries";
+import { ClickableChart } from "../common/ClickableChart";
 
 // Distinct colors for event bus series
 const BUS_COLORS = [
@@ -34,9 +35,10 @@ interface EventHistoryProps {
     run: string;
     game?: number;
     currentStep: number;
+    onStepClick?: (step: number) => void;
 }
 
-export function EventHistory({ run, game, currentStep }: EventHistoryProps) {
+export function EventHistory({ run, game, currentStep, onStepClick }: EventHistoryProps) {
     const { data: history } = useEventHistory(run, game);
 
     // Collect all unique bus names across all steps
@@ -78,7 +80,7 @@ export function EventHistory({ run, game, currentStep }: EventHistoryProps) {
         );
     }
 
-    return (
+    const chart = (
         <div>
             <Text size="xs" fw={500} mb={4}>
                 Event Activity
@@ -119,4 +121,13 @@ export function EventHistory({ run, game, currentStep }: EventHistoryProps) {
             </ResponsiveContainer>
         </div>
     );
+
+    if (onStepClick) {
+        return (
+            <ClickableChart onStepClick={onStepClick} data={displayData as { step: number }[]}>
+                {chart}
+            </ClickableChart>
+        );
+    }
+    return chart;
 }

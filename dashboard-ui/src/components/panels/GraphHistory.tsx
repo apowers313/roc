@@ -15,14 +15,16 @@ import {
 } from "recharts";
 
 import { useGraphHistory } from "../../api/queries";
+import { ClickableChart } from "../common/ClickableChart";
 
 interface GraphHistoryProps {
     run: string;
     game?: number;
     currentStep: number;
+    onStepClick?: (step: number) => void;
 }
 
-export function GraphHistory({ run, game, currentStep }: GraphHistoryProps) {
+export function GraphHistory({ run, game, currentStep, onStepClick }: GraphHistoryProps) {
     const { data: history } = useGraphHistory(run, game);
 
     if (!history || history.length === 0) {
@@ -33,7 +35,7 @@ export function GraphHistory({ run, game, currentStep }: GraphHistoryProps) {
         );
     }
 
-    return (
+    const chart = (
         <div>
             <Text size="xs" fw={500} mb={4}>
                 Graph Cache
@@ -99,4 +101,13 @@ export function GraphHistory({ run, game, currentStep }: GraphHistoryProps) {
             </ResponsiveContainer>
         </div>
     );
+
+    if (onStepClick) {
+        return (
+            <ClickableChart onStepClick={onStepClick} data={history}>
+                {chart}
+            </ClickableChart>
+        );
+    }
+    return chart;
 }
