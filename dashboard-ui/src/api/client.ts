@@ -15,7 +15,7 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
 }
 
 export async function fetchRuns(): Promise<RunSummary[]> {
-    return fetchJson<RunSummary[]>(`${BASE}/runs`);
+    return fetchJson<RunSummary[]>(`${BASE}/runs?min_steps=10`);
 }
 
 export async function fetchGames(run: string): Promise<GameSummary[]> {
@@ -112,6 +112,81 @@ export async function fetchEventHistory(
     const qs = params.toString();
     return fetchJson<EventPoint[]>(
         `${BASE}/runs/${encodeURIComponent(run)}/event-history${qs ? `?${qs}` : ""}`,
+    );
+}
+
+export interface IntrinsicsPoint {
+    step: number;
+    raw?: Record<string, number>;
+    normalized?: Record<string, number>;
+}
+
+export async function fetchIntrinsicsHistory(
+    run: string,
+    game?: number,
+): Promise<IntrinsicsPoint[]> {
+    const params = new URLSearchParams();
+    if (game != null) params.set("game", String(game));
+    const qs = params.toString();
+    return fetchJson<IntrinsicsPoint[]>(
+        `${BASE}/runs/${encodeURIComponent(run)}/intrinsics-history${qs ? `?${qs}` : ""}`,
+    );
+}
+
+export interface ActionPoint {
+    step: number;
+    action_id: number;
+    action_name?: string;
+}
+
+export async function fetchActionHistory(
+    run: string,
+    game?: number,
+): Promise<ActionPoint[]> {
+    const params = new URLSearchParams();
+    if (game != null) params.set("game", String(game));
+    const qs = params.toString();
+    return fetchJson<ActionPoint[]>(
+        `${BASE}/runs/${encodeURIComponent(run)}/action-history${qs ? `?${qs}` : ""}`,
+    );
+}
+
+export interface ResolutionPoint {
+    step: number;
+    outcome: string;
+    correct?: boolean | null;
+}
+
+export async function fetchResolutionHistory(
+    run: string,
+    game?: number,
+): Promise<ResolutionPoint[]> {
+    const params = new URLSearchParams();
+    if (game != null) params.set("game", String(game));
+    const qs = params.toString();
+    return fetchJson<ResolutionPoint[]>(
+        `${BASE}/runs/${encodeURIComponent(run)}/resolution-history${qs ? `?${qs}` : ""}`,
+    );
+}
+
+export interface ResolvedObject {
+    shape: string | null;
+    glyph: string | null;
+    color: string | null;
+    node_id: string | null;
+    step_added: number | null;
+    match_count: number;
+}
+
+export async function fetchAllObjects(
+    run: string,
+    game?: number,
+): Promise<ResolvedObject[]> {
+    const params = new URLSearchParams();
+    if (game != null) params.set("game", String(game));
+    const qs = params.toString();
+    return fetchJson<ResolvedObject[]>(
+        `${BASE}/runs/${encodeURIComponent(run)}/all-objects${qs ? `?${qs}` : ""}`,
     );
 }
 

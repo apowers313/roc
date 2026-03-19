@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import click
@@ -21,9 +20,8 @@ import click
 @click.option("--host", type=str, default="0.0.0.0", help="Host to bind to.")
 def main(data_dir: Path | None, port: int | None, host: str) -> None:
     """Browse historical game runs in the debug dashboard."""
-    # Disable observability before importing anything from roc.reporting
-    # to prevent creating empty run directories on startup.
-    os.environ["roc_emit_state"] = "false"
+    # No need to set roc_emit_state=false -- Observability.init() no longer
+    # creates DuckLake stores at module-level (only roc.init(enable_parquet=True) does).
 
     import socketio
     import uvicorn

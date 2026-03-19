@@ -54,24 +54,28 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
         playback,
         dispatchPlayback,
         liveRunName,
+        liveGameNumber,
     } = useDashboard();
 
     const { data: runs } = useRuns();
     const { data: games } = useGames(run);
     const { data: stepRangeData } = useStepRange(run, game || undefined);
 
-    // Derive effective step range: prefer REST query data, fall back to context
-    // (which is updated by live pushes). This avoids stale context values when
-    // switching runs -- the REST response is authoritative.
-    const effectiveMin = stepRangeData?.min ?? stepMin;
-    const effectiveMax = stepRangeData?.max ?? stepMax;
+    // Derive effective step range. When viewing the live run's active game,
+    // prefer context (driven by Socket.io pushes in onNewStep). For historical
+    // runs or historical games within the live run, prefer REST (authoritative).
+    const isViewingLiveGame =
+        run !== "" && run === liveRunName && game === liveGameNumber;
+    const effectiveMin = isViewingLiveGame ? stepMin : (stepRangeData?.min ?? stepMin);
+    const effectiveMax = isViewingLiveGame ? stepMax : (stepRangeData?.max ?? stepMax);
 
-    // Sync to context so other components (App.tsx) see the range
+    // Sync REST range to context for historical runs so other components see it.
+    // Skip when viewing the live run -- Socket.io pushes drive the range.
     useEffect(() => {
-        if (stepRangeData) {
+        if (stepRangeData && !isViewingLiveGame) {
             setStepRange(stepRangeData.min, stepRangeData.max);
         }
-    }, [stepRangeData, setStepRange]);
+    }, [stepRangeData, setStepRange, isViewingLiveGame]);
 
     // Auto-select first run (API returns newest-first)
     useEffect(() => {
@@ -181,7 +185,17 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
     );
 
     const runOptions =
-        runs?.map((r) => ({ value: r.name, label: r.name })) ?? [];
+        runs?.map((r) => {
+            // Parse "20260318131128-pitiable-sigismundo-nesto" into readable label
+            const ts = r.name.slice(0, 14); // YYYYMMDDHHMMSS
+            const date = ts.length === 14
+                ? `${ts.slice(4, 6)}/${ts.slice(6, 8)} ${ts.slice(8, 10)}:${ts.slice(10, 12)}`
+                : "";
+            const suffix = r.games > 0 || r.steps > 0
+                ? ` -- ${r.games}g, ${r.steps} steps`
+                : "";
+            return { value: r.name, label: `${date} ${r.name.slice(15)}${suffix}` };
+        }) ?? [];
     const gameOptions =
         games?.map((g) => ({
             value: String(g.game_number),
@@ -328,11 +342,19 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
                         if (e.key === "ArrowRight" || e.key === "ArrowUp") {
                             e.stopPropagation();
                             e.preventDefault();
-                            stepForward();
+                            if (e.shiftKey) {
+                                setStep((prev) => Math.min(prev + 10, effectiveMax));
+                            } else {
+                                stepForward();
+                            }
                         } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
                             e.stopPropagation();
                             e.preventDefault();
-                            stepBack();
+                            if (e.shiftKey) {
+                                setStep((prev) => Math.max(prev - 10, effectiveMin));
+                            } else {
+                                stepBack();
+                            }
                         } else if (e.key === "Home") {
                             e.stopPropagation();
                             e.preventDefault();

@@ -42,7 +42,7 @@ describe("API client", () => {
 
             const result = await fetchRuns();
             expect(result).toEqual(runs);
-            expect(mockFetch).toHaveBeenCalledWith("/api/runs");
+            expect(mockFetch).toHaveBeenCalledWith("/api/runs?min_steps=10");
         });
 
         it("throws on non-ok response", async () => {

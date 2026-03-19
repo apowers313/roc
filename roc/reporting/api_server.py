@@ -55,9 +55,17 @@ async def _capture_event_loop() -> None:
     """
     import asyncio
 
-    global _sio_loop
+    global _sio_loop, _summary_thread
     _sio_loop = asyncio.get_running_loop()
     _server_ready.set()
+
+    # Populate run summary cache in a background thread so the first
+    # /api/runs response is fast (returns placeholders until cached).
+    if _data_dir is not None and _summary_thread is None:
+        _summary_thread = threading.Thread(
+            target=_populate_run_summaries, daemon=True, name="run-summaries",
+        )
+        _summary_thread.start()
 
 
 # Module-level state set by start_dashboard()
@@ -67,6 +75,7 @@ _live_run_name: str | None = None
 _live_store: DuckLakeStore | None = None
 _run_stores: dict[str, RunStore] = {}
 _store_lock = threading.Lock()
+_run_summary_cache: dict[str, RunSummary] = {}
 
 
 def _get_store(run_name: str) -> RunStore:
@@ -101,11 +110,26 @@ def _get_step_data(run_name: str, step: int) -> StepData:
     For the live run, tries StepBuffer first (in-memory, instant).
     Falls back to a separate DuckDB connection reading parquet files
     directly (bypasses the game's DuckLakeStore to avoid thread-safety issues).
+
+    StepBuffer data lacks ``logs`` (loguru output goes to a separate OTel
+    logger, not the game loop).  When the buffer hit has no logs, we
+    supplement from DuckLake so the LogMessages panel works during live play.
     """
     # Try StepBuffer first for the live run
     if run_name == _live_run_name and _step_buffer is not None:
         buf_data = _step_buffer.get_step(step)
         if buf_data is not None:
+            # Supplement missing logs from DuckLake
+            if buf_data.logs is None:
+                try:
+                    store = _get_store(run_name)
+                    logs_df = store.get_step(step, "logs")
+                    if len(logs_df) > 0:
+                        from typing import cast
+
+                        buf_data.logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
+                except Exception:
+                    pass  # logs are best-effort
             return buf_data
         # Step evicted from buffer -- fall through to parquet
 
@@ -145,18 +169,99 @@ class Bookmark(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Run summary cache -- populated in a background thread to avoid blocking
+# the API while opening hundreds of DuckDB connections.
+# ---------------------------------------------------------------------------
+
+_summary_thread: threading.Thread | None = None
+
+
+def _populate_run_summaries() -> None:
+    """Background thread: scan all runs and cache their game/step counts.
+
+    Processes newest runs first (most likely to be requested).  Uses
+    temporary DuckDB connections that are closed immediately after each
+    query to avoid holding locks that block request-serving threads.
+    Sleeps briefly between runs to yield CPU to request handlers.
+    """
+    import time
+
+    if _data_dir is None:
+        return
+    names = RunStore.list_runs(_data_dir)
+    names.reverse()  # newest first
+    for name in names:
+        if name in _run_summary_cache:
+            continue
+        if name == _live_run_name:
+            continue
+        try:
+            run_dir = _data_dir / name
+            if not run_dir.is_dir():
+                continue
+            # Open a temporary connection -- don't use _get_store() which
+            # caches connections and holds _store_lock, starving requests.
+            safe_alias = "sum_" + name.replace("-", "_").replace(".", "_")
+            dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
+            try:
+                store = RunStore(dl_store)
+                games_df = store.list_games()
+                games = len(games_df)
+                steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
+                _run_summary_cache[name] = RunSummary(name=name, games=games, steps=steps)
+            finally:
+                dl_store.close()
+        except Exception:
+            _run_summary_cache[name] = RunSummary(name=name, games=0, steps=0)
+        # Yield to request-serving threads between runs
+        time.sleep(0.05)
+
+
+def _get_run_summary(name: str) -> "RunSummary":
+    """Return a RunSummary, from cache if available.
+
+    For uncached historical runs, returns games=0/steps=0 (the background
+    thread will fill in the real values).  The live run is always queried
+    fresh since its step count grows.
+    """
+    is_live = name == _live_run_name
+    if not is_live and name in _run_summary_cache:
+        return _run_summary_cache[name]
+    if is_live:
+        try:
+            store = _get_store(name)
+            games_df = store.list_games()
+            games = len(games_df)
+            steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
+            return RunSummary(name=name, games=games, steps=steps)
+        except Exception:
+            return RunSummary(name=name, games=0, steps=0)
+    # Not yet cached -- return placeholder; background thread will fill it in
+    return RunSummary(name=name, games=0, steps=0)
+
+
+# ---------------------------------------------------------------------------
 # REST endpoints
 # ---------------------------------------------------------------------------
 
 
 @app.get("/api/runs")
-def list_runs() -> list[RunSummary]:
-    """List available runs with metadata."""
+def list_runs(min_steps: int = 10) -> list[RunSummary]:
+    """List available runs with metadata.
+
+    ``min_steps`` filters out short-lived / crashed runs (default 10).
+    Pass ``min_steps=0`` to include all runs.
+    """
     if _data_dir is None:
         return []
     names = RunStore.list_runs(_data_dir)
     names.reverse()  # newest first
-    return [RunSummary(name=name, games=0, steps=0) for name in names]
+    results: list[RunSummary] = []
+    for name in names:
+        summary = _get_run_summary(name)
+        if summary.steps >= min_steps:
+            results.append(summary)
+    return results
 
 
 @app.get("/api/runs/{run_name}/games")
@@ -310,6 +415,50 @@ def get_event_history(
     """Get event_summary for all steps in a game (for charting event activity)."""
     store = _get_store(run_name)
     data = store.get_event_history(game)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/intrinsics-history")
+def get_intrinsics_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get intrinsics for all steps in a game (for charting trends)."""
+    store = _get_store(run_name)
+    data = store.get_intrinsics_history(game)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/action-history")
+def get_action_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get action taken for all steps in a game (for charting action distribution)."""
+    store = _get_store(run_name)
+    data = store.get_action_history(game)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/resolution-history")
+def get_resolution_history(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get resolution accuracy history for charting correct/incorrect/new counts."""
+    store = _get_store(run_name)
+    data = store.get_resolution_history(game)
+    return JSONResponse(content=_convert_numpy(data))
+
+
+@app.get("/api/runs/{run_name}/all-objects")
+def get_all_objects(
+    run_name: str,
+    game: int | None = Query(default=None),
+) -> JSONResponse:
+    """Get all resolved objects with attributes, match counts, and creation step."""
+    store = _get_store(run_name)
+    data = store.get_all_objects(game)
     return JSONResponse(content=_convert_numpy(data))
 
 

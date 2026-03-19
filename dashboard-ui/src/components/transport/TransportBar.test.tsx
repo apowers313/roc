@@ -175,6 +175,33 @@ describe("TransportBar", () => {
         });
     });
 
+    // Regression (task 13): when useStepRange returns stale data but context
+    // has no data (undefined), the counter should fall back to context defaults
+    // (1 / 1) rather than showing a stale REST value. In live-following mode,
+    // Socket.io pushes update context directly, and REST data arrives later
+    // with a stale max. The fix ensures REST doesn't overwrite the live range.
+    describe("live-following step range", () => {
+        it("uses context range when REST data is undefined", () => {
+            mockUseStepRange.mockReturnValue({
+                data: undefined,
+            } as ReturnType<typeof useStepRange>);
+
+            renderWithProviders(<TransportBar />);
+            // Context defaults: stepMin=1, stepMax=1 -> "1 / 1"
+            expect(screen.getByText("1 / 1")).toBeInTheDocument();
+        });
+
+        it("shows REST range for historical mode", () => {
+            // In historical mode (default), REST data is authoritative
+            mockUseStepRange.mockReturnValue({
+                data: { min: 1, max: 500 },
+            } as ReturnType<typeof useStepRange>);
+
+            renderWithProviders(<TransportBar />);
+            expect(screen.getByText("1 / 500")).toBeInTheDocument();
+        });
+    });
+
     // Regression: clicking the slider then pressing arrow keys moved 2 steps
     // because the Slider's native arrow key behavior fired alongside our
     // global keyboard shortcuts. The fix: capture-phase onKeyDown on the

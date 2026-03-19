@@ -116,6 +116,10 @@ class Observability(metaclass=ObservabilityBase):
 
     _remote_log_configured: bool = False
     _parquet_configured: bool = False
+    # DuckLake/parquet store creation is deferred until roc.init() sets this
+    # to True. This prevents the module-level Observability.init() (needed
+    # for decorator tracers) from creating empty run directories.
+    _allow_parquet: bool = False
 
     def __init__(self) -> None:
         settings = Config.get()
@@ -143,18 +147,21 @@ class Observability(metaclass=ObservabilityBase):
                 )
                 Observability._remote_log_configured = True
 
-            # Parquet exporter (always active -- source of truth for per-step data)
-            from pathlib import Path
+            # Parquet exporter (source of truth for per-step data).
+            # Only created when _allow_parquet is set (by roc.init()),
+            # not during module-level init which just needs the tracer.
+            if Observability._allow_parquet:
+                from pathlib import Path
 
-            from roc.reporting.ducklake_store import DuckLakeStore
+                from roc.reporting.ducklake_store import DuckLakeStore
 
-            run_dir = Path(settings.data_dir) / instance_id
-            self._ducklake_store = DuckLakeStore(run_dir)
-            self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
-            logger_provider.add_log_record_processor(
-                SimpleLogRecordProcessor(self._parquet_exporter)
-            )
-            Observability._parquet_configured = True
+                run_dir = Path(settings.data_dir) / instance_id
+                self._ducklake_store = DuckLakeStore(run_dir)
+                self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
+                logger_provider.add_log_record_processor(
+                    SimpleLogRecordProcessor(self._parquet_exporter)
+                )
+                Observability._parquet_configured = True
 
             otel_logs.set_logger_provider(logger_provider=logger_provider)
 
@@ -193,18 +200,19 @@ class Observability(metaclass=ObservabilityBase):
                     )
                     Observability._remote_log_configured = True
 
-                # Parquet exporter (always active)
-                from pathlib import Path
+                # Parquet exporter -- only when _allow_parquet is set
+                if Observability._allow_parquet:
+                    from pathlib import Path
 
-                from roc.reporting.ducklake_store import DuckLakeStore
+                    from roc.reporting.ducklake_store import DuckLakeStore
 
-                run_dir = Path(settings.data_dir) / instance_id
-                self._ducklake_store = DuckLakeStore(run_dir)
-                self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
-                logger_provider.add_log_record_processor(
-                    SimpleLogRecordProcessor(self._parquet_exporter)
-                )
-                Observability._parquet_configured = True
+                    run_dir = Path(settings.data_dir) / instance_id
+                    self._ducklake_store = DuckLakeStore(run_dir)
+                    self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
+                    logger_provider.add_log_record_processor(
+                        SimpleLogRecordProcessor(self._parquet_exporter)
+                    )
+                    Observability._parquet_configured = True
 
                 otel_logs.set_logger_provider(logger_provider=logger_provider)
             self.set_event_logger(NoOpEventLogger("roc"))
@@ -270,10 +278,50 @@ class Observability(metaclass=ObservabilityBase):
             )
 
     @staticmethod
-    def init() -> None:
-        """Initializes the Observability singleton and configures debug exporters."""
+    def init(enable_parquet: bool = False) -> None:
+        """Initializes the Observability singleton and configures debug exporters.
+
+        When ``enable_parquet`` is True (set by ``roc.init()``), the DuckLake
+        store and parquet exporter are created. Without this flag (module-level
+        init), only the tracer/meter are set up -- no run directories are created.
+        """
+        if enable_parquet:
+            Observability._allow_parquet = True
         Observability()
+        # If parquet was just enabled and not yet configured, add the exporter
+        # to the existing logger provider. This handles the case where the
+        # module-level init created the singleton without parquet, and now
+        # roc.init() wants to add it.
+        if enable_parquet and not Observability._parquet_configured:
+            Observability._init_parquet()
         Observability._configure_debug_exporters()
+
+    @classmethod
+    def _init_parquet(cls) -> None:
+        """Add the DuckLake/parquet exporter to the existing logger provider.
+
+        Called after roc.init() sets _allow_parquet=True, if the module-level
+        init already created the singleton without parquet.
+        """
+        from pathlib import Path
+
+        from roc.config import Config
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        instance = ObservabilityBase._instances.get(cls)
+        if instance is None:
+            return
+        settings = Config.get()
+        run_dir = Path(settings.data_dir) / instance_id
+        instance._ducklake_store = DuckLakeStore(run_dir)
+        instance._parquet_exporter = ParquetExporter(store=instance._ducklake_store)
+        # Add to existing logger provider
+        provider = otel_logs.get_logger_provider()
+        if hasattr(provider, "add_log_record_processor"):
+            provider.add_log_record_processor(
+                SimpleLogRecordProcessor(instance._parquet_exporter)
+            )
+        cls._parquet_configured = True
 
     @classmethod
     def get_ducklake_store(cls) -> Any:
@@ -312,7 +360,7 @@ class Observability(metaclass=ObservabilityBase):
         needs_remote_log = settings.debug_remote_log and not getattr(
             cls, "_remote_log_configured", False
         )
-        needs_parquet = not getattr(cls, "_parquet_configured", False)
+        needs_parquet = cls._allow_parquet and not getattr(cls, "_parquet_configured", False)
         if not needs_remote_log and not needs_parquet:
             return
 
