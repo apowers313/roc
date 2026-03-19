@@ -63,7 +63,9 @@ async def _capture_event_loop() -> None:
     # /api/runs response is fast (returns placeholders until cached).
     if _data_dir is not None and _summary_thread is None:
         _summary_thread = threading.Thread(
-            target=_populate_run_summaries, daemon=True, name="run-summaries",
+            target=_populate_run_summaries,
+            daemon=True,
+            name="run-summaries",
         )
         _summary_thread.start()
 

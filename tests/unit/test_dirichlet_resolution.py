@@ -15,6 +15,7 @@ from roc.object import (
     ResolutionContext,
     _feature_to_objects,
 )
+from roc.perception import FeatureKind
 
 
 @pytest.fixture(autouse=True)
@@ -36,6 +37,7 @@ def make_feature_node(label: str, str_repr: str) -> MagicMock:
     """Create a mock FeatureNode with label and string representation."""
     fn = MagicMock()
     fn.labels = {label, "FeatureNode"}
+    fn.kind = FeatureKind.PHYSICAL
     fn.configure_mock(**{"__str__": MagicMock(return_value=str_repr)})
     return fn
 
@@ -170,48 +172,52 @@ class TestNoMatch:
         assert result is None  # new object wins
 
 
-class TestSpatialDisambiguation:
-    def test_closer_object_preferred(self):
-        """Two objects with identical features, different positions."""
+class TestUniformPriors:
+    def test_identical_candidates_match_one(self):
+        """Two objects with identical features and uniform priors -- one should win.
+
+        With uniform priors (no spatial/temporal), both candidates have the
+        same posterior. The system should still pick one (the MAP winner) or
+        return None if the posterior is split below threshold.
+        """
         resolution = DirichletCategoricalResolution()
         fn1 = make_feature_node("SingleNode", "SingleNode(a)")
 
-        obj_near = make_object_with_position(5, 5, tick=10)
-        obj_far = make_object_with_position(50, 50, tick=10)
+        obj_a = make_object_with_position(5, 5, tick=10)
+        obj_b = make_object_with_position(50, 50, tick=10)
 
         alphas = {"SingleNode(a)": 11.0}
-        resolution._alphas[obj_near.id] = alphas.copy()
-        resolution._alphas[obj_far.id] = alphas.copy()
+        resolution._alphas[obj_a.id] = alphas.copy()
+        resolution._alphas[obj_b.id] = alphas.copy()
         resolution._global_vocab = REALISTIC_VOCAB | {"SingleNode(a)"}
 
-        setup_multi_candidate_return([fn1], [obj_near, obj_far])
+        setup_multi_candidate_return([fn1], [obj_a, obj_b])
 
         fg = MagicMock()
         ctx = ResolutionContext(x=XLoc(6), y=YLoc(6), tick=11)
         result = resolution.resolve([fn1], fg, ctx)
-        assert result is obj_near
+        # With 2 identical candidates + new, each gets ~1/3 posterior.
+        # That's below 0.5 threshold, so result is None (low confidence).
+        assert result is None
 
-
-class TestTemporalDecay:
-    def test_recent_object_preferred(self):
-        """Two similar objects, one seen recently, one stale."""
+    def test_stronger_alphas_win(self):
+        """Object with stronger alpha profile wins over weaker one."""
         resolution = DirichletCategoricalResolution()
         fn1 = make_feature_node("SingleNode", "SingleNode(a)")
 
-        obj_recent = make_object_with_position(5, 5, tick=99)
-        obj_stale = make_object_with_position(5, 5, tick=1)
+        obj_strong = make_object_with_position(5, 5, tick=10)
+        obj_weak = make_object_with_position(50, 50, tick=10)
 
-        alphas = {"SingleNode(a)": 11.0}
-        resolution._alphas[obj_recent.id] = alphas.copy()
-        resolution._alphas[obj_stale.id] = alphas.copy()
+        resolution._alphas[obj_strong.id] = {"SingleNode(a)": 50.0}
+        resolution._alphas[obj_weak.id] = {"SingleNode(a)": 2.0}
         resolution._global_vocab = REALISTIC_VOCAB | {"SingleNode(a)"}
 
-        setup_multi_candidate_return([fn1], [obj_recent, obj_stale])
+        setup_multi_candidate_return([fn1], [obj_strong, obj_weak])
 
         fg = MagicMock()
-        ctx = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=100)
+        ctx = ResolutionContext(x=XLoc(6), y=YLoc(6), tick=11)
         result = resolution.resolve([fn1], fg, ctx)
-        assert result is obj_recent
+        assert result is obj_strong
 
 
 class TestAlphaAccumulation:

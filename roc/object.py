@@ -679,11 +679,13 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             candidate_details = []
             for obj in candidates[:5]:
                 lp = log_posteriors.get(obj.id, float("-inf"))
-                candidate_details.append({
-                    "id": str(obj.id),
-                    "probability": round(math.exp(lp), 6),
-                    **_extract_visual_attrs(obj),
-                })
+                candidate_details.append(
+                    {
+                        "id": str(obj.id),
+                        "probability": round(math.exp(lp), 6),
+                        **_extract_visual_attrs(obj),
+                    }
+                )
             record["candidate_details"] = candidate_details
 
         span_context = otel_trace.get_current_span().get_span_context()

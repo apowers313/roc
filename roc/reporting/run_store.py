@@ -429,11 +429,15 @@ class RunStore:
                     "match_count": 0,
                 }
             elif outcome == "match":
-                match_events.append({
-                    "matched_id": body.get("matched_object_id"),
-                    "matched_attrs": body.get("matched_attrs", {}),
-                    "shape": shape, "glyph": glyph, "color": color,
-                })
+                match_events.append(
+                    {
+                        "matched_id": body.get("matched_object_id"),
+                        "matched_attrs": body.get("matched_attrs", {}),
+                        "shape": shape,
+                        "glyph": glyph,
+                        "color": color,
+                    }
+                )
 
         # Pass 2: read new_object_id events to link node IDs
         id_df = self._store.query_df(

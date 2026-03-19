@@ -318,9 +318,7 @@ class Observability(metaclass=ObservabilityBase):
         # Add to existing logger provider
         provider = otel_logs.get_logger_provider()
         if hasattr(provider, "add_log_record_processor"):
-            provider.add_log_record_processor(
-                SimpleLogRecordProcessor(instance._parquet_exporter)
-            )
+            provider.add_log_record_processor(SimpleLogRecordProcessor(instance._parquet_exporter))
         cls._parquet_configured = True
 
     @classmethod

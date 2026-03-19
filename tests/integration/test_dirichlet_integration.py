@@ -18,12 +18,14 @@ from roc.object import (
     ResolutionContext,
     _feature_to_objects,
 )
+from roc.perception import FeatureKind
 
 
 def make_feature_node(label: str, str_repr: str) -> MagicMock:
     """Create a mock FeatureNode with label and string representation."""
     fn = MagicMock()
     fn.labels = {label, "FeatureNode"}
+    fn.kind = FeatureKind.PHYSICAL
     fn.configure_mock(**{"__str__": MagicMock(return_value=str_repr)})
     return fn
 
@@ -227,8 +229,8 @@ class TestDirichletIntegrationFlow:
         assert len(objects_created) <= 6, f"Created {len(objects_created)} objects, expected ~3"
 
     @patch("roc.graphdb.GraphDB.singleton")
-    def test_spatial_helps_disambiguate_identical_features(self, mock_db_cls):
-        """Two entities with same features at different positions."""
+    def test_alpha_strength_disambiguates_similar_objects(self, mock_db_cls):
+        """Object with stronger alphas wins when both are candidates."""
         mock_db = MagicMock()
         mock_db.strict_schema = False
         mock_db.strict_schema_warns = False
@@ -241,45 +243,29 @@ class TestDirichletIntegrationFlow:
         feat_strs = ["SingleNode(x)", "ColorNode(y)"]
         resolution._global_vocab.update(feat_strs)
 
-        # Create two objects with identical features at different positions
-        obj_a = make_object_with_position(5, 5, tick=1)
-        obj_b = make_object_with_position(50, 50, tick=1)
-        resolution.initialize_alphas(obj_a.id, feat_strs)
-        resolution.initialize_alphas(obj_b.id, feat_strs)
+        # Create two objects: one with many observations, one with few
+        obj_strong = make_object_with_position(5, 5, tick=1)
+        obj_weak = make_object_with_position(50, 50, tick=1)
+        resolution.initialize_alphas(obj_strong.id, feat_strs)
+        resolution.initialize_alphas(obj_weak.id, feat_strs)
 
-        # Warm up both objects with 10 observations each at their positions
-        for tick in range(2, 12):
+        # Simulate many observations for obj_strong to build strong alphas
+        for tick in range(2, 22):
             fn1 = make_feature_node("SingleNode", "SingleNode(x)")
             fn2 = make_feature_node("ColorNode", "ColorNode(y)")
-
-            # Observation at obj_a's position
-            setup_candidate_return([fn1, fn2], [obj_a, obj_b])
-            obj_a.last_tick = tick - 1
-            obj_b.last_tick = tick - 1
+            setup_candidate_return([fn1, fn2], [obj_strong])
             ctx = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=tick)
             result = resolution.resolve([fn1, fn2], fg, ctx)
-            # Update last seen for whichever matched
             if result is not None:
                 result.last_tick = tick
-                result.last_x = ctx.x
-                result.last_y = ctx.y
 
-        # After warmup, observation near obj_a should match obj_a
+        # Now both are candidates -- stronger alphas should win
         fn1 = make_feature_node("SingleNode", "SingleNode(x)")
         fn2 = make_feature_node("ColorNode", "ColorNode(y)")
-        setup_candidate_return([fn1, fn2], [obj_a, obj_b])
-        ctx_near_a = ResolutionContext(x=XLoc(6), y=YLoc(6), tick=20)
-        result_a = resolution.resolve([fn1, fn2], fg, ctx_near_a)
-        assert result_a is obj_a, "Observation near obj_a should match obj_a"
-
-        # Observation near obj_b should match obj_b
-        fn1 = make_feature_node("SingleNode", "SingleNode(x)")
-        fn2 = make_feature_node("ColorNode", "ColorNode(y)")
-        setup_candidate_return([fn1, fn2], [obj_a, obj_b])
-        obj_b.last_tick = 19  # recent
-        ctx_near_b = ResolutionContext(x=XLoc(50), y=YLoc(50), tick=21)
-        result_b = resolution.resolve([fn1, fn2], fg, ctx_near_b)
-        assert result_b is obj_b, "Observation near obj_b should match obj_b"
+        setup_candidate_return([fn1, fn2], [obj_strong, obj_weak])
+        ctx_test = ResolutionContext(x=XLoc(30), y=YLoc(30), tick=30)
+        result = resolution.resolve([fn1, fn2], fg, ctx_test)
+        assert result is obj_strong, "Object with stronger alphas should win"
 
 
 class TestDirichletTelemetry:

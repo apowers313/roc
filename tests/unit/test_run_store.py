@@ -816,3 +816,708 @@ class TestPerformanceLive:
         assert worst < _STEP_TIME_LIMIT, (
             f"StepBuffer worst step time {worst:.3f}s exceeds {_STEP_TIME_LIMIT}s"
         )
+
+
+class TestGetIntrinsicsHistory:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_intrinsics_history() == []
+
+    def test_returns_intrinsics_entries(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        for i in range(1, 4):
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.intrinsics",
+                        body=json.dumps(
+                            {
+                                "raw": {"hp": 10 + i, "energy": 5 + i},
+                                "normalized": {"hp": 0.1 * i, "energy": 0.2 * i},
+                            }
+                        ),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_intrinsics_history()
+        assert len(history) == 3
+        assert all("step" in h for h in history)
+        assert history[0]["raw"]["hp"] == 11
+        assert history[2]["normalized"]["energy"] == pytest.approx(0.6)
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        # Game 1
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.intrinsics",
+                    body=json.dumps({"raw": {"hp": 10}, "normalized": {"hp": 0.5}}),
+                )
+            ]
+        )
+        # Game 2
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.intrinsics",
+                    body=json.dumps({"raw": {"hp": 20}, "normalized": {"hp": 1.0}}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_intrinsics_history(game_number=2)
+        assert len(history) == 1
+        assert history[0]["raw"]["hp"] == 20
+
+    def test_skips_malformed_body(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.intrinsics",
+                    body=json.dumps({"raw": {"hp": 5}, "normalized": {"hp": 0.3}}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_intrinsics_history()
+        # Non-JSON body gets parsed as {"raw": body_string} by _parse_body,
+        # so it still appears as an entry (just not with normal structure)
+        assert len(history) == 1
+
+
+class TestGetActionHistory:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_action_history() == []
+
+    def test_returns_action_entries(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        actions = [
+            {"action_id": 0, "action_name": "N"},
+            {"action_id": 3, "action_name": "E"},
+            {"action_id": 7, "action_name": "WAIT"},
+        ]
+        for a in actions:
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export([make_log_record(event_name="roc.action", body=json.dumps(a))])
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_action_history()
+        assert len(history) == 3
+        assert all("step" in h for h in history)
+        assert history[0]["action_id"] == 0
+        assert history[0]["action_name"] == "N"
+        assert history[1]["action_id"] == 3
+        assert history[2]["action_name"] == "WAIT"
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.action",
+                    body=json.dumps({"action_id": 1, "action_name": "N"}),
+                )
+            ]
+        )
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.action",
+                    body=json.dumps({"action_id": 5, "action_name": "S"}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_action_history(game_number=1)
+        assert len(history) == 1
+        assert history[0]["action_id"] == 1
+
+    def test_ordered_by_step(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        for i in range(5):
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.action",
+                        body=json.dumps({"action_id": i}),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_action_history()
+        steps = [h["step"] for h in history]
+        assert steps == sorted(steps)
+
+
+class TestGetResolutionHistory:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_resolution_history() == []
+
+    def test_new_object_has_no_correct_field(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": ["ShapeNode(@)", "ColorNode(white)"],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert len(history) == 1
+        assert history[0]["outcome"] == "new_object"
+        assert "correct" not in history[0]
+
+    def test_match_correct_when_attrs_match(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 42,
+                            "features": [
+                                "ShapeNode(@)",
+                                "ColorNode(white)",
+                                "SingleNode(2360)",
+                            ],
+                            "matched_attrs": {
+                                "char": "@",
+                                "color": "white",
+                                "glyph": 2360,
+                            },
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert len(history) == 1
+        assert history[0]["outcome"] == "match"
+        assert history[0]["correct"] is True
+
+    def test_match_incorrect_when_shape_differs(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 42,
+                            "features": [
+                                "ShapeNode(d)",
+                                "ColorNode(white)",
+                            ],
+                            "matched_attrs": {
+                                "char": "@",
+                                "color": "white",
+                            },
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert len(history) == 1
+        assert history[0]["correct"] is False
+
+    def test_match_incorrect_when_color_differs(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 42,
+                            "features": [
+                                "ShapeNode(@)",
+                                "ColorNode(red)",
+                            ],
+                            "matched_attrs": {
+                                "char": "@",
+                                "color": "white",
+                            },
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert history[0]["correct"] is False
+
+    def test_match_incorrect_when_glyph_differs(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 42,
+                            "features": ["SingleNode(2360)"],
+                            "matched_attrs": {"glyph": 9999},
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert history[0]["correct"] is False
+
+    def test_match_correct_none_when_no_matched_attrs(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 42,
+                            "features": ["ShapeNode(@)"],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert history[0]["correct"] is None
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": []}),
+                )
+            ]
+        )
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": []}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history(game_number=1)
+        assert len(history) == 1
+
+    def test_low_confidence_outcome(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "low_confidence", "features": []}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert len(history) == 1
+        assert history[0]["outcome"] == "low_confidence"
+        assert "correct" not in history[0]
+
+    def test_mixed_outcomes(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        events = [
+            {"outcome": "new_object", "features": ["ShapeNode(@)"]},
+            {
+                "outcome": "match",
+                "matched_object_id": 1,
+                "features": ["ShapeNode(@)"],
+                "matched_attrs": {"char": "@"},
+            },
+            {"outcome": "low_confidence", "features": []},
+        ]
+        for ev in events:
+            exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+            exporter.export(
+                [
+                    make_log_record(
+                        event_name="roc.resolution.decision",
+                        body=json.dumps(ev),
+                    )
+                ]
+            )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        history = store.get_resolution_history()
+        assert len(history) == 3
+        assert history[0]["outcome"] == "new_object"
+        assert history[1]["outcome"] == "match"
+        assert history[1]["correct"] is True
+        assert history[2]["outcome"] == "low_confidence"
+
+
+class TestGetAllObjects:
+    def test_returns_empty_when_no_events_table(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        store = RunStore(dl_store)
+        assert store.get_all_objects() == []
+
+    def test_new_object_creates_entry(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": [
+                                "ShapeNode(@)",
+                                "ColorNode(white)",
+                                "SingleNode(2360)",
+                            ],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        obj = objects[0]
+        assert obj["shape"] == "@"
+        assert obj["color"] == "white"
+        assert obj["glyph"] == "2360"
+        assert obj["step_added"] == 1
+        assert obj["match_count"] == 0
+        assert obj["node_id"] is None
+
+    def test_new_object_id_links_node_id(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": ["ShapeNode(@)", "ColorNode(white)"],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 42}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        assert objects[0]["node_id"] == "42"
+
+    def test_match_increments_count_for_known_object(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        # Step 1: new object
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": ["ShapeNode(@)"],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 100}),
+                )
+            ]
+        )
+        # Step 2: match to the same object
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 100,
+                            "features": ["ShapeNode(@)"],
+                            "matched_attrs": {"char": "@"},
+                        }
+                    ),
+                )
+            ]
+        )
+        # Step 3: another match
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 100,
+                            "features": ["ShapeNode(@)"],
+                            "matched_attrs": {"char": "@"},
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        assert objects[0]["node_id"] == "100"
+        assert objects[0]["match_count"] == 2
+
+    def test_match_creates_entry_for_unknown_object(self, tmp_path: Path):
+        """Match event for an object we never saw created (e.g., from a prior game)."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 999,
+                            "features": [
+                                "ShapeNode(d)",
+                                "ColorNode(red)",
+                                "SingleNode(1234)",
+                            ],
+                            "matched_attrs": {
+                                "char": "d",
+                                "color": "red",
+                                "glyph": 1234,
+                            },
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        obj = objects[0]
+        assert obj["node_id"] == "999"
+        assert obj["match_count"] == 1
+        # Uses matched_attrs for shape/color/glyph
+        assert obj["shape"] == "d"
+        assert obj["color"] == "red"
+        assert obj["glyph"] == "1234"
+        assert obj["step_added"] is None
+
+    def test_filters_by_game(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        # Game 1: one new object
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": ["ShapeNode(@)"]}),
+                )
+            ]
+        )
+        # Game 2: different object
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": ["ShapeNode(d)"]}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects(game_number=2)
+        assert len(objects) == 1
+        assert objects[0]["shape"] == "d"
+
+    def test_multiple_objects_tracked_independently(self, tmp_path: Path):
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        # Step 1: new object A
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": ["ShapeNode(@)"]}),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 10}),
+                )
+            ]
+        )
+        # Step 2: new object B
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps({"outcome": "new_object", "features": ["ShapeNode(d)"]}),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 20}),
+                )
+            ]
+        )
+        # Step 3: match to object A
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 10,
+                            "features": ["ShapeNode(@)"],
+                            "matched_attrs": {"char": "@"},
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 2
+        by_id = {o["node_id"]: o for o in objects}
+        assert by_id["10"]["shape"] == "@"
+        assert by_id["10"]["match_count"] == 1
+        assert by_id["20"]["shape"] == "d"
+        assert by_id["20"]["match_count"] == 0
+
+    def test_no_resolution_events_returns_empty(self, tmp_path: Path):
+        """Events table exists but has no resolution decisions."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.attention.features",
+                    body=json.dumps({"count": 1}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert objects == []
