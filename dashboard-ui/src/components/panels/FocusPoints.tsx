@@ -2,6 +2,7 @@
 
 import { Card, Table, Text } from "@mantine/core";
 
+import { useHighlight } from "../../state/highlight";
 import type { StepData } from "../../types/step-data";
 
 interface FocusPointsProps {
@@ -30,6 +31,8 @@ function parseFocusRaw(raw: string): Array<Record<string, string>> {
 }
 
 export function FocusPoints({ data }: FocusPointsProps) {
+    const { togglePoint, points } = useHighlight();
+
     if (!data?.focus_points || data.focus_points.length === 0) {
         return (
             <Text size="xs" c="dimmed">
@@ -49,10 +52,12 @@ export function FocusPoints({ data }: FocusPointsProps) {
         );
     }
 
+    const highlightSet = new Set(points.map((p) => `${p.x},${p.y}`));
+
     return (
         <Card padding={6} radius="sm" withBorder>
             <Text size="xs" fw={600} c="dimmed" mb={2}>
-                Focus Points
+                Focus Points (click to highlight)
             </Text>
             <div style={{ maxHeight: 120, overflowY: "auto" }}>
                 <Table
@@ -76,21 +81,34 @@ export function FocusPoints({ data }: FocusPointsProps) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {rows.map((row, i) => (
-                            <Table.Tr key={i}>
-                                <Table.Td style={{ padding: 0 }}>
-                                    <Text size="xs">{row.x}</Text>
-                                </Table.Td>
-                                <Table.Td style={{ padding: 0 }}>
-                                    <Text size="xs">{row.y}</Text>
-                                </Table.Td>
-                                <Table.Td style={{ padding: 0, textAlign: "right" }}>
-                                    <Text size="xs">
-                                        {Number(row.strength).toFixed(2)}
-                                    </Text>
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
+                        {rows.map((row, i) => {
+                            // Backend x = col, y = row (matches CharGrid convention)
+                            const x = Number(row.x);
+                            const y = Number(row.y);
+                            const isHighlighted = highlightSet.has(`${x},${y}`);
+                            return (
+                                <Table.Tr
+                                    key={i}
+                                    onClick={() => togglePoint({ x, y, label: `focus #${i}` })}
+                                    style={{
+                                        cursor: "pointer",
+                                        background: isHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,
+                                    }}
+                                >
+                                    <Table.Td style={{ padding: 0 }}>
+                                        <Text size="xs">{row.x}</Text>
+                                    </Table.Td>
+                                    <Table.Td style={{ padding: 0 }}>
+                                        <Text size="xs">{row.y}</Text>
+                                    </Table.Td>
+                                    <Table.Td style={{ padding: 0, textAlign: "right" }}>
+                                        <Text size="xs">
+                                            {Number(row.strength).toFixed(2)}
+                                        </Text>
+                                    </Table.Td>
+                                </Table.Tr>
+                            );
+                        })}
                     </Table.Tbody>
                 </Table>
             </div>

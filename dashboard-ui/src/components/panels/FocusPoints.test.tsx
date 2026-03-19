@@ -32,7 +32,7 @@ describe("FocusPoints", () => {
         const data = makeStepData({ focus_points: [{ raw }] });
         renderWithProviders(<FocusPoints data={data} />);
 
-        expect(screen.getByText("Focus Points")).toBeInTheDocument();
+        expect(screen.getByText("Focus Points (click to highlight)")).toBeInTheDocument();
         expect(screen.getByText("28")).toBeInTheDocument();
         expect(screen.getByText("18")).toBeInTheDocument();
         expect(screen.getByText("0.93")).toBeInTheDocument();
