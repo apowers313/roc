@@ -3,10 +3,14 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import {
+    fetchActionHistory,
     fetchEventHistory,
     fetchGames,
     fetchGraphHistory,
+    fetchIntrinsicsHistory,
     fetchMetricsHistory,
+    fetchAllObjects,
+    fetchResolutionHistory,
     fetchRuns,
     fetchStep,
     fetchStepRange,
@@ -25,6 +29,8 @@ export function useGames(run: string) {
         queryKey: ["games", run],
         queryFn: () => fetchGames(run),
         enabled: run !== "",
+        // Refetch periodically so step counts and new games appear during live play
+        refetchInterval: 10_000,
     });
 }
 
@@ -82,6 +88,42 @@ export function useEventHistory(run: string, game?: number) {
     return useQuery({
         queryKey: ["event-history", run, game],
         queryFn: () => fetchEventHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useIntrinsicsHistory(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["intrinsics-history", run, game],
+        queryFn: () => fetchIntrinsicsHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useActionHistory(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["action-history", run, game],
+        queryFn: () => fetchActionHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useResolutionHistory(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["resolution-history", run, game],
+        queryFn: () => fetchResolutionHistory(run, game),
+        enabled: run !== "",
+        staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useAllObjects(run: string, game?: number) {
+    return useQuery({
+        queryKey: ["all-objects", run, game],
+        queryFn: () => fetchAllObjects(run, game),
         enabled: run !== "",
         staleTime: HISTORY_STALE_MS,
     });
