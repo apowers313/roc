@@ -21,6 +21,7 @@ export interface StepData {
     transform_summary: TransformData | null;
     prediction: PredictionData | null;
     message: string | null;
+    phonemes: PhonemeEntry[] | null;
     inventory: InventoryItem[] | null;
 }
 
@@ -52,6 +53,12 @@ export interface InventoryItem {
     letter: string;
     item: string;
     glyph: number;
+}
+
+export interface PhonemeEntry {
+    word: string;
+    phonemes: string[];
+    is_break: boolean;
 }
 
 export interface GridData {

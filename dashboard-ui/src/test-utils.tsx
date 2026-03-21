@@ -56,6 +56,7 @@ export function makeStepData(overrides: Partial<StepData> = {}): StepData {
         transform_summary: null,
         prediction: null,
         message: null,
+        phonemes: null,
         inventory: null,
         ...overrides,
     };

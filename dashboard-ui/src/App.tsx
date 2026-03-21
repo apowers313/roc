@@ -13,6 +13,7 @@ import { ErrorBoundary } from "./components/common/ErrorBoundary";
 import { useHighlight } from "./state/highlight";
 import { ActionPanel } from "./components/panels/ActionPanel";
 import { AllObjects } from "./components/panels/AllObjects";
+import { AuralPerception } from "./components/panels/AuralPerception";
 import { AttenuationPanel } from "./components/panels/AttenuationPanel";
 import { BookmarkTable } from "./components/panels/BookmarkTable";
 import { EventHistory } from "./components/panels/EventHistory";
@@ -26,7 +27,6 @@ import { IntrinsicsChart } from "./components/panels/IntrinsicsChart";
 import { IntrinsicsPanel } from "./components/panels/IntrinsicsPanel";
 import { InventoryPanel } from "./components/panels/InventoryPanel";
 import { LogMessages } from "./components/panels/LogMessages";
-import { MessageLog } from "./components/panels/MessageLog";
 import { ObjectInfo } from "./components/panels/ObjectInfo";
 import { PipelineStatus } from "./components/panels/PipelineStatus";
 import { ResolutionChart } from "./components/panels/ResolutionChart";
@@ -514,14 +514,9 @@ export function App() {
                     </Accordion.Item>
 
                     <Accordion.Item value="perception">
-                        <Accordion.Control>Perception</Accordion.Control>
+                        <Accordion.Control>Visual Perception</Accordion.Control>
                         <Accordion.Panel>
                             <Grid>
-                                <Grid.Col span={12}>
-                                    <ErrorBoundary>
-                                        <MessageLog data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
                                 <Grid.Col span={{ base: 12, md: 4 }}>
                                     <ErrorBoundary>
                                         <FeatureTable data={data} />
@@ -536,8 +531,17 @@ export function App() {
                         </Accordion.Panel>
                     </Accordion.Item>
 
+                    <Accordion.Item value="aural-perception">
+                        <Accordion.Control>Aural Perception</Accordion.Control>
+                        <Accordion.Panel>
+                            <ErrorBoundary>
+                                <AuralPerception data={data} />
+                            </ErrorBoundary>
+                        </Accordion.Panel>
+                    </Accordion.Item>
+
                     <Accordion.Item value="attention">
-                        <Accordion.Control>Attention</Accordion.Control>
+                        <Accordion.Control>Visual Attention</Accordion.Control>
                         <Accordion.Panel>
                             <Grid>
                                 <Grid.Col span={{ base: 12, md: 8 }}>
