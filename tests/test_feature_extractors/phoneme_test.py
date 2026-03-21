@@ -4,7 +4,7 @@
 from helpers.util import StubComponent
 
 from roc.component import Component
-from roc.feature_extractors.phoneme import Phoneme, PhonemeFeature
+from roc.feature_extractors.phoneme import Phoneme, PhonemeFeature, PhonemeWord
 from roc.perception import AuditoryData, Settled
 
 
@@ -29,11 +29,11 @@ class TestSingle:
         assert isinstance(e.data, PhonemeFeature)
         pf = e.data
         assert pf.phonemes == [
-            ["j", "ˈu"],
-            ["k", "æ", "n", "ˈɑ", "t"],
-            ["ˈi", "t"],
-            ["ð", "ˈæ", "t"],
-            ["‖"],
+            PhonemeWord(word="You", phonemes=["j", "ˈu"]),
+            PhonemeWord(word="cannot", phonemes=["k", "æ", "n", "ˈɑ", "t"]),
+            PhonemeWord(word="eat", phonemes=["ˈi", "t"]),
+            PhonemeWord(word="that", phonemes=["ð", "ˈæ", "t"]),
+            PhonemeWord(word="!", phonemes=["‖"], is_break=True),
         ]
 
         # event 2

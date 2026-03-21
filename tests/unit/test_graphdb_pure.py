@@ -153,7 +153,7 @@ class TestNodeListPure:
 
     def test_contains_non_node_non_int(self):
         nl = NodeList([NodeId(1)])
-        assert "string" not in nl
+        assert "string" not in nl  # type: ignore[comparison-overlap]
 
     def test_add_new_id(self):
         nl = NodeList([NodeId(1)])
@@ -216,7 +216,7 @@ class TestEdgeListPure:
 
     def test_contains_non_edge_non_int(self):
         el = EdgeList([EdgeId(10)])
-        assert "string" not in el
+        assert "string" not in el  # type: ignore[comparison-overlap]
 
     def test_add_new(self):
         el = EdgeList([EdgeId(10)])
@@ -272,8 +272,8 @@ class TestUtilityFunctions:
         assert true_filter("anything") is True
 
     def test_no_callback(self):
-        assert no_callback(None) is None
-        assert no_callback(42) is None
+        assert no_callback(None) is None  # type: ignore[func-returns-value]
+        assert no_callback(42) is None  # type: ignore[func-returns-value]
 
     def test_dot_safe_node_str_positive(self):
         assert _dot_safe_node_str(NodeId(5)) == "node5"

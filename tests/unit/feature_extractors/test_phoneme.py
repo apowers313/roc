@@ -7,8 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from gruut import sentences
 
-from roc.feature_extractors.phoneme import Phoneme, PhonemeFeature, PhonemeNode, PhonemeWord
-from roc.perception import AuditoryData
+from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeNode, PhonemeWord
 
 
 @pytest.fixture(autouse=True)
