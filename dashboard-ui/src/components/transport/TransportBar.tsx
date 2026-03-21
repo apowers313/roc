@@ -192,9 +192,9 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
                 ? `${ts.slice(4, 6)}/${ts.slice(6, 8)} ${ts.slice(8, 10)}:${ts.slice(10, 12)}`
                 : "";
             const suffix = r.games > 0 || r.steps > 0
-                ? ` -- ${r.games}g, ${r.steps} steps`
+                ? ` (${r.games}g, ${r.steps} steps)`
                 : "";
-            return { value: r.name, label: `${date} ${r.name.slice(15)}${suffix}` };
+            return { value: r.name, label: `[${date}] ${r.name.slice(15)}${suffix}` };
         }) ?? [];
     const gameOptions =
         games?.map((g) => ({
@@ -233,7 +233,7 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
                         }
                     }}
                     data={runOptions}
-                    style={{ width: 280 }}
+                    style={{ width: 420 }}
                 />
                 <Select
                     size="xs"
