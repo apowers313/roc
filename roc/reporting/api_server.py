@@ -347,12 +347,25 @@ def get_steps_batch(
     t0 = time.monotonic()
     step_nums = [int(s.strip()) for s in steps.split(",") if s.strip()]
     result: dict[str, Any] = {}
-    for step in step_nums:
+
+    # For historical runs, use batched query (one scan per table for all steps)
+    if run_name != _live_run_name or _step_buffer is None:
         try:
-            step_data = _get_step_data(run_name, step)
-            result[str(step)] = _convert_numpy(dataclasses.asdict(step_data))
+            store = _get_store(run_name)
+            batch = store.get_steps_data(step_nums)
+            for step, sd in batch.items():
+                result[str(step)] = _convert_numpy(dataclasses.asdict(sd))
         except Exception:
-            pass  # skip steps that fail
+            pass
+    else:
+        # Live run: use step buffer per-step
+        for step in step_nums:
+            try:
+                step_data = _get_step_data(run_name, step)
+                result[str(step)] = _convert_numpy(dataclasses.asdict(step_data))
+            except Exception:
+                pass
+
     t1 = time.monotonic()
     logger.debug(
         "GET steps batch ({} steps) total={:.1f}ms",

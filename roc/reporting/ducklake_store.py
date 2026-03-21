@@ -128,6 +128,46 @@ class DuckLakeStore:
                 return self._conn.execute(sql, params).fetchone()
             return self._conn.execute(sql).fetchone()
 
+    def query_step_batch(
+        self,
+        steps: list[int],
+        tables: list[str] | None = None,
+    ) -> dict[int, dict[str, pd.DataFrame]]:
+        """Query multiple tables for one or more steps efficiently.
+
+        Executes one ``SELECT ... WHERE step IN (...)`` per table under a
+        single lock acquisition, then splits the results by step.  This
+        avoids the per-query DuckLake catalog overhead that makes sequential
+        ``get_step`` calls slow (~100ms each -> 500ms for 5 tables).
+
+        Returns ``{step: {table_name: DataFrame}}``.
+        """
+        if tables is None:
+            tables = list(self.TABLES)
+        results: dict[int, dict[str, pd.DataFrame]] = {
+            s: {t: pd.DataFrame() for t in tables} for s in steps
+        }
+        if not steps:
+            return results
+        step_list = ", ".join(str(int(s)) for s in steps)
+        with self._lock:
+            for table in tables:
+                try:
+                    if not self._table_exists(table):
+                        continue
+                    src = f'{self._alias}."{table}"'
+                    df = self._conn.execute(
+                        f"SELECT * FROM {src} WHERE step IN ({step_list})"
+                    ).fetchdf()
+                    if len(df) > 0 and "step" in df.columns:
+                        for s in steps:
+                            mask = df["step"] == s
+                            if mask.any():
+                                results[s][table] = df[mask].reset_index(drop=True)
+                except Exception:
+                    pass
+        return results
+
     def has_table(self, table: str) -> bool:
         """Check whether a table exists in the DuckLake catalog."""
         with self._lock:

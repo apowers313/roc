@@ -751,11 +751,56 @@ class TestStepRange:
 # Performance regression tests
 # ---------------------------------------------------------------------------
 
-_STEP_TIME_LIMIT = 0.300  # seconds
+_STEP_TIME_LIMIT = 0.100  # 100ms per step -- dashboard needs <100ms for smooth playback
+_BATCH_TIME_LIMIT = 0.500  # 500ms for a 10-step batch
+
+
+@pytest.fixture()
+def large_populated_store(tmp_path: Path) -> DuckLakeStore:
+    """Create a DuckLakeStore with 500 steps and checkpoints.
+
+    This produces realistic parquet file counts (checkpoints every 50 steps)
+    to catch performance regressions that only appear with many small files.
+    """
+    store = DuckLakeStore(tmp_path)
+    exporter = ParquetExporter(store=store, background=False, checkpoint_interval=50)
+
+    exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+    for i in range(500):
+        screen_body = json.dumps({"chars": [[65 + (i % 26)]], "fg": [["#fff"]], "bg": [["#000"]]})
+        exporter.export([make_log_record(event_name="roc.screen", body=screen_body)])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.attention.saliency",
+                    body=json.dumps({"chars": [[0]], "fg": [["#f00"]], "bg": [["#000"]]}),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.attention.features",
+                    body=f"Feature: {i}",
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.game_metrics",
+                    body=json.dumps({"score": i, "hp": 14, "hp_max": 14}),
+                )
+            ]
+        )
+        exporter.export([make_log_record(body=f"loguru message {i}")])
+
+    exporter.shutdown()
+    return store
 
 
 class TestPerformanceHistorical:
-    """Performance: DuckLake catalog step access must be < 300ms."""
+    """Performance: DuckLake catalog step access must be < 100ms."""
 
     def test_get_step_data_under_limit(self, populated_store: DuckLakeStore):
         store = RunStore(populated_store)
@@ -790,8 +835,72 @@ class TestPerformanceHistorical:
         )
 
 
+class TestPerformanceRealistic:
+    """Performance: 500-step store with parquet files must stay fast."""
+
+    def test_single_step_under_limit(self, large_populated_store: DuckLakeStore):
+        store = RunStore(large_populated_store)
+        # Warm up
+        store.get_step_data(1)
+
+        times = []
+        for step in range(200, 210):
+            t0 = time.perf_counter()
+            sd = store.get_step_data(step)
+            elapsed = time.perf_counter() - t0
+            times.append(elapsed)
+            assert sd.step == step
+
+        avg = sum(times) / len(times)
+        worst = max(times)
+        assert worst < _STEP_TIME_LIMIT, (
+            f"Worst step time {worst:.3f}s exceeds {_STEP_TIME_LIMIT}s "
+            f"(avg={avg:.3f}s) -- query_step_batch may be regressed"
+        )
+
+    def test_batch_steps_under_limit(self, large_populated_store: DuckLakeStore):
+        store = RunStore(large_populated_store)
+        # Warm up
+        store.get_step_data(1)
+
+        steps = list(range(200, 210))
+        t0 = time.perf_counter()
+        results = store.get_steps_data(steps)
+        elapsed = time.perf_counter() - t0
+
+        assert len(results) == 10
+        for step in steps:
+            assert results[step].step == step
+        assert elapsed < _BATCH_TIME_LIMIT, (
+            f"10-step batch took {elapsed:.3f}s, exceeds {_BATCH_TIME_LIMIT}s"
+        )
+
+    def test_batch_faster_than_sequential(self, large_populated_store: DuckLakeStore):
+        """Batch fetch should be meaningfully faster than N sequential fetches."""
+        store = RunStore(large_populated_store)
+        store.get_step_data(1)  # warm up
+
+        steps = list(range(200, 210))
+
+        # Sequential
+        t0 = time.perf_counter()
+        for step in steps:
+            store.get_step_data(step)
+        seq_elapsed = time.perf_counter() - t0
+
+        # Batch
+        t0 = time.perf_counter()
+        store.get_steps_data(steps)
+        batch_elapsed = time.perf_counter() - t0
+
+        # Batch should be at least 2x faster than sequential
+        assert batch_elapsed < seq_elapsed * 0.75, (
+            f"Batch ({batch_elapsed:.3f}s) not faster than sequential ({seq_elapsed:.3f}s)"
+        )
+
+
 class TestPerformanceLive:
-    """Performance: live StepBuffer access must be < 300ms."""
+    """Performance: live StepBuffer access must be < 100ms."""
 
     def test_step_buffer_get_step_under_limit(self):
         from roc.reporting.step_buffer import StepBuffer

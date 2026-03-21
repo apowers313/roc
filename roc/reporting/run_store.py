@@ -35,6 +35,7 @@ class StepData:
     transform_summary: dict[str, Any] | None = None
     prediction: dict[str, Any] | None = None
     message: str | None = None
+    phonemes: list[dict[str, Any]] | None = None
     inventory: list[dict[str, Any]] | None = None
 
 
@@ -485,7 +486,28 @@ class RunStore:
 
     def get_step_data(self, step: int) -> StepData:
         """Assemble all available data for a single step."""
-        screen_df = self.get_step(step, "screens")
+        # Query all tables in one lock acquisition to avoid per-query
+        # DuckLake catalog overhead (~100ms each x 5 tables = 500ms).
+        dfs = self._store.query_step_batch([step])[step]
+        return self._assemble_step(step, dfs)
+
+    def get_steps_data(self, steps: list[int]) -> dict[int, StepData]:
+        """Assemble data for multiple steps in a single batched query.
+
+        Much faster than calling ``get_step_data`` in a loop because the
+        underlying DuckLake queries use ``step IN (...)`` -- each table is
+        scanned once for all requested steps.
+        """
+        all_dfs = self._store.query_step_batch(steps)
+        results: dict[int, StepData] = {}
+        for step in steps:
+            dfs = all_dfs.get(step, {})
+            results[step] = self._assemble_step(step, dfs)
+        return results
+
+    def _assemble_step(self, step: int, dfs: dict[str, pd.DataFrame]) -> StepData:
+        """Build a StepData from pre-fetched DataFrames for each table."""
+        screen_df = dfs.get("screens", pd.DataFrame())
         screen = None
         game_number = 0
         timestamp = None
@@ -495,12 +517,12 @@ class RunStore:
             game_number = int(row["game_number"])
             timestamp = row.get("timestamp")
 
-        sal_df = self.get_step(step, "saliency")
+        sal_df = dfs.get("saliency", pd.DataFrame())
         saliency = None
         if len(sal_df) > 0:
             saliency = _parse_body(sal_df.iloc[0].get("body"))
 
-        events_df = self.get_step(step, "events")
+        events_df = dfs.get("events", pd.DataFrame())
         features = None
         object_info = None
         focus_points = None
@@ -514,6 +536,7 @@ class RunStore:
         transform_summary = None
         prediction = None
         message = None
+        phonemes: list[dict[str, Any]] | None = None
         inventory = None
         if len(events_df) > 0:
             event_list: list[dict[str, Any]] = []
@@ -565,6 +588,17 @@ class RunStore:
                 elif event_name == "roc.message":
                     raw_body = row_dict.get("body", "")
                     message = str(raw_body).strip() if raw_body else None
+                elif event_name == "roc.phonemes":
+                    raw_body = row_dict.get("body", "")
+                    if raw_body:
+                        try:
+                            import json as _json
+
+                            parsed_ph = _json.loads(raw_body)
+                            if isinstance(parsed_ph, list):
+                                phonemes = parsed_ph
+                        except (ValueError, TypeError):
+                            pass
                 elif event_name == "roc.inventory":
                     raw_inv = row_dict.get("body", "")
                     if raw_inv:
@@ -583,12 +617,12 @@ class RunStore:
                 event_summary = event_list
 
         game_metrics = None
-        metrics_df = self.get_step(step, "metrics")
+        metrics_df = dfs.get("metrics", pd.DataFrame())
         if len(metrics_df) > 0:
             game_metrics = _parse_body(metrics_df.iloc[0].get("body"))
 
         logs = None
-        logs_df = self.get_step(step, "logs")
+        logs_df = dfs.get("logs", pd.DataFrame())
         if len(logs_df) > 0:
             logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
 
@@ -613,6 +647,7 @@ class RunStore:
             transform_summary=transform_summary,
             prediction=prediction,
             message=message,
+            phonemes=phonemes,
             inventory=inventory,
         )
 
