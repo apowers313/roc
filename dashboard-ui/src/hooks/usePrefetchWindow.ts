@@ -14,8 +14,8 @@ import { useEffect, useRef } from "react";
 import { fetchStepsBatch } from "../api/client";
 
 const DEFAULT_RADIUS = 100;
-const BATCH_SIZE = 5;
-const DEBOUNCE_MS = 300;
+const BATCH_SIZE = 50;
+const DEBOUNCE_MS = 50;
 
 export interface PrefetchOptions {
     radius?: number;
