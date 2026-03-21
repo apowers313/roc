@@ -26,11 +26,20 @@ class PhonemeNode(FeatureNode):
 
 
 @dataclass(kw_only=True)
+class PhonemeWord:
+    """A single word's phoneme decomposition from gruut."""
+
+    word: str
+    phonemes: list[str]
+    is_break: bool = False
+
+
+@dataclass(kw_only=True)
 class PhonemeFeature(Feature):
     """A collection of phoneme nodes."""
 
     feature_name: str = "Phonemes"
-    phonemes: list[list[str]]
+    phonemes: list[PhonemeWord]
 
     def _create_nodes(self) -> PhonemeNode:
         """Creates a new PhonemeNode."""
@@ -68,11 +77,22 @@ class Phoneme(FeatureExtractor[Point]):
         ad = e.data
         assert isinstance(ad, AuditoryData)
 
-        phonemes: list[list[str]] = []
-        for sent in sentences(ad.msg, lang="en-us"):
+        msg = ad.msg.strip("\x00").strip()
+        if not msg:
+            self.settled()
+            return
+
+        phonemes: list[PhonemeWord] = []
+        for sent in sentences(msg, lang="en-us"):
             for word in sent:
                 if word.phonemes:
-                    phonemes.append(word.phonemes)
+                    phonemes.append(
+                        PhonemeWord(
+                            word=word.text,
+                            phonemes=list(word.phonemes),
+                            is_break=word.is_major_break or word.is_minor_break,
+                        )
+                    )
 
         self.pb_conn.send(PhonemeFeature(origin_id=self.id, phonemes=phonemes))
         self.settled()

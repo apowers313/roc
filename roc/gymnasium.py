@@ -172,6 +172,7 @@ class Gym(Component, ABC):
                     _transform_summary = None
                     _prediction = None
                     _message = None
+                    _phonemes = None
                     _inventory = None
 
                     if _states.intrinsic.val is not None:
@@ -217,6 +218,15 @@ class Gym(Component, ABC):
                         _msg = _states.message.val.strip()
                         if _msg:
                             _message = _msg
+
+                    _phonemes = (
+                        [
+                            {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
+                            for pw in _states.phonemes.val
+                        ]
+                        if _states.phonemes.val is not None
+                        else None
+                    )
 
                     # Inventory from obs
                     try:
@@ -298,6 +308,7 @@ class Gym(Component, ABC):
                             transform_summary=_transform_summary,
                             prediction=_prediction,
                             message=_message,
+                            phonemes=_phonemes,
                             inventory=_inventory,
                         )
                     )

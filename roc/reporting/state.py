@@ -25,6 +25,7 @@ from roc.graphdb import Edge, Node, Schema
 from roc.intrinsic import Intrinsic, IntrinsicData
 from roc.logger import logger
 from roc.object import Object, ObjectResolver, ResolvedObject
+from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeWord
 from roc.perception import AuditoryData, Perception, PerceptionData
 from roc.predict import NoPrediction, Predict, PredictData
 from roc.reporting.observability import Observability, Observation, instance_id, resource
@@ -160,6 +161,17 @@ class State(ABC, Generic[StateType]):
             states.message.set(e.data.msg.strip("\x00").strip())
 
         msg_conn.listen(msg_evt_handler, filter=lambda e: isinstance(e.data, AuditoryData))
+
+        # phonemes
+        phoneme_conn = Perception.bus.connect(state_component)
+
+        def phoneme_evt_handler(e: Event[PerceptionData]) -> None:
+            assert isinstance(e.data, PhonemeFeature)
+            states.phonemes.set(list(e.data.phonemes))
+
+        phoneme_conn.listen(
+            phoneme_evt_handler, filter=lambda e: isinstance(e.data, PhonemeFeature)
+        )
 
         State.print_startup_info()
 
@@ -337,6 +349,17 @@ class State(ABC, Generic[StateType]):
             msg = current_states.message.val.strip()
             if msg:
                 _emit_state_record("roc.message", msg)
+
+        # Phonemes
+        if current_states.phonemes.val is not None:
+            phoneme_dicts = [
+                {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
+                for pw in current_states.phonemes.val
+            ]
+            _emit_state_record(
+                "roc.phonemes",
+                json.dumps(phoneme_dicts, separators=(",", ":")),
+            )
 
         # Graph DB summary
         node_cache = Node.get_cache()
@@ -660,6 +683,23 @@ class CurrentMessageState(State[str]):
             return "Current Message: None"
 
 
+class CurrentPhonemeState(State[list[PhonemeWord]]):
+    """Tracks the most recent phoneme decomposition."""
+
+    def __init__(self) -> None:
+        super().__init__("curr-phonemes", display_name="Current Phonemes")
+
+    def set(self, phonemes: list[PhonemeWord]) -> None:
+        """Sets the current phonemes."""
+        self.val = phonemes
+
+    def __str__(self) -> str:
+        if self.val is not None:
+            return f"Current Phonemes: {len(self.val)} entries"
+        else:
+            return "Current Phonemes: None"
+
+
 class CurrentResolutionState(State[dict[str, Any]]):
     """Tracks the most recent object resolution decision (set from OTel emission site)."""
 
@@ -732,6 +772,7 @@ class StateList:
     transform: CurrentTransformState = CurrentTransformState()
     predict: CurrentPredictState = CurrentPredictState()
     message: CurrentMessageState = CurrentMessageState()
+    phonemes: CurrentPhonemeState = CurrentPhonemeState()
     resolution: CurrentResolutionState = CurrentResolutionState()
     attenuation_data: CurrentAttenuationState = CurrentAttenuationState()
     components: ComponentsState = ComponentsState()
