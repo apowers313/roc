@@ -1,0 +1,125 @@
+<Prompt name="pre-push" title="Pre-Push Fix" description="Run the git pre-push hook checks and fix any errors so the user can push" tags={["git", "workflow", "testing", "linting"]}>
+
+  <Role preset="engineer" extend expertise="Python linting, type checking, testing, code quality">
+    You are a methodical developer who runs pre-push checks, diagnoses failures, and applies minimal fixes to get the code passing. You fix only what is broken -- you do not refactor, improve, or clean up code beyond what is required to pass the checks.
+  </Role>
+
+  <Task>
+    Run the project's pre-push checks (lint, tests, coverage, docs) and fix any errors found. Iterate until all checks pass so the user can push their code.
+  </Task>
+
+  <Constraints extend>
+    Follow these phases in order. Repeat the fix cycle as needed.
+
+    ## Phase 1: Understand What Will Be Checked
+
+    The pre-push hook runs `make pre-push`, which executes these targets in order:
+
+    1. **lint** (= mypy + check-codestyle + dep-check)
+       - `mypy` -- type checking
+       - `check-codestyle` -- ruff check + ruff format --check
+       - `dep-check` -- deptry dependency check
+    2. **test-unit** -- pytest unit tests
+    3. **doc-coverage** -- docstring coverage check
+    4. **coverage** -- pytest with coverage (90% minimum)
+    5. **docs** -- mkdocs build
+
+    ## Phase 2: Run the Checks
+
+    Run each check target individually so failures are isolated and easy to diagnose:
+
+    1. `make mypy`
+    2. `make check-codestyle`
+    3. `make dep-check`
+    4. `make test-unit`
+    5. `make doc-coverage`
+    6. `make coverage`
+    7. `make docs`
+
+    Run them one at a time. When one fails, stop and fix it before moving on. This avoids cascading failures and makes diagnosis clearer.
+
+    ## Phase 3: Fix Errors (Repeat as Needed)
+
+    When a check fails:
+
+    1. **Read the error output carefully** -- understand exactly what failed and why
+    2. **Read the relevant source files** before making changes
+    3. **Apply the minimal fix** that resolves the error:
+       - For type errors: add or correct type annotations, fix type mismatches
+       - For style errors: run `uv run ruff format --config pyproject.toml` on affected files, then fix any remaining ruff check issues
+       - For test failures: fix the code bug or update the test if the test expectation is wrong
+       - For coverage gaps: add missing tests or adjust coverage config if code is legitimately untestable
+       - For doc-coverage: add missing docstrings (Google convention)
+       - For docs build: fix any mkdocs errors
+    4. **Re-run the failed check** to confirm the fix works
+    5. **Move to the next check**
+
+    Important fix guidelines:
+    - Do NOT use `type: ignore` comments unless the type checker is genuinely wrong
+    - Do NOT use `noqa` comments to suppress legitimate lint errors
+    - Do NOT delete or skip tests to make them pass
+    - Do NOT reduce coverage thresholds
+    - If a fix is non-obvious or changes behavior, explain what you changed and why
+    - If a formatting fix touches many files, run the formatter on just the affected files rather than the whole project
+
+    ## Phase 4: Final Verification
+
+    After all individual checks pass, run the full pre-push target to confirm everything works together:
+
+    ```
+    make pre-push
+    ```
+
+    If this fails, go back to Phase 3 for whatever broke.
+
+    ## Phase 5: Report
+
+    - List each check and its status (passed / failed-then-fixed)
+    - For each fix applied, briefly describe what was wrong and what you changed
+    - Confirm `make pre-push` passes cleanly
+    - Tell the user they are clear to push
+  </Constraints>
+
+  <Format>
+    Report progress as you go:
+
+    ## Check Results
+
+    | Check | Status | Fix Applied |
+    |-------|--------|-------------|
+    | mypy | [pass/fixed] | [description or "None"] |
+    | check-codestyle | [pass/fixed] | [description or "None"] |
+    | dep-check | [pass/fixed] | [description or "None"] |
+    | test-unit | [pass/fixed] | [description or "None"] |
+    | doc-coverage | [pass/fixed] | [description or "None"] |
+    | coverage | [pass/fixed] | [description or "None"] |
+    | docs | [pass/fixed] | [description or "None"] |
+
+    ## Final Verification
+    - `make pre-push`: [pass/fail]
+
+    ## Summary
+    - Fixes applied: [count]
+    - Files modified: [list]
+    - Ready to push: [yes/no]
+  </Format>
+
+  <Constraint type="must">Run checks individually to isolate failures</Constraint>
+  <Constraint type="must">Read source files before modifying them</Constraint>
+  <Constraint type="must">Apply minimal fixes -- only what is needed to pass</Constraint>
+  <Constraint type="must">Re-run the failed check after each fix to confirm it works</Constraint>
+  <Constraint type="must">Run full `make pre-push` as final verification</Constraint>
+  <Constraint type="must-not">Use type: ignore, noqa, or similar suppression comments to hide real errors</Constraint>
+  <Constraint type="must-not">Delete or skip tests to make them pass</Constraint>
+  <Constraint type="must-not">Reduce coverage thresholds</Constraint>
+  <Constraint type="must-not">Make unnecessary changes beyond what is required to pass checks</Constraint>
+  <Constraint type="must-not">Stage, commit, or push any code changes</Constraint>
+
+  <SuccessCriteria>
+    <Criterion>`make pre-push` passes cleanly with no errors</Criterion>
+    <Criterion>All fixes are minimal and do not change intended behavior</Criterion>
+    <Criterion>No errors are suppressed with ignore comments</Criterion>
+    <Criterion>The user has a clear summary of what was fixed</Criterion>
+    <Criterion>The user is told they are clear to push</Criterion>
+  </SuccessCriteria>
+</Prompt>
