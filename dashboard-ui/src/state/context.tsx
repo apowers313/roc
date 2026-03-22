@@ -27,7 +27,7 @@ import {
 // URL param helpers -- persist navigation state across reloads
 // ---------------------------------------------------------------------------
 
-function readUrlParams(): { run?: string; game?: number; step?: number } {
+export function readUrlParams(): { run?: string; game?: number; step?: number } {
     const params = new URLSearchParams(window.location.search);
     const run = params.get("run") ?? undefined;
     const game = params.has("game") ? Number(params.get("game")) : undefined;
@@ -94,6 +94,9 @@ interface DashboardState {
     /** The game number currently being played live. */
     liveGameNumber: number;
     setLiveGameNumber: (game: number) => void;
+    /** Whether a live game is currently active (from status poll). */
+    liveGameActive: boolean;
+    setLiveGameActive: (active: boolean) => void;
 }
 
 const DashboardContext = createContext<DashboardState | null>(null);
@@ -111,6 +114,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const [speed, setSpeedRaw] = useState(readSessionSpeed);
     const [liveRunName, setLiveRunName] = useState("");
     const [liveGameNumber, setLiveGameNumber] = useState(0);
+    const [liveGameActive, setLiveGameActive] = useState(false);
     const [playback, dispatchPlayback] = useReducer(
         playbackReducer,
         "historical" as PlaybackState,
@@ -167,6 +171,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
                 setLiveRunName,
                 liveGameNumber,
                 setLiveGameNumber,
+                liveGameActive,
+                setLiveGameActive,
             }}
         >
             {children}

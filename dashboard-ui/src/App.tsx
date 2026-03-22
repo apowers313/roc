@@ -65,6 +65,8 @@ export function App() {
         liveRunName,
         setLiveRunName,
         setLiveGameNumber,
+        liveGameActive,
+        setLiveGameActive,
     } = useDashboard();
 
     const { data: games } = useGames(run);
@@ -127,6 +129,12 @@ export function App() {
 
     // Track whether we've auto-selected the live run
     const liveRunSelected = useRef(false);
+    // Track the run name from the initial URL (if any). Used to avoid
+    // overriding explicit URL navigation to a specific run/step, while
+    // still allowing auto-navigation to a NEW game the user starts.
+    const initialUrlRun = useRef<string | null>(
+        new URLSearchParams(window.location.search).get("run"),
+    );
 
     // Use refs to avoid stale closures in the Socket.io callback
     const runRef = useRef(run);
@@ -265,12 +273,12 @@ export function App() {
     // Go live: jump to the live game's latest step and resume following.
     // Used by the "GO LIVE" badge click and the "L" keyboard shortcut.
     const goLive = useCallback(() => {
-        if (!liveRunName) return;
+        if (!liveGameActive || !liveRunName) return;
         setRun(liveRunName);
         dispatchPlayback({ type: "GO_LIVE" });
         // The next Socket.io push will set the game, step, and range
         // via onNewStep's live_following path.
-    }, [liveRunName, setRun, dispatchPlayback]);
+    }, [liveGameActive, liveRunName, setRun, dispatchPlayback]);
 
     // Speed intervals ordered slow -> fast (matching SPEED_OPTIONS in TransportBar)
     const SPEED_VALUES = [2000, 1000, 500, 200, 100, 50, 16] as const;
@@ -341,25 +349,38 @@ export function App() {
         cycleGame,
     });
 
-    // Track the live run name and game number from status polls
+    // Track the live run name, game number, and active state from status polls
     useEffect(() => {
         if (liveStatus?.active && liveStatus.run_name) {
             setLiveRunName(liveStatus.run_name);
             setLiveGameNumber(liveStatus.game_number);
         }
-    }, [liveStatus, setLiveRunName, setLiveGameNumber]);
+        setLiveGameActive(liveStatus?.active ?? false);
+    }, [liveStatus, setLiveRunName, setLiveGameNumber, setLiveGameActive]);
 
     // Auto-select the live run when a game starts.
     // Sets the run and game to match the live session, then GO_LIVE
     // so Socket.io pushes advance the step cursor.
     // The per-game step range is set by the useStepRange REST query
     // (authoritative), not from liveStatus (which reports global range).
+    const prevLiveRunName = useRef<string | null>(null);
     useEffect(() => {
-        if (
-            liveStatus?.active &&
-            liveStatus.run_name &&
-            !liveRunSelected.current
-        ) {
+        if (!liveStatus?.active || !liveStatus.run_name) return;
+
+        const isNewRun = liveStatus.run_name !== prevLiveRunName.current;
+        prevLiveRunName.current = liveStatus.run_name;
+
+        // Auto-navigate when a new live run appears. Block only if
+        // the live run matches the URL's explicit run (user navigated
+        // to a specific step of that run and we shouldn't override it).
+        // A different run name means the user started a new game -- always navigate.
+        if (isNewRun && liveStatus.run_name !== initialUrlRun.current) {
+            liveRunSelected.current = true;
+            setRun(liveStatus.run_name);
+            setGame(liveStatus.game_number);
+            setStep(liveStatus.step);
+            dispatchPlayback({ type: "GO_LIVE" });
+        } else if (!liveRunSelected.current && !initialUrlRun.current) {
             liveRunSelected.current = true;
             setRun(liveStatus.run_name);
             setGame(liveStatus.game_number);

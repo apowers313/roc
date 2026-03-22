@@ -2,6 +2,7 @@
 
 import { Badge, Group, Progress, Text } from "@mantine/core";
 
+import { useDashboard } from "../../state/context";
 import type { StepData } from "../../types/step-data";
 
 interface StatusBarProps {
@@ -19,10 +20,13 @@ function hpColor(hp: number, hpMax: number): string {
 }
 
 export function StatusBar({ data, playbackState, onGoLive }: StatusBarProps) {
+    const { liveGameActive } = useDashboard();
     const metrics = data?.game_metrics;
     const isLive = playbackState === "live_following";
-    const canGoLive =
-        playbackState === "live_paused" || playbackState === "live_catchup";
+    // Show GO LIVE whenever a live game is running and we're not following it.
+    // This covers historical mode (user navigated away), live_paused, and
+    // live_catchup -- any state where clicking would return to live.
+    const canGoLive = !isLive && liveGameActive;
 
     return (
         <Group gap="md" px={8} py={4}>

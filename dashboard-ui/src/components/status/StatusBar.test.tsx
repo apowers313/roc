@@ -1,8 +1,17 @@
 import { screen, fireEvent } from "@testing-library/react";
+import { useEffect, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { useDashboard } from "../../state/context";
 import { makeStepData, renderWithProviders } from "../../test-utils";
 import { StatusBar } from "./StatusBar";
+
+/** Helper that sets liveGameActive=true in context before rendering children. */
+function SetLiveActive({ children }: { children: ReactNode }) {
+    const { setLiveGameActive } = useDashboard();
+    useEffect(() => { setLiveGameActive(true); }, [setLiveGameActive]);
+    return <>{children}</>;
+}
 
 describe("StatusBar", () => {
     it("shows step/game when no metrics", () => {
@@ -42,14 +51,18 @@ describe("StatusBar", () => {
 
     it("shows LIVE badge when live_following", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_following" />,
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="live_following" />
+            </SetLiveActive>,
         );
         expect(screen.getByText("LIVE")).toBeInTheDocument();
     });
 
     it("LIVE badge is not clickable", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_following" />,
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="live_following" />
+            </SetLiveActive>,
         );
         const badge = screen.getByText("LIVE");
         // Should not have a click handler / button role
@@ -58,14 +71,27 @@ describe("StatusBar", () => {
 
     it("shows GO LIVE badge when live_paused", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_paused" onGoLive={() => {}} />,
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="live_paused" onGoLive={() => {}} />
+            </SetLiveActive>,
         );
         expect(screen.getByText("GO LIVE")).toBeInTheDocument();
     });
 
     it("shows GO LIVE badge when live_catchup", () => {
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_catchup" onGoLive={() => {}} />,
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="live_catchup" onGoLive={() => {}} />
+            </SetLiveActive>,
+        );
+        expect(screen.getByText("GO LIVE")).toBeInTheDocument();
+    });
+
+    it("shows GO LIVE badge when historical but live game is active", () => {
+        renderWithProviders(
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="historical" onGoLive={() => {}} />
+            </SetLiveActive>,
         );
         expect(screen.getByText("GO LIVE")).toBeInTheDocument();
     });
@@ -73,13 +99,26 @@ describe("StatusBar", () => {
     it("GO LIVE badge is clickable and calls onGoLive", () => {
         const onGoLive = vi.fn();
         renderWithProviders(
-            <StatusBar data={undefined} playbackState="live_paused" onGoLive={onGoLive} />,
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="live_paused" onGoLive={onGoLive} />
+            </SetLiveActive>,
         );
         fireEvent.click(screen.getByText("GO LIVE"));
         expect(onGoLive).toHaveBeenCalledOnce();
     });
 
-    it("shows no badge for historical playback", () => {
+    it("GO LIVE from historical mode calls onGoLive", () => {
+        const onGoLive = vi.fn();
+        renderWithProviders(
+            <SetLiveActive>
+                <StatusBar data={undefined} playbackState="historical" onGoLive={onGoLive} />
+            </SetLiveActive>,
+        );
+        fireEvent.click(screen.getByText("GO LIVE"));
+        expect(onGoLive).toHaveBeenCalledOnce();
+    });
+
+    it("shows no badge for historical playback without live game", () => {
         renderWithProviders(
             <StatusBar data={undefined} playbackState="historical" />,
         );

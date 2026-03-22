@@ -10,9 +10,13 @@ interface AuralPerceptionProps {
 
 export function AuralPerception({ data }: AuralPerceptionProps) {
     const msg = data?.message;
-    const phonemes = data?.phonemes;
+    const rawPhonemes = data?.phonemes;
+    // Filter out legacy format entries (plain arrays instead of {word, phonemes, is_break})
+    const phonemes = rawPhonemes?.filter(
+        (entry): entry is typeof entry => entry != null && typeof entry === "object" && "word" in entry,
+    );
 
-    if (!msg && !phonemes) {
+    if (!msg && (!phonemes || phonemes.length === 0)) {
         return (
             <Text size="xs" c="dimmed">
                 No auditory data this step

@@ -21,6 +21,7 @@ describe("DashboardProvider / useDashboard", () => {
         expect(result.current.playing).toBe(false);
         expect(result.current.speed).toBe(200);
         expect(result.current.liveRunName).toBe("");
+        expect(result.current.liveGameActive).toBe(false);
         expect(result.current.playback).toBe("historical");
     });
 

@@ -26,6 +26,7 @@ export function useLiveUpdates({ onNewStep }: UseLiveUpdatesOptions = {}) {
     const socketRef = useRef<Socket | null>(null);
     const onNewStepRef = useRef(onNewStep);
     onNewStepRef.current = onNewStep;
+    const pollLiveStatusRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
     useEffect(() => {
         // Connect to the API server's Socket.io endpoint.
@@ -48,13 +49,18 @@ export function useLiveUpdates({ onNewStep }: UseLiveUpdatesOptions = {}) {
             onNewStepRef.current?.(data);
         });
 
+        // React immediately to game state changes instead of waiting for poll
+        socket.on("game_state_changed", () => {
+            void pollLiveStatusRef.current();
+        });
+
         return () => {
             socket.disconnect();
             socketRef.current = null;
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Poll live status periodically
+    // Poll live status periodically. Ref is used by Socket.io callback above.
     const pollLiveStatus = useCallback(async () => {
         try {
             const res = await fetch("/api/live/status");
@@ -66,6 +72,8 @@ export function useLiveUpdates({ onNewStep }: UseLiveUpdatesOptions = {}) {
             // ignore fetch errors
         }
     }, []);
+
+    pollLiveStatusRef.current = pollLiveStatus;
 
     useEffect(() => {
         void pollLiveStatus();
