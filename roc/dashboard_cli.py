@@ -39,10 +39,9 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     # Set module-level state for the API server (no StepBuffer needed for
     # historical-only mode).
     import roc.reporting.api_server as srv
+    from roc.reporting.data_store import DataStore
 
-    srv._data_dir = data_dir
-    srv._live_run_name = None
-    srv._step_buffer = None
+    srv._data_store = DataStore(data_dir=data_dir)
 
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)

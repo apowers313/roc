@@ -1,0 +1,532 @@
+"""Unified data access layer for the ROC debug dashboard.
+
+Provides a single DataStore class that:
+- Receives live step pushes and incrementally builds per-game history indices
+- Serves history queries from in-memory indices for live runs (O(1) lookup)
+- Delegates to DuckLake/RunStore for historical runs (unchanged path)
+- Absorbs the module-level globals previously scattered across api_server.py
+"""
+
+from __future__ import annotations
+
+import threading
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+from pydantic import BaseModel
+
+from roc.logger import logger
+from roc.reporting.ducklake_store import DuckLakeStore
+from roc.reporting.run_store import (
+    RunStore,
+    StepData,
+    compute_match_correctness,
+    parse_feature_attrs,
+)
+from roc.reporting.step_buffer import StepBuffer
+
+
+class RunSummary(BaseModel):
+    """Summary metadata for a single run."""
+
+    name: str
+    games: int
+    steps: int
+
+
+@dataclass
+class _GameIndex:
+    """Incremental history accumulator for a single game.
+
+    Each field is appended to on every step push.  Memory cost is
+    ~5.6 MB for 100K steps x 6 indices (pointers to existing dicts).
+    """
+
+    graph_history: list[dict[str, Any]] = field(default_factory=list)
+    event_history: list[dict[str, Any]] = field(default_factory=list)
+    intrinsics_history: list[dict[str, Any]] = field(default_factory=list)
+    metrics_history: list[dict[str, Any]] = field(default_factory=list)
+    action_history: list[dict[str, Any]] = field(default_factory=list)
+    resolution_events: list[dict[str, Any]] = field(default_factory=list)
+
+
+class DataStore:
+    """Single point of access for all dashboard data.
+
+    Receives live step pushes and incrementally builds per-game history
+    indices.  Serves history queries from in-memory indices for live runs.
+    Delegates to DuckLake/RunStore for historical runs.
+    """
+
+    def __init__(self, data_dir: Path) -> None:
+        self._data_dir = data_dir
+        self._live_run_name: str | None = None
+        self._live_buffer: StepBuffer | None = None
+        self._live_store: DuckLakeStore | None = None
+        self._indices: dict[int, _GameIndex] = {}
+        self._lock = threading.Lock()
+        self._run_stores: dict[str, RunStore] = {}
+        self._store_lock = threading.Lock()
+        self._run_summary_cache: dict[str, RunSummary] = {}
+
+    @property
+    def data_dir(self) -> Path:
+        """The root data directory containing run subdirectories."""
+        return self._data_dir
+
+    @property
+    def live_run_name(self) -> str | None:
+        """Name of the currently live run, or None."""
+        return self._live_run_name
+
+    @property
+    def live_buffer(self) -> StepBuffer | None:
+        """The StepBuffer for the live session, or None."""
+        return self._live_buffer
+
+    # -------------------------------------------------------------------
+    # Session lifecycle
+    # -------------------------------------------------------------------
+
+    def set_live_session(
+        self,
+        run_name: str,
+        buffer: StepBuffer,
+        store: DuckLakeStore | None = None,
+    ) -> None:
+        """Configure a live session with the given buffer.
+
+        Args:
+            run_name: Directory name of the live run.
+            buffer: StepBuffer that receives live pushes.
+            store: Optional DuckLakeStore for in-process mode (shared
+                   with the game writer for log supplementation).
+        """
+        self._live_run_name = run_name
+        self._live_buffer = buffer
+        self._live_store = store
+        with self._lock:
+            self._indices.clear()
+        with self._store_lock:
+            self._run_stores.pop(run_name, None)
+        buffer.add_listener(self._on_step_pushed)
+        logger.info("DataStore: live session for run {}", run_name)
+
+    def clear_live_session(self) -> None:
+        """Clear the live session state and indices."""
+        if self._live_buffer is not None:
+            self._live_buffer.remove_listener(self._on_step_pushed)
+        old_name = self._live_run_name
+        self._live_run_name = None
+        self._live_buffer = None
+        self._live_store = None
+        with self._lock:
+            self._indices.clear()
+        if old_name is not None:
+            with self._store_lock:
+                self._run_stores.pop(old_name, None)
+        logger.debug("DataStore: live session cleared")
+
+    # -------------------------------------------------------------------
+    # Live step push and indexing
+    # -------------------------------------------------------------------
+
+    def push_live_step(self, step_data: StepData) -> None:
+        """Push a step received from a subprocess to the live buffer."""
+        if self._live_buffer is not None:
+            self._live_buffer.push(step_data)
+
+    def _on_step_pushed(self) -> None:
+        """StepBuffer listener: index the latest step."""
+        if self._live_buffer is None:
+            return
+        step_data = self._live_buffer.get_latest()
+        if step_data is None:
+            return
+        self._index_step(step_data)
+
+    def _index_step(self, step_data: StepData) -> None:
+        """Incrementally add a step's data to the per-game history indices."""
+        game = step_data.game_number
+        step = step_data.step
+
+        with self._lock:
+            if game not in self._indices:
+                self._indices[game] = _GameIndex()
+            idx = self._indices[game]
+
+        if step_data.graph_summary is not None:
+            idx.graph_history.append({"step": step, **step_data.graph_summary})
+        if step_data.event_summary is not None:
+            for entry in step_data.event_summary:
+                if isinstance(entry, dict):
+                    idx.event_history.append({"step": step, **entry})
+        if step_data.intrinsics is not None:
+            idx.intrinsics_history.append({"step": step, **step_data.intrinsics})
+        if step_data.game_metrics is not None:
+            idx.metrics_history.append({"step": step, **step_data.game_metrics})
+        if step_data.action_taken is not None:
+            idx.action_history.append({"step": step, **step_data.action_taken})
+        if step_data.resolution_metrics is not None:
+            idx.resolution_events.append({"step": step, **step_data.resolution_metrics})
+
+    # -------------------------------------------------------------------
+    # Internal helpers
+    # -------------------------------------------------------------------
+
+    def _is_live(self, run_name: str) -> bool:
+        return run_name == self._live_run_name and self._live_buffer is not None
+
+    def _get_live_history(self, game: int | None, field_name: str) -> list[dict[str, Any]]:
+        """Get accumulated history from live indices."""
+        with self._lock:
+            if game is not None:
+                idx = self._indices.get(game)
+                return list(getattr(idx, field_name)) if idx else []
+            result: list[dict[str, Any]] = []
+            for idx in self._indices.values():
+                result.extend(getattr(idx, field_name))
+            return result
+
+    def _get_run_store(self, run_name: str) -> RunStore:
+        """Get or create a RunStore for a historical or live run."""
+        with self._store_lock:
+            if run_name not in self._run_stores:
+                if run_name == self._live_run_name and self._live_store is not None:
+                    self._run_stores[run_name] = RunStore(self._live_store)
+                else:
+                    run_dir = self._data_dir / run_name
+                    if not run_dir.is_dir():
+                        raise FileNotFoundError(f"Run not found: {run_name}")
+                    safe_alias = "r_" + run_name.replace("-", "_").replace(".", "_")
+                    dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
+                    self._run_stores[run_name] = RunStore(dl_store)
+            return self._run_stores[run_name]
+
+    def _get_run_summary(self, name: str) -> RunSummary:
+        """Return a RunSummary, from cache if available."""
+        is_live = name == self._live_run_name
+        if not is_live and name in self._run_summary_cache:
+            return self._run_summary_cache[name]
+        if is_live and self._live_buffer is not None and len(self._live_buffer) > 0:
+            counts = self._live_buffer.steps_per_game()
+            return RunSummary(
+                name=name,
+                games=len(counts),
+                steps=sum(counts.values()),
+            )
+        if is_live:
+            try:
+                store = self._get_run_store(name)
+                games_df = store.list_games()
+                games = len(games_df)
+                steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
+                return RunSummary(name=name, games=games, steps=steps)
+            except Exception:
+                return RunSummary(name=name, games=0, steps=0)
+        return RunSummary(name=name, games=0, steps=0)
+
+    def populate_run_summaries(self) -> None:
+        """Background thread target: scan all runs and cache game/step counts.
+
+        Processes newest runs first (most likely to be requested).
+        Uses temporary DuckDB connections closed immediately after each
+        query to avoid holding locks that block request-serving threads.
+        """
+        names = RunStore.list_runs(self._data_dir)
+        names.reverse()
+        for name in names:
+            if name in self._run_summary_cache:
+                continue
+            if name == self._live_run_name:
+                continue
+            try:
+                run_dir = self._data_dir / name
+                if not run_dir.is_dir():
+                    continue
+                safe_alias = "sum_" + name.replace("-", "_").replace(".", "_")
+                dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
+                try:
+                    store = RunStore(dl_store)
+                    games_df = store.list_games()
+                    games = len(games_df)
+                    steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
+                    self._run_summary_cache[name] = RunSummary(name=name, games=games, steps=steps)
+                finally:
+                    dl_store.close()
+            except Exception:
+                self._run_summary_cache[name] = RunSummary(name=name, games=0, steps=0)
+            time.sleep(0.05)
+
+    # -------------------------------------------------------------------
+    # Public query methods
+    # -------------------------------------------------------------------
+
+    def list_runs(self, min_steps: int = 10) -> list[RunSummary]:
+        """List available runs with metadata.
+
+        ``min_steps`` filters out short-lived / crashed runs (default 10).
+        """
+        names = RunStore.list_runs(self._data_dir)
+        names.reverse()
+        if self._live_run_name and self._live_run_name not in names:
+            names.insert(0, self._live_run_name)
+        results: list[RunSummary] = []
+        for name in names:
+            summary = self._get_run_summary(name)
+            if summary.steps >= min_steps:
+                results.append(summary)
+        return results
+
+    def list_games(self, run_name: str) -> list[dict[str, Any]]:
+        """List games in a run."""
+        if self._is_live(run_name):
+            assert self._live_buffer is not None
+            counts = self._live_buffer.steps_per_game()
+            return [
+                {"game_number": g, "steps": counts.get(g, 0), "start_ts": None, "end_ts": None}
+                for g in sorted(counts.keys())
+            ]
+        store = self._get_run_store(run_name)
+        df = store.list_games()
+        return [
+            {
+                "game_number": int(row["game_number"]),
+                "steps": int(row["steps"]),
+                "start_ts": int(row["start_ts"]) if row.get("start_ts") is not None else None,
+                "end_ts": int(row["end_ts"]) if row.get("end_ts") is not None else None,
+            }
+            for _, row in df.iterrows()
+        ]
+
+    def get_step_range(self, run_name: str, game: int | None = None) -> tuple[int, int]:
+        """Get min/max step for a run or game."""
+        if self._is_live(run_name):
+            assert self._live_buffer is not None
+            if len(self._live_buffer) > 0:
+                if game is not None:
+                    return self._live_buffer.step_range_for_game(game)
+                return (self._live_buffer.min_step, self._live_buffer.max_step)
+            return (0, 0)
+        store = self._get_run_store(run_name)
+        return store.step_range(game)
+
+    def get_step_data(self, run_name: str, step: int) -> StepData:
+        """Get all data for a specific step.
+
+        For the live run, tries StepBuffer first (in-memory, instant).
+        Falls back to RunStore for evicted steps.  Supplements missing
+        logs from DuckLake when the buffer hit has no log data.
+        """
+        if run_name == self._live_run_name and self._live_buffer is not None:
+            buf_data = self._live_buffer.get_step(step)
+            if buf_data is not None:
+                if buf_data.logs is None and self._live_store is not None:
+                    try:
+                        store = self._get_run_store(run_name)
+                        logs_df = store.get_step(step, "logs")
+                        if len(logs_df) > 0:
+                            from typing import cast
+
+                            buf_data.logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
+                    except Exception:
+                        pass
+                return buf_data
+        store = self._get_run_store(run_name)
+        return store.get_step_data(step)
+
+    def get_steps_batch(self, run_name: str, steps: list[int]) -> dict[int, StepData]:
+        """Get data for multiple steps in a single request."""
+        if run_name != self._live_run_name or self._live_buffer is None:
+            store = self._get_run_store(run_name)
+            return store.get_steps_data(steps)
+        result: dict[int, StepData] = {}
+        for step in steps:
+            try:
+                result[step] = self.get_step_data(run_name, step)
+            except Exception:
+                pass
+        return result
+
+    def get_live_step(self, step: int) -> StepData | None:
+        """Get step data from the live buffer."""
+        if self._live_buffer is None:
+            return None
+        return self._live_buffer.get_step(step)
+
+    def get_live_status(self) -> dict[str, Any]:
+        """Return live session status from the buffer."""
+        if self._live_buffer is not None and len(self._live_buffer) > 0:
+            latest = self._live_buffer.get_latest()
+            return {
+                "active": True,
+                "run_name": self._live_run_name,
+                "step": latest.step if latest else 0,
+                "game_number": latest.game_number if latest else 0,
+                "step_min": self._live_buffer.min_step,
+                "step_max": self._live_buffer.max_step,
+                "game_numbers": self._live_buffer.game_numbers,
+            }
+        return {
+            "active": False,
+            "run_name": None,
+            "step": 0,
+            "game_number": 0,
+            "step_min": 0,
+            "step_max": 0,
+            "game_numbers": [],
+        }
+
+    # -------------------------------------------------------------------
+    # History queries
+    # -------------------------------------------------------------------
+
+    def get_graph_history(self, run_name: str, game: int | None = None) -> list[dict[str, Any]]:
+        """Get graph_summary for all steps in a game."""
+        if self._is_live(run_name):
+            return self._get_live_history(game, "graph_history")
+        return self._get_run_store(run_name).get_graph_history(game)
+
+    def get_event_history(self, run_name: str, game: int | None = None) -> list[dict[str, Any]]:
+        """Get event_summary for all steps in a game."""
+        if self._is_live(run_name):
+            return self._get_live_history(game, "event_history")
+        return self._get_run_store(run_name).get_event_history(game)
+
+    def get_intrinsics_history(
+        self, run_name: str, game: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Get intrinsics for all steps in a game."""
+        if self._is_live(run_name):
+            return self._get_live_history(game, "intrinsics_history")
+        return self._get_run_store(run_name).get_intrinsics_history(game)
+
+    def get_metrics_history(
+        self,
+        run_name: str,
+        game: int | None = None,
+        fields: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Get game_metrics for all steps in a game."""
+        if self._is_live(run_name):
+            raw = self._get_live_history(game, "metrics_history")
+            if fields is None:
+                return raw
+            return [{"step": e["step"], **{f: e[f] for f in fields if f in e}} for e in raw]
+        return self._get_run_store(run_name).get_metrics_history(game, fields)
+
+    def get_action_history(self, run_name: str, game: int | None = None) -> list[dict[str, Any]]:
+        """Get action_taken for all steps in a game."""
+        if self._is_live(run_name):
+            return self._get_live_history(game, "action_history")
+        return self._get_run_store(run_name).get_action_history(game)
+
+    def get_resolution_history(
+        self, run_name: str, game: int | None = None
+    ) -> list[dict[str, Any]]:
+        """Get resolution accuracy history for all steps in a game."""
+        if self._is_live(run_name):
+            return self._live_resolution_history(game)
+        return self._get_run_store(run_name).get_resolution_history(game)
+
+    def get_all_objects(self, run_name: str, game: int | None = None) -> list[dict[str, Any]]:
+        """Get all resolved objects with attributes, match counts, and creation step."""
+        if self._is_live(run_name):
+            return self._live_all_objects(game)
+        return self._get_run_store(run_name).get_all_objects(game)
+
+    # -------------------------------------------------------------------
+    # Live resolution/objects computation
+    # -------------------------------------------------------------------
+
+    def _live_resolution_history(self, game: int | None) -> list[dict[str, Any]]:
+        """Build resolution history from accumulated resolution_events."""
+        events = self._get_live_history(game, "resolution_events")
+        results: list[dict[str, Any]] = []
+        for ev in events:
+            outcome = ev.get("outcome", "unknown")
+            entry: dict[str, Any] = {"step": ev["step"], "outcome": outcome}
+            if outcome == "match":
+                entry["correct"] = compute_match_correctness(ev)
+            results.append(entry)
+        return results
+
+    def _live_all_objects(self, game: int | None) -> list[dict[str, Any]]:
+        """Build all-objects list from accumulated resolution_events.
+
+        Uses the same 3-pass algorithm as RunStore.get_all_objects, but
+        reads from in-memory indices.  new_object_id is available directly
+        in resolution_metrics (set by object.py before StepData assembly),
+        so no separate DuckDB query is needed.
+        """
+        events = self._get_live_history(game, "resolution_events")
+
+        objects: dict[str, dict[str, Any]] = {}
+        step_to_key: dict[int, str] = {}
+        match_events: list[dict[str, Any]] = []
+
+        # Pass 1: collect new_object and match entries
+        for ev in events:
+            step = ev["step"]
+            outcome = ev.get("outcome")
+            features = ev.get("features", [])
+            shape, color, glyph = parse_feature_attrs(features)
+
+            if outcome == "new_object":
+                nid = ev.get("new_object_id")
+                if nid is not None:
+                    mid = str(nid)
+                    objects[mid] = {
+                        "shape": shape,
+                        "glyph": glyph,
+                        "color": color,
+                        "node_id": mid,
+                        "step_added": step,
+                        "match_count": 0,
+                    }
+                else:
+                    key = f"new@{step}"
+                    step_to_key[step] = key
+                    objects[key] = {
+                        "shape": shape,
+                        "glyph": glyph,
+                        "color": color,
+                        "node_id": None,
+                        "step_added": step,
+                        "match_count": 0,
+                    }
+            elif outcome == "match":
+                match_events.append(
+                    {
+                        "matched_id": ev.get("matched_object_id"),
+                        "matched_attrs": ev.get("matched_attrs", {}),
+                        "shape": shape,
+                        "glyph": glyph,
+                        "color": color,
+                    }
+                )
+
+        # Pass 2: (skipped -- new_object_id handled in Pass 1 for live data)
+
+        # Pass 3: process match events
+        for m in match_events:
+            matched_id = m["matched_id"]
+            if matched_id is None:
+                continue
+            mid = str(matched_id)
+            if mid in objects:
+                objects[mid]["match_count"] += 1
+            else:
+                ma = m["matched_attrs"]
+                objects[mid] = {
+                    "shape": ma.get("char", m["shape"]),
+                    "glyph": str(ma["glyph"]) if ma.get("glyph") else m["glyph"],
+                    "color": ma.get("color", m["color"]),
+                    "node_id": mid,
+                    "step_added": None,
+                    "match_count": 1,
+                }
+
+        return list(objects.values())

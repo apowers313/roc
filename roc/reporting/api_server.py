@@ -1,7 +1,7 @@
 """FastAPI + Socket.io server for the React debug dashboard.
 
 Provides a clean separation of concerns:
-- REST endpoints serve step data from StepBuffer (live) or DuckLake (historical)
+- REST endpoints serve step data from DataStore (live buffer or DuckLake)
 - Socket.io pushes live step metadata to connected browsers
 - In production, serves the React static build from dashboard-ui/dist/
 """
@@ -18,14 +18,14 @@ from typing import Any
 import numpy as np
 import socketio
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from roc.logger import logger
-from roc.reporting.ducklake_store import DuckLakeStore
-from roc.reporting.run_store import RunStore, StepData
+from roc.reporting.data_store import DataStore, RunSummary
+from roc.reporting.run_store import StepData
 from roc.reporting.step_buffer import StepBuffer, register_step_buffer
 
 # ---------------------------------------------------------------------------
@@ -61,94 +61,30 @@ async def _capture_event_loop() -> None:
 
     # Populate run summary cache in a background thread so the first
     # /api/runs response is fast (returns placeholders until cached).
-    if _data_dir is not None and _summary_thread is None:
+    if _data_store is not None and _summary_thread is None:
         _summary_thread = threading.Thread(
-            target=_populate_run_summaries,
+            target=_data_store.populate_run_summaries,
             daemon=True,
             name="run-summaries",
         )
         _summary_thread.start()
 
 
-# Module-level state set by start_dashboard()
-_data_dir: Path | None = None
-_step_buffer: StepBuffer | None = None
-_live_run_name: str | None = None
-_live_store: DuckLakeStore | None = None
-_run_stores: dict[str, RunStore] = {}
-_store_lock = threading.Lock()
-_run_summary_cache: dict[str, RunSummary] = {}
+# Single data store instance -- set by start_dashboard() or CLI entry points
+_data_store: DataStore | None = None
+
+_summary_thread: threading.Thread | None = None
 
 
-def _get_store(run_name: str) -> RunStore:
-    """Get or create a RunStore for a run.
-
-    For the live run, shares the game's DuckLakeStore (concurrent
-    read+write through the store's lock).  For historical runs,
-    opens a read-only DuckLakeStore with a unique alias.
-    """
-    if _data_dir is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
-
-    with _store_lock:
-        if run_name not in _run_stores:
-            # For the live run, reuse the game's DuckLakeStore
-            if run_name == _live_run_name and _live_store is not None:
-                _run_stores[run_name] = RunStore(_live_store)
-            else:
-                run_dir = _data_dir / run_name
-                if not run_dir.is_dir():
-                    raise HTTPException(status_code=404, detail=f"Run not found: {run_name}")
-                # Unique alias per run avoids DuckDB catalog collisions
-                safe_alias = "r_" + run_name.replace("-", "_").replace(".", "_")
-                dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
-                _run_stores[run_name] = RunStore(dl_store)
-        return _run_stores[run_name]
-
-
-def _get_step_data(run_name: str, step: int) -> StepData:
-    """Get step data -- from StepBuffer if live, else from parquet/DuckLake.
-
-    For the live run, tries StepBuffer first (in-memory, instant).
-    Falls back to a separate DuckDB connection reading parquet files
-    directly (bypasses the game's DuckLakeStore to avoid thread-safety issues).
-
-    StepBuffer data lacks ``logs`` (loguru output goes to a separate OTel
-    logger, not the game loop).  When the buffer hit has no logs, we
-    supplement from DuckLake so the LogMessages panel works during live play.
-    """
-    # Try StepBuffer first for the live run
-    if run_name == _live_run_name and _step_buffer is not None:
-        buf_data = _step_buffer.get_step(step)
-        if buf_data is not None:
-            # Supplement missing logs from DuckLake
-            if buf_data.logs is None:
-                try:
-                    store = _get_store(run_name)
-                    logs_df = store.get_step(step, "logs")
-                    if len(logs_df) > 0:
-                        from typing import cast
-
-                        buf_data.logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
-                except Exception:
-                    pass  # logs are best-effort
-            return buf_data
-        # Step evicted from buffer -- fall through to parquet
-
-    # Read from parquet via RunStore (separate DuckDB connection, thread-safe)
-    store = _get_store(run_name)
-    return store.get_step_data(step)
+@app.exception_handler(FileNotFoundError)
+async def _handle_file_not_found(request: Request, exc: FileNotFoundError) -> JSONResponse:
+    """Convert FileNotFoundError (from DataStore) to a 404 response."""
+    return JSONResponse(status_code=404, content={"detail": str(exc)})
 
 
 # ---------------------------------------------------------------------------
 # Response models
 # ---------------------------------------------------------------------------
-
-
-class RunSummary(BaseModel):
-    name: str
-    games: int
-    steps: int
 
 
 class GameSummary(BaseModel):
@@ -171,122 +107,8 @@ class Bookmark(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Run summary cache -- populated in a background thread to avoid blocking
-# the API while opening hundreds of DuckDB connections.
-# ---------------------------------------------------------------------------
-
-_summary_thread: threading.Thread | None = None
-
-
-def _populate_run_summaries() -> None:
-    """Background thread: scan all runs and cache their game/step counts.
-
-    Processes newest runs first (most likely to be requested).  Uses
-    temporary DuckDB connections that are closed immediately after each
-    query to avoid holding locks that block request-serving threads.
-    Sleeps briefly between runs to yield CPU to request handlers.
-    """
-    import time
-
-    if _data_dir is None:
-        return
-    names = RunStore.list_runs(_data_dir)
-    names.reverse()  # newest first
-    for name in names:
-        if name in _run_summary_cache:
-            continue
-        if name == _live_run_name:
-            continue
-        try:
-            run_dir = _data_dir / name
-            if not run_dir.is_dir():
-                continue
-            # Open a temporary connection -- don't use _get_store() which
-            # caches connections and holds _store_lock, starving requests.
-            safe_alias = "sum_" + name.replace("-", "_").replace(".", "_")
-            dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
-            try:
-                store = RunStore(dl_store)
-                games_df = store.list_games()
-                games = len(games_df)
-                steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
-                _run_summary_cache[name] = RunSummary(name=name, games=games, steps=steps)
-            finally:
-                dl_store.close()
-        except Exception:
-            _run_summary_cache[name] = RunSummary(name=name, games=0, steps=0)
-        # Yield to request-serving threads between runs
-        time.sleep(0.05)
-
-
-def _get_run_summary(name: str) -> "RunSummary":
-    """Return a RunSummary, from cache if available.
-
-    For uncached historical runs, returns games=0/steps=0 (the background
-    thread will fill in the real values).  The live run is always queried
-    fresh since its step count grows.
-    """
-    is_live = name == _live_run_name
-    if not is_live and name in _run_summary_cache:
-        return _run_summary_cache[name]
-    if is_live:
-        try:
-            store = _get_store(name)
-            games_df = store.list_games()
-            games = len(games_df)
-            steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
-            return RunSummary(name=name, games=games, steps=steps)
-        except Exception:
-            return RunSummary(name=name, games=0, steps=0)
-    # Not yet cached -- return placeholder; background thread will fill it in
-    return RunSummary(name=name, games=0, steps=0)
-
-
-# ---------------------------------------------------------------------------
 # REST endpoints
 # ---------------------------------------------------------------------------
-
-
-@app.get("/api/runs")
-def list_runs(min_steps: int = 10) -> list[RunSummary]:
-    """List available runs with metadata.
-
-    ``min_steps`` filters out short-lived / crashed runs (default 10).
-    Pass ``min_steps=0`` to include all runs.
-    """
-    if _data_dir is None:
-        return []
-    names = RunStore.list_runs(_data_dir)
-    names.reverse()  # newest first
-    results: list[RunSummary] = []
-    for name in names:
-        summary = _get_run_summary(name)
-        if summary.steps >= min_steps:
-            results.append(summary)
-    return results
-
-
-@app.get("/api/runs/{run_name}/games")
-def list_games(run_name: str) -> list[GameSummary]:
-    """List games in a run."""
-    # For live run, use step buffer game data
-    if run_name == _live_run_name and _step_buffer is not None:
-        counts = _step_buffer.steps_per_game()
-        return [
-            GameSummary(game_number=g, steps=counts.get(g, 0), start_ts=None, end_ts=None)
-            for g in sorted(counts.keys())
-        ]
-    store = _get_store(run_name)
-    df = store.list_games()
-    return [
-        GameSummary(
-            game_number=int(row["game_number"]),
-            steps=int(row["steps"]),
-            start_ts=int(row["start_ts"]) if row.get("start_ts") is not None else None,
-            end_ts=int(row["end_ts"]) if row.get("end_ts") is not None else None,
-        )
-        for _, row in df.iterrows()
-    ]
 
 
 def _convert_numpy(obj: Any) -> Any:
@@ -306,6 +128,27 @@ def _convert_numpy(obj: Any) -> Any:
     return obj
 
 
+@app.get("/api/runs")
+def list_runs(min_steps: int = 10) -> list[RunSummary]:
+    """List available runs with metadata.
+
+    ``min_steps`` filters out short-lived / crashed runs (default 10).
+    Pass ``min_steps=0`` to include all runs.
+    """
+    if _data_store is None:
+        return []
+    return _data_store.list_runs(min_steps)
+
+
+@app.get("/api/runs/{run_name}/games")
+def list_games(run_name: str) -> list[GameSummary]:
+    """List games in a run."""
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    games = _data_store.list_games(run_name)
+    return [GameSummary(**g) for g in games]
+
+
 @app.get("/api/runs/{run_name}/step/{step}")
 def get_step(
     run_name: str,
@@ -313,13 +156,10 @@ def get_step(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get all data for a specific step."""
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
     t0 = time.monotonic()
-    try:
-        step_data = _get_step_data(run_name, step)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    step_data = _data_store.get_step_data(run_name, step)
     t1 = time.monotonic()
     data = _convert_numpy(dataclasses.asdict(step_data))
     t2 = time.monotonic()
@@ -344,28 +184,17 @@ def get_steps_batch(
     Returns a dict mapping step number (as string key) to StepData.
     Steps that fail to load are silently skipped.
     """
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
     t0 = time.monotonic()
     step_nums = [int(s.strip()) for s in steps.split(",") if s.strip()]
-    result: dict[str, Any] = {}
-
-    # For historical runs, use batched query (one scan per table for all steps)
-    if run_name != _live_run_name or _step_buffer is None:
-        try:
-            store = _get_store(run_name)
-            batch = store.get_steps_data(step_nums)
-            for step, sd in batch.items():
-                result[str(step)] = _convert_numpy(dataclasses.asdict(sd))
-        except Exception:
-            pass
-    else:
-        # Live run: use step buffer per-step
-        for step in step_nums:
-            try:
-                step_data = _get_step_data(run_name, step)
-                result[str(step)] = _convert_numpy(dataclasses.asdict(step_data))
-            except Exception:
-                pass
-
+    try:
+        batch = _data_store.get_steps_batch(run_name, step_nums)
+    except Exception:
+        batch = {}
+    result: dict[str, Any] = {
+        str(s): _convert_numpy(dataclasses.asdict(sd)) for s, sd in batch.items()
+    }
     t1 = time.monotonic()
     logger.debug(
         "GET steps batch ({} steps) total={:.1f}ms",
@@ -381,20 +210,9 @@ def get_step_range(
     game: int | None = Query(default=None),
 ) -> StepRange:
     """Get min/max step for a run or game."""
-    # For live run, use step buffer range
-    if run_name == _live_run_name and _step_buffer is not None and len(_step_buffer) > 0:
-        if game is not None:
-            smin, smax = _step_buffer.step_range_for_game(game)
-        else:
-            smin, smax = _step_buffer.min_step, _step_buffer.max_step
-        return StepRange(min=smin, max=smax)
-    try:
-        store = _get_store(run_name)
-        min_step, max_step = store.step_range(game)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    min_step, max_step = _data_store.get_step_range(run_name, game)
     return StepRange(min=min_step, max=max_step)
 
 
@@ -405,9 +223,10 @@ def get_metrics_history(
     fields: str | None = Query(default=None, description="Comma-separated field names"),
 ) -> JSONResponse:
     """Get game_metrics for all steps in a game (for charting trends)."""
-    store = _get_store(run_name)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
     field_list = [f.strip() for f in fields.split(",") if f.strip()] if fields else None
-    data = store.get_metrics_history(game, field_list)
+    data = _data_store.get_metrics_history(run_name, game, field_list)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -417,8 +236,9 @@ def get_graph_history(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get graph_summary for all steps in a game (for charting cache utilization)."""
-    store = _get_store(run_name)
-    data = store.get_graph_history(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_graph_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -428,8 +248,9 @@ def get_event_history(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get event_summary for all steps in a game (for charting event activity)."""
-    store = _get_store(run_name)
-    data = store.get_event_history(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_event_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -439,8 +260,9 @@ def get_intrinsics_history(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get intrinsics for all steps in a game (for charting trends)."""
-    store = _get_store(run_name)
-    data = store.get_intrinsics_history(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_intrinsics_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -450,8 +272,9 @@ def get_action_history(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get action taken for all steps in a game (for charting action distribution)."""
-    store = _get_store(run_name)
-    data = store.get_action_history(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_action_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -461,8 +284,9 @@ def get_resolution_history(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get resolution accuracy history for charting correct/incorrect/new counts."""
-    store = _get_store(run_name)
-    data = store.get_resolution_history(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_resolution_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
@@ -472,17 +296,18 @@ def get_all_objects(
     game: int | None = Query(default=None),
 ) -> JSONResponse:
     """Get all resolved objects with attributes, match counts, and creation step."""
-    store = _get_store(run_name)
-    data = store.get_all_objects(game)
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    data = _data_store.get_all_objects(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
 @app.get("/api/runs/{run_name}/bookmarks")
 def get_bookmarks(run_name: str) -> list[Bookmark]:
     """Get bookmarks for a run."""
-    if _data_dir is None:
+    if _data_store is None:
         return []
-    bookmarks_file = _data_dir / run_name / "bookmarks.json"
+    bookmarks_file = _data_store.data_dir / run_name / "bookmarks.json"
     if not bookmarks_file.exists():
         return []
     try:
@@ -495,9 +320,9 @@ def get_bookmarks(run_name: str) -> list[Bookmark]:
 @app.post("/api/runs/{run_name}/bookmarks")
 def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> dict[str, str]:
     """Save bookmarks for a run."""
-    if _data_dir is None:
+    if _data_store is None:
         raise HTTPException(status_code=503, detail="Dashboard not initialized")
-    bookmarks_file = _data_dir / run_name / "bookmarks.json"
+    bookmarks_file = _data_store.data_dir / run_name / "bookmarks.json"
     bookmarks_file.parent.mkdir(parents=True, exist_ok=True)
     bookmarks_file.write_text(json.dumps([b.model_dump() for b in bookmarks], indent=2))
     return {"status": "ok"}
@@ -521,38 +346,99 @@ class LiveStatus(BaseModel):
 @app.get("/api/live/status")
 def live_status() -> LiveStatus:
     """Get current live run status."""
-    if _step_buffer is None or len(_step_buffer) == 0:
-        return LiveStatus(
-            active=False,
-            run_name=None,
-            step=0,
-            game_number=0,
-            step_min=0,
-            step_max=0,
-            game_numbers=[],
-        )
-    latest = _step_buffer.get_latest()
+    if _data_store is not None:
+        status = _data_store.get_live_status()
+        if status["active"]:
+            return LiveStatus(**status)
+
+    # Game manager is running but no steps received yet
+    if _game_manager is not None and _game_manager.state in ("initializing", "running"):
+        ds_run_name = _data_store.live_run_name if _data_store else None
+        if ds_run_name is not None:
+            return LiveStatus(
+                active=True,
+                run_name=ds_run_name,
+                step=0,
+                game_number=0,
+                step_min=0,
+                step_max=0,
+                game_numbers=[],
+            )
+
     return LiveStatus(
-        active=True,
-        run_name=_live_run_name,
-        step=latest.step if latest else 0,
-        game_number=latest.game_number if latest else 0,
-        step_min=_step_buffer.min_step,
-        step_max=_step_buffer.max_step,
-        game_numbers=_step_buffer.game_numbers,
+        active=False,
+        run_name=None,
+        step=0,
+        game_number=0,
+        step_min=0,
+        step_max=0,
+        game_numbers=[],
     )
 
 
 @app.get("/api/live/step/{step}")
 def live_step(step: int) -> JSONResponse:
     """Get step data from the live StepBuffer (in-memory)."""
-    if _step_buffer is None:
+    if _data_store is None or _data_store.live_buffer is None:
         raise HTTPException(status_code=404, detail="No live session")
-    step_data = _step_buffer.get_step(step)
+    step_data = _data_store.get_live_step(step)
     if step_data is None:
         raise HTTPException(status_code=404, detail=f"Step {step} not in buffer")
     data = _convert_numpy(dataclasses.asdict(step_data))
     return JSONResponse(content=data)
+
+
+# ---------------------------------------------------------------------------
+# Game lifecycle endpoints
+# ---------------------------------------------------------------------------
+
+# Set by server_cli.py when running in unified server mode.
+_game_manager: Any = None
+
+
+class GameStatus(BaseModel):
+    state: str
+    run_name: str | None = None
+    exit_code: int | None = None
+    error: str | None = None
+
+
+@app.get("/api/game/status")
+def game_status() -> GameStatus:
+    """Get current game state."""
+    if _game_manager is None:
+        return GameStatus(state="idle")
+    status = _game_manager.get_status()
+    return GameStatus(
+        state=status["state"],
+        run_name=status.get("run_name"),
+        exit_code=status.get("exit_code"),
+        error=status.get("error"),
+    )
+
+
+@app.post("/api/game/start")
+def game_start(num_games: int = Query(default=5)) -> dict[str, str]:
+    """Start a new game subprocess."""
+    if _game_manager is None:
+        raise HTTPException(status_code=503, detail="Game manager not initialized")
+    try:
+        result = _game_manager.start_game(num_games=num_games)
+        return {"status": result}
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@app.post("/api/game/stop")
+def game_stop() -> dict[str, str]:
+    """Stop the running game."""
+    if _game_manager is None:
+        raise HTTPException(status_code=503, detail="Game manager not initialized")
+    try:
+        _game_manager.stop_game()
+        return {"status": "stopping"}
+    except RuntimeError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
@@ -595,6 +481,72 @@ def _notify_new_step(step_data: StepData) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Subprocess-based game lifecycle
+# ---------------------------------------------------------------------------
+
+
+def _start_live_session(run_name: str) -> None:
+    """Start a live session for a subprocess-based game run."""
+    if _data_store is None:
+        return
+    buf = StepBuffer(capacity=100_000)
+    _data_store.set_live_session(run_name=run_name, buffer=buf)
+    # Socket.io notifications come from receive_step(), not a listener
+    logger.info("Started live session for run {}", run_name)
+
+
+def _stop_live_session() -> None:
+    """Clear the live session state."""
+    if _data_store is not None:
+        _data_store.clear_live_session()
+    logger.debug("Stopped live session")
+
+
+@app.post("/api/internal/step")
+def receive_step(request: dict[str, Any]) -> dict[str, str]:
+    """Receive a step from the game subprocess and broadcast via Socket.io.
+
+    This is an internal endpoint used by the game subprocess to push
+    live step data to the dashboard server.
+    """
+    step_data = StepData(**{k: v for k, v in request.items() if k in StepData.__dataclass_fields__})
+    if _data_store is not None:
+        _data_store.push_live_step(step_data)
+    _notify_new_step(step_data)
+    return {"status": "ok"}
+
+
+def _emit_game_state_changed(status: dict[str, Any]) -> None:
+    """Emit game_state_changed Socket.io event and manage polling."""
+    import asyncio
+
+    state = status.get("state", "idle")
+    run_name = status.get("run_name")
+
+    # Start/stop live session based on game state
+    if state == "running" and run_name:
+        _start_live_session(run_name)
+    elif state == "idle":
+        _stop_live_session()
+
+    # Emit Socket.io event
+    try:
+        if _sio_loop is not None and _sio_loop.is_running():
+            asyncio.run_coroutine_threadsafe(
+                sio.emit(
+                    "game_state_changed",
+                    {
+                        "state": state,
+                        "run_name": run_name,
+                    },
+                ),
+                _sio_loop,
+            )
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
 # Server lifecycle
 # ---------------------------------------------------------------------------
 
@@ -604,11 +556,11 @@ _started = False
 def start_dashboard() -> None:
     """Start the FastAPI dashboard server.
 
-    Creates a StepBuffer and registers it globally so the game loop
-    can push StepData. Socket.io broadcasts push notifications to
-    all connected browser clients.
+    Creates a DataStore and StepBuffer, registers the buffer globally so
+    the game loop can push StepData.  Socket.io broadcasts push
+    notifications to all connected browser clients.
     """
-    global _started, _data_dir, _step_buffer, _live_run_name, _live_store
+    global _started, _data_store
     if _started:
         return
 
@@ -624,16 +576,12 @@ def start_dashboard() -> None:
         logger.warning("Dashboard enabled but no DuckLakeStore available; skipping.")
         return
 
-    _data_dir = store.run_dir.parent
-    _live_run_name = store.run_dir.name
-    _live_store = store
-
-    # Create step buffer for live push.
-    # Large capacity so live-following mode can read from memory (instant).
-    # Evicted steps fall through to DuckLake catalog reads (~8ms).
-    _step_buffer = StepBuffer(capacity=100_000)
-    register_step_buffer(_step_buffer)
-    _step_buffer.add_listener(lambda: _notify_new_step(_step_buffer.get_latest()))  # type: ignore[arg-type]
+    ds = DataStore(data_dir=store.run_dir.parent)
+    buf = StepBuffer(capacity=100_000)
+    register_step_buffer(buf)
+    ds.set_live_session(run_name=store.run_dir.name, buffer=buf, store=store)
+    buf.add_listener(lambda: _notify_new_step(buf.get_latest()))  # type: ignore[arg-type]
+    _data_store = ds
 
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
@@ -674,4 +622,6 @@ def stop_dashboard() -> None:
     from roc.reporting.step_buffer import clear_step_buffer
 
     clear_step_buffer()
+    if _data_store is not None:
+        _data_store.clear_live_session()
     logger.debug("Dashboard API stopped.")

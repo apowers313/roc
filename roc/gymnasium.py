@@ -70,6 +70,19 @@ class Gym(Component, ABC):
         obs, reset_info = self.env.reset()
         settings = Config.get()
 
+        # HTTP callback for pushing step data to an external dashboard server
+        _callback_url = settings.dashboard_callback_url
+        _callback_ctx: Any = None
+        if _callback_url:
+            import ssl
+            import urllib.request
+
+            # Skip SSL verification for localhost (self-signed certs)
+            _callback_ctx = ssl.create_default_context()
+            _callback_ctx.check_hostname = False
+            _callback_ctx.verify_mode = ssl.CERT_NONE
+            logger.info("Step callback URL: {}", _callback_url)
+
         done = False
         truncated = False
         _dump_env_start()
@@ -88,6 +101,13 @@ class Gym(Component, ABC):
         # main environment loop
         while game_num <= settings.num_games:
             with Observability.tracer.start_as_current_span("observation"):
+                # Tag log records with the step number that StepData will use.
+                # loop_num is incremented later in this iteration, so +1 here
+                # ensures logs match StepData.step.
+                from roc.reporting.step_log_sink import set_current_step
+
+                set_current_step(loop_num + 1)
+
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
 
@@ -126,7 +146,7 @@ class Gym(Component, ABC):
                 from roc.reporting.step_buffer import get_step_buffer
 
                 _buf = get_step_buffer()
-                if _buf is not None:
+                if _buf is not None or _callback_url:
                     from time import time_ns as _time_ns
 
                     from roc.event import Event
@@ -279,39 +299,63 @@ class Gym(Component, ABC):
                 )
 
                 # Emit inventory as OTel log record
-                if _buf is not None and _inventory is not None:
+                if (_buf is not None or _callback_url) and _inventory is not None:
                     _emit_state_record(
                         "roc.inventory",
                         _json.dumps(_inventory, separators=(",", ":")),
                     )
 
                 # Push assembled StepData to live dashboard
-                if _buf is not None:
-                    _buf.push(
-                        StepData(
-                            step=loop_num,
-                            game_number=game_num,
-                            timestamp=_time_ns(),
-                            screen=_screen_vals,
-                            saliency=_saliency_vals,
-                            features=_features,
-                            object_info=_object_info,
-                            focus_points=_focus_points,
-                            attenuation=_attenuation,
-                            resolution_metrics=_resolution_metrics,
-                            graph_summary=_graph_summary,
-                            event_summary=_event_summary,
-                            game_metrics=game_metrics,
-                            intrinsics=_intrinsics,
-                            significance=_significance,
-                            action_taken=_action_taken,
-                            transform_summary=_transform_summary,
-                            prediction=_prediction,
-                            message=_message,
-                            phonemes=_phonemes,
-                            inventory=_inventory,
-                        )
+                if _buf is not None or _callback_url:
+                    from roc.reporting.step_log_sink import drain_step_logs
+
+                    _step_logs = drain_step_logs(loop_num)
+
+                    _step_data = StepData(
+                        step=loop_num,
+                        game_number=game_num,
+                        timestamp=_time_ns(),
+                        screen=_screen_vals,
+                        saliency=_saliency_vals,
+                        features=_features,
+                        object_info=_object_info,
+                        focus_points=_focus_points,
+                        attenuation=_attenuation,
+                        resolution_metrics=_resolution_metrics,
+                        graph_summary=_graph_summary,
+                        event_summary=_event_summary,
+                        game_metrics=game_metrics,
+                        logs=_step_logs,
+                        intrinsics=_intrinsics,
+                        significance=_significance,
+                        action_taken=_action_taken,
+                        transform_summary=_transform_summary,
+                        prediction=_prediction,
+                        message=_message,
+                        phonemes=_phonemes,
+                        inventory=_inventory,
                     )
+                    if _buf is not None:
+                        _buf.push(_step_data)
+
+                    # Push step to external dashboard server via HTTP callback
+                    if _callback_url:
+                        try:
+                            import dataclasses as _dc
+                            import urllib.request
+
+                            _payload = _json.dumps(
+                                _dc.asdict(_step_data), separators=(",", ":"), default=str
+                            ).encode()
+                            _req = urllib.request.Request(
+                                _callback_url,
+                                data=_payload,
+                                headers={"Content-Type": "application/json"},
+                                method="POST",
+                            )
+                            urllib.request.urlopen(_req, timeout=2, context=_callback_ctx)
+                        except Exception:
+                            pass  # best-effort, don't break the game loop
 
                 if done or truncated:
                     # log game over info

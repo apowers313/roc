@@ -338,35 +338,8 @@ class RunStore:
             outcome = body.get("outcome", "unknown")
             entry: dict[str, Any] = {"step": int(row["step"]), "outcome": outcome}
 
-            # Compute correctness for matches by comparing non-relational attrs
             if outcome == "match":
-                matched_attrs = body.get("matched_attrs")
-                features = body.get("features", [])
-                if matched_attrs and isinstance(features, list):
-                    # Parse observed attrs from feature strings
-                    obs_shape = obs_color = obs_glyph = None
-                    for f in features:
-                        s = str(f)
-                        if s.startswith("ShapeNode(") and s.endswith(")"):
-                            obs_shape = s[10:-1]
-                        elif s.startswith("ColorNode(") and s.endswith(")"):
-                            obs_color = s[10:-1]
-                        elif s.startswith("SingleNode(") and s.endswith(")"):
-                            obs_glyph = s[11:-1]
-                    # Compare with matched object's stored attrs
-                    m_shape = matched_attrs.get("char")
-                    m_color = matched_attrs.get("color")
-                    m_glyph = str(matched_attrs.get("glyph", ""))
-                    correct = True
-                    if obs_shape and m_shape and obs_shape != m_shape:
-                        correct = False
-                    if obs_color and m_color and obs_color != m_color:
-                        correct = False
-                    if obs_glyph and m_glyph and obs_glyph != m_glyph:
-                        correct = False
-                    entry["correct"] = correct
-                else:
-                    entry["correct"] = None  # unknown -- no matched_attrs available
+                entry["correct"] = compute_match_correctness(body)
             results.append(entry)
         return results
 
@@ -392,18 +365,6 @@ class RunStore:
             params or None,
         )
 
-        def _parse_attrs(features: list[Any]) -> tuple[str | None, str | None, str | None]:
-            shape = color = glyph = None
-            for f in features:
-                s = str(f)
-                if s.startswith("ShapeNode(") and s.endswith(")"):
-                    shape = s[10:-1]
-                elif s.startswith("ColorNode(") and s.endswith(")"):
-                    color = s[10:-1]
-                elif s.startswith("SingleNode(") and s.endswith(")"):
-                    glyph = s[11:-1]
-            return shape, color, glyph
-
         # Pass 1: collect new_object entries keyed by step
         objects: dict[str, dict[str, Any]] = {}
         step_to_key: dict[int, str] = {}
@@ -416,7 +377,7 @@ class RunStore:
             step = int(row["step"])
             outcome = body.get("outcome")
             features = body.get("features", [])
-            shape, color, glyph = _parse_attrs(features)
+            shape, color, glyph = parse_feature_attrs(features)
 
             if outcome == "new_object":
                 key = f"new@{step}"
@@ -663,3 +624,44 @@ def _parse_body(body: str | None) -> dict[str, Any] | None:
         return result
     except (json.JSONDecodeError, TypeError):
         return {"raw": body}
+
+
+def parse_feature_attrs(features: list[Any]) -> tuple[str | None, str | None, str | None]:
+    """Parse shape, color, glyph from feature strings.
+
+    Used by both RunStore and DataStore for resolution event processing.
+    """
+    shape = color = glyph = None
+    for f in features:
+        s = str(f)
+        if s.startswith("ShapeNode(") and s.endswith(")"):
+            shape = s[10:-1]
+        elif s.startswith("ColorNode(") and s.endswith(")"):
+            color = s[10:-1]
+        elif s.startswith("SingleNode(") and s.endswith(")"):
+            glyph = s[11:-1]
+    return shape, color, glyph
+
+
+def compute_match_correctness(body: dict[str, Any]) -> bool | None:
+    """Determine whether a 'match' resolution decision was correct.
+
+    Compares observed features with the matched object's stored attributes.
+    Returns True/False for correctness, or None if comparison data is missing.
+    """
+    matched_attrs = body.get("matched_attrs")
+    features = body.get("features", [])
+    if not matched_attrs or not isinstance(features, list):
+        return None
+    obs_shape, obs_color, obs_glyph = parse_feature_attrs(features)
+    m_shape = matched_attrs.get("char")
+    m_color = matched_attrs.get("color")
+    m_glyph = str(matched_attrs.get("glyph", ""))
+    correct = True
+    if obs_shape and m_shape and obs_shape != m_shape:
+        correct = False
+    if obs_color and m_color and obs_color != m_color:
+        correct = False
+    if obs_glyph and m_glyph and obs_glyph != m_glyph:
+        correct = False
+    return correct
