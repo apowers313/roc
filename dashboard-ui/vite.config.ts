@@ -5,11 +5,11 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-const SSL_CERT = "/home/apowers/ssl/atoms.crt";
-const SSL_KEY = "/home/apowers/ssl/atoms.key";
-const HOST = "dev.ato.ms";
-const PORT = 9044;
-const API_PORT = 9043;
+const SSL_CERT = process.env.VITE_SSL_CERT || "/home/apowers/ssl/atoms.crt";
+const SSL_KEY = process.env.VITE_SSL_KEY || "/home/apowers/ssl/atoms.key";
+const HOST = process.env.VITE_HOST || "dev.ato.ms";
+const PORT = parseInt(process.env.VITE_DEV_PORT || "9044", 10);
+const API_PORT = parseInt(process.env.VITE_API_PORT || "9043", 10);
 
 const hasSSL = existsSync(SSL_KEY) && existsSync(SSL_CERT);
 const apiTarget = hasSSL

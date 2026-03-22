@@ -7,7 +7,21 @@ PYTHONPATH := `pwd`
 IMAGE := roc
 VERSION := latest
 
-# Test the library
+# Start unified server + Vite dev frontend
+.PHONY: run
+run:
+	@npx servherd start -n roc-server -p 9043 -e roc_dashboard_port={{port}} -- uv run server --port {{port}} >/dev/null
+	@npx servherd start -n roc-ui -p 9044 -e 'VITE_API_PORT={{$$ "roc-server" "port"}}' -e VITE_DEV_PORT={{port}} -e VITE_HOST={{hostname}} -- pnpm -C dashboard-ui dev >/dev/null
+	@echo "Dashboard: $$(npx servherd info roc-ui --json 2>/dev/null | jq -r .data.url)"
+
+# Stop all ROC servers
+.PHONY: stop
+stop:
+	@npx servherd stop roc-ui 2>/dev/null || true
+	@npx servherd stop roc-server 2>/dev/null || true
+	@echo "Servers stopped."
+
+# Run game directly (legacy, no server management)
 .PHONY: play
 play:
 	uv run play

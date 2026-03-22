@@ -129,6 +129,7 @@ class Config(BaseSettings):
     # dashboard config
     dashboard_enabled: bool = Field(default=True)
     dashboard_port: int = Field(default=9042)
+    dashboard_callback_url: str | None = Field(default=None)
     emit_state: bool = Field(default=True)
     emit_state_screen: bool = Field(default=True)
     emit_state_saliency: bool = Field(default=True)

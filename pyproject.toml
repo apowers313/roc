@@ -128,6 +128,7 @@ repository = "https://github.com/apowers313/roc"
 [project.scripts]
 play = "roc.script:cli"
 dashboard = "roc.dashboard_cli:main"
+server = "roc.server_cli:main"
 cleanup = "roc.cleanup_cli:main"
 
 [tool.uv]
