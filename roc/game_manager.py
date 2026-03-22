@@ -197,7 +197,11 @@ class GameManager:
                 logger.info("Game subprocess exited cleanly (code 0)")
             elif exit_code < 0:
                 sig = -exit_code
-                sig_name = signal.Signals(sig).name if sig in signal.Signals._value2member_map_ else str(sig)
+                sig_name = (
+                    signal.Signals(sig).name
+                    if sig in signal.Signals._value2member_map_
+                    else str(sig)
+                )
                 logger.warning("Game subprocess killed by signal {} ({})", sig_name, sig)
                 self._error_message = f"Killed by signal {sig_name}"
             else:
