@@ -171,6 +171,17 @@ class Observability(metaclass=ObservabilityBase):
                 format="<level>{message}</level>",
                 level=settings.observability_logging_level,
             )
+
+            # Live dashboard log capture -- ring buffer for StepData.logs
+            if settings.dashboard_enabled or settings.dashboard_callback_url:
+                from roc.reporting.step_log_sink import step_log_sink
+
+                roc_logger.logger.add(
+                    step_log_sink,
+                    format="<level>{message}</level>",
+                    level=settings.observability_logging_level,
+                )
+
             # events init
             event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
 
