@@ -111,10 +111,14 @@ class Gym(Component, ABC):
                 logger.trace(f"Sending observation: {obs}")
                 breakpoints.check()
 
+                # Copy numpy arrays -- NLE reuses internal buffers that
+                # get overwritten by env.step().  Without .copy(), screen.val
+                # would point to the next observation's data by the time
+                # emit_state_logs() reads it.
                 State.get_states().screen.set(
                     {
-                        "chars": obs["tty_chars"],
-                        "colors": obs["tty_colors"],
+                        "chars": obs["tty_chars"].copy(),
+                        "colors": obs["tty_colors"].copy(),
                         "cursor": obs["tty_cursor"],
                     }
                 )
@@ -124,15 +128,12 @@ class Gym(Component, ABC):
 
                 # get an action
                 action = self.get_action()
-                logger.trace(f"Doing action: {action}")
 
                 # perform the action and get the next observation
                 obs, reward, done, truncated, info = self.env.step(action)
 
                 # optionally save the screen to file
                 _dump_env_record(obs, loop_num)
-
-                logger.trace(f"Main loop done: {done}, {truncated}")
 
                 # set and save the loop number
                 observation_counter.add(1)
