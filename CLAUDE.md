@@ -35,6 +35,13 @@ make coverage           # Run tests with coverage (90% minimum threshold)
 # Docs
 make docs               # Build mkdocs
 make edit-docs          # Serve docs locally on 0.0.0.0:9000
+
+# Dashboard Server (managed by servherd)
+make run                # Start roc-server (API) + roc-ui (Vite dev) via servherd
+make stop               # Stop both servers
+npx servherd list       # Show all managed servers and their status/ports/URLs
+npx servherd info roc-ui  # Show details for a specific server
+npx servherd logs roc-server  # View server logs
 ```
 
 ## Architecture
@@ -185,8 +192,17 @@ The debug dashboard is a React app in `dashboard-ui/` with a FastAPI + Socket.io
 
 - **Frontend**: React + Mantine (compact-mantine theme) + TanStack Query + Vite
 - **Backend**: FastAPI REST API + Socket.io live push via StepBuffer
-- **Data flow**: Game loop pushes StepData to StepBuffer, Socket.io broadcasts to browsers
-- **Dev server**: `cd dashboard-ui && pnpm dev` (proxies API to the game's FastAPI server)
+- **Data flow**: Game subprocess POSTs StepData to server via HTTP callback, server broadcasts via Socket.io
+- **Server management**: All servers managed by servherd. Use `make run` / `make stop`.
+
+### Server Architecture (One Server, One URL)
+
+There must be exactly ONE UI server (`roc-ui`) and ONE API server (`roc-server`). Never start additional dashboard or preview servers. See `design/dashboard-server-redesign.md` for full design.
+
+- `roc-server`: Unified FastAPI + Socket.io backend (`uv run server`). Always running. Serves API and manages game lifecycle.
+- `roc-ui`: Vite dev server for frontend HMR. Proxies `/api` and `/socket.io` to `roc-server`.
+- Games are started/stopped via REST API (`POST /api/game/start`, `POST /api/game/stop`), not by restarting the server.
+- Both servers' ports are auto-assigned by servherd. Use `npx servherd info roc-ui` to get the dashboard URL.
 
 ## Testing Notes
 
