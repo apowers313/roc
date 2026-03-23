@@ -1630,3 +1630,65 @@ class TestGetAllObjects:
         store = RunStore(dl_store)
         objects = store.get_all_objects()
         assert objects == []
+
+    def test_match_updates_missing_glyph(self, tmp_path: Path):
+        """Regression: objects created without a glyph get one on later match."""
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+
+        # Step 1: new_object with only LineNode (no SingleNode => no glyph)
+        exporter.export([make_log_record(event_name="roc.game_start", body="game")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": ["LineNode(2378,5,7,.)"],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 50}),
+                )
+            ]
+        )
+
+        # Step 2: match with SingleNode feature (has glyph now)
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "match",
+                            "matched_object_id": 50,
+                            "matched_attrs": {"char": ".", "color": "GREY", "glyph": "2378"},
+                            "features": [
+                                "ShapeNode(.)",
+                                "ColorNode(GREY)",
+                                "SingleNode(2378)",
+                            ],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        obj = objects[0]
+        assert obj["node_id"] == "50"
+        assert obj["glyph"] == "2378"
+        assert obj["shape"] == "."
+        assert obj["color"] == "GREY"
+        assert obj["match_count"] == 1

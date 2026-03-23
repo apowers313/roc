@@ -518,6 +518,11 @@ class DataStore:
             mid = str(matched_id)
             if mid in objects:
                 objects[mid]["match_count"] += 1
+                # Update attributes from the current observation so that
+                # objects created without a glyph get one when matched later.
+                for attr in ("shape", "glyph", "color"):
+                    if m[attr] and not objects[mid].get(attr):
+                        objects[mid][attr] = m[attr]
             else:
                 ma = m["matched_attrs"]
                 objects[mid] = {

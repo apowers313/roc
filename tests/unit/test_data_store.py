@@ -389,6 +389,50 @@ class TestAllObjects:
         assert objects[0]["match_count"] == 1
         assert objects[0]["step_added"] is None
 
+    def test_match_updates_missing_glyph(self, tmp_path: Path) -> None:
+        """Regression: objects created without a glyph should get one on match."""
+        ds = DataStore(tmp_path)
+        buf = StepBuffer(capacity=100)
+        ds.set_live_session("test-run", buf)
+
+        # Step 1: new_object with only LineNode features (no glyph)
+        buf.push(
+            StepData(
+                step=1,
+                game_number=1,
+                resolution_metrics={
+                    "outcome": "new_object",
+                    "features": ["LineNode(2378,5,7,.)"],
+                    "new_object_id": 50,
+                },
+            )
+        )
+
+        objects = ds.get_all_objects("test-run", game=1)
+        assert len(objects) == 1
+        assert objects[0]["glyph"] is None
+
+        # Step 2: match with SingleNode feature (has glyph now)
+        buf.push(
+            StepData(
+                step=2,
+                game_number=1,
+                resolution_metrics={
+                    "outcome": "match",
+                    "matched_object_id": 50,
+                    "matched_attrs": {"char": ".", "color": "GREY", "glyph": "2378"},
+                    "features": ["ShapeNode(.)", "ColorNode(GREY)", "SingleNode(2378)"],
+                },
+            )
+        )
+
+        objects = ds.get_all_objects("test-run", game=1)
+        assert len(objects) == 1
+        assert objects[0]["glyph"] == "2378"
+        assert objects[0]["shape"] == "."
+        assert objects[0]["color"] == "GREY"
+        assert objects[0]["match_count"] == 1
+
 
 class TestLiveStatus:
     def test_no_live_session(self, tmp_path: Path) -> None:
