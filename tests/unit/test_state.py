@@ -416,7 +416,16 @@ class TestSaliencySync:
         from copy import deepcopy
         from unittest.mock import MagicMock
 
-        from roc.attention import Attention, SaliencyMap, VisionAttentionData
+        import pandas as pd
+        from strictly_typed_pandas import DataSet
+
+        from roc.attention import (
+            Attention,
+            SaliencyMap,
+            VisionAttentionData,
+            VisionAttentionSchema,
+        )
+        from roc.event import Event
         from roc.reporting.state import states
 
         # Set a known saliency value
@@ -427,9 +436,7 @@ class TestSaliencySync:
 
         # Manually register the subscriber (same logic as State.init)
         # to avoid test pollution from full init().
-        def test_handler(e: object) -> None:
-            if not isinstance(e.data, VisionAttentionData):
-                return
+        def test_handler(e: Event[VisionAttentionData]) -> None:
             # Subscriber must NOT update salency -- only attention
             states.attention.set(deepcopy(e.data))
 
@@ -437,13 +444,22 @@ class TestSaliencySync:
 
         try:
             mock_sm = MagicMock(spec=SaliencyMap)
+            empty_df: DataSet[VisionAttentionSchema] = DataSet[VisionAttentionSchema](
+                pd.DataFrame(
+                    {
+                        "x": pd.array([], dtype="int64"),
+                        "y": pd.array([], dtype="int64"),
+                        "strength": pd.array([], dtype="float64"),
+                        "label": pd.array([], dtype="int64"),
+                    }
+                )
+            )
             att_data = VisionAttentionData(
-                focus_points=[],
+                focus_points=empty_df,
                 saliency_map=mock_sm,
             )
-            from roc.event import Event as RocEvent
 
-            evt = RocEvent[VisionAttentionData](
+            evt = Event[VisionAttentionData](
                 att_data,
                 MagicMock(),
                 Attention.bus,
