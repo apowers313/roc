@@ -2,6 +2,7 @@
 
 import { Badge, Group, Text } from "@mantine/core";
 
+import { InfoCard } from "../common/InfoCard";
 import type { StepData } from "../../types/step-data";
 
 interface ActionPanelProps {
@@ -12,12 +13,9 @@ export function ActionPanel({ data }: ActionPanelProps) {
     const a = data?.action_taken;
 
     return (
-        <Group gap="xs">
-            <Text size="sm" fw={600}>
-                Action
-            </Text>
+        <InfoCard title="Action">
             {a ? (
-                <>
+                <Group gap="xs">
                     <Badge color="indigo" variant="filled" size="sm">
                         {a.action_name ?? `Action #${a.action_id}`}
                     </Badge>
@@ -29,12 +27,12 @@ export function ActionPanel({ data }: ActionPanelProps) {
                             {a.expmod_name}
                         </Badge>
                     )}
-                </>
+                </Group>
             ) : (
                 <Text size="xs" c="dimmed">
                     No action data
                 </Text>
             )}
-        </Group>
+        </InfoCard>
     );
 }

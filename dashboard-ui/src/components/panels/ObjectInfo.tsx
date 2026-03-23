@@ -2,6 +2,7 @@
 
 import { Table, Text } from "@mantine/core";
 
+import { InfoCard } from "../common/InfoCard";
 import type { StepData } from "../../types/step-data";
 
 interface ObjectInfoProps {
@@ -55,71 +56,75 @@ export function ObjectInfo({ data }: ObjectInfoProps) {
 
     if (!hasStructured) {
         return (
-            <div style={{ maxHeight: 200, overflowY: "auto" }}>
-                <Table
-                    horizontalSpacing={4}
-                    verticalSpacing={1}
-                    withRowBorders={false}
-                    layout="fixed"
-                >
-                    <Table.Tbody>
-                        {objects.map((obj, i) => (
-                            <Table.Tr key={i}>
-                                <Table.Td>
-                                    <Text size="xs" style={{ fontFamily: "monospace" }}>
-                                        {String(obj.raw ?? JSON.stringify(obj))}
-                                    </Text>
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
-                    </Table.Tbody>
-                </Table>
-            </div>
+            <InfoCard title="Objects">
+                <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                    <Table
+                        horizontalSpacing={4}
+                        verticalSpacing={1}
+                        withRowBorders={false}
+                        layout="fixed"
+                    >
+                        <Table.Tbody>
+                            {objects.map((obj, i) => (
+                                <Table.Tr key={i}>
+                                    <Table.Td>
+                                        <Text size="xs" style={{ fontFamily: "monospace" }}>
+                                            {String(obj.raw ?? JSON.stringify(obj))}
+                                        </Text>
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </div>
+            </InfoCard>
         );
     }
 
     const columns = getColumns(objects);
 
     return (
-        <div style={{ maxHeight: 200, overflowY: "auto" }}>
-            <Table
-                horizontalSpacing={4}
-                verticalSpacing={1}
-                withRowBorders
-                layout="fixed"
-                striped
-            >
-                <Table.Thead>
-                    <Table.Tr>
-                        {columns.map((col) => (
-                            <Table.Th
-                                key={col}
-                                style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}
-                            >
-                                {col}
-                            </Table.Th>
-                        ))}
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {objects.map((obj, i) => (
-                        <Table.Tr key={i}>
+        <InfoCard title="Objects">
+            <div style={{ maxHeight: 200, overflowY: "auto" }}>
+                <Table
+                    horizontalSpacing={4}
+                    verticalSpacing={1}
+                    withRowBorders
+                    layout="fixed"
+                    striped
+                >
+                    <Table.Thead>
+                        <Table.Tr>
                             {columns.map((col) => (
-                                <Table.Td
+                                <Table.Th
                                     key={col}
-                                    style={{
-                                        fontSize: 10,
-                                        fontFamily: "monospace",
-                                        padding: "1px 4px",
-                                    }}
+                                    style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}
                                 >
-                                    {formatValue(obj[col])}
-                                </Table.Td>
+                                    {col}
+                                </Table.Th>
                             ))}
                         </Table.Tr>
-                    ))}
-                </Table.Tbody>
-            </Table>
-        </div>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {objects.map((obj, i) => (
+                            <Table.Tr key={i}>
+                                {columns.map((col) => (
+                                    <Table.Td
+                                        key={col}
+                                        style={{
+                                            fontSize: 10,
+                                            fontFamily: "monospace",
+                                            padding: "1px 4px",
+                                        }}
+                                    >
+                                        {formatValue(obj[col])}
+                                    </Table.Td>
+                                ))}
+                            </Table.Tr>
+                        ))}
+                    </Table.Tbody>
+                </Table>
+            </div>
+        </InfoCard>
     );
 }

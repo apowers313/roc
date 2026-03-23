@@ -1,7 +1,8 @@
 /** Resolution Inspector -- structured display of object resolution decisions. */
 
-import { Badge, Group, Table, Text, UnstyledButton } from "@mantine/core";
+import { Badge, Group, Stack, Table, Text, UnstyledButton } from "@mantine/core";
 
+import { InfoCard } from "../common/InfoCard";
 import { useHighlight } from "../../state/highlight";
 import type { StepData } from "../../types/step-data";
 
@@ -185,138 +186,135 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
     const hasComparison = isMatch && (matchedAttrs != null || Object.keys(observedAttrs).length > 0);
 
     return (
-        <div>
-            {/* Expmod badge above the resolution line */}
-            {d.algorithm != null && (
-                <Badge size="xs" variant="light" color="grape" mb={4}>
-                    {String(d.algorithm)}
-                </Badge>
-            )}
+        <Stack gap="xs">
+            <InfoCard title="Resolution">
+                {/* Expmod badge */}
+                {d.algorithm != null && (
+                    <Badge size="xs" variant="light" color="grape" mb={4}>
+                        {String(d.algorithm)}
+                    </Badge>
+                )}
 
-            <Group gap="xs" mb={4}>
-                <Text size="xs" fw={600}>Resolution</Text>
-                <Badge size="xs" color={outcomeColor} variant="filled">
-                    {outcomeLabel}
-                </Badge>
-                {observedAttrs.shape && (
-                    <GlyphBadge char={observedAttrs.shape} color={observedAttrs.color} />
-                )}
-                {isMatch && matchedAttrs?.char && (
-                    <>
-                        <Text size="xs" c="dimmed">{"\u2192"}</Text>
-                        <GlyphBadge char={matchedAttrs.char} color={matchedAttrs.color} />
-                    </>
-                )}
-                {isMatch && !matchedAttrs?.char && observedAttrs.shape && (
-                    <Text size="xs" c="dimmed">{"\u2192 ?"}</Text>
-                )}
-            </Group>
+                <Group gap="xs" mb={4}>
+                    <Badge size="xs" color={outcomeColor} variant="filled">
+                        {outcomeLabel}
+                    </Badge>
+                    {observedAttrs.shape && (
+                        <GlyphBadge char={observedAttrs.shape} color={observedAttrs.color} />
+                    )}
+                    {isMatch && matchedAttrs?.char && (
+                        <>
+                            <Text size="xs" c="dimmed">{"\u2192"}</Text>
+                            <GlyphBadge char={matchedAttrs.char} color={matchedAttrs.color} />
+                        </>
+                    )}
+                    {isMatch && !matchedAttrs?.char && observedAttrs.shape && (
+                        <Text size="xs" c="dimmed">{"\u2192 ?"}</Text>
+                    )}
+                </Group>
 
-            {/* Side-by-side attribute comparison for matches */}
-            {hasComparison && (
-                <Table
-                    horizontalSpacing={4}
-                    verticalSpacing={1}
-                    withRowBorders
-                    layout="fixed"
-                    mb={4}
-                    fz="xs"
-                >
-                    <Table.Thead>
-                        <Table.Tr>
-                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "30%" }}>
-                                attr
-                            </Table.Th>
-                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
-                                observed
-                            </Table.Th>
-                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
-                                matched
-                            </Table.Th>
-                        </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                        {comparisonRows.map(({ label, obsKey, matchKey }) => {
-                            const obsVal = observedAttrs[obsKey];
-                            const matchVal = matchedAttrs?.[matchKey];
-                            if (!obsVal && !matchVal) return null;
-                            const same = obsVal != null && matchVal != null && String(obsVal) === String(matchVal);
-                            const different = obsVal != null && matchVal != null && String(obsVal) !== String(matchVal);
-                            return (
-                                <Table.Tr key={label}>
-                                    <Table.Td style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", padding: "1px 4px" }}>
-                                        {label}
+                {/* Side-by-side attribute comparison for matches */}
+                {hasComparison && (
+                    <Table
+                        horizontalSpacing={4}
+                        verticalSpacing={1}
+                        withRowBorders
+                        mb={4}
+                        fz="xs"
+                        style={{ width: "auto" }}
+                    >
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "30%" }}>
+                                    attr
+                                </Table.Th>
+                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
+                                    observed
+                                </Table.Th>
+                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
+                                    matched
+                                </Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {comparisonRows.map(({ label, obsKey, matchKey }) => {
+                                const obsVal = observedAttrs[obsKey];
+                                const matchVal = matchedAttrs?.[matchKey];
+                                if (!obsVal && !matchVal) return null;
+                                const same = obsVal != null && matchVal != null && String(obsVal) === String(matchVal);
+                                const different = obsVal != null && matchVal != null && String(obsVal) !== String(matchVal);
+                                return (
+                                    <Table.Tr key={label}>
+                                        <Table.Td style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", padding: "1px 4px" }}>
+                                            {label}
+                                        </Table.Td>
+                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                            {label === "shape" && obsVal ? (
+                                                <GlyphBadge char={obsVal} color={observedAttrs.color} />
+                                            ) : obsVal ?? "--"}
+                                        </Table.Td>
+                                        <Table.Td style={{
+                                            fontSize: 10,
+                                            fontFamily: "monospace",
+                                            padding: "1px 4px",
+                                            background: different ? "rgba(248, 81, 73, 0.15)" : same ? "rgba(63, 185, 80, 0.15)" : undefined,
+                                        }}>
+                                            {label === "shape" && matchVal ? (
+                                                <GlyphBadge char={String(matchVal)} color={matchedAttrs?.color} />
+                                            ) : matchVal != null ? String(matchVal) : (matchedAttrs ? "--" : "?")}
+                                        </Table.Td>
+                                    </Table.Tr>
+                                );
+                            })}
+                        </Table.Tbody>
+                    </Table>
+                )}
+
+                {summaryRows.length > 0 && (
+                    <Table
+                        horizontalSpacing={4}
+                        verticalSpacing={1}
+                        withRowBorders={false}
+                        style={{ width: "auto" }}
+                    >
+                        <Table.Tbody>
+                            {summaryRows.map((row) => (
+                                <Table.Tr
+                                    key={row.label}
+                                    style={{
+                                        cursor: row.clickable ? "pointer" : undefined,
+                                        background: row.clickable && isLocHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,
+                                    }}
+                                    onClick={row.clickable && hasLocation ? () => togglePoint({ x: locX, y: locY, label: `resolved @ (${locX},${locY})` }) : undefined}
+                                >
+                                    <Table.Td
+                                        style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", paddingRight: 16 }}
+                                    >
+                                        {row.label}
                                     </Table.Td>
-                                    <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                        {label === "shape" && obsVal ? (
-                                            <GlyphBadge char={obsVal} color={observedAttrs.color} />
-                                        ) : obsVal ?? "--"}
-                                    </Table.Td>
-                                    <Table.Td style={{
-                                        fontSize: 10,
-                                        fontFamily: "monospace",
-                                        padding: "1px 4px",
-                                        background: different ? "rgba(248, 81, 73, 0.15)" : same ? "rgba(63, 185, 80, 0.15)" : undefined,
-                                    }}>
-                                        {label === "shape" && matchVal ? (
-                                            <GlyphBadge char={String(matchVal)} color={matchedAttrs?.color} />
-                                        ) : matchVal != null ? String(matchVal) : (matchedAttrs ? "--" : "?")}
+                                    <Table.Td style={{ fontSize: 10, fontFamily: "monospace" }}>
+                                        {row.clickable ? (
+                                            <UnstyledButton style={{ fontSize: 10, fontFamily: "monospace", textDecoration: "underline dotted" }}>
+                                                {row.value}
+                                            </UnstyledButton>
+                                        ) : row.value}
                                     </Table.Td>
                                 </Table.Tr>
-                            );
-                        })}
-                    </Table.Tbody>
-                </Table>
-            )}
-
-            {summaryRows.length > 0 && (
-                <Table
-                    horizontalSpacing={4}
-                    verticalSpacing={1}
-                    withRowBorders={false}
-                    layout="fixed"
-                    mb={4}
-                >
-                    <Table.Tbody>
-                        {summaryRows.map((row) => (
-                            <Table.Tr
-                                key={row.label}
-                                style={{
-                                    cursor: row.clickable ? "pointer" : undefined,
-                                    background: row.clickable && isLocHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,
-                                }}
-                                onClick={row.clickable && hasLocation ? () => togglePoint({ x: locX, y: locY, label: `resolved @ (${locX},${locY})` }) : undefined}
-                            >
-                                <Table.Td
-                                    style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", width: "40%" }}
-                                >
-                                    {row.label}
-                                </Table.Td>
-                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace" }}>
-                                    {row.clickable ? (
-                                        <UnstyledButton style={{ fontSize: 10, fontFamily: "monospace", textDecoration: "underline dotted" }}>
-                                            {row.value}
-                                        </UnstyledButton>
-                                    ) : row.value}
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
-                    </Table.Tbody>
-                </Table>
-            )}
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                )}
+            </InfoCard>
 
             {candidates.length > 0 && (
-                <>
-                    <Text size="xs" fw={600} mt={4} mb={2}>
-                        Candidates
-                    </Text>
+                <InfoCard title="Candidates">
                     <div style={{ maxHeight: 120, overflowY: "auto" }}>
                         <Table
                             horizontalSpacing={4}
                             verticalSpacing={1}
                             withRowBorders
-                            layout="fixed"
                             striped
+                            style={{ width: "auto" }}
                         >
                             <Table.Thead>
                                 <Table.Tr>
@@ -371,20 +369,17 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
                             </Table.Tbody>
                         </Table>
                     </div>
-                </>
+                </InfoCard>
             )}
 
             {featureList && featureList.length > 0 && (
-                <>
-                    <Text size="xs" fw={600} mt={4} mb={2}>
-                        Features
-                    </Text>
+                <InfoCard title="Features">
                     <Text size="xs" c="dimmed" style={{ fontFamily: "monospace", wordBreak: "break-all" }}>
                         {featureList.slice(0, 20).map(String).join(", ")}
                         {featureList.length > 20 && ` ... (+${featureList.length - 20})`}
                     </Text>
-                </>
+                </InfoCard>
             )}
-        </div>
+        </Stack>
     );
 }

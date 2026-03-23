@@ -1,7 +1,8 @@
 /** Attenuation deep dive -- structured display of attenuation data. */
 
-import { Badge, Grid, Group, Paper, Stack, Table, Text } from "@mantine/core";
+import { Badge, Grid, Group, Stack, Table, Text } from "@mantine/core";
 
+import { InfoCard } from "../common/InfoCard";
 import { useHighlight } from "../../state/highlight";
 import type { StepData } from "../../types/step-data";
 
@@ -21,7 +22,7 @@ function renderValue(v: unknown): string {
     return JSON.stringify(v);
 }
 
-function Section({
+function KVSection({
     title,
     entries,
     onPointClick,
@@ -34,10 +35,7 @@ function Section({
 }) {
     if (entries.length === 0) return null;
     return (
-        <Paper p="xs" withBorder>
-            <Text size="xs" fw={600} mb={4}>
-                {title}
-            </Text>
+        <InfoCard title={title}>
             {entries.map(([k, v]) => {
                 // Point values arrive as [x, y] (col, row).
                 // Values may be numbers or numeric strings depending on JSON serialization.
@@ -68,7 +66,7 @@ function Section({
                     </Group>
                 );
             })}
-        </Paper>
+        </InfoCard>
     );
 }
 
@@ -139,7 +137,7 @@ export function AttenuationPanel({ data }: AttenuationPanelProps) {
             )}
             <Grid gutter="xs">
                 <Grid.Col span={4}>
-                    <Section
+                    <KVSection
                         title="Peaks"
                         entries={peakEntries}
                         onPointClick={(x, y, label) => togglePoint({ x, y, label: `peak: ${label}` })}
@@ -147,17 +145,14 @@ export function AttenuationPanel({ data }: AttenuationPanelProps) {
                     />
                 </Grid.Col>
                 <Grid.Col span={4}>
-                    <Section title="Entropy" entries={entropyEntries} />
+                    <KVSection title="Entropy" entries={entropyEntries} />
                 </Grid.Col>
                 <Grid.Col span={4}>
-                    <Section title="Beliefs / History" entries={beliefEntries} />
+                    <KVSection title="Beliefs / History" entries={beliefEntries} />
                 </Grid.Col>
             </Grid>
             {history && history.length > 0 && (
-                <Paper p="xs" withBorder>
-                    <Text size="xs" fw={600} mb={4}>
-                        Attended Locations (attenuated)
-                    </Text>
+                <InfoCard title="Attended Locations (attenuated)">
                     <Table striped fz="xs" withTableBorder>
                         <Table.Thead>
                             <Table.Tr>
@@ -188,10 +183,10 @@ export function AttenuationPanel({ data }: AttenuationPanelProps) {
                             })}
                         </Table.Tbody>
                     </Table>
-                </Paper>
+                </InfoCard>
             )}
             {otherEntries.length > 0 && (
-                <Section title="Other" entries={otherEntries} />
+                <KVSection title="Other" entries={otherEntries} />
             )}
         </Stack>
     );

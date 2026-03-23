@@ -1,6 +1,8 @@
 /** Reusable compact key-value table using Mantine Table. */
 
-import { Card, Table, Text } from "@mantine/core";
+import { Table, Text } from "@mantine/core";
+
+import { InfoCard } from "./InfoCard";
 
 interface KVTableProps {
     data: Record<string, unknown> | null | undefined;
@@ -71,12 +73,9 @@ export function KVTable({ data, emptyText = "No data", title }: KVTableProps) {
 
     if (title) {
         return (
-            <Card padding={6} radius="sm" withBorder>
-                <Text size="xs" fw={600} c="dimmed" mb={2}>
-                    {title}
-                </Text>
+            <InfoCard title={title}>
                 {table}
-            </Card>
+            </InfoCard>
         );
     }
 
