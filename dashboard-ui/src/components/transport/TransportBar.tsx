@@ -19,7 +19,6 @@ import { useCallback, useEffect, useRef } from "react";
 
 import { useGames, useRuns, useStepRange } from "../../api/queries";
 import { useDashboard } from "../../state/context";
-import { GameMenu } from "./GameMenu";
 
 const SPEED_OPTIONS = [
     { value: "2000", label: "0.5x" },
@@ -277,7 +276,6 @@ export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps)
                     data={SPEED_OPTIONS}
                     style={{ width: 80 }}
                 />
-                <GameMenu />
                 {connected !== undefined && (
                     <div
                         style={{

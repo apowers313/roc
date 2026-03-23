@@ -71,7 +71,7 @@ export function AllObjects({ run, game, onStepClick }: AllObjectsProps) {
         sortKey === key ? (sortAsc ? " \u25B2" : " \u25BC") : "";
 
     return (
-        <div style={{ maxHeight: 300, overflowY: "auto" }}>
+        <div style={{ maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
             <Table
                 striped
                 highlightOnHover

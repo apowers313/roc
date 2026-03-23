@@ -6,10 +6,28 @@ import {
     Grid,
     Text,
 } from "@mantine/core";
+import {
+    Activity,
+    Backpack,
+    BarChart3,
+    Bookmark,
+    Ear,
+    Eye,
+    Gamepad2,
+    GitCompare,
+    HeartPulse,
+    MessageSquare,
+    ScanEye,
+    Shapes,
+    Bug,
+    Table as TableIcon,
+    Zap,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useStepData, useGames } from "./api/queries";
-import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { PopoutToolbar } from "./components/common/PopoutToolbar";
+import { Section } from "./components/common/Section";
 import { useHighlight } from "./state/highlight";
 import { ActionPanel } from "./components/panels/ActionPanel";
 import { AllObjects } from "./components/panels/AllObjects";
@@ -36,6 +54,7 @@ import { TransformPanel } from "./components/panels/TransformPanel";
 import { StatusBar } from "./components/status/StatusBar";
 import { BookmarkBar } from "./components/transport/BookmarkBar";
 import { KeyboardHelp } from "./components/transport/KeyboardHelp";
+import { MenuBar } from "./components/transport/MenuBar";
 import { TransportBar } from "./components/transport/TransportBar";
 import { useBookmarks } from "./hooks/useBookmarks";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
@@ -425,8 +444,9 @@ export function App() {
     usePrefetchWindow(run, step, stepMin, stepMax, game || undefined);
 
     return (
-        <AppShell header={{ height: 120 }} padding="xs">
+        <AppShell header={{ height: 140 }} padding="xs">
             <AppShell.Header>
+                <MenuBar />
                 <TransportBar connected={connected} stepDataReadyRef={stepDataReadyRef} />
                 <BookmarkBar
                     bookmarks={bm.bookmarks}
@@ -451,206 +471,127 @@ export function App() {
                     </Text>
                 )}
 
+                <PopoutToolbar>
+                    <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
+                        <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
+                    </PopoutToolbar.Button>
+                    <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
+                        <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                        <div style={{ marginTop: 16 }}>
+                            <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                        </div>
+                    </PopoutToolbar.Button>
+                </PopoutToolbar>
+
                 <Accordion
                     multiple
                     value={openSections}
                     onChange={handleAccordionChange}
                     variant="separated"
                 >
-                    <Accordion.Item value="pipeline">
-                        <Accordion.Control>Pipeline Status</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <PipelineStatus data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="pipeline" title="Pipeline Status" icon={Activity} color="gray">
+                        <PipelineStatus data={data} />
+                    </Section>
 
-                    <Accordion.Item value="bookmarks">
-                        <Accordion.Control>Bookmarks</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <BookmarkTable
-                                    bookmarks={bm.bookmarks}
-                                    currentStep={step}
-                                    onNavigate={navigateToBookmark}
-                                    onUpdateBookmark={bm.updateBookmark}
-                                />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="bookmarks" title="Bookmarks" icon={Bookmark} color="gray">
+                        <BookmarkTable
+                            bookmarks={bm.bookmarks}
+                            currentStep={step}
+                            onNavigate={navigateToBookmark}
+                            onUpdateBookmark={bm.updateBookmark}
+                        />
+                    </Section>
 
-                    <Accordion.Item value="game-state">
-                        <Accordion.Control>Game State</Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 8 }}>
-                                    <ErrorBoundary>
-                                        <GameScreen data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
-                                    <ErrorBoundary>
-                                        <GameMetrics data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="game-state" title="Game State" icon={Gamepad2} color="gray" toolbar={
+                        <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
+                            <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                            <div style={{ marginTop: 16 }}>
+                                <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                            </div>
+                        </PopoutToolbar.Button>
+                    }>
+                        <Grid>
+                            <Grid.Col span={{ base: 12, md: 8 }}>
+                                <GameScreen data={data} />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, md: 4 }}>
+                                <GameMetrics data={data} />
+                            </Grid.Col>
+                        </Grid>
+                    </Section>
 
-                    <Accordion.Item value="log-messages">
-                        <Accordion.Control>Log Messages</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <LogMessages data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="log-messages" title="Log Messages" icon={MessageSquare} color="gray">
+                        <LogMessages data={data} />
+                    </Section>
 
-                    <Accordion.Item value="intrinsics">
-                        <Accordion.Control>Intrinsics & Significance</Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <IntrinsicsPanel data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <IntrinsicsChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="intrinsics" title="Intrinsics & Significance" icon={HeartPulse} color="orange">
+                        <Grid>
+                            <Grid.Col span={{ base: 12, md: 6 }}>
+                                <IntrinsicsPanel data={data} />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, md: 6 }}>
+                                <IntrinsicsChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                            </Grid.Col>
+                        </Grid>
+                    </Section>
 
-                    <Accordion.Item value="inventory">
-                        <Accordion.Control>Inventory</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <InventoryPanel data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="inventory" title="Inventory" icon={Backpack} color="yellow">
+                        <InventoryPanel data={data} />
+                    </Section>
 
-                    <Accordion.Item value="perception">
-                        <Accordion.Control>Visual Perception</Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
-                                    <ErrorBoundary>
-                                        <FeatureTable data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 8 }}>
-                                    <ErrorBoundary>
-                                        <ObjectInfo data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="perception" title="Visual Perception" icon={Eye} color="teal">
+                        <Grid>
+                            <Grid.Col span={{ base: 12, md: 4 }}>
+                                <FeatureTable data={data} />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, md: 8 }}>
+                                <ObjectInfo data={data} />
+                            </Grid.Col>
+                        </Grid>
+                    </Section>
 
-                    <Accordion.Item value="aural-perception">
-                        <Accordion.Control>Aural Perception</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <AuralPerception data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="aural-perception" title="Aural Perception" icon={Ear} color="teal">
+                        <AuralPerception data={data} />
+                    </Section>
 
-                    <Accordion.Item value="attention">
-                        <Accordion.Control>Visual Attention</Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 8 }}>
-                                    <ErrorBoundary>
-                                        <SaliencyMap data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 4 }}>
-                                    <ErrorBoundary>
-                                        <AttenuationPanel data={data} />
-                                        <div style={{ marginTop: 8 }}>
-                                            <FocusPoints data={data} />
-                                        </div>
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet">
+                        <Grid>
+                            <Grid.Col span={{ base: 12, md: 8 }}>
+                                <SaliencyMap data={data} />
+                            </Grid.Col>
+                            <Grid.Col span={{ base: 12, md: 4 }}>
+                                <AttenuationPanel data={data} />
+                                <div style={{ marginTop: 8 }}>
+                                    <FocusPoints data={data} />
+                                </div>
+                            </Grid.Col>
+                        </Grid>
+                    </Section>
 
-                    <Accordion.Item value="object-resolution">
-                        <Accordion.Control>
-                            Object Resolution
-                        </Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <ResolutionInspector data={data} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <ResolutionChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                                    </ErrorBoundary>
-                                    <div style={{ marginTop: 8 }}>
-                                        <ErrorBoundary>
-                                            <EventSummary data={data} />
-                                        </ErrorBoundary>
-                                    </div>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
-
-                    <Accordion.Item value="all-objects">
-                        <Accordion.Control>All Objects</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
+                    <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" toolbar={
+                        <>
+                            <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
                                 <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                            </PopoutToolbar.Button>
+                            <PopoutToolbar.Button title="Resolution Error Rate" icon={Bug}>
+                                <ResolutionChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                            </PopoutToolbar.Button>
+                        </>
+                    }>
+                        <ResolutionInspector data={data} />
+                        <div style={{ marginTop: 8 }}>
+                            <EventSummary data={data} />
+                        </div>
+                    </Section>
 
-                    <Accordion.Item value="transforms">
-                        <Accordion.Control>Transforms & Prediction</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <TransformPanel data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="transforms" title="Transforms & Prediction" icon={GitCompare} color="orange">
+                        <TransformPanel data={data} />
+                    </Section>
 
-                    <Accordion.Item value="actions">
-                        <Accordion.Control>Actions</Accordion.Control>
-                        <Accordion.Panel>
-                            <ErrorBoundary>
-                                <ActionPanel data={data} />
-                            </ErrorBoundary>
-                        </Accordion.Panel>
-                    </Accordion.Item>
+                    <Section value="actions" title="Actions" icon={Zap} color="orange">
+                        <ActionPanel data={data} />
+                    </Section>
 
-                    <Accordion.Item value="graph-events">
-                        <Accordion.Control>Graph & Events</Accordion.Control>
-                        <Accordion.Panel>
-                            <Grid>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                                <Grid.Col span={{ base: 12, md: 6 }}>
-                                    <ErrorBoundary>
-                                        <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                                    </ErrorBoundary>
-                                </Grid.Col>
-                            </Grid>
-                        </Accordion.Panel>
-                    </Accordion.Item>
                 </Accordion>
             </AppShell.Main>
         </AppShell>
