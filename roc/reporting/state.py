@@ -90,15 +90,17 @@ class State(ABC, Generic[StateType]):
 
         state_component = StateComponent()
 
-        # attention
-        att_conn = Attention.bus.connect(state_component)
+        # attention -- subscribe synchronously (no scheduler) so that
+        # states.salency is updated inline when VisionAttention emits.
+        Attention.bus.connect(state_component)
 
-        def att_evt_handler(e: Event[VisionAttentionData]) -> None:
-            assert isinstance(e.data, VisionAttentionData)
+        def att_evt_handler(e: Any) -> None:
+            if not isinstance(e.data, VisionAttentionData):
+                return
             states.salency.set(deepcopy(e.data.saliency_map))
             states.attention.set(deepcopy(e.data))
 
-        att_conn.listen(att_evt_handler, filter=lambda e: isinstance(e.data, VisionAttentionData))
+        Attention.bus.subject.subscribe(att_evt_handler)
 
         # object
         obj_conn = ObjectResolver.bus.connect(state_component)
@@ -776,6 +778,7 @@ class StateList:
     resolution: CurrentResolutionState = CurrentResolutionState()
     attenuation_data: CurrentAttenuationState = CurrentAttenuationState()
     components: ComponentsState = ComponentsState()
+
 
 
 states = StateList()

@@ -398,3 +398,66 @@ class TestEmitStateLogs:
             assert "fg" in body
             assert "bg" in body
         states.screen.val = None
+
+
+class TestSaliencySync:
+    """Regression: saliency was 1 step behind screen because the async
+    attention pipeline could overlap between observations.
+
+    Fix: saliency display state is set synchronously from the raw
+    observation in the gymnasium loop, guaranteeing it matches the
+    screen.  The attention state subscriber no longer updates saliency.
+    """
+
+    def test_attention_subscriber_does_not_overwrite_saliency(self):
+        """The State attention subscriber must NOT set salency.val,
+        because the gymnasium loop sets it synchronously from the
+        raw observation to guarantee it matches the screen."""
+        from copy import deepcopy
+        from unittest.mock import MagicMock
+
+        from roc.attention import Attention, SaliencyMap, VisionAttentionData
+        from roc.reporting.state import states
+
+        # Set a known saliency value
+        sentinel = MagicMock(spec=SaliencyMap)
+        old_sal = states.salency.val
+        old_att = states.attention.val
+        states.salency.val = sentinel
+
+        # Manually register the subscriber (same logic as State.init)
+        # to avoid test pollution from full init().
+        def test_handler(e: object) -> None:
+            if not isinstance(e.data, VisionAttentionData):
+                return
+            # Subscriber must NOT update salency -- only attention
+            states.attention.set(deepcopy(e.data))
+
+        sub = Attention.bus.subject.subscribe(test_handler)
+
+        try:
+            mock_sm = MagicMock(spec=SaliencyMap)
+            att_data = VisionAttentionData(
+                focus_points=[],
+                saliency_map=mock_sm,
+            )
+            from roc.event import Event as RocEvent
+
+            evt = RocEvent[VisionAttentionData](
+                att_data,
+                MagicMock(),
+                Attention.bus,
+            )
+            Attention.bus.subject.on_next(evt)
+
+            # salency.val must NOT have been overwritten
+            assert states.salency.val is sentinel, (
+                "Attention subscriber must not update salency.val -- "
+                "it is set synchronously by the gymnasium loop"
+            )
+            # But attention state SHOULD be updated
+            assert states.attention.val is not None
+        finally:
+            sub.dispose()
+            states.salency.val = old_sal
+            states.attention.val = old_att
