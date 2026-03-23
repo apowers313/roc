@@ -15,7 +15,7 @@ export function GameScreen({ data }: GameScreenProps) {
     return (
         <div style={{ minHeight: 260 }}>
             {data?.screen ? (
-                <CharGrid data={data.screen} />
+                <CharGrid data={data.screen} highlightRowOffset={1} />
             ) : (
                 <Text size="xs" c="dimmed">
                     No screen data
