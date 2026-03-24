@@ -8,6 +8,13 @@ tmp/
 # coverage data
 .coverage
 coverage.lcov
+coverage.xml
+
+# SonarQube
+.sonar/
+.scannerwork/
+ruff-report.json
+mypy-report.xml
 
 # python cache
 __pycache__/
@@ -45,3 +52,6 @@ wandb/
 
 # Node.js
 node_modules/
+
+# Claude Code
+.claude/
