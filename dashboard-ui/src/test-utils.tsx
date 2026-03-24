@@ -53,6 +53,7 @@ export function makeStepData(overrides: Partial<StepData> = {}): StepData {
         intrinsics: null,
         significance: null,
         action_taken: null,
+        sequence_summary: null,
         transform_summary: null,
         prediction: null,
         message: null,

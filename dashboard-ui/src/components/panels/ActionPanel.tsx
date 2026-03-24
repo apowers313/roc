@@ -1,4 +1,4 @@
-/** Action panel -- current action taken and expmod. */
+/** Action panel -- current action taken. */
 
 import { Badge, Group, Text } from "@mantine/core";
 
@@ -17,16 +17,15 @@ export function ActionPanel({ data }: ActionPanelProps) {
             {a ? (
                 <Group gap="xs">
                     <Badge color="indigo" variant="filled" size="sm">
-                        {a.action_name ?? `Action #${a.action_id}`}
+                        {a.action_name
+                            ? a.action_key
+                                ? `${a.action_name} (${a.action_key})`
+                                : a.action_name
+                            : `Action #${a.action_id}`}
                     </Badge>
                     <Text size="xs" c="dimmed">
                         (id: {a.action_id})
                     </Text>
-                    {a.expmod_name && (
-                        <Badge size="xs" variant="light" color="grape">
-                            {a.expmod_name}
-                        </Badge>
-                    )}
                 </Group>
             ) : (
                 <Text size="xs" c="dimmed">

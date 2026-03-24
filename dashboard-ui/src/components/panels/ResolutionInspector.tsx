@@ -188,13 +188,6 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
     return (
         <Stack gap="xs">
             <InfoCard title="Resolution">
-                {/* Expmod badge */}
-                {d.algorithm != null && (
-                    <Badge size="xs" variant="light" color="grape" mb={4}>
-                        {String(d.algorithm)}
-                    </Badge>
-                )}
-
                 <Group gap="xs" mb={4}>
                     <Badge size="xs" color={outcomeColor} variant="filled">
                         {outcomeLabel}

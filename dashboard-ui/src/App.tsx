@@ -8,14 +8,17 @@ import {
 } from "@mantine/core";
 import {
     Activity,
+    ArrowRightLeft,
     Backpack,
     BarChart3,
     Bookmark,
+    BrainCircuit,
+    Database,
     Ear,
     Eye,
     Gamepad2,
-    GitCompare,
     HeartPulse,
+    Layers,
     MessageSquare,
     ScanEye,
     Shapes,
@@ -29,6 +32,7 @@ import { useStepData, useGames } from "./api/queries";
 import { PopoutToolbar } from "./components/common/PopoutToolbar";
 import { Section } from "./components/common/Section";
 import { useHighlight } from "./state/highlight";
+import { ActionHistogram } from "./components/panels/ActionHistogram";
 import { ActionPanel } from "./components/panels/ActionPanel";
 import { AllObjects } from "./components/panels/AllObjects";
 import { AuralPerception } from "./components/panels/AuralPerception";
@@ -50,7 +54,10 @@ import { PipelineStatus } from "./components/panels/PipelineStatus";
 import { ResolutionChart } from "./components/panels/ResolutionChart";
 import { ResolutionInspector } from "./components/panels/ResolutionInspector";
 import { SaliencyMap } from "./components/panels/SaliencyMap";
-import { TransformPanel } from "./components/panels/TransformPanel";
+import { SchemaPanel } from "./components/panels/SchemaPanel";
+import { PredictionPanel } from "./components/panels/PredictionPanel";
+import { SequencePanel } from "./components/panels/SequencePanel";
+import { TransitionPanel } from "./components/panels/TransitionPanel";
 import { StatusBar } from "./components/status/StatusBar";
 import { BookmarkBar } from "./components/transport/BookmarkBar";
 import { KeyboardHelp } from "./components/transport/KeyboardHelp";
@@ -503,12 +510,17 @@ export function App() {
                     </Section>
 
                     <Section value="game-state" title="Game State" icon={Gamepad2} color="gray" toolbar={
-                        <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
-                            <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                            <div style={{ marginTop: 16 }}>
-                                <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
-                            </div>
-                        </PopoutToolbar.Button>
+                        <>
+                            <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
+                                <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                <div style={{ marginTop: 16 }}>
+                                    <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                </div>
+                            </PopoutToolbar.Button>
+                            <PopoutToolbar.Button title="Schema" icon={Database}>
+                                <SchemaPanel run={run} />
+                            </PopoutToolbar.Button>
+                        </>
                     }>
                         <Grid>
                             <Grid.Col span={{ base: 12, md: 8 }}>
@@ -554,7 +566,7 @@ export function App() {
                         <AuralPerception data={data} />
                     </Section>
 
-                    <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet">
+                    <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet" expmod={data?.attenuation?.flavor != null ? String(data.attenuation.flavor) : undefined}>
                         <Grid>
                             <Grid.Col span={{ base: 12, md: 8 }}>
                                 <SaliencyMap data={data} />
@@ -568,7 +580,7 @@ export function App() {
                         </Grid>
                     </Section>
 
-                    <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" toolbar={
+                    <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" expmod={data?.resolution_metrics?.algorithm != null ? String(data.resolution_metrics.algorithm) : undefined} toolbar={
                         <>
                             <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
                                 <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
@@ -584,11 +596,23 @@ export function App() {
                         </div>
                     </Section>
 
-                    <Section value="transforms" title="Transforms & Prediction" icon={GitCompare} color="orange">
-                        <TransformPanel data={data} />
+                    <Section value="sequences" title="Sequences" icon={Layers} color="indigo">
+                        <SequencePanel data={data} />
                     </Section>
 
-                    <Section value="actions" title="Actions" icon={Zap} color="orange">
+                    <Section value="transitions" title="Transitions" icon={ArrowRightLeft} color="orange">
+                        <TransitionPanel data={data} />
+                    </Section>
+
+                    <Section value="prediction" title="Prediction" icon={BrainCircuit} color="cyan" expmod={[data?.prediction?.candidate_expmod, data?.prediction?.confidence_expmod].filter((v): v is string => v != null)}>
+                        <PredictionPanel data={data} />
+                    </Section>
+
+                    <Section value="actions" title="Actions" icon={Zap} color="orange" expmod={data?.action_taken?.expmod_name} toolbar={
+                        <PopoutToolbar.Button title="Action Histogram" icon={BarChart3}>
+                            <ActionHistogram run={run} game={game || undefined} />
+                        </PopoutToolbar.Button>
+                    }>
                         <ActionPanel data={data} />
                     </Section>
 

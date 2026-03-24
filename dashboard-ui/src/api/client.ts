@@ -137,6 +137,7 @@ export interface ActionPoint {
     step: number;
     action_id: number;
     action_name?: string;
+    action_key?: string;
 }
 
 export async function fetchActionHistory(
@@ -173,6 +174,7 @@ export interface ResolvedObject {
     shape: string | null;
     glyph: string | null;
     color: string | null;
+    type: string | null;
     node_id: string | null;
     step_added: number | null;
     match_count: number;
@@ -187,6 +189,59 @@ export async function fetchAllObjects(
     const qs = params.toString();
     return fetchJson<ResolvedObject[]>(
         `${BASE}/runs/${encodeURIComponent(run)}/all-objects${qs ? `?${qs}` : ""}`,
+    );
+}
+
+export interface SchemaField {
+    name: string;
+    type: string;
+    default: string | null;
+    local: boolean;
+    exclude: boolean;
+}
+
+export interface SchemaMethod {
+    name: string;
+    params: string;
+    return_type: string;
+    local: boolean;
+}
+
+export interface SchemaNode {
+    name: string;
+    parents: string[];
+    fields: SchemaField[];
+    methods: SchemaMethod[];
+}
+
+export interface SchemaEdge {
+    name: string;
+    type: string;
+    connections: [string, string][];
+    fields: SchemaField[];
+}
+
+export interface GraphSchema {
+    mermaid: string;
+    nodes: SchemaNode[];
+    edges: SchemaEdge[];
+}
+
+export interface ActionMapEntry {
+    action_id: number;
+    action_name: string;
+    action_key?: string;
+}
+
+export async function fetchActionMap(run: string): Promise<ActionMapEntry[]> {
+    return fetchJson<ActionMapEntry[]>(
+        `${BASE}/runs/${encodeURIComponent(run)}/action-map`,
+    );
+}
+
+export async function fetchSchema(run: string): Promise<GraphSchema> {
+    return fetchJson<GraphSchema>(
+        `${BASE}/runs/${encodeURIComponent(run)}/schema`,
     );
 }
 

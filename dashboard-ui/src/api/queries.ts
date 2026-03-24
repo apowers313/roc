@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import {
     fetchActionHistory,
+    fetchActionMap,
     fetchEventHistory,
     fetchGames,
     fetchGraphHistory,
@@ -12,6 +13,7 @@ import {
     fetchAllObjects,
     fetchResolutionHistory,
     fetchRuns,
+    fetchSchema,
     fetchStep,
     fetchStepRange,
 } from "./client";
@@ -126,6 +128,39 @@ export function useAllObjects(run: string, game?: number) {
         queryFn: () => fetchAllObjects(run, game),
         enabled: run !== "",
         staleTime: HISTORY_STALE_MS,
+    });
+}
+
+export function useActionMap(run: string) {
+    return useQuery({
+        queryKey: ["action-map", run],
+        queryFn: async () => {
+            try {
+                return await fetchActionMap(run);
+            } catch {
+                // Return empty array on 404 / network error so the query
+                // doesn't enter a permanent error state.
+                return [] as Awaited<ReturnType<typeof fetchActionMap>>;
+            }
+        },
+        enabled: run !== "",
+        staleTime: Infinity, // immutable once we have data
+        // Retry every 2s while the map is empty (race: game subprocess
+        // may not have sent the map yet when the dashboard first queries).
+        refetchInterval: (query) => {
+            const data = query.state.data;
+            return data && data.length > 0 ? false : 2_000;
+        },
+    });
+}
+
+export function useSchema(run: string) {
+    return useQuery({
+        queryKey: ["schema", run],
+        queryFn: () => fetchSchema(run),
+        enabled: run !== "",
+        staleTime: Infinity, // schema is immutable per run
+        retry: false,
     });
 }
 

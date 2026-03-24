@@ -95,6 +95,7 @@ export function CharGrid({ data, highlightRowOffset = 0 }: CharGridProps) {
                 padding: "4px",
                 margin: 0,
                 overflow: "auto",
+                width: "fit-content",
             }}
             dangerouslySetInnerHTML={{ __html: html }}
         />

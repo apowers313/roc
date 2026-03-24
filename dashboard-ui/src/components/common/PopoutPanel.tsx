@@ -19,8 +19,8 @@ export function PopoutPanel({ title, opened, onClose, children, size = "xl" }: P
             title={title}
             position="right"
             size={size}
-            withOverlay={false}
-            closeOnClickOutside={false}
+            overlayProps={{ backgroundOpacity: 0.1 }}
+            closeOnClickOutside={true}
             lockScroll={false}
             removeScrollProps={{ enabled: false }}
         >

@@ -39,7 +39,7 @@ export default defineConfig({
                 ],
             },
             manifest: {
-                name: "ROC Debug Dashboard",
+                name: "ROC",
                 short_name: "ROC",
                 description: "Debug dashboard for ROC reinforcement learning agent",
                 theme_color: "#1a1b1e",

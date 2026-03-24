@@ -10,7 +10,7 @@ describe("ResolutionInspector", () => {
         expect(screen.getByText("No resolution data")).toBeInTheDocument();
     });
 
-    it("displays expmod badge above Resolution line", () => {
+    it("does not render expmod inline (expmod is shown by Section)", () => {
         const data = makeStepData({
             resolution_metrics: {
                 outcome: "match",
@@ -21,12 +21,8 @@ describe("ResolutionInspector", () => {
             },
         });
         renderWithProviders(<ResolutionInspector data={data} />);
-        const badge = screen.getByText("dirichlet-categorical");
-        const resolution = screen.getByText("Resolution");
-        // Badge should appear before Resolution text in DOM order
-        expect(
-            badge.compareDocumentPosition(resolution) & Node.DOCUMENT_POSITION_FOLLOWING,
-        ).toBeTruthy();
+        // Expmod badge is rendered by the parent Section, not by ResolutionInspector
+        expect(screen.queryByText("dirichlet-categorical")).not.toBeInTheDocument();
     });
 
     it("parses glyph from features and displays it", () => {

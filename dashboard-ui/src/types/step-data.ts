@@ -18,6 +18,7 @@ export interface StepData {
     intrinsics: IntrinsicsData | null;
     significance: number | null;
     action_taken: ActionData | null;
+    sequence_summary: SequenceData | null;
     transform_summary: TransformData | null;
     prediction: PredictionData | null;
     message: string | null;
@@ -33,18 +34,45 @@ export interface IntrinsicsData {
 export interface ActionData {
     action_id: number;
     action_name?: string;
+    action_key?: string;
     expmod_name?: string;
+}
+
+export interface SequenceObjectData {
+    id: string;
+    x?: number;
+    y?: number;
+    resolve_count?: number;
+}
+
+export interface SequenceData {
+    tick: number;
+    object_count: number;
+    objects: SequenceObjectData[];
+    intrinsic_count: number;
+    intrinsics: Record<string, number>;
+    significance?: number;
+}
+
+export interface TransformChangeData {
+    description: string;
+    type?: string;
+    name?: string;
+    normalized_change?: number;
 }
 
 export interface TransformData {
     count: number;
-    changes: string[];
+    /** Structured objects (new format) or plain strings (old format). */
+    changes: (TransformChangeData | string)[];
 }
 
 export interface PredictionData {
     made: boolean;
-    candidates?: number;
+    candidate_count?: number;
     confidence?: number;
+    all_scores?: number[];
+    predicted_intrinsics?: Record<string, number>;
     candidate_expmod?: string;
     confidence_expmod?: string;
 }

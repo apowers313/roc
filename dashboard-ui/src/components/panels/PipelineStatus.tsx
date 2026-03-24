@@ -19,36 +19,12 @@ function getStages(data: StepData | undefined): StageCard[] {
 
     const stages: StageCard[] = [];
 
-    // Perception
-    const featCount = data.features?.length ?? 0;
-    stages.push({
-        label: "Perception",
-        value: featCount > 0 ? `${featCount} feat` : "--",
-        color: featCount > 0 ? "blue" : "gray",
-    });
-
-    // Attention
-    const fpCount = data.focus_points?.length ?? 0;
-    stages.push({
-        label: "Attention",
-        value: fpCount > 0 ? `${fpCount} focus` : "--",
-        color: fpCount > 0 ? "cyan" : "gray",
-    });
-
     // Resolution
     const res = data.resolution_metrics;
     stages.push({
         label: "Resolution",
         value: res ? String(res.outcome ?? "done") : "--",
         color: res ? "teal" : "gray",
-    });
-
-    // Graph
-    const g = data.graph_summary;
-    stages.push({
-        label: "Graph",
-        value: g ? `${g.node_count}n/${g.edge_count}e` : "--",
-        color: g ? "violet" : "gray",
     });
 
     // Transform
@@ -98,7 +74,7 @@ export function PipelineStatus({ data }: PipelineStatusProps) {
     }
 
     return (
-        <SimpleGrid cols={{ base: 4, md: 8 }} spacing="xs">
+        <SimpleGrid cols={{ base: 3, md: 5 }} spacing="xs">
             {stages.map((s) => (
                 <Paper key={s.label} p="xs" withBorder>
                     <Group justify="space-between" gap={4}>

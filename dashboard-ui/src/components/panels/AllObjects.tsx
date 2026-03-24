@@ -21,7 +21,7 @@ interface AllObjectsProps {
     onStepClick?: (step: number) => void;
 }
 
-type SortKey = "shape" | "glyph" | "color" | "node_id" | "step_added" | "match_count";
+type SortKey = "shape" | "glyph" | "color" | "type" | "node_id" | "step_added" | "match_count";
 
 function compareValues(a: unknown, b: unknown): number {
     if (a == null && b == null) return 0;
@@ -62,6 +62,7 @@ export function AllObjects({ run, game, onStepClick }: AllObjectsProps) {
         { key: "shape", label: "shape", width: 40 },
         { key: "glyph", label: "glyph", width: 60 },
         { key: "color", label: "color" },
+        { key: "type", label: "type", width: 50 },
         { key: "node_id", label: "node id" },
         { key: "step_added", label: "step added", width: 80 },
         { key: "match_count", label: "matches", width: 70 },
@@ -134,6 +135,9 @@ export function AllObjects({ run, game, onStepClick }: AllObjectsProps) {
                                 </Table.Td>
                                 <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
                                     {obj.color ?? "--"}
+                                </Table.Td>
+                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                    {obj.type ?? "--"}
                                 </Table.Td>
                                 <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
                                     {obj.node_id ?? "--"}
