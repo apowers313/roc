@@ -302,6 +302,28 @@ def get_all_objects(
     return JSONResponse(content=_convert_numpy(data))
 
 
+@app.get("/api/runs/{run_name}/schema")
+def get_schema(run_name: str) -> JSONResponse:
+    """Get the graph database schema for a run."""
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    schema = _data_store.get_schema(run_name)
+    if schema is None:
+        raise HTTPException(status_code=404, detail="No schema found for this run")
+    return JSONResponse(content=schema)
+
+
+@app.get("/api/runs/{run_name}/action-map")
+def get_action_map(run_name: str) -> JSONResponse:
+    """Get the full action-id-to-name mapping for a run."""
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+    action_map = _data_store.get_action_map(run_name)
+    if action_map is None:
+        return JSONResponse(content=[])
+    return JSONResponse(content=action_map)
+
+
 @app.get("/api/runs/{run_name}/bookmarks")
 def get_bookmarks(run_name: str) -> list[Bookmark]:
     """Get bookmarks for a run."""
@@ -503,16 +525,34 @@ def _stop_live_session() -> None:
 
 
 @app.post("/api/internal/step")
-def receive_step(request: dict[str, Any]) -> dict[str, str]:
+def receive_step(request: dict[str, Any]) -> dict[str, Any]:
     """Receive a step from the game subprocess and broadcast via Socket.io.
 
     This is an internal endpoint used by the game subprocess to push
-    live step data to the dashboard server.
+    live step data to the dashboard server. The response may include
+    ``{"stop": true}`` to request cooperative shutdown.
     """
     step_data = StepData(**{k: v for k, v in request.items() if k in StepData.__dataclass_fields__})
     if _data_store is not None:
         _data_store.push_live_step(step_data)
     _notify_new_step(step_data)
+    response: dict[str, Any] = {"status": "ok"}
+    if _game_manager is not None and _game_manager.is_stop_requested():
+        response["stop"] = True
+    return response
+
+
+@app.post("/api/internal/action-map")
+def receive_action_map(request: dict[str, Any]) -> dict[str, str]:
+    """Receive the full action map from the game subprocess.
+
+    Called once at game start so the dashboard knows all action names
+    without waiting for them to appear in step data.
+    """
+    run_name = request.get("run_name", "")
+    action_map = request.get("action_map", [])
+    if _data_store is not None and run_name and isinstance(action_map, list):
+        _data_store.set_action_map(run_name, action_map)
     return {"status": "ok"}
 
 

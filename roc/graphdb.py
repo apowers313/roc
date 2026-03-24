@@ -2107,6 +2107,80 @@ class Schema:
         ret += "}"
         return ret
 
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the schema to a JSON-friendly dictionary.
+
+        Returns:
+            dict: Schema data with nodes, edges, and a Mermaid diagram.
+        """
+        nodes = []
+        for n in self.nodes:
+            fields = []
+            for f in n.fields:
+                fields.append(
+                    {
+                        "name": f.name,
+                        "type": f.type,
+                        "default": f.default_val_str
+                        if f.default_val is not PydanticUndefined
+                        else None,
+                        "local": _is_local(n.model, f.name),
+                        "exclude": bool(f.exclude),
+                    }
+                )
+            methods = []
+            for m in n.methods:
+                param_list = [
+                    f"{p.name}: {p.type}{p.formatted_default}" for p in m.params
+                ]
+                methods.append(
+                    {
+                        "name": m.name,
+                        "params": ", ".join(param_list),
+                        "return_type": m.return_type,
+                        "local": _is_local(n.model, m.name),
+                    }
+                )
+            nodes.append(
+                {
+                    "name": n.name,
+                    "parents": list(n.parent_class_names),
+                    "fields": fields,
+                    "methods": methods,
+                }
+            )
+
+        edges = []
+        for e in self.edges:
+            connections = [[c[0], c[1]] for c in e.allowed_connections]
+            fields = []
+            for f in e.fields:
+                fields.append(
+                    {
+                        "name": f.name,
+                        "type": f.type,
+                        "default": f.default_val_str
+                        if f.default_val is not PydanticUndefined
+                        else None,
+                        "local": _is_local(e.model, f.name),
+                        "exclude": bool(f.exclude),
+                    }
+                )
+            edges.append(
+                {
+                    "name": e.name,
+                    "type": e.edgetype,
+                    "connections": connections,
+                    "fields": fields,
+                }
+            )
+
+        return {
+            "mermaid": self.to_mermaid(),
+            "nodes": nodes,
+            "edges": edges,
+        }
+
     @classmethod
     def _repr_markdown_(cls) -> str:
         """Returns the schema as a Mermaid diagram wrapped in a markdown code block."""

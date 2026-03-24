@@ -13,7 +13,7 @@ from helpers.otel import make_log_record
 
 from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.parquet_exporter import ParquetExporter
-from roc.reporting.run_store import RunStore, StepData
+from roc.reporting.run_store import RunStore, StepData, parse_feature_attrs
 
 
 @pytest.fixture()
@@ -1692,3 +1692,150 @@ class TestGetAllObjects:
         assert obj["shape"] == "."
         assert obj["color"] == "GREY"
         assert obj["match_count"] == 1
+
+    def test_new_object_with_only_flood_features(self, tmp_path: Path):
+        """Regression: objects with only FloodNode/LineNode features must still
+        have shape, glyph, and color populated (not null/--).
+
+        Before the fix, parse_feature_attrs only recognized ShapeNode,
+        ColorNode, and SingleNode, so FloodNode/LineNode-only objects got
+        null for all three visual attributes.
+        """
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+
+        exporter.export([make_log_record(event_name="roc.game_start", body="game")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": [
+                                "FloodNode(2378,29,7,.)",
+                                "LineNode(2378,5,7,.)",
+                            ],
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 99}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        obj = objects[0]
+        assert obj["shape"] == ".", f"Expected '.', got {obj['shape']!r}"
+        assert obj["glyph"] == "2378", f"Expected '2378', got {obj['glyph']!r}"
+        assert obj["color"] == "GREY", f"Expected 'GREY', got {obj['color']!r}"
+
+    def test_observed_attrs_used_when_features_empty(self, tmp_path: Path):
+        """Regression: when features are empty (all excluded by filter),
+        observed_attrs from unfiltered feature nodes provides shape/glyph/color/type.
+        """
+        dl_store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=dl_store, background=False)
+
+        exporter.export([make_log_record(event_name="roc.game_start", body="game")])
+        exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.decision",
+                    body=json.dumps(
+                        {
+                            "outcome": "new_object",
+                            "features": [],
+                            "observed_attrs": {
+                                "char": ".",
+                                "color": "GREY",
+                                "glyph": 2378,
+                                "type": "flood",
+                            },
+                        }
+                    ),
+                )
+            ]
+        )
+        exporter.export(
+            [
+                make_log_record(
+                    event_name="roc.resolution.new_object_id",
+                    body=json.dumps({"new_object_id": 77}),
+                )
+            ]
+        )
+        exporter.shutdown()
+        store = RunStore(dl_store)
+        objects = store.get_all_objects()
+        assert len(objects) == 1
+        obj = objects[0]
+        assert obj["shape"] == "."
+        assert obj["glyph"] == "2378"
+        assert obj["color"] == "GREY"
+        assert obj["type"] == "flood"
+
+
+class TestParseFeatureAttrs:
+    """Unit tests for parse_feature_attrs."""
+
+    def test_standard_features(self):
+        features = ["ShapeNode(.)", "ColorNode(GREY)", "SingleNode(2378)"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == "."
+        assert color == "GREY"
+        assert glyph == "2378"
+
+    def test_flood_node_fallback(self):
+        features = ["FloodNode(2378,29,7,.)"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == "."
+        assert color == "GREY"
+        assert glyph == "2378"
+
+    def test_line_node_fallback(self):
+        features = ["LineNode(2378,5,7,.)"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == "."
+        assert color == "GREY"
+        assert glyph == "2378"
+
+    def test_standard_features_take_priority_over_composite(self):
+        features = [
+            "ShapeNode(@)",
+            "ColorNode(RED)",
+            "SingleNode(100)",
+            "FloodNode(2378,29,7,.)",
+        ]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == "@"
+        assert color == "RED"
+        assert glyph == "100"
+
+    def test_composite_with_special_shape_chars(self):
+        # comma as shape character
+        features = ["FloodNode(100,5,1,,)"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == ","
+
+        # closing paren as shape character
+        features = ["FloodNode(100,5,1,))"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape == ")"
+
+    def test_no_recognized_features(self):
+        features = ["DeltaNode(1,2)", "MotionNode(3,4)"]
+        shape, color, glyph = parse_feature_attrs(features)
+        assert shape is None
+        assert color is None
+        assert glyph is None

@@ -14,6 +14,27 @@ import gymnasium as gym
 import nle
 from pydantic import BaseModel, Field
 
+
+def action_value_to_key(val: int) -> str | None:
+    """Convert an NLE action enum value to a human-readable key string.
+
+    NLE encodes actions in three ranges:
+    - Printable ASCII (32-126): single keystroke, e.g. ord("a") -> "a"
+    - Control chars (1-31): C(c) = 0x1F & c, e.g. C("d") = 4 -> "^d"
+    - Meta/extended (128+): M(c) = 0x80 | c, e.g. M("f") = 230 -> "M-f"
+
+    Returns None for values that don't map to a key (0, 127, etc).
+    """
+    if 32 <= val <= 126:
+        return chr(val)
+    if 1 <= val <= 31:
+        return f"^{chr(val + 0x40)}"
+    if val >= 128:
+        base = val & 0x7F
+        if 32 <= base <= 126:
+            return f"M-{chr(base)}"
+    return None
+
 from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
@@ -82,6 +103,63 @@ class Gym(Component, ABC):
             _callback_ctx.check_hostname = False
             _callback_ctx.verify_mode = ssl.CERT_NONE
             logger.info("Step callback URL: {}", _callback_url)
+
+        # Build and publish the full action map so the dashboard knows all
+        # action names upfront (not just ones the agent has taken).
+        _gym_actions = settings.gym_actions
+        if _gym_actions:
+            _action_map: list[dict[str, Any]] = []
+            for _idx, _act in enumerate(_gym_actions):
+                _entry: dict[str, Any] = {"action_id": _idx}
+                _entry["action_name"] = str(getattr(_act, "name", _act))
+                _aval = getattr(_act, "value", None)
+                if isinstance(_aval, int):
+                    _key = action_value_to_key(_aval)
+                    if _key is not None:
+                        _entry["action_key"] = _key
+                _action_map.append(_entry)
+
+            if _callback_url:
+                # Subprocess mode: POST action map to the server
+                from roc.reporting.observability import Observability
+
+                _dl_store = Observability.get_ducklake_store()
+                if _dl_store is not None:
+                    _run_name = _dl_store.run_dir.name
+                    try:
+                        import json as _json_mod
+                        import urllib.request
+
+                        _base = _callback_url.rsplit("/api/internal/step", 1)[0]
+                        _map_url = f"{_base}/api/internal/action-map"
+                        _map_payload = _json_mod.dumps(
+                            {"run_name": _run_name, "action_map": _action_map},
+                            separators=(",", ":"),
+                        ).encode()
+                        _map_req = urllib.request.Request(
+                            _map_url,
+                            data=_map_payload,
+                            headers={"Content-Type": "application/json"},
+                            method="POST",
+                        )
+                        urllib.request.urlopen(_map_req, timeout=5, context=_callback_ctx)
+                        logger.debug("Sent action map ({} entries) to server", len(_action_map))
+                    except Exception:
+                        logger.opt(exception=True).debug("Failed to send action map")
+            else:
+                # In-process mode: save directly to the run directory
+                from roc.reporting.observability import Observability
+
+                _dl_store = Observability.get_ducklake_store()
+                if _dl_store is not None:
+                    try:
+                        import json as _json_mod2
+
+                        _map_path = _dl_store.run_dir / "action_map.json"
+                        _map_path.write_text(_json_mod2.dumps(_action_map))
+                        logger.debug("Saved action_map.json ({} entries)", len(_action_map))
+                    except Exception:
+                        logger.opt(exception=True).debug("Failed to save action_map.json")
 
         done = False
         truncated = False
@@ -191,7 +269,7 @@ class Gym(Component, ABC):
                     _significance = None
                     _action_taken = None
                     _transform_summary = None
-                    _prediction = None
+                    _prediction: dict[str, Any] | None = None
                     _message = None
                     _phonemes = None
                     _inventory = None
@@ -216,17 +294,75 @@ class Gym(Component, ABC):
                                 _action_taken_dict["action_name"] = str(
                                     getattr(_act_enum, "name", _act_enum)
                                 )
+                                _val = getattr(_act_enum, "value", None)
+                                if isinstance(_val, int):
+                                    _key = action_value_to_key(_val)
+                                    if _key is not None:
+                                        _action_taken_dict["action_key"] = _key
                         except Exception:
                             pass
                         _action_taken = _action_taken_dict
 
                     if _states.transform.val is not None:
                         _t = _states.transform.val.transform
-                        _changes = [str(e.dst) for e in _t.src_edges]
+                        _changes_list: list[dict[str, Any]] = []
+                        for _edge in _t.src_edges:
+                            _dst = _edge.dst
+                            _ch: dict[str, Any] = {"description": str(_dst)}
+                            if hasattr(_dst, "name"):
+                                _ch["type"] = type(_dst).__name__
+                                _ch["name"] = _dst.name
+                            if hasattr(_dst, "normalized_change"):
+                                _ch["normalized_change"] = _dst.normalized_change
+                            _changes_list.append(_ch)
                         _transform_summary = {
-                            "count": len(_changes),
-                            "changes": _changes,
+                            "count": len(_changes_list),
+                            "changes": _changes_list,
                         }
+
+                    _sequence_summary = None
+                    try:
+                        from roc.intrinsic import IntrinsicNode as _IN
+
+                        _seq = _states.transform.val
+                        if _seq is not None:
+                            from roc.component import (
+                                ComponentName as _CN2,
+                                ComponentType as _CT2,
+                                loaded_components as _lc2,
+                            )
+                            from roc.sequencer import Sequencer as _Seq2
+
+                            _seq_comp = _lc2.get((_CN2("sequencer"), _CT2("sequencer")))
+                            if isinstance(_seq_comp, _Seq2) and _seq_comp.last_frame is not None:
+                                _frame = _seq_comp.last_frame
+                                _objs = _frame.objects
+                                _obj_dicts: list[dict[str, Any]] = []
+                                for _obj in _objs:
+                                    _od: dict[str, Any] = {"id": str(_obj.id)[:8]}
+                                    if hasattr(_obj, "last_x") and hasattr(_obj, "last_y"):
+                                        _od["x"] = _obj.last_x
+                                        _od["y"] = _obj.last_y
+                                    if hasattr(_obj, "resolve_count"):
+                                        _od["resolve_count"] = _obj.resolve_count
+                                    _obj_dicts.append(_od)
+                                _intr_snap: dict[str, float] = {}
+                                for _tn in _frame.transformable:
+                                    if isinstance(_tn, _IN):
+                                        _intr_snap[_tn.name] = round(_tn.normalized_value, 4)
+                                _sequence_summary = {
+                                    "tick": _frame.tick,
+                                    "object_count": len(_objs),
+                                    "objects": _obj_dicts,
+                                    "intrinsic_count": len(_intr_snap),
+                                    "intrinsics": _intr_snap,
+                                }
+                                if _states.significance.val is not None:
+                                    _sequence_summary["significance"] = (
+                                        _states.significance.val.significance
+                                    )
+                    except Exception:
+                        pass
 
                     if _states.predict.val is not None:
                         from roc.predict import NoPrediction as _NP
@@ -234,6 +370,26 @@ class Gym(Component, ABC):
                         _prediction = {
                             "made": not isinstance(_states.predict.val, _NP),
                         }
+                        try:
+                            from roc.component import (
+                                ComponentName as _CN3,
+                                ComponentType as _CT3,
+                                loaded_components as _lc3,
+                            )
+                            from roc.predict import Predict as _Pred
+
+                            _pred_comp = _lc3.get((_CN3("predict"), _CT3("predict")))
+                            if isinstance(_pred_comp, _Pred):
+                                _meta = _pred_comp.last_prediction_meta
+                                _prediction["candidate_count"] = _meta.candidate_count
+                                _prediction["confidence"] = _meta.confidence
+                                _prediction["all_scores"] = _meta.all_scores
+                                if _meta.predicted_intrinsics:
+                                    _prediction["predicted_intrinsics"] = (
+                                        _meta.predicted_intrinsics
+                                    )
+                        except Exception:
+                            pass
 
                     if _states.message.val is not None:
                         _msg = _states.message.val.strip()
@@ -330,6 +486,7 @@ class Gym(Component, ABC):
                         intrinsics=_intrinsics,
                         significance=_significance,
                         action_taken=_action_taken,
+                        sequence_summary=_sequence_summary,
                         transform_summary=_transform_summary,
                         prediction=_prediction,
                         message=_message,
@@ -340,6 +497,7 @@ class Gym(Component, ABC):
                         _buf.push(_step_data)
 
                     # Push step to external dashboard server via HTTP callback
+                    _server_stop = False
                     if _callback_url:
                         try:
                             import dataclasses as _dc
@@ -354,7 +512,12 @@ class Gym(Component, ABC):
                                 headers={"Content-Type": "application/json"},
                                 method="POST",
                             )
-                            urllib.request.urlopen(_req, timeout=2, context=_callback_ctx)
+                            _resp = urllib.request.urlopen(
+                                _req, timeout=2, context=_callback_ctx
+                            )
+                            _resp_body = _json.loads(_resp.read())
+                            if _resp_body.get("stop"):
+                                _server_stop = True
                         except Exception:
                             pass  # best-effort, don't break the game loop
 
@@ -387,6 +550,10 @@ class Gym(Component, ABC):
                     game_counter.add(1)
                     game_num += 1
                     _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
+
+                if _server_stop:
+                    logger.info("Server requested stop, exiting game loop.")
+                    break
 
         logger.info("NLE loop done, exiting.")
         from roc.reporting.api_server import stop_dashboard

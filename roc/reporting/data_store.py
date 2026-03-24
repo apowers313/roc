@@ -9,6 +9,7 @@ Provides a single DataStore class that:
 
 from __future__ import annotations
 
+import json
 import threading
 import time
 from dataclasses import dataclass, field
@@ -70,6 +71,7 @@ class DataStore:
         self._run_stores: dict[str, RunStore] = {}
         self._store_lock = threading.Lock()
         self._run_summary_cache: dict[str, RunSummary] = {}
+        self._action_maps: dict[str, list[dict[str, Any]]] = {}
 
     @property
     def data_dir(self) -> Path:
@@ -437,6 +439,46 @@ class DataStore:
             return self._live_all_objects(game)
         return self._get_run_store(run_name).get_all_objects(game)
 
+    def set_action_map(self, run_name: str, action_map: list[dict[str, Any]]) -> None:
+        """Store the action map for a run and persist to disk."""
+        self._action_maps[run_name] = action_map
+        action_map_path = self._data_dir / run_name / "action_map.json"
+        try:
+            action_map_path.parent.mkdir(parents=True, exist_ok=True)
+            action_map_path.write_text(json.dumps(action_map))
+        except Exception:
+            logger.opt(exception=True).warning("Failed to persist action_map.json")
+
+    def get_action_map(self, run_name: str) -> list[dict[str, Any]] | None:
+        """Get the full action map for a run (from memory or disk)."""
+        cached = self._action_maps.get(run_name)
+        if cached is not None:
+            return cached
+        action_map_path = self._data_dir / run_name / "action_map.json"
+        if action_map_path.exists():
+            try:
+                data: list[dict[str, Any]] = json.loads(action_map_path.read_text())
+                self._action_maps[run_name] = data
+                return data
+            except Exception:
+                return None
+        return None
+
+    def get_schema(self, run_name: str) -> dict[str, Any] | None:
+        """Get the graph database schema for a run.
+
+        Reads from the schema.json file saved in the run directory.
+        Returns None if no schema is available.
+        """
+        schema_path = self._data_dir / run_name / "schema.json"
+        if schema_path.exists():
+            try:
+                result: dict[str, Any] = json.loads(schema_path.read_text())
+                return result
+            except Exception:
+                return None
+        return None
+
     # -------------------------------------------------------------------
     # Live resolution/objects computation
     # -------------------------------------------------------------------
@@ -474,6 +516,15 @@ class DataStore:
             features = ev.get("features", [])
             shape, color, glyph = parse_feature_attrs(features)
 
+            # observed_attrs (from unfiltered features) takes priority
+            oa = ev.get("observed_attrs", {})
+            if oa:
+                shape = shape or oa.get("char")
+                color = color or oa.get("color")
+                glyph = glyph or (str(oa["glyph"]) if oa.get("glyph") is not None else None)
+
+            obj_type = oa.get("type")
+
             if outcome == "new_object":
                 nid = ev.get("new_object_id")
                 if nid is not None:
@@ -482,6 +533,7 @@ class DataStore:
                         "shape": shape,
                         "glyph": glyph,
                         "color": color,
+                        "type": obj_type,
                         "node_id": mid,
                         "step_added": step,
                         "match_count": 0,
@@ -493,6 +545,7 @@ class DataStore:
                         "shape": shape,
                         "glyph": glyph,
                         "color": color,
+                        "type": obj_type,
                         "node_id": None,
                         "step_added": step,
                         "match_count": 0,
@@ -505,6 +558,7 @@ class DataStore:
                         "shape": shape,
                         "glyph": glyph,
                         "color": color,
+                        "type": obj_type,
                     }
                 )
 
@@ -520,15 +574,16 @@ class DataStore:
                 objects[mid]["match_count"] += 1
                 # Update attributes from the current observation so that
                 # objects created without a glyph get one when matched later.
-                for attr in ("shape", "glyph", "color"):
-                    if m[attr] and not objects[mid].get(attr):
+                for attr in ("shape", "glyph", "color", "type"):
+                    if m.get(attr) and not objects[mid].get(attr):
                         objects[mid][attr] = m[attr]
             else:
                 ma = m["matched_attrs"]
                 objects[mid] = {
                     "shape": ma.get("char", m["shape"]),
-                    "glyph": str(ma["glyph"]) if ma.get("glyph") else m["glyph"],
+                    "glyph": str(ma["glyph"]) if ma.get("glyph") is not None else m["glyph"],
                     "color": ma.get("color", m["color"]),
+                    "type": m.get("type"),
                     "node_id": mid,
                     "step_added": None,
                     "match_count": 1,

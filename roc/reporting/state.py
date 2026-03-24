@@ -226,6 +226,17 @@ class State(ABC, Generic[StateType]):
         schema = Schema()
         logger.debug(f"schema\n{schema.to_dot()}")
 
+        # Save schema to the run directory and emit as OTel event
+        schema_dict = schema.to_dict()
+        store = Observability.get_ducklake_store()
+        if store is not None:
+            schema_path = store.run_dir / "schema.json"
+            schema_path.write_text(json.dumps(schema_dict, indent=2))
+            logger.debug("Schema saved to {}", schema_path)
+        _emit_state_record(
+            "roc.schema", json.dumps(schema_dict, separators=(",", ":"))
+        )
+
     @staticmethod
     def emit_state_logs() -> None:
         """Emits current state values as OTel log records."""
@@ -295,6 +306,13 @@ class State(ABC, Generic[StateType]):
                 if gym_actions and int(action_val) < len(gym_actions):
                     act_enum = gym_actions[int(action_val)]
                     action_dict["action_name"] = str(getattr(act_enum, "name", act_enum))
+                    _val = getattr(act_enum, "value", None)
+                    if isinstance(_val, int):
+                        from roc.gymnasium import action_value_to_key
+
+                        _key = action_value_to_key(_val)
+                        if _key is not None:
+                            action_dict["action_key"] = _key
             except Exception:
                 pass
             try:
@@ -311,9 +329,16 @@ class State(ABC, Generic[StateType]):
         # Transform summary
         if current_states.transform.val is not None:
             t = current_states.transform.val.transform
-            changes = []
+            changes: list[dict[str, Any]] = []
             for edge in t.src_edges:
-                changes.append(str(edge.dst))
+                dst = edge.dst
+                change_dict: dict[str, Any] = {"description": str(dst)}
+                if hasattr(dst, "name"):
+                    change_dict["type"] = type(dst).__name__
+                    change_dict["name"] = dst.name
+                if hasattr(dst, "normalized_change"):
+                    change_dict["normalized_change"] = dst.normalized_change
+                changes.append(change_dict)
             _emit_state_record(
                 "roc.transform_summary",
                 json.dumps(
@@ -323,12 +348,59 @@ class State(ABC, Generic[StateType]):
                 ),
             )
 
+        # Sequence summary -- frame composition from the last completed frame
+        try:
+            from roc.component import (
+                ComponentName as _CN,
+                ComponentType as _CT,
+                loaded_components as _lc,
+            )
+            from roc.intrinsic import IntrinsicNode
+            from roc.sequencer import Sequencer as _Seq
+
+            seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
+            if isinstance(seq_comp, _Seq) and seq_comp.last_frame is not None:
+                frame = seq_comp.last_frame
+                objs = frame.objects
+                obj_dicts: list[dict[str, Any]] = []
+                for obj in objs:
+                    obj_dict: dict[str, Any] = {"id": str(obj.id)[:8]}
+                    if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
+                        obj_dict["x"] = obj.last_x
+                        obj_dict["y"] = obj.last_y
+                    if hasattr(obj, "resolve_count"):
+                        obj_dict["resolve_count"] = obj.resolve_count
+                    obj_dicts.append(obj_dict)
+
+                intrinsic_snapshot: dict[str, float] = {}
+                for t_node in frame.transformable:
+                    if isinstance(t_node, IntrinsicNode):
+                        intrinsic_snapshot[t_node.name] = round(t_node.normalized_value, 4)
+
+                seq_dict: dict[str, Any] = {
+                    "tick": frame.tick,
+                    "object_count": len(objs),
+                    "objects": obj_dicts,
+                    "intrinsic_count": len(intrinsic_snapshot),
+                    "intrinsics": intrinsic_snapshot,
+                }
+                if current_states.significance.val is not None:
+                    seq_dict["significance"] = current_states.significance.val.significance
+
+                _emit_state_record(
+                    "roc.sequence_summary",
+                    json.dumps(seq_dict, separators=(",", ":"), default=str),
+                )
+        except Exception:
+            pass
+
         # Prediction
         if current_states.predict.val is not None:
             pred = current_states.predict.val
             pred_dict: dict[str, Any] = {"made": not isinstance(pred, NoPrediction)}
             try:
                 from roc.predict import (
+                    Predict,
                     PredictionCandidateFramesExpMod,
                     PredictionConfidenceExpMod,
                 )
@@ -339,11 +411,29 @@ class State(ABC, Generic[StateType]):
                 pred_dict["confidence_expmod"] = PredictionConfidenceExpMod.get(
                     default="naive"
                 ).name
+
+                # Pull enriched metadata from the Predict component
+                from roc.component import (
+                    ComponentName,
+                    ComponentType,
+                    loaded_components,
+                )
+
+                predict_comp = loaded_components.get(
+                    (ComponentName("predict"), ComponentType("predict"))
+                )
+                if isinstance(predict_comp, Predict):
+                    meta = predict_comp.last_prediction_meta
+                    pred_dict["candidate_count"] = meta.candidate_count
+                    pred_dict["confidence"] = meta.confidence
+                    pred_dict["all_scores"] = meta.all_scores
+                    if meta.predicted_intrinsics:
+                        pred_dict["predicted_intrinsics"] = meta.predicted_intrinsics
             except Exception:
                 pass
             _emit_state_record(
                 "roc.prediction",
-                json.dumps(pred_dict, separators=(",", ":")),
+                json.dumps(pred_dict, separators=(",", ":"), default=str),
             )
 
         # Message

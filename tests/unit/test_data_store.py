@@ -390,12 +390,18 @@ class TestAllObjects:
         assert objects[0]["step_added"] is None
 
     def test_match_updates_missing_glyph(self, tmp_path: Path) -> None:
-        """Regression: objects created without a glyph should get one on match."""
+        """Regression: objects created without a glyph should get one on match.
+
+        LineNode features now provide glyph/shape/color directly via
+        parse_feature_attrs, so attributes are populated at creation time.
+        A subsequent match with richer features should not overwrite them.
+        """
         ds = DataStore(tmp_path)
         buf = StepBuffer(capacity=100)
         ds.set_live_session("test-run", buf)
 
-        # Step 1: new_object with only LineNode features (no glyph)
+        # Step 1: new_object with only LineNode features -- glyph/shape/color
+        # are now extracted from LineNode composite features.
         buf.push(
             StepData(
                 step=1,
@@ -410,9 +416,11 @@ class TestAllObjects:
 
         objects = ds.get_all_objects("test-run", game=1)
         assert len(objects) == 1
-        assert objects[0]["glyph"] is None
+        assert objects[0]["glyph"] == "2378"
+        assert objects[0]["shape"] == "."
+        assert objects[0]["color"] == "GREY"
 
-        # Step 2: match with SingleNode feature (has glyph now)
+        # Step 2: match with SingleNode feature (same glyph)
         buf.push(
             StepData(
                 step=2,

@@ -8,7 +8,7 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from time import time_ns
-from typing import TYPE_CHECKING, Any, Collection, NewType, cast
+from typing import TYPE_CHECKING, Any, Collection, Iterable, NewType, cast
 
 from opentelemetry import trace as otel_trace
 
@@ -157,21 +157,71 @@ class ResolutionContext:
     tick: int
 
 
-def _extract_visual_attrs(obj: Object) -> dict[str, Any]:
-    """Extract glyph char, color name, and glyph ID from an Object's features."""
+def _extract_visual_attrs_from_nodes(
+    nodes: Iterable[FeatureNode],
+) -> dict[str, Any]:
+    """Extract visual attributes (char, color, glyph, type) from feature nodes."""
     from .feature_extractors.color import ColorNode
+    from .feature_extractors.flood import FloodNode
+    from .feature_extractors.line import LineNode
     from .feature_extractors.shape import ShapeNode
     from .feature_extractors.single import SingleNode
 
     result: dict[str, Any] = {}
-    for f in obj.features:
+    for f in nodes:
         if isinstance(f, ShapeNode):
             result["char"] = chr(f.type)
         elif isinstance(f, ColorNode) and f.attr_strs:
             result["color"] = f.attr_strs[0]
         elif isinstance(f, SingleNode):
             result["glyph"] = f.type
+            if "type" not in result:
+                result["type"] = "single"
+        elif isinstance(f, FloodNode):
+            if "char" not in result:
+                result["char"] = chr(f.shape)
+            if "glyph" not in result:
+                result["glyph"] = f.type
+            if "color" not in result:
+                result["color"] = _COLOR_NAMES.get(f.color, str(f.color))
+            result["type"] = "flood"
+        elif isinstance(f, LineNode):
+            if "char" not in result:
+                result["char"] = chr(f.shape)
+            if "glyph" not in result:
+                result["glyph"] = f.type
+            if "color" not in result:
+                result["color"] = _COLOR_NAMES.get(f.color, str(f.color))
+            if "type" not in result:
+                result["type"] = "line"
     return result
+
+
+def _extract_visual_attrs(obj: Object) -> dict[str, Any]:
+    """Extract glyph char, color name, and glyph ID from an Object's features."""
+    return _extract_visual_attrs_from_nodes(obj.features)
+
+
+# Standard terminal color codes matching ColorNode.attr_strs output.
+_COLOR_NAMES: dict[int, str] = {
+    0: "BLACK",
+    1: "RED",
+    2: "GREEN",
+    3: "BROWN",
+    4: "BLUE",
+    5: "MAGENTA",
+    6: "CYAN",
+    7: "GREY",
+    8: "NO COLOR",
+    9: "ORANGE",
+    10: "BRIGHT GREEN",
+    11: "YELLOW",
+    12: "BRIGHT BLUE",
+    13: "BRIGHT MAGENTA",
+    14: "BRIGHT CYAN",
+    15: "WHITE",
+    16: "MAX",
+}
 
 
 class ObjectResolutionExpMod(ExpMod):
@@ -239,22 +289,42 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         self.candidate_object_counter.add(len(candidates))
         self.candidates_histogram.record(len(candidates))
         feature_strs = [str(f) for f in feature_nodes]
+        observed_attrs = _extract_visual_attrs_from_nodes(feature_nodes)
 
         if not candidates:
             self.decision_counter.add(1, attributes={"outcome": "new_object"})
-            self._log_decision("new_object", None, feature_strs, candidates, context)
+            self._log_decision(
+                "new_object",
+                None,
+                feature_strs,
+                candidates,
+                context,
+                observed_attrs=observed_attrs,
+            )
             return None
 
         best_obj, best_dist = candidates[0]
         if best_dist <= 1:
             self.decision_counter.add(1, attributes={"outcome": "match"})
             self._log_decision(
-                "match", best_obj, feature_strs, candidates, context, best_distance=best_dist
+                "match",
+                best_obj,
+                feature_strs,
+                candidates,
+                context,
+                best_distance=best_dist,
+                observed_attrs=observed_attrs,
             )
             return best_obj
         self.decision_counter.add(1, attributes={"outcome": "new_object"})
         self._log_decision(
-            "new_object", None, feature_strs, candidates, context, best_distance=best_dist
+            "new_object",
+            None,
+            feature_strs,
+            candidates,
+            context,
+            best_distance=best_dist,
+            observed_attrs=observed_attrs,
         )
         return None
 
@@ -267,6 +337,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         context: ResolutionContext,
         *,
         best_distance: float | None = None,
+        observed_attrs: dict[str, Any] | None = None,
     ) -> None:
         """Emit an OTel log record describing this resolution decision."""
         record: dict[str, Any] = {
@@ -280,6 +351,8 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
             "num_candidates": len(candidates),
             "matched_object_id": matched_obj.id if matched_obj is not None else None,
         }
+        if observed_attrs:
+            record["observed_attrs"] = observed_attrs
         if best_distance is not None:
             record["best_distance"] = best_distance
         if matched_obj is not None:
@@ -430,10 +503,20 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         # Update global vocabulary
         self._global_vocab.update(feature_strs)
 
+        # Extract visual attrs from ALL feature nodes (before exclusion filtering)
+        observed_attrs = _extract_visual_attrs_from_nodes(feature_nodes)
+
         if not candidates:
             self.dirichlet_decision_counter.add(1, attributes={"outcome": "new_object"})
             self._log_decision(
-                "new_object", None, feature_strs, [], {}, context, reason="no_candidates"
+                "new_object",
+                None,
+                feature_strs,
+                [],
+                {},
+                context,
+                observed_attrs=observed_attrs,
+                reason="no_candidates",
             )
             return None
 
@@ -461,6 +544,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             candidates,
             log_posteriors,
             context,
+            observed_attrs=observed_attrs,
         )
 
         return result
@@ -644,6 +728,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         log_posteriors: dict[NodeId | str, float],
         context: ResolutionContext,
         *,
+        observed_attrs: dict[str, Any] | None = None,
         reason: str = "",
     ) -> None:
         """Emit an OTel log record describing this resolution decision."""
@@ -667,6 +752,8 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             "vocab_size": len(self._global_vocab),
             "total_objects_tracked": len(self._alphas),
         }
+        if observed_attrs:
+            record["observed_attrs"] = observed_attrs
 
         if matched_obj is not None:
             record["matched_attrs"] = _extract_visual_attrs(matched_obj)

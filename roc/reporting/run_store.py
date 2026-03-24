@@ -32,6 +32,7 @@ class StepData:
     intrinsics: dict[str, Any] | None = None
     significance: float | None = None
     action_taken: dict[str, Any] | None = None
+    sequence_summary: dict[str, Any] | None = None
     transform_summary: dict[str, Any] | None = None
     prediction: dict[str, Any] | None = None
     message: str | None = None
@@ -379,6 +380,15 @@ class RunStore:
             features = body.get("features", [])
             shape, color, glyph = parse_feature_attrs(features)
 
+            # observed_attrs (from unfiltered features) takes priority
+            oa = body.get("observed_attrs", {})
+            if oa:
+                shape = shape or oa.get("char")
+                color = color or oa.get("color")
+                glyph = glyph or (str(oa["glyph"]) if oa.get("glyph") is not None else None)
+
+            obj_type = oa.get("type")
+
             if outcome == "new_object":
                 key = f"new@{step}"
                 step_to_key[step] = key
@@ -386,6 +396,7 @@ class RunStore:
                     "shape": shape,
                     "glyph": glyph,
                     "color": color,
+                    "type": obj_type,
                     "node_id": None,
                     "step_added": step,
                     "match_count": 0,
@@ -398,6 +409,7 @@ class RunStore:
                         "shape": shape,
                         "glyph": glyph,
                         "color": color,
+                        "type": obj_type,
                     }
                 )
 
@@ -434,15 +446,16 @@ class RunStore:
                 objects[mid]["match_count"] += 1
                 # Update attributes from the current observation so that
                 # objects created without a glyph get one when matched later.
-                for attr in ("shape", "glyph", "color"):
-                    if m[attr] and not objects[mid].get(attr):
+                for attr in ("shape", "glyph", "color", "type"):
+                    if m.get(attr) and not objects[mid].get(attr):
                         objects[mid][attr] = m[attr]
             else:
                 ma = m["matched_attrs"]
                 objects[mid] = {
                     "shape": ma.get("char", m["shape"]),
-                    "glyph": str(ma["glyph"]) if ma.get("glyph") else m["glyph"],
+                    "glyph": str(ma["glyph"]) if ma.get("glyph") is not None else m["glyph"],
                     "color": ma.get("color", m["color"]),
+                    "type": m.get("type"),
                     "node_id": mid,
                     "step_added": None,
                     "match_count": 1,
@@ -499,6 +512,7 @@ class RunStore:
         intrinsics = None
         significance = None
         action_taken = None
+        sequence_summary = None
         transform_summary = None
         prediction = None
         message = None
@@ -547,6 +561,8 @@ class RunStore:
                         significance = float(body["significance"])
                 elif event_name == "roc.action":
                     action_taken = body
+                elif event_name == "roc.sequence_summary":
+                    sequence_summary = body
                 elif event_name == "roc.transform_summary":
                     transform_summary = body
                 elif event_name == "roc.prediction":
@@ -610,6 +626,7 @@ class RunStore:
             intrinsics=intrinsics,
             significance=significance,
             action_taken=action_taken,
+            sequence_summary=sequence_summary,
             transform_summary=transform_summary,
             prediction=prediction,
             message=message,
@@ -631,10 +648,57 @@ def _parse_body(body: str | None) -> dict[str, Any] | None:
         return {"raw": body}
 
 
+def _parse_composite_feature(s: str, prefix_len: int) -> tuple[str, str, str] | None:
+    """Extract shape, color, glyph from a composite feature string (FloodNode/LineNode).
+
+    Format: ``PrefixNode(glyph_id,size,color_int,shape_char)``.
+    Returns ``(shape_char, color_name, glyph_id_str)`` or ``None`` on parse failure.
+    """
+    content = s[prefix_len:-1]  # strip prefix and trailing ")"
+    # Last char is always the shape character, preceded by a comma separator
+    if len(content) < 6 or content[-2] != ",":
+        return None
+    shape_char = content[-1]
+    parts = content[:-2].split(",")
+    if len(parts) != 3:
+        return None
+    glyph_str = parts[0]
+    try:
+        color_idx = int(parts[2])
+    except ValueError:
+        return None
+    color_name = _COLOR_NAMES.get(color_idx)
+    return shape_char, color_name or str(color_idx), glyph_str
+
+
+# Standard terminal color codes used by ColorNode.attr_strs (NetHack color.h).
+_COLOR_NAMES: dict[int, str] = {
+    0: "BLACK",
+    1: "RED",
+    2: "GREEN",
+    3: "BROWN",
+    4: "BLUE",
+    5: "MAGENTA",
+    6: "CYAN",
+    7: "GREY",
+    8: "NO COLOR",
+    9: "ORANGE",
+    10: "BRIGHT GREEN",
+    11: "YELLOW",
+    12: "BRIGHT BLUE",
+    13: "BRIGHT MAGENTA",
+    14: "BRIGHT CYAN",
+    15: "WHITE",
+    16: "MAX",
+}
+
+
 def parse_feature_attrs(features: list[Any]) -> tuple[str | None, str | None, str | None]:
     """Parse shape, color, glyph from feature strings.
 
     Used by both RunStore and DataStore for resolution event processing.
+    Recognises ShapeNode, ColorNode, SingleNode directly, and falls back to
+    composite features (FloodNode, LineNode) which embed shape/color/glyph.
     """
     shape = color = glyph = None
     for f in features:
@@ -645,6 +709,24 @@ def parse_feature_attrs(features: list[Any]) -> tuple[str | None, str | None, st
             color = s[10:-1]
         elif s.startswith("SingleNode(") and s.endswith(")"):
             glyph = s[11:-1]
+        elif s.startswith("FloodNode(") and s.endswith(")"):
+            parsed = _parse_composite_feature(s, 10)
+            if parsed is not None:
+                if shape is None:
+                    shape = parsed[0]
+                if color is None:
+                    color = parsed[1]
+                if glyph is None:
+                    glyph = parsed[2]
+        elif s.startswith("LineNode(") and s.endswith(")"):
+            parsed = _parse_composite_feature(s, 9)
+            if parsed is not None:
+                if shape is None:
+                    shape = parsed[0]
+                if color is None:
+                    color = parsed[1]
+                if glyph is None:
+                    glyph = parsed[2]
     return shape, color, glyph
 
 
