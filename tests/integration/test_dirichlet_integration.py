@@ -11,6 +11,8 @@ import math
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from roc.location import XLoc, YLoc
 from roc.object import (
     DirichletCategoricalResolution,
@@ -116,8 +118,8 @@ class TestDirichletIntegrationFlow:
 
         # Verify alpha vectors reflect observation counts
         # initial (prior+1=2.0) + 2 match updates = 4.0
-        assert resolution._alphas[obj_a.id]["SingleNode(a)"] == 4.0
-        assert resolution._alphas[obj_a.id]["ColorNode(red)"] == 4.0
+        assert resolution._alphas[obj_a.id]["SingleNode(a)"] == pytest.approx(4.0)
+        assert resolution._alphas[obj_a.id]["ColorNode(red)"] == pytest.approx(4.0)
 
     @patch("roc.graphdb.GraphDB.singleton")
     def test_warmup_then_stable(self, mock_db_cls):
@@ -150,30 +152,35 @@ class TestDirichletIntegrationFlow:
             fns = ent["fns"]
             ctx = ResolutionContext(x=XLoc(10 * (tick % 5)), y=YLoc(10), tick=tick)
 
-            if ent["obj"] is None:
-                # First time seeing this entity -- set up no candidates
-                setup_no_candidates(fns)
-                result = resolution.resolve(fns, fg, ctx)
-                assert result is None
-                obj = make_object_with_position(int(ctx.x), int(ctx.y), tick)
-                resolution.initialize_alphas(obj.id, ent["strs"])
-                ent["obj"] = obj
-            else:
-                obj = ent["obj"]
-                obj.last_tick = tick - 5  # last seen 5 ticks ago
-                obj.last_x = ctx.x
-                obj.last_y = ctx.y
-                setup_candidate_return(fns, [obj])
-                result = resolution.resolve(fns, fg, ctx)
+            result = self._resolve_entity(resolution, ent, fns, fg, ctx)
 
-                if tick > 10:  # after warmup
-                    total_after_warmup += 1
-                    if result is obj:
-                        matches_after_warmup += 1
+            is_after_warmup = tick > 10 and ent["obj"] is not None
+            if is_after_warmup:
+                total_after_warmup += 1
+                if result is ent["obj"]:
+                    matches_after_warmup += 1
 
         # After warmup, match rate should be > 70%
         match_rate = matches_after_warmup / total_after_warmup
         assert match_rate > 0.70, f"Match rate {match_rate:.2%} <= 70%"
+
+    @staticmethod
+    def _resolve_entity(resolution, ent, fns, fg, ctx):
+        """Resolve a single entity observation, creating it if first-seen."""
+        if ent["obj"] is None:
+            setup_no_candidates(fns)
+            result = resolution.resolve(fns, fg, ctx)
+            assert result is None
+            obj = make_object_with_position(int(ctx.x), int(ctx.y), ctx.tick)
+            resolution.initialize_alphas(obj.id, ent["strs"])
+            ent["obj"] = obj
+            return None
+        obj = ent["obj"]
+        obj.last_tick = ctx.tick - 5
+        obj.last_x = ctx.x
+        obj.last_y = ctx.y
+        setup_candidate_return(fns, [obj])
+        return resolution.resolve(fns, fg, ctx)
 
     @patch("roc.graphdb.GraphDB.singleton")
     def test_object_count_does_not_explode(self, mock_db_cls):

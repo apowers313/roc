@@ -9,7 +9,7 @@ interface SaliencyMapProps {
     data: StepData | undefined;
 }
 
-export function SaliencyMap({ data }: SaliencyMapProps) {
+export function SaliencyMap({ data }: Readonly<SaliencyMapProps>) {
     if (!data?.saliency) {
         return (
             <Text size="xs" c="dimmed">

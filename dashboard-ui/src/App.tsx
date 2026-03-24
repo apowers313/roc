@@ -71,6 +71,23 @@ import { useRemoteLogger } from "./hooks/useRemoteLogger";
 import { useDashboard } from "./state/context";
 import type { StepData } from "./types/step-data";
 
+/** Safely convert an unknown value to a display string, handling objects. */
+function toDisplayString(value: unknown): string | undefined {
+    if (value == null) return undefined;
+    switch (typeof value) {
+        case "string":
+            return value;
+        case "number":
+        case "boolean":
+        case "bigint":
+            return String(value);
+        case "object":
+            return JSON.stringify(value);
+        default:
+            return JSON.stringify(value);
+    }
+}
+
 export function App() {
     const {
         run,
@@ -159,7 +176,7 @@ export function App() {
     // overriding explicit URL navigation to a specific run/step, while
     // still allowing auto-navigation to a NEW game the user starts.
     const initialUrlRun = useRef<string | null>(
-        new URLSearchParams(window.location.search).get("run"),
+        new URLSearchParams(globalThis.location.search).get("run"),
     );
 
     // Use refs to avoid stale closures in the Socket.io callback
@@ -191,14 +208,14 @@ export function App() {
                 gameRef.current === pushData.game_number;
 
             if (isFollowingRef.current && isViewingLiveRun) {
-                if (!gameMatches) {
+                if (gameMatches) {
+                    // Update stepMax for the current game
+                    setStepRange(stepMinRef.current, pushData.step);
+                } else {
                     // Live game changed (e.g. game 1 ended, game 2 started).
                     // Auto-switch to the new game so the user keeps following.
                     setGame(pushData.game_number);
                     setStepRange(pushData.step, pushData.step);
-                } else {
-                    // Update stepMax for the current game
-                    setStepRange(stepMinRef.current, pushData.step);
                 }
                 // Advance step cursor to the live edge
                 setStep(pushData.step);
@@ -400,13 +417,11 @@ export function App() {
         // the live run matches the URL's explicit run (user navigated
         // to a specific step of that run and we shouldn't override it).
         // A different run name means the user started a new game -- always navigate.
-        if (isNewRun && liveStatus.run_name !== initialUrlRun.current) {
-            liveRunSelected.current = true;
-            setRun(liveStatus.run_name);
-            setGame(liveStatus.game_number);
-            setStep(liveStatus.step);
-            dispatchPlayback({ type: "GO_LIVE" });
-        } else if (!liveRunSelected.current && !initialUrlRun.current) {
+        const shouldAutoNavigate =
+            (isNewRun && liveStatus.run_name !== initialUrlRun.current) ||
+            (!liveRunSelected.current && !initialUrlRun.current);
+
+        if (shouldAutoNavigate) {
             liveRunSelected.current = true;
             setRun(liveStatus.run_name);
             setGame(liveStatus.game_number);
@@ -463,7 +478,6 @@ export function App() {
                     isBookmarked={bm.isBookmarked(step)}
                     onToggle={toggleBookmark}
                     onNavigate={navigateToBookmark}
-                    onAnnotate={bm.updateAnnotation}
                 />
             </AppShell.Header>
 
@@ -566,7 +580,7 @@ export function App() {
                         <AuralPerception data={data} />
                     </Section>
 
-                    <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet" expmod={data?.attenuation?.flavor != null ? String(data.attenuation.flavor) : undefined}>
+                    <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet" expmod={toDisplayString(data?.attenuation?.flavor)}>
                         <Grid>
                             <Grid.Col span={{ base: 12, md: 8 }}>
                                 <SaliencyMap data={data} />
@@ -580,7 +594,7 @@ export function App() {
                         </Grid>
                     </Section>
 
-                    <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" expmod={data?.resolution_metrics?.algorithm != null ? String(data.resolution_metrics.algorithm) : undefined} toolbar={
+                    <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" expmod={toDisplayString(data?.resolution_metrics?.algorithm)} toolbar={
                         <>
                             <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
                                 <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />

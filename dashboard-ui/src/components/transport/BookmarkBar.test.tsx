@@ -22,7 +22,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         // Should render marker dots for each bookmark
@@ -40,7 +40,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         const marker = container.querySelector("[data-testid='bookmark-marker']") as HTMLElement;
@@ -59,7 +59,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={true}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         const toggleBtn = screen.getByLabelText("Remove bookmark");
@@ -76,7 +76,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         const toggleBtn = screen.getByLabelText("Add bookmark");
@@ -94,7 +94,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={onToggle}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         fireEvent.click(screen.getByLabelText("Add bookmark"));
@@ -112,7 +112,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={onNavigate}
-                onAnnotate={() => {}}
+
             />,
         );
         const markers = container.querySelectorAll("[data-testid='bookmark-marker']");
@@ -130,7 +130,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         const markers = container.querySelectorAll("[data-testid='bookmark-marker']");
@@ -148,7 +148,7 @@ describe("BookmarkBar", () => {
                 isBookmarked={false}
                 onToggle={() => {}}
                 onNavigate={() => {}}
-                onAnnotate={() => {}}
+
             />,
         );
         // Should still render the toggle button even with no bookmarks

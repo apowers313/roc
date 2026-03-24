@@ -13,7 +13,7 @@ class TestDebugPortConfig:
 class TestDebugpySetup:
     def test_debugpy_not_started_when_port_zero(self, mocker):
         """debugpy should not be started when debug_port is 0."""
-        mock_debugpy = mocker.patch.dict("sys.modules", {"debugpy": mocker.MagicMock()})
+        mocker.patch.dict("sys.modules", {"debugpy": mocker.MagicMock()})
         settings = Config.get()
         settings.debug_port = 0
 

@@ -58,7 +58,7 @@ class TestState:
             pass
 
         s = ConcreteState("test")
-        with pytest.raises(Exception, match="Trying to get state value before it is set"):
+        with pytest.raises(RuntimeError, match="Trying to get state value before it is set"):
             s.get()
 
     def test_get_returns_value(self):
@@ -127,7 +127,7 @@ class TestNodeCacheState:
         mock_cache.maxsize = 100
         with patch("roc.reporting.state.Node.get_cache", return_value=mock_cache):
             ncs = NodeCacheState()
-            assert ncs.get() == 0.1
+            assert ncs.get() == pytest.approx(0.1)
 
     def test_str(self):
         from roc.reporting.state import NodeCacheState
@@ -150,7 +150,7 @@ class TestEdgeCacheState:
         mock_cache.maxsize = 50
         with patch("roc.reporting.state.Edge.get_cache", return_value=mock_cache):
             ecs = EdgeCacheState()
-            assert ecs.get() == 0.1
+            assert ecs.get() == pytest.approx(0.1)
 
     def test_str(self):
         from roc.reporting.state import EdgeCacheState
@@ -270,8 +270,8 @@ class TestStateList:
     def test_default_fields(self):
         from roc.reporting.state import StateList
 
-        sl = StateList()
-        fields = [f.name for f in dataclasses.fields(sl)]
+        _sl = StateList()
+        fields = [f.name for f in dataclasses.fields(StateList)]
         assert "loop" in fields
         assert "node_cache" in fields
         assert "edge_cache" in fields
@@ -347,6 +347,7 @@ class TestStatePrintStartupInfo:
         mock_run.return_value = mock_result
         mock_schema_inst = MagicMock()
         mock_schema_inst.to_dot.return_value = "dot"
+        mock_schema_inst.to_dict.return_value = {"nodes": [], "edges": []}
         mock_schema.return_value = mock_schema_inst
 
         # Should not raise

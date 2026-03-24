@@ -5,7 +5,6 @@ initialization, shutdown, etc.
 
 from __future__ import annotations
 
-# import traceback
 from abc import ABC
 from typing import TYPE_CHECKING, Any, NamedTuple, NewType, Self, TypeVar, cast
 from weakref import WeakSet
@@ -48,11 +47,10 @@ class Component(ABC):
         global component_set
         for c in component_set:
             if c.name == self.name and c.type == self.type:
-                raise Exception(f"component already exists: {self.name}:{self.type}")
+                raise ValueError(f"component already exists: {self.name}:{self.type}")
         component_set.add(self)
         self.bus_conns: dict[str, BusConnection[Any]] = {}
         logger.trace(f"++ incrementing component count: {self.name}:{self.type} {self}")
-        # traceback.print_stack()
 
     def __init_subclass__(cls) -> None:
         if ABC in cls.__bases__:
@@ -67,10 +65,10 @@ class Component(ABC):
         auto_load = cls.auto
 
         if component_name is Component.name:
-            raise Exception(f"Component name is unspecified in class {cls.__name__}")
+            raise TypeError(f"Component name is unspecified in class {cls.__name__}")
 
         if component_type is Component.type:
-            raise Exception(f"Component type is unspecified in class {cls.__name__}")
+            raise TypeError(f"Component type is unspecified in class {cls.__name__}")
 
         logger.debug(f"Registering component: {component_name}:{component_type} (auto={auto_load})")
 
@@ -87,8 +85,6 @@ class Component(ABC):
         component_registry[reg_str] = cls
 
     def __del__(self) -> None:
-        global component_set
-        # component_set.remove(self)
         logger.trace(f"-- decrementing component count: {self.name}:{self.type} {self}")
 
     def connect_bus(self, bus: EventBus[T]) -> BusConnection[T]:
@@ -152,12 +148,12 @@ class Component(ABC):
         component_list = [*default_components, *settings.perception_components]
         logger.debug(f"Component.init: default components: {component_list}")
 
-        # TODO: shutdown previously loaded components
-
         for reg_str in component_list:
             logger.trace(f"Loading component: {reg_str} ...")
-            name, type = reg_str
-            loaded_components[ComponentName(name), ComponentType(type)] = Component.get(name, type)
+            comp_name, comp_type = reg_str
+            loaded_components[ComponentName(comp_name), ComponentType(comp_type)] = Component.get(
+                comp_name, comp_type
+            )
 
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
@@ -191,8 +187,6 @@ class Component(ABC):
         Returns:
             int: The number of currently active Component instances
         """
-        # global component_count
-        # return component_count
         global component_set
         return len(component_set)
 

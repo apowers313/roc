@@ -24,7 +24,7 @@ interface GraphHistoryProps {
     onStepClick?: (step: number) => void;
 }
 
-export function GraphHistory({ run, game, currentStep, onStepClick }: GraphHistoryProps) {
+export function GraphHistory({ run, game, currentStep, onStepClick }: Readonly<GraphHistoryProps>) {
     const { data: history } = useGraphHistory(run, game);
 
     if (!history || history.length === 0) {

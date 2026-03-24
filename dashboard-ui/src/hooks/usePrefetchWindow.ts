@@ -45,7 +45,7 @@ export function usePrefetchWindow(
         abortRef.current = controller;
 
         timerRef.current = setTimeout(() => {
-            void sweep(run, step, stepMin, stepMax, game, radius, queryClient, controller.signal);
+            void sweep({ run, center: step, stepMin, stepMax, game, radius, queryClient, signal: controller.signal });
         }, DEBOUNCE_MS);
 
         return () => {
@@ -55,54 +55,63 @@ export function usePrefetchWindow(
     }, [queryClient, run, step, stepMin, stepMax, game, radius]);
 }
 
-async function sweep(
-    run: string,
-    center: number,
-    stepMin: number,
-    stepMax: number,
-    game: number | undefined,
-    radius: number,
-    queryClient: ReturnType<typeof useQueryClient>,
-    signal: AbortSignal,
-): Promise<void> {
-    // Build the list of steps to fetch in outward-spreading order,
-    // skipping any already in cache
+interface SweepParams {
+    run: string;
+    center: number;
+    stepMin: number;
+    stepMax: number;
+    game: number | undefined;
+    radius: number;
+    queryClient: ReturnType<typeof useQueryClient>;
+    signal: AbortSignal;
+}
+
+/** Build the list of uncached steps to fetch, spreading outward from center. */
+function buildTargets(params: SweepParams): number[] {
+    const { run, center, stepMin, stepMax, game, radius, queryClient } = params;
     const targets: number[] = [];
     for (let offset = 1; offset <= radius; offset++) {
         const below = center - offset;
-        const above = center + offset;
-        if (below >= stepMin) {
-            const cached = queryClient.getQueryData(["step", run, below, game]);
-            if (!cached) targets.push(below);
+        if (below >= stepMin && !queryClient.getQueryData(["step", run, below, game])) {
+            targets.push(below);
         }
-        if (above <= stepMax) {
-            const cached = queryClient.getQueryData(["step", run, above, game]);
-            if (!cached) targets.push(above);
+        const above = center + offset;
+        if (above <= stepMax && !queryClient.getQueryData(["step", run, above, game])) {
+            targets.push(above);
         }
     }
+    return targets;
+}
 
-    // Process in small batches, checking abort between each
+/** Fetch one batch of steps and populate the query cache. Returns false on abort/error. */
+async function fetchBatch(
+    run: string,
+    batch: number[],
+    game: number | undefined,
+    signal: AbortSignal,
+    queryClient: SweepParams["queryClient"],
+): Promise<boolean> {
+    try {
+        const results = await fetchStepsBatch(run, batch, game, signal);
+        for (const [stepStr, data] of Object.entries(results)) {
+            queryClient.setQueryData(["step", run, Number(stepStr), game], data);
+        }
+        return true;
+    } catch (err: unknown) {
+        if (err instanceof DOMException && err.name === "AbortError") return false;
+        return false;
+    }
+}
+
+async function sweep(params: SweepParams): Promise<void> {
+    const { run, game, signal, queryClient } = params;
+    const targets = buildTargets(params);
+
     for (let i = 0; i < targets.length; i += BATCH_SIZE) {
         if (signal.aborted) return;
-
         const batch = targets.slice(i, i + BATCH_SIZE);
         if (batch.length === 0) continue;
-
-        try {
-            const results = await fetchStepsBatch(run, batch, game, signal);
-            // Populate the TanStack Query cache with each step
-            for (const [stepStr, data] of Object.entries(results)) {
-                const stepNum = Number(stepStr);
-                queryClient.setQueryData(
-                    ["step", run, stepNum, game],
-                    data,
-                );
-            }
-        } catch (err: unknown) {
-            // AbortError is expected when user navigates -- exit silently
-            if (err instanceof DOMException && err.name === "AbortError") return;
-            // Other network errors -- stop the sweep
-            return;
-        }
+        const ok = await fetchBatch(run, batch, game, signal, queryClient);
+        if (!ok) return;
     }
 }

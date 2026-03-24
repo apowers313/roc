@@ -67,23 +67,23 @@ class TestPoint:
 
 class TestPointIsadjacent:
     def test_adjacent_horizontal(self):
-        assert Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=XLoc(1), y2=YLoc(0)) is True
+        assert Point.isadjacent(xy1=(XLoc(0), YLoc(0)), xy2=(XLoc(1), YLoc(0))) is True
 
     def test_adjacent_vertical(self):
-        assert Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=XLoc(0), y2=YLoc(1)) is True
+        assert Point.isadjacent(xy1=(XLoc(0), YLoc(0)), xy2=(XLoc(0), YLoc(1))) is True
 
     def test_adjacent_diagonal(self):
-        assert Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=XLoc(1), y2=YLoc(1)) is True
+        assert Point.isadjacent(xy1=(XLoc(0), YLoc(0)), xy2=(XLoc(1), YLoc(1))) is True
 
     def test_same_point_not_adjacent(self):
-        assert Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=XLoc(0), y2=YLoc(0)) is False
+        assert Point.isadjacent(xy1=(XLoc(0), YLoc(0)), xy2=(XLoc(0), YLoc(0))) is False
 
     def test_far_apart_not_adjacent(self):
-        assert Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=XLoc(3), y2=YLoc(3)) is False
+        assert Point.isadjacent(xy1=(XLoc(0), YLoc(0)), xy2=(XLoc(3), YLoc(3))) is False
 
-    def test_with_p1_and_x2y2(self):
+    def test_with_p1_and_xy2(self):
         p1 = Point(XLoc(5), YLoc(5), 0)
-        assert Point.isadjacent(p1=p1, x2=XLoc(6), y2=YLoc(5)) is True
+        assert Point.isadjacent(p1=p1, xy2=(XLoc(6), YLoc(5))) is True
 
     def test_with_p1_and_p2(self):
         p1 = Point(XLoc(5), YLoc(5), 0)
@@ -92,18 +92,16 @@ class TestPointIsadjacent:
 
     def test_bad_p1_args_raises(self):
         with pytest.raises(TypeError, match="bad p1"):
-            Point.isadjacent(x1=None, y1=None, x2=XLoc(0), y2=YLoc(0))  # type: ignore
+            Point.isadjacent(xy2=(XLoc(0), YLoc(0)))  # type: ignore
 
     def test_bad_p2_args_raises(self):
         with pytest.raises(TypeError, match="bad p2"):
-            Point.isadjacent(x1=XLoc(0), y1=YLoc(0), x2=None, y2=None)  # type: ignore
+            Point.isadjacent(xy1=(XLoc(0), YLoc(0)))  # type: ignore
 
 
 class TestChangedPoint:
     def test_repr(self):
-        # ChangedPoint.__init_ has a typo (single underscore), so we construct via Point.__init__
-        cp = ChangedPoint(XLoc(1), YLoc(2), 66)
-        cp.old_val = 65
+        cp = ChangedPoint(XLoc(1), YLoc(2), 66, 65)
         r = repr(cp)
         assert "(1, 2):" in r
         assert "65" in r
@@ -183,7 +181,7 @@ class TestGridStyle:
             style="bold",
             val="X",
         )
-        assert gs.front_hue == 0.5
+        assert gs.front_hue == pytest.approx(0.5)
         assert gs.style == "bold"
         assert gs.val == "X"
 
@@ -206,8 +204,8 @@ class TestDebugGrid:
         dg = debug_grid
         dg.set_style(0, 0, front_hue=0.5, back_brightness=0.8)
         s = dg.get_val(0, 0)
-        assert s.front_hue == 0.5
-        assert s.back_brightness == 0.8
+        assert s.front_hue == pytest.approx(0.5)
+        assert s.back_brightness == pytest.approx(0.8)
 
     def test_set_style_out_of_range(self, debug_grid):
         with pytest.raises(Exception, match="between 0 and 1"):

@@ -30,7 +30,7 @@ function parseFocusRaw(raw: string): Array<Record<string, string>> {
     return rows;
 }
 
-export function FocusPoints({ data }: FocusPointsProps) {
+export function FocusPoints({ data }: Readonly<FocusPointsProps>) {
     const { togglePoint, points } = useHighlight();
 
     if (!data?.focus_points || data.focus_points.length === 0) {
@@ -42,7 +42,7 @@ export function FocusPoints({ data }: FocusPointsProps) {
     }
 
     const fp = data.focus_points[0]!;
-    const rows = fp.raw ? parseFocusRaw(String(fp.raw)) : [];
+    const rows = typeof fp.raw === "string" ? parseFocusRaw(fp.raw) : [];
 
     if (rows.length === 0) {
         return (
@@ -81,15 +81,15 @@ export function FocusPoints({ data }: FocusPointsProps) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {rows.map((row, i) => {
+                        {rows.map((row, idx) => {
                             // Backend x = col, y = row (matches CharGrid convention)
                             const x = Number(row.x);
                             const y = Number(row.y);
                             const isHighlighted = highlightSet.has(`${x},${y}`);
                             return (
                                 <Table.Tr
-                                    key={i}
-                                    onClick={() => togglePoint({ x, y, label: `focus #${i}` })}
+                                    key={`${row.x}-${row.y}`}
+                                    onClick={() => togglePoint({ x, y, label: `focus #${idx}` })}
                                     style={{
                                         cursor: "pointer",
                                         background: isHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,

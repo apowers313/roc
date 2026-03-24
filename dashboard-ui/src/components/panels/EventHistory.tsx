@@ -38,7 +38,7 @@ interface EventHistoryProps {
     onStepClick?: (step: number) => void;
 }
 
-export function EventHistory({ run, game, currentStep, onStepClick }: EventHistoryProps) {
+export function EventHistory({ run, game, currentStep, onStepClick }: Readonly<EventHistoryProps>) {
     const { data: history } = useEventHistory(run, game);
 
     // Collect all unique bus names across all steps
@@ -50,7 +50,7 @@ export function EventHistory({ run, game, currentStep, onStepClick }: EventHisto
                 if (key !== "step") names.add(key);
             }
         }
-        return Array.from(names).sort();
+        return Array.from(names).sort((a, b) => a.localeCompare(b));
     }, [history]);
 
     // Strip "roc." prefix for display

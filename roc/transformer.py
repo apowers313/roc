@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from .component import Component
 from .event import Event, EventBus
@@ -49,40 +49,47 @@ class Transformer(Component):
 
     def do_transformer(self, e: Event[Frame]) -> None:
         """Compares current and previous frames, emitting transforms for any changes."""
-        # print("do_transformer", e)
         current_frame = e.data
 
-        # get previous frame
-        previous_frames = current_frame.dst_edges.select(type="NextFrame")
-        if len(previous_frames) < 1:
+        previous_frame = _get_previous_frame(current_frame)
+        if previous_frame is None:
             return
-        assert len(previous_frames) == 1
-        previous_frame = previous_frames[0].src
 
-        # get all transformable attributes
-        current_edges = current_frame.src_edges.select(
-            filter_fn=lambda e: e.type == "FrameAttribute" and isinstance(e.dst, Transformable)  # type: ignore
-        )
-        previous_edges = previous_frame.src_edges.select(
-            filter_fn=lambda e: e.type == "FrameAttribute" and isinstance(e.dst, Transformable)  # type: ignore
-        )
-
-        # find all changes between previous frame and this frame
-        ret = Transform()
-        for ce in current_edges:
-            cn = ce.dst
-            assert isinstance(cn, Transformable)
-
-            for pe in previous_edges:
-                pn = pe.dst
-
-                if cn.same_transform_type(pn):
-                    t = cn.create_transform(pn)
-                    if t is not None:
-                        Change.connect(ret, t)
-
+        ret = _compute_transforms(current_frame, previous_frame)
         Change.connect(previous_frame, ret)
         Change.connect(ret, current_frame)
 
-        # print("transformer sending")
         self.transformer_conn.send(TransformResult(transform=ret))
+
+
+def _get_previous_frame(current_frame: Frame) -> Frame | None:
+    """Return the previous frame linked via NextFrame, or None."""
+    previous_frames = current_frame.dst_edges.select(type="NextFrame")
+    if len(previous_frames) < 1:
+        return None
+    assert len(previous_frames) == 1
+    return cast(Frame, previous_frames[0].src)
+
+
+def _select_transformable_edges(frame: Frame) -> list[Any]:
+    """Select edges pointing to Transformable nodes from a frame."""
+    return frame.src_edges.select(
+        filter_fn=lambda e: e.type == "FrameAttribute" and isinstance(e.dst, Transformable)  # type: ignore
+    )
+
+
+def _compute_transforms(current_frame: Frame, previous_frame: Frame) -> Transform:
+    """Compute all transforms between two consecutive frames."""
+    current_edges = _select_transformable_edges(current_frame)
+    previous_edges = _select_transformable_edges(previous_frame)
+
+    ret = Transform()
+    for ce in current_edges:
+        cn = ce.dst
+        assert isinstance(cn, Transformable)
+        for pe in previous_edges:
+            if cn.same_transform_type(pe.dst):
+                t = cn.create_transform(pe.dst)
+                if t is not None:
+                    Change.connect(ret, t)
+    return ret

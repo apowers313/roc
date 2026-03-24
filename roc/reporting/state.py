@@ -9,7 +9,7 @@ from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
 from time import time_ns
-from typing import Any, Generic, Iterable, TypeVar
+from typing import Any, Iterable
 
 import nle
 from opentelemetry import trace as otel_trace
@@ -33,7 +33,6 @@ from roc.sequencer import Sequencer  # noqa: F401
 from roc.significance import Significance, SignificanceData
 from roc.transformer import TransformResult, Transformer
 
-StateType = TypeVar("StateType")
 _state_init_done = False
 
 
@@ -49,7 +48,7 @@ class StateComponent(Component):
     type: str = "reporting"
 
 
-class State(ABC, Generic[StateType]):
+class State[StateType](ABC):
     """Base class for tracking a piece of runtime state."""
 
     def __init__(self, name: str, display_name: str | None = None) -> None:
@@ -63,7 +62,7 @@ class State(ABC, Generic[StateType]):
     def get(self) -> StateType:
         """Returns the current state value."""
         if self.val is None:
-            raise Exception("Trying to get state value before it is set")
+            raise RuntimeError("Trying to get state value before it is set")
 
         return self.val
 
@@ -233,9 +232,7 @@ class State(ABC, Generic[StateType]):
             schema_path = store.run_dir / "schema.json"
             schema_path.write_text(json.dumps(schema_dict, indent=2))
             logger.debug("Schema saved to {}", schema_path)
-        _emit_state_record(
-            "roc.schema", json.dumps(schema_dict, separators=(",", ":"))
-        )
+        _emit_state_record("roc.schema", json.dumps(schema_dict, separators=(",", ":")))
 
     @staticmethod
     def emit_state_logs() -> None:
@@ -245,237 +242,19 @@ class State(ABC, Generic[StateType]):
         cfg = Config.get()
         current_states = State.get_states()
 
-        if cfg.emit_state_screen and current_states.screen.val is not None:
-            from roc.reporting.screen_renderer import screen_to_html_vals
-
-            screen_vals = screen_to_html_vals(current_states.screen.val)
-            _emit_state_record("roc.screen", json.dumps(screen_vals, separators=(",", ":")))
-
-        if cfg.emit_state_saliency and current_states.salency.val is not None:
-            saliency = current_states.salency.val
-            saliency_vals = saliency.to_html_vals()
-            _emit_state_record(
-                "roc.attention.saliency", json.dumps(saliency_vals, separators=(",", ":"))
-            )
-            if cfg.emit_state_features:
-                s = ""
-                features = saliency.feature_report()
-                for feat_name in features:
-                    s += f"\t\t{feat_name}: {features[feat_name]}\n"
-                _emit_state_record("roc.attention.features", s)
-
-        if current_states.object.val is not None:
-            _emit_state_record("roc.attention.object", str(current_states.object))
-
-        if current_states.attention.val is not None:
-            _emit_state_record(
-                "roc.attention.focus_points", str(current_states.attention.val.focus_points)
-            )
-
-        # Intrinsics
-        if current_states.intrinsic.val is not None:
-            intr_data = current_states.intrinsic.val
-            _emit_state_record(
-                "roc.intrinsics",
-                json.dumps(
-                    {
-                        "raw": intr_data.intrinsics,
-                        "normalized": intr_data.normalized_intrinsics,
-                    },
-                    separators=(",", ":"),
-                    default=str,
-                ),
-            )
-
-        # Significance
-        if current_states.significance.val is not None:
-            _emit_state_record(
-                "roc.significance",
-                json.dumps(
-                    {"significance": current_states.significance.val.significance},
-                    separators=(",", ":"),
-                ),
-            )
-
-        # Action
-        if current_states.action.val is not None:
-            action_val = current_states.action.val.action
-            action_dict: dict[str, Any] = {"action_id": int(action_val)}
-            try:
-                gym_actions = cfg.gym_actions
-                if gym_actions and int(action_val) < len(gym_actions):
-                    act_enum = gym_actions[int(action_val)]
-                    action_dict["action_name"] = str(getattr(act_enum, "name", act_enum))
-                    _val = getattr(act_enum, "value", None)
-                    if isinstance(_val, int):
-                        from roc.gymnasium import action_value_to_key
-
-                        _key = action_value_to_key(_val)
-                        if _key is not None:
-                            action_dict["action_key"] = _key
-            except Exception:
-                pass
-            try:
-                from roc.action import DefaultActionExpMod
-
-                action_dict["expmod_name"] = DefaultActionExpMod.get(default="pass").name
-            except Exception:
-                pass
-            _emit_state_record(
-                "roc.action",
-                json.dumps(action_dict, separators=(",", ":")),
-            )
-
-        # Transform summary
-        if current_states.transform.val is not None:
-            t = current_states.transform.val.transform
-            changes: list[dict[str, Any]] = []
-            for edge in t.src_edges:
-                dst = edge.dst
-                change_dict: dict[str, Any] = {"description": str(dst)}
-                if hasattr(dst, "name"):
-                    change_dict["type"] = type(dst).__name__
-                    change_dict["name"] = dst.name
-                if hasattr(dst, "normalized_change"):
-                    change_dict["normalized_change"] = dst.normalized_change
-                changes.append(change_dict)
-            _emit_state_record(
-                "roc.transform_summary",
-                json.dumps(
-                    {"count": len(changes), "changes": changes},
-                    separators=(",", ":"),
-                    default=str,
-                ),
-            )
-
-        # Sequence summary -- frame composition from the last completed frame
-        try:
-            from roc.component import (
-                ComponentName as _CN,
-                ComponentType as _CT,
-                loaded_components as _lc,
-            )
-            from roc.intrinsic import IntrinsicNode
-            from roc.sequencer import Sequencer as _Seq
-
-            seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
-            if isinstance(seq_comp, _Seq) and seq_comp.last_frame is not None:
-                frame = seq_comp.last_frame
-                objs = frame.objects
-                obj_dicts: list[dict[str, Any]] = []
-                for obj in objs:
-                    obj_dict: dict[str, Any] = {"id": str(obj.id)[:8]}
-                    if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
-                        obj_dict["x"] = obj.last_x
-                        obj_dict["y"] = obj.last_y
-                    if hasattr(obj, "resolve_count"):
-                        obj_dict["resolve_count"] = obj.resolve_count
-                    obj_dicts.append(obj_dict)
-
-                intrinsic_snapshot: dict[str, float] = {}
-                for t_node in frame.transformable:
-                    if isinstance(t_node, IntrinsicNode):
-                        intrinsic_snapshot[t_node.name] = round(t_node.normalized_value, 4)
-
-                seq_dict: dict[str, Any] = {
-                    "tick": frame.tick,
-                    "object_count": len(objs),
-                    "objects": obj_dicts,
-                    "intrinsic_count": len(intrinsic_snapshot),
-                    "intrinsics": intrinsic_snapshot,
-                }
-                if current_states.significance.val is not None:
-                    seq_dict["significance"] = current_states.significance.val.significance
-
-                _emit_state_record(
-                    "roc.sequence_summary",
-                    json.dumps(seq_dict, separators=(",", ":"), default=str),
-                )
-        except Exception:
-            pass
-
-        # Prediction
-        if current_states.predict.val is not None:
-            pred = current_states.predict.val
-            pred_dict: dict[str, Any] = {"made": not isinstance(pred, NoPrediction)}
-            try:
-                from roc.predict import (
-                    Predict,
-                    PredictionCandidateFramesExpMod,
-                    PredictionConfidenceExpMod,
-                )
-
-                pred_dict["candidate_expmod"] = PredictionCandidateFramesExpMod.get(
-                    default="object-based"
-                ).name
-                pred_dict["confidence_expmod"] = PredictionConfidenceExpMod.get(
-                    default="naive"
-                ).name
-
-                # Pull enriched metadata from the Predict component
-                from roc.component import (
-                    ComponentName,
-                    ComponentType,
-                    loaded_components,
-                )
-
-                predict_comp = loaded_components.get(
-                    (ComponentName("predict"), ComponentType("predict"))
-                )
-                if isinstance(predict_comp, Predict):
-                    meta = predict_comp.last_prediction_meta
-                    pred_dict["candidate_count"] = meta.candidate_count
-                    pred_dict["confidence"] = meta.confidence
-                    pred_dict["all_scores"] = meta.all_scores
-                    if meta.predicted_intrinsics:
-                        pred_dict["predicted_intrinsics"] = meta.predicted_intrinsics
-            except Exception:
-                pass
-            _emit_state_record(
-                "roc.prediction",
-                json.dumps(pred_dict, separators=(",", ":"), default=str),
-            )
-
-        # Message
-        if current_states.message.val is not None:
-            msg = current_states.message.val.strip()
-            if msg:
-                _emit_state_record("roc.message", msg)
-
-        # Phonemes
-        if current_states.phonemes.val is not None:
-            phoneme_dicts = [
-                {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
-                for pw in current_states.phonemes.val
-            ]
-            _emit_state_record(
-                "roc.phonemes",
-                json.dumps(phoneme_dicts, separators=(",", ":")),
-            )
-
-        # Graph DB summary
-        node_cache = Node.get_cache()
-        edge_cache = Edge.get_cache()
-        _emit_state_record(
-            "roc.graphdb.summary",
-            json.dumps(
-                {
-                    "node_count": node_cache.currsize,
-                    "node_max": node_cache.maxsize,
-                    "edge_count": edge_cache.currsize,
-                    "edge_max": edge_cache.maxsize,
-                },
-                separators=(",", ":"),
-            ),
-        )
-
-        # Event bus activity summary
-        step_counts = Event.get_step_counts()
-        if step_counts:
-            _emit_state_record(
-                "roc.event.summary",
-                json.dumps(step_counts, separators=(",", ":")),
-            )
+        _emit_screen_log(cfg, current_states)
+        _emit_saliency_log(cfg, current_states)
+        _emit_object_and_attention_log(current_states)
+        _emit_intrinsics_log(current_states)
+        _emit_significance_log(current_states)
+        _emit_action_log(cfg, current_states)
+        _emit_transform_log(current_states)
+        _emit_sequence_log(current_states)
+        _emit_prediction_log(current_states)
+        _emit_message_log(current_states)
+        _emit_phonemes_log(current_states)
+        _emit_graphdb_summary_log()
+        _emit_event_summary_log()
 
     @staticmethod
     def maybe_emit_snapshot(tick: int) -> None:
@@ -489,41 +268,14 @@ class State(ABC, Generic[StateType]):
         if interval <= 0 or tick <= 0 or tick % interval != 0:
             return
 
-        snapshot: dict[str, Any] = {"tick": tick}
+        snapshot: dict[str, Any] = {
+            "tick": tick,
+            "screen": _render_screen_text(states.screen.val),
+            "objects": str(states.object.val) if states.object.val is not None else None,
+            "loop": states.loop.val,
+        }
 
-        # Screen
-        if states.screen.val is not None:
-            screen_text = ""
-            for row in states.screen.val["chars"]:
-                for ch in row:
-                    screen_text += chr(ch)
-                screen_text += "\n"
-            snapshot["screen"] = screen_text
-        else:
-            snapshot["screen"] = None
-
-        # Objects
-        if states.object.val is not None:
-            snapshot["objects"] = str(states.object.val)
-        else:
-            snapshot["objects"] = None
-
-        # Loop state
-        snapshot["loop"] = states.loop.val
-
-        span_context = otel_trace.get_current_span().get_span_context()
-        log_record = LogRecord(
-            timestamp=time_ns(),
-            severity_number=SeverityNumber.INFO,
-            severity_text="INFO",
-            body=json.dumps(snapshot, default=str),
-            resource=resource,
-            attributes={"event.name": "roc.state.snapshot"},
-            trace_id=span_context.trace_id,
-            span_id=span_context.span_id,
-            trace_flags=span_context.trace_flags,
-        )
-        _get_otel_logger().emit(log_record)
+        _emit_state_record("roc.state.snapshot", json.dumps(snapshot, default=str))
 
     @staticmethod
     def print() -> None:
@@ -902,6 +654,294 @@ def _emit_state_record(event_name: str, body: str) -> None:
         trace_flags=span_context.trace_flags,
     )
     _get_otel_logger().emit(log_record)
+
+
+def _render_screen_text(screen_val: dict[str, Any] | None) -> str | None:
+    """Render screen chars to a text string, or return None if no screen data."""
+    if screen_val is None:
+        return None
+    lines: list[str] = []
+    for row in screen_val["chars"]:
+        lines.append("".join(chr(ch) for ch in row))
+    return "\n".join(lines) + "\n"
+
+
+def _emit_screen_log(cfg: Any, current_states: "StateList") -> None:
+    """Emit screen state as an OTel log record."""
+    if not cfg.emit_state_screen or current_states.screen.val is None:
+        return
+    from roc.reporting.screen_renderer import screen_to_html_vals
+
+    screen_vals = screen_to_html_vals(current_states.screen.val)
+    _emit_state_record("roc.screen", json.dumps(screen_vals, separators=(",", ":")))
+
+
+def _emit_saliency_log(cfg: Any, current_states: "StateList") -> None:
+    """Emit saliency and feature state as OTel log records."""
+    if not cfg.emit_state_saliency or current_states.salency.val is None:
+        return
+    saliency = current_states.salency.val
+    saliency_vals = saliency.to_html_vals()
+    _emit_state_record("roc.attention.saliency", json.dumps(saliency_vals, separators=(",", ":")))
+    if not cfg.emit_state_features:
+        return
+    s = ""
+    features = saliency.feature_report()
+    for feat_name in features:
+        s += f"\t\t{feat_name}: {features[feat_name]}\n"
+    _emit_state_record("roc.attention.features", s)
+
+
+def _emit_object_and_attention_log(current_states: "StateList") -> None:
+    """Emit object and focus point state as OTel log records."""
+    if current_states.object.val is not None:
+        _emit_state_record("roc.attention.object", str(current_states.object))
+    if current_states.attention.val is not None:
+        _emit_state_record(
+            "roc.attention.focus_points", str(current_states.attention.val.focus_points)
+        )
+
+
+def _emit_intrinsics_log(current_states: "StateList") -> None:
+    """Emit intrinsics state as an OTel log record."""
+    if current_states.intrinsic.val is None:
+        return
+    intr_data = current_states.intrinsic.val
+    _emit_state_record(
+        "roc.intrinsics",
+        json.dumps(
+            {"raw": intr_data.intrinsics, "normalized": intr_data.normalized_intrinsics},
+            separators=(",", ":"),
+            default=str,
+        ),
+    )
+
+
+def _emit_significance_log(current_states: "StateList") -> None:
+    """Emit significance state as an OTel log record."""
+    if current_states.significance.val is None:
+        return
+    _emit_state_record(
+        "roc.significance",
+        json.dumps(
+            {"significance": current_states.significance.val.significance},
+            separators=(",", ":"),
+        ),
+    )
+
+
+def _emit_action_log(cfg: Any, current_states: "StateList") -> None:
+    """Emit action state as an OTel log record."""
+    if current_states.action.val is None:
+        return
+    action_val = current_states.action.val.action
+    action_dict: dict[str, Any] = {"action_id": int(action_val)}
+    _enrich_action_from_gym(cfg, action_val, action_dict)
+    _enrich_action_expmod(action_dict)
+    _emit_state_record("roc.action", json.dumps(action_dict, separators=(",", ":")))
+
+
+def _enrich_action_from_gym(cfg: Any, action_val: Any, action_dict: dict[str, Any]) -> None:
+    """Add gym action name and key to the action dict if available."""
+    try:
+        gym_actions = cfg.gym_actions
+        if not gym_actions or int(action_val) >= len(gym_actions):
+            return
+        act_enum = gym_actions[int(action_val)]
+        action_dict["action_name"] = str(getattr(act_enum, "name", act_enum))
+        _val = getattr(act_enum, "value", None)
+        if not isinstance(_val, int):
+            return
+        from roc.gymnasium import action_value_to_key
+
+        _key = action_value_to_key(_val)
+        if _key is not None:
+            action_dict["action_key"] = _key
+    except Exception:
+        pass
+
+
+def _enrich_action_expmod(action_dict: dict[str, Any]) -> None:
+    """Add expmod name to the action dict if available."""
+    try:
+        from roc.action import DefaultActionExpMod
+
+        action_dict["expmod_name"] = DefaultActionExpMod.get(default="pass").name
+    except Exception:
+        pass
+
+
+def _emit_transform_log(current_states: "StateList") -> None:
+    """Emit transform summary as an OTel log record."""
+    if current_states.transform.val is None:
+        return
+    t = current_states.transform.val.transform
+    changes: list[dict[str, Any]] = []
+    for edge in t.src_edges:
+        dst = edge.dst
+        change_dict: dict[str, Any] = {"description": str(dst)}
+        if hasattr(dst, "name"):
+            change_dict["type"] = type(dst).__name__
+            change_dict["name"] = dst.name
+        if hasattr(dst, "normalized_change"):
+            change_dict["normalized_change"] = dst.normalized_change
+        changes.append(change_dict)
+    _emit_state_record(
+        "roc.transform_summary",
+        json.dumps(
+            {"count": len(changes), "changes": changes},
+            separators=(",", ":"),
+            default=str,
+        ),
+    )
+
+
+def _emit_sequence_log(current_states: "StateList") -> None:
+    """Emit sequence summary as an OTel log record."""
+    try:
+        from roc.component import (
+            ComponentName as _CN,
+            ComponentType as _CT,
+            loaded_components as _lc,
+        )
+        from roc.sequencer import Sequencer as _Seq
+
+        seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
+        if not isinstance(seq_comp, _Seq) or seq_comp.last_frame is None:
+            return
+        frame = seq_comp.last_frame
+        seq_dict = _build_sequence_dict(frame, current_states)
+        _emit_state_record(
+            "roc.sequence_summary",
+            json.dumps(seq_dict, separators=(",", ":"), default=str),
+        )
+    except Exception:
+        pass
+
+
+def _build_sequence_dict(frame: Any, current_states: "StateList") -> dict[str, Any]:
+    """Build the sequence summary dict from a frame."""
+    from roc.intrinsic import IntrinsicNode
+
+    objs = frame.objects
+    obj_dicts: list[dict[str, Any]] = []
+    for obj in objs:
+        obj_dict: dict[str, Any] = {"id": str(obj.id)[:8]}
+        if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
+            obj_dict["x"] = obj.last_x
+            obj_dict["y"] = obj.last_y
+        if hasattr(obj, "resolve_count"):
+            obj_dict["resolve_count"] = obj.resolve_count
+        obj_dicts.append(obj_dict)
+
+    intrinsic_snapshot: dict[str, float] = {}
+    for t_node in frame.transformable:
+        if isinstance(t_node, IntrinsicNode):
+            intrinsic_snapshot[t_node.name] = round(t_node.normalized_value, 4)
+
+    seq_dict: dict[str, Any] = {
+        "tick": frame.tick,
+        "object_count": len(objs),
+        "objects": obj_dicts,
+        "intrinsic_count": len(intrinsic_snapshot),
+        "intrinsics": intrinsic_snapshot,
+    }
+    if current_states.significance.val is not None:
+        seq_dict["significance"] = current_states.significance.val.significance
+    return seq_dict
+
+
+def _emit_prediction_log(current_states: "StateList") -> None:
+    """Emit prediction state as an OTel log record."""
+    if current_states.predict.val is None:
+        return
+    pred = current_states.predict.val
+    pred_dict: dict[str, Any] = {"made": not isinstance(pred, NoPrediction)}
+    _enrich_prediction_meta(pred_dict)
+    _emit_state_record(
+        "roc.prediction",
+        json.dumps(pred_dict, separators=(",", ":"), default=str),
+    )
+
+
+def _enrich_prediction_meta(pred_dict: dict[str, Any]) -> None:
+    """Add prediction metadata from expmod and component state."""
+    try:
+        from roc.predict import (
+            Predict,
+            PredictionCandidateFramesExpMod,
+            PredictionConfidenceExpMod,
+        )
+
+        pred_dict["candidate_expmod"] = PredictionCandidateFramesExpMod.get(
+            default="object-based"
+        ).name
+        pred_dict["confidence_expmod"] = PredictionConfidenceExpMod.get(default="naive").name
+
+        from roc.component import ComponentName, ComponentType, loaded_components
+
+        predict_comp = loaded_components.get((ComponentName("predict"), ComponentType("predict")))
+        if not isinstance(predict_comp, Predict):
+            return
+        meta = predict_comp.last_prediction_meta
+        pred_dict["candidate_count"] = meta.candidate_count
+        pred_dict["confidence"] = meta.confidence
+        pred_dict["all_scores"] = meta.all_scores
+        if meta.predicted_intrinsics:
+            pred_dict["predicted_intrinsics"] = meta.predicted_intrinsics
+    except Exception:
+        pass
+
+
+def _emit_message_log(current_states: "StateList") -> None:
+    """Emit message state as an OTel log record."""
+    if current_states.message.val is None:
+        return
+    msg = current_states.message.val.strip()
+    if msg:
+        _emit_state_record("roc.message", msg)
+
+
+def _emit_phonemes_log(current_states: "StateList") -> None:
+    """Emit phonemes state as an OTel log record."""
+    if current_states.phonemes.val is None:
+        return
+    phoneme_dicts = [
+        {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
+        for pw in current_states.phonemes.val
+    ]
+    _emit_state_record(
+        "roc.phonemes",
+        json.dumps(phoneme_dicts, separators=(",", ":")),
+    )
+
+
+def _emit_graphdb_summary_log() -> None:
+    """Emit graph DB summary as an OTel log record."""
+    node_cache = Node.get_cache()
+    edge_cache = Edge.get_cache()
+    _emit_state_record(
+        "roc.graphdb.summary",
+        json.dumps(
+            {
+                "node_count": node_cache.currsize,
+                "node_max": node_cache.maxsize,
+                "edge_count": edge_cache.currsize,
+                "edge_max": edge_cache.maxsize,
+            },
+            separators=(",", ":"),
+        ),
+    )
+
+
+def _emit_event_summary_log() -> None:
+    """Emit event bus activity summary as an OTel log record."""
+    step_counts = Event.get_step_counts()
+    if step_counts:
+        _emit_state_record(
+            "roc.event.summary",
+            json.dumps(step_counts, separators=(",", ":")),
+        )
 
 
 def node_cache_gague(*args: Any) -> Iterable[Observation]:

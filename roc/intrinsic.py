@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from typing import Any
 
 from .component import Component
 from .config import Config, ConfigIntrinsicType
@@ -14,10 +14,8 @@ from .transformable import Transform, Transformable
 
 # intrinsic_op_list
 
-IntrinsicType = TypeVar("IntrinsicType")
 
-
-class IntrinsicOp(ABC, Generic[IntrinsicType]):
+class IntrinsicOp[IntrinsicType](ABC):
     """Base class for intrinsic operations that validate and normalize raw game values."""
 
     intrinsic_type = str()
@@ -55,11 +53,11 @@ class IntrinsicIntOp(IntrinsicOp[int]):
 
     def __init__(self, name: str, config: tuple[int, int]) -> None:
         super().__init__(name)
-        min = config[0]
-        max = config[1]
-        self.min = min
-        self.max = max
-        self.range = abs(min) + abs(max)
+        min_val = config[0]
+        max_val = config[1]
+        self.min = min_val
+        self.max = max_val
+        self.range = abs(min_val) + abs(max_val)
 
     def validate(self, val: int) -> bool:
         """Returns True if val is within [min, max]."""
@@ -86,7 +84,7 @@ class IntrinsicPercentOp(IntrinsicOp[int]):
         """Returns True if val is a positive integer."""
         return isinstance(val, int) and val > 0
 
-    def normalize(self, val: int, raw_intrinsics: dict[str, Any]) -> float:
+    def normalize(self, val: int, *, raw_intrinsics: dict[str, Any]) -> float:
         """Normalizes val as a fraction of the base intrinsic."""
         return float(val / raw_intrinsics[self.base])
 
@@ -149,18 +147,15 @@ class IntrinsicNode(Node, Transformable):
         if math.isclose(self.normalized_value, previous.normalized_value):
             return None
 
-        # TODO: create transform for raw values using IntrinsicOps?
         return IntrinsicTransform(
             name=self.name,
             normalized_change=self.normalized_value - previous.normalized_value,
         )
-        # normalized_change = 0.4 - 0.5 = -0.1
 
     def apply_transform(self, t: Transform) -> IntrinsicNode:
         """Creates a new IntrinsicNode by applying the normalized change from the transform."""
         assert isinstance(t, IntrinsicTransform)
         new_val = self.normalized_value + t.normalized_change
-        # new_val = 0.5 + -0.1 = 0.4
         return IntrinsicNode(name=self.name, raw_value=None, normalized_value=new_val)
 
 
@@ -252,10 +247,10 @@ def _config_intrinsics(intrinsics_desc: list[ConfigIntrinsicType]) -> dict[str, 
 
     for known_intrinsic in intrinsics_desc:
         name = known_intrinsic.name
-        type = known_intrinsic.type
+        intrinsic_type = known_intrinsic.type
         config = known_intrinsic.model_dump(exclude={"name", "type"})
 
-        cls = intrinsic_op_registry[type]
+        cls = intrinsic_op_registry[intrinsic_type]
 
         ret[name] = cls(name, **config)
 

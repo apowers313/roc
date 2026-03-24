@@ -5,6 +5,7 @@ the interactions between the agent and the system, including the main event loop
 """
 
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import IntEnum
 from typing import Any
 
@@ -35,6 +36,7 @@ def action_value_to_key(val: int) -> str | None:
             return f"M-{chr(base)}"
     return None
 
+
 from .action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
 from .component import Component
@@ -49,6 +51,15 @@ from .reporting.screen_renderer import screen_to_html_vals
 from .reporting.state import State, _emit_state_record
 
 
+@dataclass
+class GameLoopContext:
+    """Invariant state for the game observation loop."""
+
+    callback_url: str | None
+    callback_ctx: Any
+    observation_counter: Any
+
+
 class Gym(Component, ABC):
     """A wrapper around an OpenAI Gym / Farama Gymnasium that drives the event
     loop and interfaces to the ROC agent.
@@ -58,7 +69,7 @@ class Gym(Component, ABC):
     type: str = "game"
 
     def __init__(self, gym_id: str, *, gym_opts: dict[str, Any] | None = None) -> None:
-        logger.debug(f"Initializing Gym...")
+        logger.debug("Initializing Gym...")
         super().__init__()
         gym_opts = gym_opts or {}
         logger.debug(f"Gym options: {gym_opts}")
@@ -68,6 +79,7 @@ class Gym(Component, ABC):
         self.env_bus_conn = Perception.bus.connect(self)
         self.action_bus_conn = Action.bus.connect(self)
         self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
+        self._server_stop = False
 
         # config
         self.config(self.env)
@@ -88,78 +100,13 @@ class Gym(Component, ABC):
     @Observability.tracer.start_as_current_span("start")
     def start(self) -> None:
         logger.debug("Starting NLE loop...")
-        obs, reset_info = self.env.reset()
+        obs, _reset_info = self.env.reset()
         settings = Config.get()
 
-        # HTTP callback for pushing step data to an external dashboard server
-        _callback_url = settings.dashboard_callback_url
-        _callback_ctx: Any = None
-        if _callback_url:
-            import ssl
-            import urllib.request
+        callback_url = settings.dashboard_callback_url
+        callback_ctx = _setup_callback_context(callback_url, settings)
 
-            # Skip SSL verification for localhost (self-signed certs)
-            _callback_ctx = ssl.create_default_context()
-            _callback_ctx.check_hostname = False
-            _callback_ctx.verify_mode = ssl.CERT_NONE
-            logger.info("Step callback URL: {}", _callback_url)
-
-        # Build and publish the full action map so the dashboard knows all
-        # action names upfront (not just ones the agent has taken).
-        _gym_actions = settings.gym_actions
-        if _gym_actions:
-            _action_map: list[dict[str, Any]] = []
-            for _idx, _act in enumerate(_gym_actions):
-                _entry: dict[str, Any] = {"action_id": _idx}
-                _entry["action_name"] = str(getattr(_act, "name", _act))
-                _aval = getattr(_act, "value", None)
-                if isinstance(_aval, int):
-                    _key = action_value_to_key(_aval)
-                    if _key is not None:
-                        _entry["action_key"] = _key
-                _action_map.append(_entry)
-
-            if _callback_url:
-                # Subprocess mode: POST action map to the server
-                from roc.reporting.observability import Observability
-
-                _dl_store = Observability.get_ducklake_store()
-                if _dl_store is not None:
-                    _run_name = _dl_store.run_dir.name
-                    try:
-                        import json as _json_mod
-                        import urllib.request
-
-                        _base = _callback_url.rsplit("/api/internal/step", 1)[0]
-                        _map_url = f"{_base}/api/internal/action-map"
-                        _map_payload = _json_mod.dumps(
-                            {"run_name": _run_name, "action_map": _action_map},
-                            separators=(",", ":"),
-                        ).encode()
-                        _map_req = urllib.request.Request(
-                            _map_url,
-                            data=_map_payload,
-                            headers={"Content-Type": "application/json"},
-                            method="POST",
-                        )
-                        urllib.request.urlopen(_map_req, timeout=5, context=_callback_ctx)
-                        logger.debug("Sent action map ({} entries) to server", len(_action_map))
-                    except Exception:
-                        logger.opt(exception=True).debug("Failed to send action map")
-            else:
-                # In-process mode: save directly to the run directory
-                from roc.reporting.observability import Observability
-
-                _dl_store = Observability.get_ducklake_store()
-                if _dl_store is not None:
-                    try:
-                        import json as _json_mod2
-
-                        _map_path = _dl_store.run_dir / "action_map.json"
-                        _map_path.write_text(_json_mod2.dumps(_action_map))
-                        logger.debug("Saved action_map.json ({} entries)", len(_action_map))
-                    except Exception:
-                        logger.opt(exception=True).debug("Failed to save action_map.json")
+        _publish_action_map(settings.gym_actions, callback_url, callback_ctx)
 
         done = False
         truncated = False
@@ -175,383 +122,25 @@ class Gym(Component, ABC):
         )
         game_counter.add(1)
         _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
+        loop_ctx = GameLoopContext(callback_url, callback_ctx, observation_counter)
 
         # main environment loop
         while game_num <= settings.num_games:
             with Observability.tracer.start_as_current_span("observation"):
-                # Tag log records with the step number that StepData will use.
-                # loop_num is incremented later in this iteration, so +1 here
-                # ensures logs match StepData.step.
-                from roc.reporting.step_log_sink import set_current_step
-
-                set_current_step(loop_num + 1)
-
-                logger.trace(f"Sending observation: {obs}")
-                breakpoints.check()
-
-                # Copy numpy arrays -- NLE reuses internal buffers that
-                # get overwritten by env.step().  Without .copy(), screen.val
-                # would point to the next observation's data by the time
-                # emit_state_logs() reads it.
-                State.get_states().screen.set(
-                    {
-                        "chars": obs["tty_chars"].copy(),
-                        "colors": obs["tty_colors"].copy(),
-                        "cursor": obs["tty_cursor"],
-                    }
+                obs, done, truncated, loop_num = self._run_observation_step(
+                    obs, loop_num, game_num, loop_ctx
                 )
 
-                # do all the real work
-                self.send_obs(obs)
-
-                # get an action
-                action = self.get_action()
-
-                # perform the action and get the next observation
-                obs, reward, done, truncated, info = self.env.step(action)
-
-                # optionally save the screen to file
-                _dump_env_record(obs, loop_num)
-
-                # set and save the loop number
-                observation_counter.add(1)
-                loop_num += 1
-                State.get_states().loop.set(loop_num)
-                State.maybe_emit_snapshot(loop_num)
-                if Config.get().emit_state:
-                    State.emit_state_logs()
-
-                # Push StepData to live dashboard buffer (cheap -- just dict refs)
-                from roc.reporting.step_buffer import get_step_buffer
-
-                _buf = get_step_buffer()
-                if _buf is not None or _callback_url:
-                    from time import time_ns as _time_ns
-
-                    from roc.event import Event
-                    from roc.graphdb import Edge, Node
-                    from roc.reporting.run_store import StepData
-
-                    _states = State.get_states()
-                    _screen_state = _states.screen.val
-                    _screen_vals = (
-                        screen_to_html_vals(_screen_state) if _screen_state is not None else None
-                    )
-                    _saliency_state = _states.salency.val
-                    _saliency_vals = (
-                        _saliency_state.to_html_vals() if _saliency_state is not None else None
-                    )
-                    _features = None
-                    if _saliency_state is not None:
-                        _feat_report = _saliency_state.feature_report()
-                        _features = [_feat_report] if _feat_report else None
-                    _object_info = None
-                    if _states.object.val is not None:
-                        _object_info = [{"raw": str(_states.object)}]
-                    _focus_points = None
-                    if _states.attention.val is not None:
-                        _focus_points = [{"raw": str(_states.attention.val.focus_points)}]
-                    _node_cache = Node.get_cache()
-                    _edge_cache = Edge.get_cache()
-                    _graph_summary = {
-                        "node_count": _node_cache.currsize,
-                        "node_max": _node_cache.maxsize,
-                        "edge_count": _edge_cache.currsize,
-                        "edge_max": _edge_cache.maxsize,
-                    }
-                    _step_counts = Event.get_step_counts()
-                    _event_summary = [_step_counts] if _step_counts else None
-                    _resolution_metrics = _states.resolution.val
-                    _attenuation = _states.attenuation_data.val
-
-                    # New pipeline state fields
-                    _intrinsics = None
-                    _significance = None
-                    _action_taken = None
-                    _transform_summary = None
-                    _prediction: dict[str, Any] | None = None
-                    _message = None
-                    _phonemes = None
-                    _inventory = None
-
-                    if _states.intrinsic.val is not None:
-                        _intr = _states.intrinsic.val
-                        _intrinsics = {
-                            "raw": _intr.intrinsics,
-                            "normalized": _intr.normalized_intrinsics,
-                        }
-
-                    if _states.significance.val is not None:
-                        _significance = _states.significance.val.significance
-
-                    if _states.action.val is not None:
-                        _act_id = int(_states.action.val.action)
-                        _action_taken_dict: dict[str, Any] = {"action_id": _act_id}
-                        try:
-                            _gym_actions = Config.get().gym_actions
-                            if _gym_actions and _act_id < len(_gym_actions):
-                                _act_enum = _gym_actions[_act_id]
-                                _action_taken_dict["action_name"] = str(
-                                    getattr(_act_enum, "name", _act_enum)
-                                )
-                                _val = getattr(_act_enum, "value", None)
-                                if isinstance(_val, int):
-                                    _key = action_value_to_key(_val)
-                                    if _key is not None:
-                                        _action_taken_dict["action_key"] = _key
-                        except Exception:
-                            pass
-                        _action_taken = _action_taken_dict
-
-                    if _states.transform.val is not None:
-                        _t = _states.transform.val.transform
-                        _changes_list: list[dict[str, Any]] = []
-                        for _edge in _t.src_edges:
-                            _dst = _edge.dst
-                            _ch: dict[str, Any] = {"description": str(_dst)}
-                            if hasattr(_dst, "name"):
-                                _ch["type"] = type(_dst).__name__
-                                _ch["name"] = _dst.name
-                            if hasattr(_dst, "normalized_change"):
-                                _ch["normalized_change"] = _dst.normalized_change
-                            _changes_list.append(_ch)
-                        _transform_summary = {
-                            "count": len(_changes_list),
-                            "changes": _changes_list,
-                        }
-
-                    _sequence_summary = None
-                    try:
-                        from roc.intrinsic import IntrinsicNode as _IN
-
-                        _seq = _states.transform.val
-                        if _seq is not None:
-                            from roc.component import (
-                                ComponentName as _CN2,
-                                ComponentType as _CT2,
-                                loaded_components as _lc2,
-                            )
-                            from roc.sequencer import Sequencer as _Seq2
-
-                            _seq_comp = _lc2.get((_CN2("sequencer"), _CT2("sequencer")))
-                            if isinstance(_seq_comp, _Seq2) and _seq_comp.last_frame is not None:
-                                _frame = _seq_comp.last_frame
-                                _objs = _frame.objects
-                                _obj_dicts: list[dict[str, Any]] = []
-                                for _obj in _objs:
-                                    _od: dict[str, Any] = {"id": str(_obj.id)[:8]}
-                                    if hasattr(_obj, "last_x") and hasattr(_obj, "last_y"):
-                                        _od["x"] = _obj.last_x
-                                        _od["y"] = _obj.last_y
-                                    if hasattr(_obj, "resolve_count"):
-                                        _od["resolve_count"] = _obj.resolve_count
-                                    _obj_dicts.append(_od)
-                                _intr_snap: dict[str, float] = {}
-                                for _tn in _frame.transformable:
-                                    if isinstance(_tn, _IN):
-                                        _intr_snap[_tn.name] = round(_tn.normalized_value, 4)
-                                _sequence_summary = {
-                                    "tick": _frame.tick,
-                                    "object_count": len(_objs),
-                                    "objects": _obj_dicts,
-                                    "intrinsic_count": len(_intr_snap),
-                                    "intrinsics": _intr_snap,
-                                }
-                                if _states.significance.val is not None:
-                                    _sequence_summary["significance"] = (
-                                        _states.significance.val.significance
-                                    )
-                    except Exception:
-                        pass
-
-                    if _states.predict.val is not None:
-                        from roc.predict import NoPrediction as _NP
-
-                        _prediction = {
-                            "made": not isinstance(_states.predict.val, _NP),
-                        }
-                        try:
-                            from roc.component import (
-                                ComponentName as _CN3,
-                                ComponentType as _CT3,
-                                loaded_components as _lc3,
-                            )
-                            from roc.predict import Predict as _Pred
-
-                            _pred_comp = _lc3.get((_CN3("predict"), _CT3("predict")))
-                            if isinstance(_pred_comp, _Pred):
-                                _meta = _pred_comp.last_prediction_meta
-                                _prediction["candidate_count"] = _meta.candidate_count
-                                _prediction["confidence"] = _meta.confidence
-                                _prediction["all_scores"] = _meta.all_scores
-                                if _meta.predicted_intrinsics:
-                                    _prediction["predicted_intrinsics"] = (
-                                        _meta.predicted_intrinsics
-                                    )
-                        except Exception:
-                            pass
-
-                    if _states.message.val is not None:
-                        _msg = _states.message.val.strip()
-                        if _msg:
-                            _message = _msg
-
-                    _phonemes = (
-                        [
-                            {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
-                            for pw in _states.phonemes.val
-                        ]
-                        if _states.phonemes.val is not None
-                        else None
-                    )
-
-                    # Inventory from obs
-                    try:
-                        _inv_strs = obs["inv_strs"]
-                        _inv_letters = obs["inv_letters"]
-                        _inv_glyphs = obs["inv_glyphs"]
-                        _inv_items: list[dict[str, Any]] = []
-                        for _i in range(len(_inv_strs)):
-                            _item_str = "".join(chr(ch) for ch in _inv_strs[_i]).strip("\x00 ")
-                            _glyph = int(_inv_glyphs[_i])
-                            if not _item_str or _glyph == 5976:
-                                continue
-                            _inv_items.append(
-                                {
-                                    "letter": chr(int(_inv_letters[_i])),
-                                    "item": _item_str,
-                                    "glyph": _glyph,
-                                }
-                            )
-                        if _inv_items:
-                            _inventory = _inv_items
-                    except Exception:
-                        pass
-
-                # Log per-tick game state to W&B
-                blstats = obs["blstats"]
-                game_metrics = {
-                    "score": int(blstats[blstat_offsets.SCORE]),
-                    "hp": int(blstats[blstat_offsets.HP]),
-                    "hp_max": int(blstats[blstat_offsets.HPMAX]),
-                    "energy": int(blstats[blstat_offsets.ENE]),
-                    "energy_max": int(blstats[blstat_offsets.ENEMAX]),
-                    "depth": int(blstats[blstat_offsets.DEPTH]),
-                    "gold": int(blstats[blstat_offsets.GOLD]),
-                    "x": int(blstats[blstat_offsets.X]),
-                    "y": int(blstats[blstat_offsets.Y]),
-                    "hunger": int(blstats[blstat_offsets.HUNGER]),
-                    "xp_level": int(blstats[blstat_offsets.XP]),
-                    "experience": int(blstats[blstat_offsets.EXP]),
-                    "ac": int(blstats[blstat_offsets.AC]),
-                }
-                RocMetrics.log_step(game_metrics)
-
-                # Emit game metrics as OTel log record for Parquet storage
-                import json as _json
-
-                _emit_state_record(
-                    "roc.game_metrics",
-                    _json.dumps(game_metrics, separators=(",", ":")),
-                )
-
-                # Emit inventory as OTel log record
-                if (_buf is not None or _callback_url) and _inventory is not None:
-                    _emit_state_record(
-                        "roc.inventory",
-                        _json.dumps(_inventory, separators=(",", ":")),
-                    )
-
-                # Push assembled StepData to live dashboard
-                if _buf is not None or _callback_url:
-                    from roc.reporting.step_log_sink import drain_step_logs
-
-                    _step_logs = drain_step_logs(loop_num)
-
-                    _step_data = StepData(
-                        step=loop_num,
-                        game_number=game_num,
-                        timestamp=_time_ns(),
-                        screen=_screen_vals,
-                        saliency=_saliency_vals,
-                        features=_features,
-                        object_info=_object_info,
-                        focus_points=_focus_points,
-                        attenuation=_attenuation,
-                        resolution_metrics=_resolution_metrics,
-                        graph_summary=_graph_summary,
-                        event_summary=_event_summary,
-                        game_metrics=game_metrics,
-                        logs=_step_logs,
-                        intrinsics=_intrinsics,
-                        significance=_significance,
-                        action_taken=_action_taken,
-                        sequence_summary=_sequence_summary,
-                        transform_summary=_transform_summary,
-                        prediction=_prediction,
-                        message=_message,
-                        phonemes=_phonemes,
-                        inventory=_inventory,
-                    )
-                    if _buf is not None:
-                        _buf.push(_step_data)
-
-                    # Push step to external dashboard server via HTTP callback
-                    _server_stop = False
-                    if _callback_url:
-                        try:
-                            import dataclasses as _dc
-                            import urllib.request
-
-                            _payload = _json.dumps(
-                                _dc.asdict(_step_data), separators=(",", ":"), default=str
-                            ).encode()
-                            _req = urllib.request.Request(
-                                _callback_url,
-                                data=_payload,
-                                headers={"Content-Type": "application/json"},
-                                method="POST",
-                            )
-                            _resp = urllib.request.urlopen(
-                                _req, timeout=2, context=_callback_ctx
-                            )
-                            _resp_body = _json.loads(_resp.read())
-                            if _resp_body.get("stop"):
-                                _server_stop = True
-                        except Exception:
-                            pass  # best-effort, don't break the game loop
+                if done or truncated:
+                    _handle_game_over(obs, game_num, done, settings)
 
                 if done or truncated:
-                    # log game over info
-                    screen = ""
-                    for row in obs["tty_chars"]:
-                        for ch in row:
-                            screen += chr(ch)
-                        screen += "\n"
-                    logger.info(screen, death=True, game_num=game_num)
-                    logger.info(f"Game {game_num} completed, starting next game")
-                    # flush cache to graphdb
-                    if settings.graphdb_flush:
-                        GraphDB.flush()
-                    if settings.graphdb_export:
-                        GraphDB.export()
-                    # Buffer game-end data before flush so it's in the same step
-                    blstats = obs["blstats"]
-                    score = int(blstats[blstat_offsets.SCORE])
-                    outcome = "done" if done else "truncated"
-                    _emit_state_record(
-                        "roc.game_end",
-                        f'{{"game_number": {game_num}, "outcome": "{outcome}", "score": {score}}}',
-                    )
-
-                if done or truncated:
-                    # restart and prepare to go again
                     self.env.reset()
                     game_counter.add(1)
                     game_num += 1
                     _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
 
-                if _server_stop:
+                if self._server_stop:
                     logger.info("Server requested stop, exiting game loop.")
                     break
 
@@ -561,6 +150,522 @@ class Gym(Component, ABC):
         stop_dashboard()
         Observability.shutdown()
         _dump_env_end()
+
+    def _run_observation_step(
+        self,
+        obs: Any,
+        loop_num: int,
+        game_num: int,
+        loop_ctx: GameLoopContext,
+    ) -> tuple[Any, bool, bool, int]:
+        """Execute a single observation-action-step cycle.
+
+        Returns the new (obs, done, truncated, loop_num) tuple.
+        """
+        from roc.reporting.step_log_sink import set_current_step
+
+        set_current_step(loop_num + 1)
+
+        logger.trace(f"Sending observation: {obs}")
+        breakpoints.check()
+
+        # Copy numpy arrays -- NLE reuses internal buffers
+        State.get_states().screen.set(
+            {
+                "chars": obs["tty_chars"].copy(),
+                "colors": obs["tty_colors"].copy(),
+                "cursor": obs["tty_cursor"],
+            }
+        )
+
+        self.send_obs(obs)
+        action = self.get_action()
+        obs, _reward, done, truncated, _info = self.env.step(action)
+        _dump_env_record(obs, loop_num)
+
+        loop_ctx.observation_counter.add(1)
+        loop_num += 1
+        State.get_states().loop.set(loop_num)
+        State.maybe_emit_snapshot(loop_num)
+        if Config.get().emit_state:
+            State.emit_state_logs()
+
+        self._server_stop = _push_dashboard_data(
+            obs, loop_num, game_num, loop_ctx.callback_url, loop_ctx.callback_ctx
+        )
+
+        return obs, done, truncated, loop_num
+
+
+def _setup_callback_context(callback_url: str | None, settings: Config) -> Any:
+    """Build an SSL context for the HTTP callback URL, if needed."""
+    if not callback_url:
+        return None
+    import ssl
+
+    if callback_url.startswith("https://"):
+        ctx = ssl.create_default_context()
+        if settings.ssl_certfile:
+            ctx.load_verify_locations(settings.ssl_certfile)
+    else:
+        ctx = None
+    logger.info("Step callback URL: {}", callback_url)
+    return ctx
+
+
+def _build_action_map(
+    gym_actions: tuple[Any, ...],
+) -> list[dict[str, Any]]:
+    """Build the full action map from gym action enums."""
+    action_map: list[dict[str, Any]] = []
+    for idx, act in enumerate(gym_actions):
+        entry: dict[str, Any] = {"action_id": idx}
+        entry["action_name"] = str(getattr(act, "name", act))
+        aval = getattr(act, "value", None)
+        if isinstance(aval, int):
+            key = action_value_to_key(aval)
+            if key is not None:
+                entry["action_key"] = key
+        action_map.append(entry)
+    return action_map
+
+
+def _publish_action_map(
+    gym_actions: tuple[Any, ...] | None,
+    callback_url: str | None,
+    callback_ctx: Any,
+) -> None:
+    """Build and publish the action map to the server or to disk."""
+    if not gym_actions:
+        return
+
+    action_map = _build_action_map(gym_actions)
+
+    if callback_url:
+        _post_action_map_to_server(action_map, callback_url, callback_ctx)
+    else:
+        _save_action_map_to_file(action_map)
+
+
+def _post_action_map_to_server(
+    action_map: list[dict[str, Any]],
+    callback_url: str,
+    callback_ctx: Any,
+) -> None:
+    """POST the action map to the dashboard server."""
+    from roc.reporting.observability import Observability
+
+    dl_store = Observability.get_ducklake_store()
+    if dl_store is None:
+        return
+    try:
+        import json
+        import urllib.request
+
+        run_name = dl_store.run_dir.name
+        base = callback_url.rsplit("/api/internal/step", 1)[0]
+        map_url = f"{base}/api/internal/action-map"
+        payload = json.dumps(
+            {"run_name": run_name, "action_map": action_map},
+            separators=(",", ":"),
+        ).encode()
+        req = urllib.request.Request(
+            map_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=5, context=callback_ctx)
+        logger.debug("Sent action map ({} entries) to server", len(action_map))
+    except Exception:
+        logger.opt(exception=True).debug("Failed to send action map")
+
+
+def _save_action_map_to_file(action_map: list[dict[str, Any]]) -> None:
+    """Save the action map directly to the run directory."""
+    from roc.reporting.observability import Observability
+
+    dl_store = Observability.get_ducklake_store()
+    if dl_store is None:
+        return
+    try:
+        import json
+
+        map_path = dl_store.run_dir / "action_map.json"
+        map_path.write_text(json.dumps(action_map))
+        logger.debug("Saved action_map.json ({} entries)", len(action_map))
+    except Exception:
+        logger.opt(exception=True).debug("Failed to save action_map.json")
+
+
+def _collect_screen_data(states: Any) -> tuple[Any, Any, Any]:
+    """Collect screen, saliency, and feature data from states."""
+    screen_state = states.screen.val
+    screen_vals = screen_to_html_vals(screen_state) if screen_state is not None else None
+    saliency_state = states.salency.val
+    saliency_vals = saliency_state.to_html_vals() if saliency_state is not None else None
+    features = None
+    if saliency_state is not None:
+        feat_report = saliency_state.feature_report()
+        features = [feat_report] if feat_report else None
+    return screen_vals, saliency_vals, features
+
+
+def _collect_object_data(states: Any) -> tuple[Any, Any]:
+    """Collect object info and focus points from states."""
+    object_info = None
+    if states.object.val is not None:
+        object_info = [{"raw": str(states.object)}]
+    focus_points = None
+    if states.attention.val is not None:
+        focus_points = [{"raw": str(states.attention.val.focus_points)}]
+    return object_info, focus_points
+
+
+def _collect_graph_summary() -> dict[str, Any]:
+    """Collect graph database cache summary."""
+    from roc.graphdb import Edge, Node
+
+    node_cache = Node.get_cache()
+    edge_cache = Edge.get_cache()
+    return {
+        "node_count": node_cache.currsize,
+        "node_max": node_cache.maxsize,
+        "edge_count": edge_cache.currsize,
+        "edge_max": edge_cache.maxsize,
+    }
+
+
+def _collect_event_summary() -> list[dict[str, Any]] | None:
+    """Collect event bus step counts."""
+    from roc.event import Event
+
+    step_counts = Event.get_step_counts()
+    return [step_counts] if step_counts else None
+
+
+def _build_action_taken_dict(states: Any) -> dict[str, Any] | None:
+    """Build the action_taken dict from current state."""
+    if states.action.val is None:
+        return None
+    act_id = int(states.action.val.action)
+    result: dict[str, Any] = {"action_id": act_id}
+    try:
+        gym_actions = Config.get().gym_actions
+        if gym_actions and act_id < len(gym_actions):
+            act_enum = gym_actions[act_id]
+            result["action_name"] = str(getattr(act_enum, "name", act_enum))
+            val = getattr(act_enum, "value", None)
+            if isinstance(val, int):
+                key = action_value_to_key(val)
+                if key is not None:
+                    result["action_key"] = key
+    except Exception:
+        pass
+    return result
+
+
+def _build_transform_summary(states: Any) -> dict[str, Any] | None:
+    """Build transform summary from the current transform state."""
+    if states.transform.val is None:
+        return None
+    t = states.transform.val.transform
+    changes_list: list[dict[str, Any]] = []
+    for edge in t.src_edges:
+        dst = edge.dst
+        ch: dict[str, Any] = {"description": str(dst)}
+        if hasattr(dst, "name"):
+            ch["type"] = type(dst).__name__
+            ch["name"] = dst.name
+        if hasattr(dst, "normalized_change"):
+            ch["normalized_change"] = dst.normalized_change
+        changes_list.append(ch)
+    return {"count": len(changes_list), "changes": changes_list}
+
+
+def _build_sequence_summary(states: Any) -> dict[str, Any] | None:
+    """Build sequence summary from the sequencer's last frame."""
+    try:
+        if states.transform.val is None:
+            return None
+        frame = _get_last_frame()
+        if frame is None:
+            return None
+        return _frame_to_summary(frame, states)
+    except Exception:
+        return None
+
+
+def _get_last_frame() -> Any:
+    """Get the sequencer's last frame, or None if unavailable."""
+    from roc.component import ComponentName, ComponentType, loaded_components
+    from roc.sequencer import Sequencer
+
+    seq_comp = loaded_components.get((ComponentName("sequencer"), ComponentType("sequencer")))
+    if not isinstance(seq_comp, Sequencer) or seq_comp.last_frame is None:
+        return None
+    return seq_comp.last_frame
+
+
+def _obj_to_dict(obj: Any) -> dict[str, Any]:
+    """Convert a single object to a summary dict."""
+    od: dict[str, Any] = {"id": str(obj.id)[:8]}
+    if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
+        od["x"] = obj.last_x
+        od["y"] = obj.last_y
+    if hasattr(obj, "resolve_count"):
+        od["resolve_count"] = obj.resolve_count
+    return od
+
+
+def _frame_to_summary(frame: Any, states: Any) -> dict[str, Any]:
+    """Build the summary dict from a frame and current states."""
+    from roc.intrinsic import IntrinsicNode
+
+    objs = frame.objects
+    obj_dicts = [_obj_to_dict(obj) for obj in objs]
+    intr_snap = {
+        tn.name: round(tn.normalized_value, 4)
+        for tn in frame.transformable
+        if isinstance(tn, IntrinsicNode)
+    }
+    summary: dict[str, Any] = {
+        "tick": frame.tick,
+        "object_count": len(objs),
+        "objects": obj_dicts,
+        "intrinsic_count": len(intr_snap),
+        "intrinsics": intr_snap,
+    }
+    if states.significance.val is not None:
+        summary["significance"] = states.significance.val.significance
+    return summary
+
+
+def _build_prediction_data(states: Any) -> dict[str, Any] | None:
+    """Build prediction data from the current predict state."""
+    if states.predict.val is None:
+        return None
+    from roc.predict import NoPrediction
+
+    prediction: dict[str, Any] = {"made": not isinstance(states.predict.val, NoPrediction)}
+    try:
+        from roc.component import (
+            ComponentName,
+            ComponentType,
+            loaded_components,
+        )
+        from roc.predict import Predict
+
+        pred_comp = loaded_components.get((ComponentName("predict"), ComponentType("predict")))
+        if isinstance(pred_comp, Predict):
+            meta = pred_comp.last_prediction_meta
+            prediction["candidate_count"] = meta.candidate_count
+            prediction["confidence"] = meta.confidence
+            prediction["all_scores"] = meta.all_scores
+            if meta.predicted_intrinsics:
+                prediction["predicted_intrinsics"] = meta.predicted_intrinsics
+    except Exception:
+        pass
+    return prediction
+
+
+def _collect_message(states: Any) -> str | None:
+    """Extract a non-empty message string from states."""
+    if states.message.val is None:
+        return None
+    msg = states.message.val.strip()
+    return msg if msg else None
+
+
+def _collect_phonemes(states: Any) -> list[dict[str, Any]] | None:
+    """Collect phoneme data from states."""
+    if states.phonemes.val is None:
+        return None
+    return [
+        {"word": pw.word, "phonemes": pw.phonemes, "is_break": pw.is_break}
+        for pw in states.phonemes.val
+    ]
+
+
+def _parse_inventory(obs: Any) -> list[dict[str, Any]] | None:
+    """Parse inventory items from the observation dict."""
+    try:
+        inv_strs = obs["inv_strs"]
+        inv_letters = obs["inv_letters"]
+        inv_glyphs = obs["inv_glyphs"]
+        inv_items: list[dict[str, Any]] = []
+        for i in range(len(inv_strs)):
+            item_str = "".join(chr(ch) for ch in inv_strs[i]).strip("\x00 ")
+            glyph = int(inv_glyphs[i])
+            if not item_str or glyph == 5976:
+                continue
+            inv_items.append(
+                {
+                    "letter": chr(int(inv_letters[i])),
+                    "item": item_str,
+                    "glyph": glyph,
+                }
+            )
+        return inv_items if inv_items else None
+    except Exception:
+        return None
+
+
+def _extract_game_metrics(obs: Any) -> dict[str, int]:
+    """Extract bottom-line stats into a game metrics dict."""
+    blstats = obs["blstats"]
+    return {
+        "score": int(blstats[blstat_offsets.SCORE]),
+        "hp": int(blstats[blstat_offsets.HP]),
+        "hp_max": int(blstats[blstat_offsets.HPMAX]),
+        "energy": int(blstats[blstat_offsets.ENE]),
+        "energy_max": int(blstats[blstat_offsets.ENEMAX]),
+        "depth": int(blstats[blstat_offsets.DEPTH]),
+        "gold": int(blstats[blstat_offsets.GOLD]),
+        "x": int(blstats[blstat_offsets.X]),
+        "y": int(blstats[blstat_offsets.Y]),
+        "hunger": int(blstats[blstat_offsets.HUNGER]),
+        "xp_level": int(blstats[blstat_offsets.XP]),
+        "experience": int(blstats[blstat_offsets.EXP]),
+        "ac": int(blstats[blstat_offsets.AC]),
+    }
+
+
+def _push_step_to_server(
+    step_data: Any,
+    callback_url: str,
+    callback_ctx: Any,
+) -> bool:
+    """POST step data to the dashboard server. Returns True if server requested stop."""
+    try:
+        import dataclasses
+        import json
+        import urllib.request
+
+        payload = json.dumps(
+            dataclasses.asdict(step_data), separators=(",", ":"), default=str
+        ).encode()
+        req = urllib.request.Request(
+            callback_url,
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=2, context=callback_ctx)
+        resp_body = json.loads(resp.read())
+        return bool(resp_body.get("stop"))
+    except Exception:
+        return False  # best-effort, don't break the game loop
+
+
+def _push_dashboard_data(
+    obs: Any,
+    loop_num: int,
+    game_num: int,
+    callback_url: str | None,
+    callback_ctx: Any,
+) -> bool:
+    """Collect step data and push to the dashboard buffer and/or server.
+
+    Returns True if the server requested a stop.
+    """
+    import json as _json
+
+    game_metrics = _extract_game_metrics(obs)
+    RocMetrics.log_step(game_metrics)
+    _emit_state_record(
+        "roc.game_metrics",
+        _json.dumps(game_metrics, separators=(",", ":")),
+    )
+
+    from roc.reporting.step_buffer import get_step_buffer
+
+    buf = get_step_buffer()
+    dashboard_active = buf is not None or bool(callback_url)
+
+    inventory = _parse_inventory(obs) if dashboard_active else None
+
+    if dashboard_active and inventory is not None:
+        _emit_state_record(
+            "roc.inventory",
+            _json.dumps(inventory, separators=(",", ":")),
+        )
+
+    if not dashboard_active:
+        return False
+
+    from time import time_ns
+
+    from roc.reporting.run_store import StepData
+    from roc.reporting.step_log_sink import drain_step_logs
+
+    states = State.get_states()
+    screen_vals, saliency_vals, features = _collect_screen_data(states)
+    object_info, focus_points = _collect_object_data(states)
+
+    step_data = StepData(
+        step=loop_num,
+        game_number=game_num,
+        timestamp=time_ns(),
+        screen=screen_vals,
+        saliency=saliency_vals,
+        features=features,
+        object_info=object_info,
+        focus_points=focus_points,
+        attenuation=states.attenuation_data.val,
+        resolution_metrics=states.resolution.val,
+        graph_summary=_collect_graph_summary(),
+        event_summary=_collect_event_summary(),
+        game_metrics=game_metrics,
+        logs=drain_step_logs(loop_num),
+        intrinsics=(
+            {
+                "raw": states.intrinsic.val.intrinsics,
+                "normalized": states.intrinsic.val.normalized_intrinsics,
+            }
+            if states.intrinsic.val is not None
+            else None
+        ),
+        significance=(
+            states.significance.val.significance if states.significance.val is not None else None
+        ),
+        action_taken=_build_action_taken_dict(states),
+        sequence_summary=_build_sequence_summary(states),
+        transform_summary=_build_transform_summary(states),
+        prediction=_build_prediction_data(states),
+        message=_collect_message(states),
+        phonemes=_collect_phonemes(states),
+        inventory=inventory,
+    )
+    if buf is not None:
+        buf.push(step_data)
+
+    server_stop = False
+    if callback_url:
+        server_stop = _push_step_to_server(step_data, callback_url, callback_ctx)
+    return server_stop
+
+
+def _handle_game_over(obs: Any, game_num: int, done: bool, settings: Config) -> None:
+    """Log game over info and optionally flush the graph database."""
+    screen = ""
+    for row in obs["tty_chars"]:
+        for ch in row:
+            screen += chr(ch)
+        screen += "\n"
+    logger.info(screen, death=True, game_num=game_num)
+    logger.info(f"Game {game_num} completed, starting next game")
+    if settings.graphdb_flush:
+        GraphDB.flush()
+    if settings.graphdb_export:
+        GraphDB.export()
+    blstats = obs["blstats"]
+    score = int(blstats[blstat_offsets.SCORE])
+    outcome = "done" if done else "truncated"
+    _emit_state_record(
+        "roc.game_end",
+        f'{{"game_number": {game_num}, "outcome": "{outcome}", "score": {score}}}',
+    )
 
 
 class blstat_offsets(IntEnum):
@@ -721,13 +826,6 @@ class NethackGym(Gym):
         self.env_bus_conn.send(ad)
 
     def send_proprioceptive(self, obs: Any) -> None:
-        # print("inv_glyphs", obs["inv_glyphs"])
-        # print("inv_strs", obs["inv_strs"])
-        # print("inv_letters", obs["inv_letters"])
-        # print("inv_oclasses", obs["inv_oclasses"])
-        # for inv in obs["inv_strs"]:
-        #     invline = "".join(chr(ch) for ch in inv)
-        #     print(invline)
         pd = ProprioceptiveData.from_dict(obs)
         self.env_bus_conn.send(pd)
 
@@ -756,7 +854,7 @@ def _ascii_list(al: list[int]) -> str:
     return result_string
 
 
-def _print_screen(screen: list[list[int]], *, as_int: bool = False) -> None:
+def _print_screen(screen: list[list[int]]) -> None:
     global dump_env_file
     assert dump_env_file
     for row in screen:

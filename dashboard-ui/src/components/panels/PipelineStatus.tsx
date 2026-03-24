@@ -14,6 +14,18 @@ interface StageCard {
     color: string;
 }
 
+function getPredictionColor(p: StepData["prediction"]): string {
+    if (!p) return "gray";
+    return p.made ? "green" : "orange";
+}
+
+function getSignificanceColor(sig: number | null | undefined): string {
+    if (sig == null) return "gray";
+    if (sig > 0.5) return "red";
+    if (sig > 0.1) return "yellow";
+    return "green";
+}
+
 function getStages(data: StepData | undefined): StageCard[] {
     if (!data) return [];
 
@@ -21,9 +33,13 @@ function getStages(data: StepData | undefined): StageCard[] {
 
     // Resolution
     const res = data.resolution_metrics;
+    let resValue = "--";
+    if (res) {
+        resValue = typeof res.outcome === "string" ? res.outcome : "done";
+    }
     stages.push({
         label: "Resolution",
-        value: res ? String(res.outcome ?? "done") : "--",
+        value: resValue,
         color: res ? "teal" : "gray",
     });
 
@@ -37,10 +53,15 @@ function getStages(data: StepData | undefined): StageCard[] {
 
     // Prediction
     const p = data.prediction;
+    let predValue = "--";
+    if (p) {
+        predValue = p.made ? "MADE" : "SKIP";
+    }
+    const predColor = getPredictionColor(p);
     stages.push({
         label: "Prediction",
-        value: p ? (p.made ? "MADE" : "SKIP") : "--",
-        color: p ? (p.made ? "green" : "orange") : "gray",
+        value: predValue,
+        color: predColor,
     });
 
     // Action
@@ -53,16 +74,17 @@ function getStages(data: StepData | undefined): StageCard[] {
 
     // Significance
     const sig = data.significance;
+    const sigColor = getSignificanceColor(sig);
     stages.push({
         label: "Significance",
-        value: sig != null ? sig.toFixed(3) : "--",
-        color: sig != null ? (sig > 0.5 ? "red" : sig > 0.1 ? "yellow" : "green") : "gray",
+        value: sig == null ? "--" : sig.toFixed(3),
+        color: sigColor,
     });
 
     return stages;
 }
 
-export function PipelineStatus({ data }: PipelineStatusProps) {
+export function PipelineStatus({ data }: Readonly<PipelineStatusProps>) {
     const stages = getStages(data);
 
     if (stages.length === 0) {

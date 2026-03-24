@@ -18,13 +18,19 @@ interface SectionProps {
     children: ReactNode;
 }
 
-export function Section({ value, title, icon: Icon, color, toolbar, expmod, children }: SectionProps) {
+export function Section({ value, title, icon: Icon, color, toolbar, expmod, children }: Readonly<SectionProps>) {
     const { contentRef, minHeight } = useRatchetHeight();
 
     // Normalize to array, filter out empty/undefined values
-    const expmodList = expmod
-        ? (Array.isArray(expmod) ? expmod : [expmod]).filter(Boolean)
-        : [];
+    let expmodArray: string[];
+    if (Array.isArray(expmod)) {
+        expmodArray = expmod;
+    } else if (expmod) {
+        expmodArray = [expmod];
+    } else {
+        expmodArray = [];
+    }
+    const expmodList = expmodArray.filter(Boolean);
 
     return (
         <Accordion.Item value={value}>

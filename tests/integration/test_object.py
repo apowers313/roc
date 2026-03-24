@@ -215,7 +215,7 @@ class TestSymmetricDifferenceRegression:
         fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx)
         assert result1 is None, "first observation should create a new object"
-        obj1 = Object.with_features(fg1)
+        Object.with_features(fg1)
 
         # Observation 2: single2 + color2 + shape2 (completely different features)
         fg2 = FeatureGroup.from_nodes([features["single2"], features["color2"], features["shape2"]])
@@ -238,7 +238,7 @@ class TestSymmetricDifferenceRegression:
         fg1 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape1"]])
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx)
         assert result1 is None
-        obj1 = Object.with_features(fg1)
+        Object.with_features(fg1)
 
         # Observation 2: single1 + color2 + shape2 (shares single1, differs in 2)
         fg2 = FeatureGroup.from_nodes([features["single1"], features["color2"], features["shape2"]])
@@ -271,7 +271,6 @@ class TestSymmetricDifferenceRegression:
         This is the core regression scenario from production where 15k+ resolutions
         all collapsed into a single object.
         """
-        ctx = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         objects: list[Object] = []
 
         # Three observations with completely distinct feature sets
@@ -311,7 +310,7 @@ class TestSymmetricDifferenceRegression:
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result1 is None
-        obj1 = Object.with_features(fg1)
+        Object.with_features(fg1)
 
         # Observation 2: single1 + color1 + shape2
         # Shares single1 and color1 with obj1 (distance should be 2: shape1 vs shape2)
@@ -402,21 +401,20 @@ class TestSymmetricDifferenceRegression:
         ctx1 = ResolutionContext(x=XLoc(1), y=YLoc(1), tick=1)
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result1 is None
-        obj1 = Object.with_features(fg1)
+        Object.with_features(fg1)
 
         # Observation 2: single1 + color1 + shape2
         # Shares single1 and color1 -> obj1 found via 2 graph paths
         # True distance = 2 (shape1 vs shape2 symmetric diff)
         # Inflated distance = 2 * 2 = 4 (distance computed and summed twice)
         fg2 = FeatureGroup.from_nodes([features["single1"], features["color1"], features["shape2"]])
-        ctx2 = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=2)
 
         candidates = self.resolution._find_candidates(fg2.feature_nodes)
         assert len(candidates) >= 1, "should find obj1 as candidate"
         _, dist = candidates[0]
         # BUG: distance is inflated because _distance is called once per shared
         # feature node and summed via +=. True distance is 2, but gets doubled.
-        assert dist == 2.0, (
+        assert dist == pytest.approx(2.0), (
             f"distance should be 2 (true symmetric diff), got {dist} "
             f"(inflated by += accumulation if > 2)"
         )
@@ -451,7 +449,7 @@ class TestSymmetricDifferenceRegression:
         ctx1 = ResolutionContext(x=XLoc(10), y=YLoc(5), tick=1)
         result1 = self.resolution.resolve(fg1.feature_nodes, fg1, ctx1)
         assert result1 is None
-        obj1 = Object.with_features(fg1)
+        Object.with_features(fg1)
 
         # Observation 2: shared_delta + different delta at (30,15)
         # Found as candidate via shared_delta -> fg1 -> obj1
@@ -507,7 +505,6 @@ class TestObjectResolver:
         assert isinstance(e, Event)
         assert isinstance(e.data, ResolvedObject)
         o = e.data.object
-        # assert o.resolve_count == 0
         first_uuid = o.uuid
 
         # second event
@@ -515,7 +512,6 @@ class TestObjectResolver:
         assert isinstance(e, Event)
         assert isinstance(e.data, ResolvedObject)
         o = e.data.object
-        # assert o.resolve_count == 1
         second_uuid = o.uuid
         assert second_uuid != first_uuid
 

@@ -7,7 +7,7 @@ interface GameMetricsProps {
     data: StepData | undefined;
 }
 
-export function GameMetrics({ data }: GameMetricsProps) {
+export function GameMetrics({ data }: Readonly<GameMetricsProps>) {
     return (
         <KVTable
             data={data?.game_metrics}

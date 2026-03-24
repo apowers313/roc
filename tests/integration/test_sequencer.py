@@ -1,5 +1,6 @@
 # mypy: disable-error-code="no-untyped-def"
 
+import pytest
 from helpers.util import StubComponent
 
 from roc.action import Action, TakeAction
@@ -59,7 +60,7 @@ class TestFrame:
         n = res.src_edges[0].dst
         assert n.labels == {"IntrinsicNode"}
         assert isinstance(n, IntrinsicNode)
-        assert n.normalized_value == 0.55
+        assert n.normalized_value == pytest.approx(0.55)
 
 
 class TestSequencer:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from colorsys import hsv_to_rgb
 from dataclasses import dataclass
-from typing import Any, Generic, Iterator, NewType, Self, TypeVar, cast, overload
+from typing import Any, Iterator, NewType, Self, cast, overload
 
 import numpy as np
 import numpy.typing as npt
@@ -48,13 +48,13 @@ class Point:
 
     @overload
     @staticmethod
-    def isadjacent(*, x1: XLoc, y1: YLoc, x2: XLoc, y2: YLoc) -> bool:
-        """Check adjacency using raw coordinates."""
+    def isadjacent(*, xy1: tuple[XLoc, YLoc], xy2: tuple[XLoc, YLoc]) -> bool:
+        """Check adjacency using raw coordinate tuples."""
 
     @overload
     @staticmethod
-    def isadjacent(*, p1: Point, x2: XLoc, y2: YLoc) -> bool:
-        """Check adjacency using a Point and raw coordinates."""
+    def isadjacent(*, p1: Point, xy2: tuple[XLoc, YLoc]) -> bool:
+        """Check adjacency using a Point and a raw coordinate tuple."""
 
     @overload
     @staticmethod
@@ -63,26 +63,25 @@ class Point:
 
     @staticmethod
     def isadjacent(
-        # o1: int | Point, o2: int | Point, o3: int | None = None, o4: int | None = None
         *,
-        x1: XLoc | None = None,
-        y1: YLoc | None = None,
-        x2: XLoc | None = None,
-        y2: YLoc | None = None,
+        xy1: tuple[XLoc, YLoc] | None = None,
+        xy2: tuple[XLoc, YLoc] | None = None,
         p1: Point | None = None,
         p2: Point | None = None,
     ) -> bool:
         """Returns True if two positions are adjacent (within Chebyshev distance 1), False if same or farther."""
         if isinstance(p1, Point):
-            x1 = p1.x
-            y1 = p1.y
-        elif not isinstance(x1, int) or not isinstance(y1, int):
+            x1, y1 = p1.x, p1.y
+        elif xy1 is not None:
+            x1, y1 = xy1
+        else:
             raise TypeError("bad p1 arguments in isadjacent()")
 
         if isinstance(p2, Point):
-            x2 = p2.x
-            y2 = p2.y
-        elif not isinstance(x2, int) or not isinstance(y2, int):
+            x2, y2 = p2.x, p2.y
+        elif xy2 is not None:
+            x2, y2 = xy2
+        else:
             raise TypeError("bad p2 arguments in isadjacent()")
 
         dx = abs(x1 - x2)
@@ -99,7 +98,7 @@ PointList = list[Point]
 class ChangedPoint(Point):
     """Represents a value changing from `old_val` to `val` at a given (x, y) location."""
 
-    def __init_(self, x: XLoc, y: YLoc, val: int, old_val: int) -> None:
+    def __init__(self, x: XLoc, y: YLoc, val: int, old_val: int) -> None:
         super().__init__(x, y, val)
         self.old_val = old_val
 
@@ -107,15 +106,11 @@ class ChangedPoint(Point):
         return f"({self.x}, {self.y}): {self.old_val} '{chr(self.old_val)}' -> {self.val} '{chr(self.val)}'"
 
 
-# NDArrayInt = npt.NDArray[np.int_]
-# GridType = TypeVar("GridType", bound=np.generic, covariant=True)
-GridType = TypeVar("GridType")
-
 LocationTuple = tuple[XLoc, YLoc]
-ValLocTuple = tuple[XLoc, YLoc, GridType]
+type ValLocTuple[GridType] = tuple[XLoc, YLoc, GridType]
 
 
-class Grid(npt.NDArray[Any], Generic[GridType]):
+class Grid[GridType](npt.NDArray[Any]):
     """A typed 2D numpy array with x,y coordinate access and iteration."""
 
     def __new__(cls, input_array: npt.ArrayLike) -> Self:
@@ -123,20 +118,9 @@ class Grid(npt.NDArray[Any], Generic[GridType]):
         assert obj.ndim == 2
         return obj
 
-    # def __array_finalize__(self, obj: npt.NDArray[Any] | None) -> None:
-    #     if obj is None:
-    #         return
-
     def __iter__(self) -> Iterator[ValLocTuple[GridType]]:
         for y, x in np.ndindex(self.shape):
             yield cast(ValLocTuple[GridType], (x, y, self[y, x]))
-        # yield from np.nditer(self)
-
-    # def __init__(self, val_list: list[list[Any]] | np.ndarray) -> None:
-    #     if not isinstance(val_list, np.ndarray):
-    #         val_list = np.array(val_list)
-    #     assert val_list.ndim == 2
-    #     self.val_list = val_list
 
     def get_val(self, x: int, y: int) -> GridType:
         """Returns the value at grid position (x, y)."""
@@ -214,7 +198,6 @@ class DebugGrid(Grid[GridStyle]):
     """A debug visualization grid that renders characters with colored backgrounds and foregrounds."""
 
     def __new__(cls, grid: IntGrid) -> DebugGrid:
-        # obj = np.ndarray((grid.height, grid.width), dtype=object).view(DebugGrid)
         obj = np.array(
             [
                 [
@@ -277,7 +260,7 @@ class DebugGrid(Grid[GridStyle]):
 
         for key, value in kwargs.items():
             if value < 0 or value > 1:
-                raise Exception(
+                raise ValueError(
                     f"set_style expects values to be floats between 0 and 1, '{key}' was '{value}'"
                 )
 
@@ -295,13 +278,13 @@ class DebugGrid(Grid[GridStyle]):
                 case "back_saturation":
                     s.back_saturation = value
                 case _:
-                    raise Exception(f"unknown key '{key}' in set_style")
+                    raise ValueError(f"unknown key '{key}' in set_style")
 
     def get_front_rgb(self, x: int, y: int) -> tuple[int, int, int]:
         """Returns the foreground RGB color for the cell at (x, y)."""
         s = self.get_val(x, y)
         rgb = hsv_to_rgb(s.front_hue, s.front_saturation, s.front_brightness)
-        ret = tuple(map(lambda c: round(c * 255), rgb))
+        ret = tuple(round(c * 255) for c in rgb)
         assert len(ret) == 3
         return ret
 
@@ -309,7 +292,7 @@ class DebugGrid(Grid[GridStyle]):
         """Returns the background RGB color for the cell at (x, y)."""
         s = self.get_val(x, y)
         rgb = hsv_to_rgb(s.back_hue, s.back_saturation, s.back_brightness)
-        ret = tuple(map(lambda c: round(c * 255), rgb))
+        ret = tuple(round(c * 255) for c in rgb)
         assert len(ret) == 3
         return ret
 

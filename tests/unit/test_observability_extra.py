@@ -176,23 +176,23 @@ class TestLgToOtelSeverityExtra:
     def test_level_1(self):
         from roc.reporting.observability import _lg_to_otel_severity
 
-        sev, name = _lg_to_otel_severity(1)
+        _sev, name = _lg_to_otel_severity(1)
         assert name == "TRACE"
 
     def test_level_9(self):
         from roc.reporting.observability import _lg_to_otel_severity
 
-        sev, name = _lg_to_otel_severity(9)
+        _sev, name = _lg_to_otel_severity(9)
         assert name == "TRACE"
 
     def test_level_35(self):
         from roc.reporting.observability import _lg_to_otel_severity
 
-        sev, name = _lg_to_otel_severity(35)
+        _sev, name = _lg_to_otel_severity(35)
         assert name == "WARN"
 
     def test_level_45(self):
         from roc.reporting.observability import _lg_to_otel_severity
 
-        sev, name = _lg_to_otel_severity(45)
+        _sev, name = _lg_to_otel_severity(45)
         assert name == "ERROR"

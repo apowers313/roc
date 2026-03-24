@@ -35,7 +35,7 @@ function svgToBlob(svgString: string): Blob {
 export function DiagramViewer({
     definition,
     filename = "schema",
-}: DiagramViewerProps) {
+}: Readonly<DiagramViewerProps>) {
     const transformRef = useRef<ReactZoomPanPinchRef | null>(null);
     const [svgString, setSvgString] = useState<string | null>(null);
 

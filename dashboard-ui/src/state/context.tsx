@@ -10,6 +10,7 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useReducer,
     useRef,
     useState,
@@ -28,7 +29,7 @@ import {
 // ---------------------------------------------------------------------------
 
 export function readUrlParams(): { run?: string; game?: number; step?: number } {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(globalThis.location.search);
     const run = params.get("run") ?? undefined;
     const game = params.has("game") ? Number(params.get("game")) : undefined;
     const step = params.has("step") ? Number(params.get("step")) : undefined;
@@ -46,8 +47,8 @@ function writeUrlParams(run: string, game: number, step: number) {
     if (game > 0) params.set("game", String(game));
     if (step > 0) params.set("step", String(step));
     const qs = params.toString();
-    const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-    window.history.replaceState(null, "", url);
+    const url = qs ? `${globalThis.location.pathname}?${qs}` : globalThis.location.pathname;
+    globalThis.history.replaceState(null, "", url);
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +102,7 @@ interface DashboardState {
 
 const DashboardContext = createContext<DashboardState | null>(null);
 
-export function DashboardProvider({ children }: { children: ReactNode }) {
+export function DashboardProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Read URL params once on mount for initial state
     const initial = useRef(readUrlParams());
 
@@ -111,7 +112,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     const [stepMin, setStepMin] = useState(1);
     const [stepMax, setStepMax] = useState(1);
     const [playing, setPlaying] = useState(false);
-    const [speed, setSpeedRaw] = useState(readSessionSpeed);
+    const [rawSpeed, setRawSpeed] = useState(readSessionSpeed);
     const [liveRunName, setLiveRunName] = useState("");
     const [liveGameNumber, setLiveGameNumber] = useState(0);
     const [liveGameActive, setLiveGameActive] = useState(false);
@@ -121,8 +122,9 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     );
 
     // Wrap setSpeed to also persist to sessionStorage
+    const speed = rawSpeed;
     const setSpeed = useCallback((s: number) => {
-        setSpeedRaw(s);
+        setRawSpeed(s);
         writeSessionSpeed(s);
     }, []);
 
@@ -142,38 +144,47 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
         return () => cancelAnimationFrame(rafRef.current);
     }, [run, game, step]);
 
-    // Expose setStep for e2e testing (Playwright can call window.__testSetStep)
+    // Expose setStep for e2e testing (Playwright can call globalThis.__testSetStep)
     useEffect(() => {
-        const w = window as unknown as Record<string, unknown>;
-        w.__testSetStep = setStep;
-        return () => { delete w.__testSetStep; };
+        const g = globalThis as unknown as Record<string, unknown>;
+        g.__testSetStep = setStep;
+        return () => { delete g.__testSetStep; };
     }, [setStep]);
+
+    const contextValue = useMemo<DashboardState>(() => ({
+        run,
+        setRun,
+        game,
+        setGame,
+        step,
+        setStep,
+        stepMin,
+        stepMax,
+        setStepRange,
+        playback,
+        dispatchPlayback,
+        playing,
+        setPlaying,
+        speed,
+        setSpeed,
+        liveRunName,
+        setLiveRunName,
+        liveGameNumber,
+        setLiveGameNumber,
+        liveGameActive,
+        setLiveGameActive,
+    }), [
+        run, setRun, game, setGame, step, setStep,
+        stepMin, stepMax, setStepRange,
+        playback, dispatchPlayback, playing, setPlaying,
+        speed, setSpeed, liveRunName, setLiveRunName,
+        liveGameNumber, setLiveGameNumber,
+        liveGameActive, setLiveGameActive,
+    ]);
 
     return (
         <DashboardContext.Provider
-            value={{
-                run,
-                setRun,
-                game,
-                setGame,
-                step,
-                setStep,
-                stepMin,
-                stepMax,
-                setStepRange,
-                playback,
-                dispatchPlayback,
-                playing,
-                setPlaying,
-                speed,
-                setSpeed,
-                liveRunName,
-                setLiveRunName,
-                liveGameNumber,
-                setLiveGameNumber,
-                liveGameActive,
-                setLiveGameActive,
-            }}
+            value={contextValue}
         >
             {children}
         </DashboardContext.Provider>

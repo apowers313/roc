@@ -5,7 +5,7 @@
  * (game screen, saliency map) render circle overlays at those coordinates.
  */
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 export interface HighlightPoint {
@@ -32,7 +32,7 @@ const HighlightContext = createContext<HighlightContextValue>({
     clear: () => {},
 });
 
-export function HighlightProvider({ children }: { children: ReactNode }) {
+export function HighlightProvider({ children }: Readonly<{ children: ReactNode }>) {
     const [points, setPoints] = useState<HighlightPoint[]>([]);
 
     const togglePoint = useCallback((pt: HighlightPoint) => {
@@ -47,8 +47,13 @@ export function HighlightProvider({ children }: { children: ReactNode }) {
 
     const clear = useCallback(() => setPoints([]), []);
 
+    const contextValue = useMemo(
+        () => ({ points, setPoints, togglePoint, clear }),
+        [points, setPoints, togglePoint, clear],
+    );
+
     return (
-        <HighlightContext.Provider value={{ points, setPoints, togglePoint, clear }}>
+        <HighlightContext.Provider value={contextValue}>
             {children}
         </HighlightContext.Provider>
     );

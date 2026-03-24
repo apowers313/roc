@@ -80,45 +80,59 @@ def main(data_dir: Path | None, min_steps: int, delete: bool) -> None:
     click.echo(f"Mode: {'DELETE' if delete else 'DRY RUN'}")
     click.echo()
 
-    to_delete: list[tuple[Path, str]] = []
-    to_keep: list[Path] = []
+    to_delete, to_keep = _classify_runs(runs)
 
-    for run_dir in runs:
-        parquet_count = _count_parquet_files(run_dir)
-
-        if parquet_count == 0:
-            to_delete.append((run_dir, "no data files"))
-        else:
-            # Has parquet data -- keep it (we can't cheaply query step
-            # counts without opening DuckDB connections for each run)
-            to_keep.append(run_dir)
-
-    # Report
     click.echo(f"Keep: {len(to_keep)} runs (have parquet data)")
     click.echo(f"Delete: {len(to_delete)} runs")
     click.echo()
 
-    if to_delete:
-        total_bytes = 0
-        click.echo("Runs to delete:")
-        for run_dir, reason in to_delete:
-            size = sum(f.stat().st_size for f in run_dir.rglob("*") if f.is_file())
-            total_bytes += size
-            size_mb = size / (1024 * 1024)
-            click.echo(f"  {run_dir.name}: {reason} ({size_mb:.1f} MB)")
-
-        click.echo(f"\nTotal space to reclaim: {total_bytes / (1024 * 1024):.1f} MB")
-
-        if delete:
-            click.echo("\nDeleting...")
-            for run_dir, reason in to_delete:
-                shutil.rmtree(run_dir)
-                click.echo(f"  Deleted {run_dir.name}")
-            click.echo(f"\nDone. Deleted {len(to_delete)} runs.")
-        else:
-            click.echo("\nRe-run with --delete to actually remove these runs.")
-    else:
+    if not to_delete:
         click.echo("Nothing to clean up.")
+        return
+
+    total_bytes = _report_deletions(to_delete)
+    click.echo(f"\nTotal space to reclaim: {total_bytes / (1024 * 1024):.1f} MB")
+
+    if delete:
+        _execute_deletions(to_delete)
+    else:
+        click.echo("\nRe-run with --delete to actually remove these runs.")
+
+
+def _classify_runs(
+    runs: list[Path],
+) -> tuple[list[tuple[Path, str]], list[Path]]:
+    """Classify runs into delete and keep lists."""
+    to_delete: list[tuple[Path, str]] = []
+    to_keep: list[Path] = []
+    for run_dir in runs:
+        parquet_count = _count_parquet_files(run_dir)
+        if parquet_count == 0:
+            to_delete.append((run_dir, "no data files"))
+        else:
+            to_keep.append(run_dir)
+    return to_delete, to_keep
+
+
+def _report_deletions(to_delete: list[tuple[Path, str]]) -> int:
+    """Print runs to delete and return total bytes."""
+    total_bytes = 0
+    click.echo("Runs to delete:")
+    for run_dir, reason in to_delete:
+        size = sum(f.stat().st_size for f in run_dir.rglob("*") if f.is_file())
+        total_bytes += size
+        size_mb = size / (1024 * 1024)
+        click.echo(f"  {run_dir.name}: {reason} ({size_mb:.1f} MB)")
+    return total_bytes
+
+
+def _execute_deletions(to_delete: list[tuple[Path, str]]) -> None:
+    """Actually delete the listed run directories."""
+    click.echo("\nDeleting...")
+    for run_dir, _reason in to_delete:
+        shutil.rmtree(run_dir)
+        click.echo(f"  Deleted {run_dir.name}")
+    click.echo(f"\nDone. Deleted {len(to_delete)} runs.")
 
 
 if __name__ == "__main__":

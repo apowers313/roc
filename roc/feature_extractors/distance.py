@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import XLoc, YLoc
 from ..perception import FeatureExtractor, FeatureNode, PerceptionEvent, Settled, VisualFeature
 from .single import SingleFeature
@@ -45,7 +46,9 @@ class DistanceFeature(VisualFeature[DistanceNode]):
 
     def _dbfetch_nodes(self) -> DistanceNode | None:
         """Looks up an existing DistanceNode by size."""
-        return DistanceNode.find_one("src.size = $size", params={"size": self.size})
+        return DistanceNode.find_one(
+            "src.size = $size", query_opts=FindQueryOpts(params={"size": self.size})
+        )
 
 
 class Distance(FeatureExtractor[DistanceFeature]):

@@ -293,16 +293,20 @@ class TestAlphaUpdate:
         result = resolution.resolve([fn1, fn2], fg, ctx)
         assert result is obj
         # Alphas should have been incremented by 1
-        assert resolution._alphas[obj.id]["SingleNode(a)"] == 12.0
-        assert resolution._alphas[obj.id]["ColorNode(red)"] == 12.0
+        assert resolution._alphas[obj.id]["SingleNode(a)"] == pytest.approx(12.0)
+        assert resolution._alphas[obj.id]["ColorNode(red)"] == pytest.approx(12.0)
 
     def test_new_object_gets_initial_alphas(self):
         """initialize_alphas sets up prior alphas for a new object."""
         resolution = DirichletCategoricalResolution()
         obj_id = NodeId(42)
         resolution.initialize_alphas(obj_id, ["SingleNode(a)", "ColorNode(red)"])
-        assert resolution._alphas[obj_id]["SingleNode(a)"] == resolution.prior_alpha + 1.0
-        assert resolution._alphas[obj_id]["ColorNode(red)"] == resolution.prior_alpha + 1.0
+        assert resolution._alphas[obj_id]["SingleNode(a)"] == pytest.approx(
+            resolution.prior_alpha + 1.0
+        )
+        assert resolution._alphas[obj_id]["ColorNode(red)"] == pytest.approx(
+            resolution.prior_alpha + 1.0
+        )
 
 
 class TestFeatureExclusion:
@@ -399,7 +403,7 @@ class TestComputePriors:
         obj = make_object_with_position(None, None, tick=0)
         ctx = ResolutionContext(x=XLoc(5), y=YLoc(5), tick=1)
         weight = resolution._spatial_weight(obj, ctx)
-        assert weight == 1.0
+        assert weight == pytest.approx(1.0)
 
 
 class TestComputeLikelihoods:
@@ -423,6 +427,6 @@ class TestComputeLikelihoods:
         resolution._global_vocab = {"A", "B", "C", "D", "E"}
 
         ll = resolution._log_likelihood_new(["A", "B"])
-        # P(A) = 1.0/5.0, P(B) = 1.0/5.0
+        # Each symbol has uniform probability 1/5
         expected = math.log(1.0 / 5.0) + math.log(1.0 / 5.0)
         assert abs(ll - expected) < 1e-6

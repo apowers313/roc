@@ -9,7 +9,7 @@ interface GameScreenProps {
     data: StepData | undefined;
 }
 
-export function GameScreen({ data }: GameScreenProps) {
+export function GameScreen({ data }: Readonly<GameScreenProps>) {
     // Fixed-height container prevents layout shifts when data loads/changes.
     // NetHack screen is 24 rows at 9px * 1.15 line-height + padding.
     return (

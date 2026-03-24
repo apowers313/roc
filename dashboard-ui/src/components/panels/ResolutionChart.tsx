@@ -30,7 +30,7 @@ interface BucketedPoint {
     unknown: number;
 }
 
-export function ResolutionChart({ run, game, currentStep, onStepClick }: ResolutionChartProps) {
+export function ResolutionChart({ run, game, currentStep, onStepClick }: Readonly<ResolutionChartProps>) {
     const { data: history } = useResolutionHistory(run, game);
 
     if (!history || history.length === 0) {

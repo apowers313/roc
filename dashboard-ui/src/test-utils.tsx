@@ -10,7 +10,7 @@ import { HighlightProvider } from "./state/highlight";
 import type { GridData, LogEntry, StepData } from "./types/step-data";
 
 /** Wraps components with Mantine + QueryClient + DashboardProvider. */
-function AllProviders({ children }: { children: ReactNode }) {
+function AllProviders({ children }: Readonly<{ children: ReactNode }>) {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
     });

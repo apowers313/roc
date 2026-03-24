@@ -23,15 +23,31 @@ interface AllObjectsProps {
 
 type SortKey = "shape" | "glyph" | "color" | "type" | "node_id" | "step_added" | "match_count";
 
+function toSortString(v: unknown): string {
+    if (v == null) return "";
+    switch (typeof v) {
+        case "string":
+            return v;
+        case "number":
+        case "boolean":
+        case "bigint":
+            return String(v);
+        case "object":
+            return JSON.stringify(v);
+        default:
+            return JSON.stringify(v);
+    }
+}
+
 function compareValues(a: unknown, b: unknown): number {
     if (a == null && b == null) return 0;
     if (a == null) return 1;
     if (b == null) return -1;
     if (typeof a === "number" && typeof b === "number") return a - b;
-    return String(a).localeCompare(String(b));
+    return toSortString(a).localeCompare(toSortString(b));
 }
 
-export function AllObjects({ run, game, onStepClick }: AllObjectsProps) {
+export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>) {
     const { data: objects } = useAllObjects(run, game);
     const [sortKey, setSortKey] = useState<SortKey>("shape");
     const [sortAsc, setSortAsc] = useState(true);
@@ -68,8 +84,10 @@ export function AllObjects({ run, game, onStepClick }: AllObjectsProps) {
         { key: "match_count", label: "matches", width: 70 },
     ];
 
-    const arrow = (key: SortKey) =>
-        sortKey === key ? (sortAsc ? " \u25B2" : " \u25BC") : "";
+    const arrow = (key: SortKey) => {
+        if (sortKey !== key) return "";
+        return sortAsc ? " \u25B2" : " \u25BC";
+    };
 
     return (
         <div style={{ maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>

@@ -173,8 +173,9 @@ def registered_test_component() -> Generator[tuple[str, str], None, None]:
         type: str = t
 
         def shutdown(self) -> None:
-            pass
+            """No-op; required by abstract base class."""
 
+    _ = Bar
     yield (n, t)
 
     Component.deregister(n, t)

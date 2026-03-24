@@ -81,38 +81,3 @@ class TestPredict:
 
         print("s.output.call_count", s.output.call_count)
         print("first", s.output.call_args_list[0].args[0].data)
-
-        # # first frame
-        # o = Object()
-        # fg = FeatureGroup()
-        # object_resolver.obj_res_conn.send(
-        #     ResolvedObject(object=o, feature_group=fg, x=XLoc(0), y=YLoc(0))
-        # )
-        # intrinsic.int_conn.send(IntrinsicData({"hunger": 1, "hp": 14, "hpmax": 14}))
-        # s.input_conn.send(TakeAction(action=20))
-
-        # # second frame
-        # object_resolver.obj_res_conn.send(
-        #     ResolvedObject(object=o, feature_group=fg, x=XLoc(0), y=YLoc(0))
-        # )
-        # intrinsic.int_conn.send(IntrinsicData({"hunger": 2, "hp": 7, "hpmax": 14}))
-        # s.input_conn.send(TakeAction(action=20))
-
-        # assert s.output.call_count == 1
-        # print("s.output.call_count", s.output.call_count)
-        # print("first", s.output.call_args_list[0].args[0])
-
-        # # first event
-        # e = s.output.call_args_list[0].args[0]
-        # assert isinstance(e.data, Transform)
-        # t = e.data
-        # assert len(t.src_edges) == 3
-        # assert len(t.dst_edges) == 1
-        # transform_nodes = t.successors.select(labels={"Transform", "IntrinsicTransform"})
-        # assert len(transform_nodes) == 2
-        # assert isinstance(transform_nodes[0], IntrinsicTransform)
-        # assert transform_nodes[0].name == "hp"
-        # assert transform_nodes[0].normalized_change == 0.5
-        # assert isinstance(transform_nodes[1], IntrinsicTransform)
-        # assert transform_nodes[0].name == "hunger"
-        # assert transform_nodes[1].normalized_change == -0.25

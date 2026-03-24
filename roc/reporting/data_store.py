@@ -37,6 +37,62 @@ class RunSummary(BaseModel):
     steps: int
 
 
+def _extract_event_attrs(ev: dict[str, Any]) -> dict[str, Any]:
+    """Extract shape/color/glyph/type from a resolution event."""
+    features = ev.get("features", [])
+    shape, color, glyph = parse_feature_attrs(features)
+
+    oa = ev.get("observed_attrs", {})
+    if oa:
+        shape = shape or oa.get("char")
+        color = color or oa.get("color")
+        glyph = glyph or (str(oa["glyph"]) if oa.get("glyph") is not None else None)
+
+    return {"shape": shape, "color": color, "glyph": glyph, "type": oa.get("type")}
+
+
+def _collect_new_object(
+    ev: dict[str, Any],
+    attrs: dict[str, Any],
+    objects: dict[str, dict[str, Any]],
+    step_to_key: dict[int, str],
+) -> None:
+    """Register a new_object event in the objects dict."""
+    step = ev["step"]
+    nid = ev.get("new_object_id")
+    if nid is not None:
+        mid = str(nid)
+        objects[mid] = {**attrs, "node_id": mid, "step_added": step, "match_count": 0}
+        return
+    key = f"new@{step}"
+    step_to_key[step] = key
+    objects[key] = {**attrs, "node_id": None, "step_added": step, "match_count": 0}
+
+
+def _apply_match_event(m: dict[str, Any], objects: dict[str, dict[str, Any]]) -> None:
+    """Apply a match event to the objects dict, updating or creating the entry."""
+    matched_id = m["matched_id"]
+    if matched_id is None:
+        return
+    mid = str(matched_id)
+    if mid in objects:
+        objects[mid]["match_count"] += 1
+        for attr in ("shape", "glyph", "color", "type"):
+            if m.get(attr) and not objects[mid].get(attr):
+                objects[mid][attr] = m[attr]
+        return
+    ma = m["matched_attrs"]
+    objects[mid] = {
+        "shape": ma.get("char", m["shape"]),
+        "glyph": str(ma["glyph"]) if ma.get("glyph") is not None else m["glyph"],
+        "color": ma.get("color", m["color"]),
+        "type": m.get("type"),
+        "node_id": mid,
+        "step_added": None,
+        "match_count": 1,
+    }
+
+
 @dataclass
 class _GameIndex:
     """Incremental history accumulator for a single game.
@@ -159,20 +215,31 @@ class DataStore:
                 self._indices[game] = _GameIndex()
             idx = self._indices[game]
 
-        if step_data.graph_summary is not None:
-            idx.graph_history.append({"step": step, **step_data.graph_summary})
-        if step_data.event_summary is not None:
-            for entry in step_data.event_summary:
-                if isinstance(entry, dict):
-                    idx.event_history.append({"step": step, **entry})
-        if step_data.intrinsics is not None:
-            idx.intrinsics_history.append({"step": step, **step_data.intrinsics})
-        if step_data.game_metrics is not None:
-            idx.metrics_history.append({"step": step, **step_data.game_metrics})
-        if step_data.action_taken is not None:
-            idx.action_history.append({"step": step, **step_data.action_taken})
-        if step_data.resolution_metrics is not None:
-            idx.resolution_events.append({"step": step, **step_data.resolution_metrics})
+        self._append_if_present(idx.graph_history, step, step_data.graph_summary)
+        self._index_event_summary(idx, step, step_data.event_summary)
+        self._append_if_present(idx.intrinsics_history, step, step_data.intrinsics)
+        self._append_if_present(idx.metrics_history, step, step_data.game_metrics)
+        self._append_if_present(idx.action_history, step, step_data.action_taken)
+        self._append_if_present(idx.resolution_events, step, step_data.resolution_metrics)
+
+    @staticmethod
+    def _append_if_present(
+        history: list[dict[str, Any]], step: int, data: dict[str, Any] | None
+    ) -> None:
+        """Append a step entry to a history list if data is not None."""
+        if data is not None:
+            history.append({"step": step, **data})
+
+    @staticmethod
+    def _index_event_summary(
+        idx: _GameIndex, step: int, event_summary: list[dict[str, Any]] | None
+    ) -> None:
+        """Index event summary entries for a step."""
+        if event_summary is None:
+            return
+        for entry in event_summary:
+            if isinstance(entry, dict):
+                idx.event_history.append({"step": step, **entry})
 
     # -------------------------------------------------------------------
     # Internal helpers
@@ -240,27 +307,29 @@ class DataStore:
         names = RunStore.list_runs(self._data_dir)
         names.reverse()
         for name in names:
-            if name in self._run_summary_cache:
+            if name in self._run_summary_cache or name == self._live_run_name:
                 continue
-            if name == self._live_run_name:
-                continue
-            try:
-                run_dir = self._data_dir / name
-                if not run_dir.is_dir():
-                    continue
-                safe_alias = "sum_" + name.replace("-", "_").replace(".", "_")
-                dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
-                try:
-                    store = RunStore(dl_store)
-                    games_df = store.list_games()
-                    games = len(games_df)
-                    steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
-                    self._run_summary_cache[name] = RunSummary(name=name, games=games, steps=steps)
-                finally:
-                    dl_store.close()
-            except Exception:
-                self._run_summary_cache[name] = RunSummary(name=name, games=0, steps=0)
+            self._populate_single_run_summary(name)
             time.sleep(0.05)
+
+    def _populate_single_run_summary(self, name: str) -> None:
+        """Compute and cache the summary for a single historical run."""
+        run_dir = self._data_dir / name
+        if not run_dir.is_dir():
+            return
+        try:
+            safe_alias = "sum_" + name.replace("-", "_").replace(".", "_")
+            dl_store = DuckLakeStore(run_dir, read_only=True, alias=safe_alias)
+            try:
+                store = RunStore(dl_store)
+                games_df = store.list_games()
+                games = len(games_df)
+                steps = int(games_df["steps"].sum()) if games > 0 else store.step_count()
+                self._run_summary_cache[name] = RunSummary(name=name, games=games, steps=steps)
+            finally:
+                dl_store.close()
+        except Exception:
+            self._run_summary_cache[name] = RunSummary(name=name, games=0, steps=0)
 
     # -------------------------------------------------------------------
     # Public query methods
@@ -325,19 +394,24 @@ class DataStore:
         if run_name == self._live_run_name and self._live_buffer is not None:
             buf_data = self._live_buffer.get_step(step)
             if buf_data is not None:
-                if buf_data.logs is None and self._live_store is not None:
-                    try:
-                        store = self._get_run_store(run_name)
-                        logs_df = store.get_step(step, "logs")
-                        if len(logs_df) > 0:
-                            from typing import cast
-
-                            buf_data.logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
-                    except Exception:
-                        pass
+                self._supplement_logs(buf_data, run_name, step)
                 return buf_data
         store = self._get_run_store(run_name)
         return store.get_step_data(step)
+
+    def _supplement_logs(self, buf_data: StepData, run_name: str, step: int) -> None:
+        """Fill in missing logs from DuckLake when the buffer has no log data."""
+        if buf_data.logs is not None or self._live_store is None:
+            return
+        try:
+            store = self._get_run_store(run_name)
+            logs_df = store.get_step(step, "logs")
+            if len(logs_df) > 0:
+                from typing import cast
+
+                buf_data.logs = cast(list[dict[str, Any]], logs_df.to_dict("records"))
+        except Exception:
+            pass
 
     def get_steps_batch(self, run_name: str, steps: list[int]) -> dict[int, StepData]:
         """Get data for multiple steps in a single request."""
@@ -511,54 +585,16 @@ class DataStore:
 
         # Pass 1: collect new_object and match entries
         for ev in events:
-            step = ev["step"]
+            attrs = _extract_event_attrs(ev)
             outcome = ev.get("outcome")
-            features = ev.get("features", [])
-            shape, color, glyph = parse_feature_attrs(features)
-
-            # observed_attrs (from unfiltered features) takes priority
-            oa = ev.get("observed_attrs", {})
-            if oa:
-                shape = shape or oa.get("char")
-                color = color or oa.get("color")
-                glyph = glyph or (str(oa["glyph"]) if oa.get("glyph") is not None else None)
-
-            obj_type = oa.get("type")
-
             if outcome == "new_object":
-                nid = ev.get("new_object_id")
-                if nid is not None:
-                    mid = str(nid)
-                    objects[mid] = {
-                        "shape": shape,
-                        "glyph": glyph,
-                        "color": color,
-                        "type": obj_type,
-                        "node_id": mid,
-                        "step_added": step,
-                        "match_count": 0,
-                    }
-                else:
-                    key = f"new@{step}"
-                    step_to_key[step] = key
-                    objects[key] = {
-                        "shape": shape,
-                        "glyph": glyph,
-                        "color": color,
-                        "type": obj_type,
-                        "node_id": None,
-                        "step_added": step,
-                        "match_count": 0,
-                    }
+                _collect_new_object(ev, attrs, objects, step_to_key)
             elif outcome == "match":
                 match_events.append(
                     {
                         "matched_id": ev.get("matched_object_id"),
                         "matched_attrs": ev.get("matched_attrs", {}),
-                        "shape": shape,
-                        "glyph": glyph,
-                        "color": color,
-                        "type": obj_type,
+                        **attrs,
                     }
                 )
 
@@ -566,27 +602,6 @@ class DataStore:
 
         # Pass 3: process match events
         for m in match_events:
-            matched_id = m["matched_id"]
-            if matched_id is None:
-                continue
-            mid = str(matched_id)
-            if mid in objects:
-                objects[mid]["match_count"] += 1
-                # Update attributes from the current observation so that
-                # objects created without a glyph get one when matched later.
-                for attr in ("shape", "glyph", "color", "type"):
-                    if m.get(attr) and not objects[mid].get(attr):
-                        objects[mid][attr] = m[attr]
-            else:
-                ma = m["matched_attrs"]
-                objects[mid] = {
-                    "shape": ma.get("char", m["shape"]),
-                    "glyph": str(ma["glyph"]) if ma.get("glyph") is not None else m["glyph"],
-                    "color": ma.get("color", m["color"]),
-                    "type": m.get("type"),
-                    "node_id": mid,
-                    "step_added": None,
-                    "match_count": 1,
-                }
+            _apply_match_event(m, objects)
 
         return list(objects.values())

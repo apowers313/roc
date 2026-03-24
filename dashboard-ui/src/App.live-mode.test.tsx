@@ -5,7 +5,7 @@
  * handleChartStepClick, and onNewStep live push paths.
  */
 
-import { screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { screen, fireEvent, act } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 let capturedOnNewStep: ((data: unknown) => void) | undefined;

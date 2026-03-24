@@ -175,55 +175,69 @@ class GameManager:
         """Monitor the game subprocess: detect run name, wait for exit."""
         assert self._process is not None
 
-        # Poll for the new run directory to appear (up to 30s)
-        deadline = time.monotonic() + 30
-        while time.monotonic() < deadline:
-            if self._process.poll() is not None:
-                # Process exited before we found the run dir
-                break
-            if self._data_dir.is_dir():
-                current_runs = {d.name for d in self._data_dir.iterdir() if d.is_dir()}
-                new_runs = current_runs - existing_runs
-                if new_runs:
-                    # Pick the newest (lexicographically largest since names are timestamp-prefixed)
-                    self._current_run_name = sorted(new_runs)[-1]
-                    with self._lock:
-                        if self._state == "initializing":
-                            self._set_state("running")
-                    break
-            time.sleep(0.5)
-
-        # Wait for the subprocess to exit
-        try:
-            exit_code = self._process.wait(timeout=None)
-            self._exit_code = exit_code
-            was_stopping = self._state == "stopping"
-            if exit_code == 0:
-                logger.info("Game subprocess exited cleanly (code 0)")
-            elif was_stopping:
-                # User-initiated stop: non-zero exit is expected (SIGTERM -> exit 1)
-                logger.info("Game subprocess stopped (code {})", exit_code)
-            elif exit_code < 0:
-                sig = -exit_code
-                sig_name = (
-                    signal.Signals(sig).name
-                    if sig in signal.Signals._value2member_map_
-                    else str(sig)
-                )
-                logger.warning("Game subprocess killed by signal {} ({})", sig_name, sig)
-                self._error_message = f"Killed by signal {sig_name}"
-            else:
-                logger.error("Game subprocess crashed with exit code {}", exit_code)
-                self._error_message = f"Exited with code {exit_code}"
-        except Exception:
-            logger.opt(exception=True).warning("Error waiting for game subprocess")
-            self._error_message = "Monitor error"
+        self._poll_for_run_dir(existing_runs)
+        self._wait_for_exit()
 
         # Clean up
         with self._lock:
             self._process = None
             self._set_state("idle")
             # Keep _current_run_name so the UI can still show the last run
+
+    def _poll_for_run_dir(self, existing_runs: set[str]) -> None:
+        """Poll for the new run directory to appear (up to 30s)."""
+        assert self._process is not None
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            if self._process.poll() is not None:
+                return
+            if self._detect_new_run(existing_runs):
+                return
+            time.sleep(0.5)
+
+    def _detect_new_run(self, existing_runs: set[str]) -> bool:
+        """Check for a new run directory and update state. Returns True if found."""
+        if not self._data_dir.is_dir():
+            return False
+        current_runs = {d.name for d in self._data_dir.iterdir() if d.is_dir()}
+        new_runs = current_runs - existing_runs
+        if not new_runs:
+            return False
+        self._current_run_name = sorted(new_runs)[-1]
+        with self._lock:
+            if self._state == "initializing":
+                self._set_state("running")
+        return True
+
+    def _wait_for_exit(self) -> None:
+        """Wait for the subprocess to exit and record its outcome."""
+        assert self._process is not None
+        try:
+            exit_code = self._process.wait(timeout=None)
+            self._exit_code = exit_code
+            self._record_exit_outcome(exit_code)
+        except Exception:
+            logger.opt(exception=True).warning("Error waiting for game subprocess")
+            self._error_message = "Monitor error"
+
+    def _record_exit_outcome(self, exit_code: int) -> None:
+        """Log and record the exit outcome of the game subprocess."""
+        if exit_code == 0:
+            logger.info("Game subprocess exited cleanly (code 0)")
+            return
+        if self._state == "stopping":
+            logger.info("Game subprocess stopped (code {})", exit_code)
+            return
+        if exit_code < 0:
+            sig = -exit_code
+            sig_name = (
+                signal.Signals(sig).name if sig in signal.Signals._value2member_map_ else str(sig)
+            )
+            logger.warning("Game subprocess killed by signal {} ({})", sig_name, sig)
+            self._error_message = f"Killed by signal {sig_name}"
+            return
+        logger.error("Game subprocess crashed with exit code {}", exit_code)
+        self._error_message = f"Exited with code {exit_code}"
 
     def _shutdown_watchdog(self) -> None:
         """Escalate shutdown: wait for cooperative exit, then SIGTERM, then SIGKILL."""

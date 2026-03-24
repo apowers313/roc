@@ -11,7 +11,7 @@ interface PopoutPanelProps {
     size?: string;
 }
 
-export function PopoutPanel({ title, opened, onClose, children, size = "xl" }: PopoutPanelProps) {
+export function PopoutPanel({ title, opened, onClose, children, size = "xl" }: Readonly<PopoutPanelProps>) {
     return (
         <Drawer
             opened={opened}

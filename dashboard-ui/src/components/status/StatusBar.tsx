@@ -19,7 +19,7 @@ function hpColor(hp: number, hpMax: number): string {
     return "red";
 }
 
-export function StatusBar({ data, playbackState, onGoLive }: StatusBarProps) {
+export function StatusBar({ data, playbackState, onGoLive }: Readonly<StatusBarProps>) {
     const { liveGameActive } = useDashboard();
     const metrics = data?.game_metrics;
     const isLive = playbackState === "live_following";
@@ -92,17 +92,38 @@ export function StatusBar({ data, playbackState, onGoLive }: StatusBarProps) {
 function StatItem({
     label,
     value,
-}: {
+}: Readonly<{
     label: string;
     value: unknown;
-}) {
+}>) {
+    let display: string;
+    if (value == null) {
+        display = "--";
+    } else {
+        switch (typeof value) {
+            case "string":
+                display = value;
+                break;
+            case "number":
+            case "boolean":
+            case "bigint":
+                display = String(value);
+                break;
+            case "object":
+                display = JSON.stringify(value);
+                break;
+            default:
+                display = JSON.stringify(value);
+                break;
+        }
+    }
     return (
         <Group gap={4}>
             <Text size="xs" c="dimmed">
                 {label}
             </Text>
             <Text size="xs" fw={500}>
-                {value != null ? String(value) : "--"}
+                {display}
             </Text>
         </Group>
     );

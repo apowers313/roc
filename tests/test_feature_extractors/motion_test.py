@@ -30,12 +30,6 @@ class TestMotion:
     def test_exists(self, empty_components) -> None:
         Motion()
 
-    # def test_print_screen(self) -> None:
-    #     for line in screen0.screen:
-    #         for ch in line:
-    #             print(chr(ch), end="")
-    #         print("")
-
     def test_to_nodes(self, fake_component) -> None:
         f = MotionFeature(
             origin_id=("foo", "bar"),

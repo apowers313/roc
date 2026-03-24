@@ -25,11 +25,11 @@ interface ClickableChartProps {
     children: ReactNode;
 }
 
-export function ClickableChart({ onStepClick, data, children }: ClickableChartProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
+export function ClickableChart({ onStepClick, data, children }: Readonly<ClickableChartProps>) {
+    const containerRef = useRef<HTMLButtonElement>(null);
 
     const handleClick = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>) => {
+        (e: React.MouseEvent<HTMLElement>) => {
             if (!containerRef.current || !data || data.length === 0) return;
 
             // Find the recharts CartesianGrid rect element -- it defines
@@ -66,12 +66,27 @@ export function ClickableChart({ onStepClick, data, children }: ClickableChartPr
     );
 
     return (
-        <div
+        <button
             ref={containerRef}
+            type="button"
             onClick={handleClick}
-            style={{ cursor: "crosshair" }}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    handleClick(e as unknown as React.MouseEvent<HTMLElement>);
+                }
+            }}
+            style={{
+                cursor: "crosshair",
+                background: "none",
+                border: "none",
+                padding: 0,
+                width: "100%",
+                textAlign: "left",
+                font: "inherit",
+                color: "inherit",
+            }}
         >
             {children}
-        </div>
+        </button>
     );
 }

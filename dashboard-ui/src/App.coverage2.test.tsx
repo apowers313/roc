@@ -7,11 +7,10 @@
  * - navigateToBookmark cross-game fetch success path (lines 239-248)
  */
 
-import { screen, fireEvent, act, waitFor } from "@testing-library/react";
+import { screen, fireEvent, act, waitFor, render } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render } from "@testing-library/react";
 import { useEffect, type ReactNode } from "react";
 
 import { DashboardProvider, useDashboard } from "./state/context";
@@ -70,7 +69,7 @@ const mockUseGames = vi.mocked(useGames);
  * A wrapper that sets the speed to a non-standard value (not in SPEED_VALUES)
  * to exercise the idx < 0 branches in speedUp and speedDown.
  */
-function NonStandardSpeedSetup({ children }: { children: ReactNode }) {
+function NonStandardSpeedSetup({ children }: Readonly<{ children: ReactNode }>) {
     const { setSpeed } = useDashboard();
     useEffect(() => {
         // Set speed to 300, which is not in [2000, 1000, 500, 200, 100, 50, 16]
@@ -79,7 +78,7 @@ function NonStandardSpeedSetup({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-function NonStandardSpeedWrapper({ children }: { children: ReactNode }) {
+function NonStandardSpeedWrapper({ children }: Readonly<{ children: ReactNode }>) {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
     });

@@ -8,7 +8,7 @@ interface PredictionPanelProps {
     data: StepData | undefined;
 }
 
-export function PredictionPanel({ data }: PredictionPanelProps) {
+export function PredictionPanel({ data }: Readonly<PredictionPanelProps>) {
     const p = data?.prediction;
 
     if (!p) {
@@ -20,7 +20,7 @@ export function PredictionPanel({ data }: PredictionPanelProps) {
     }
 
     const predictedKeys = p.predicted_intrinsics
-        ? Object.keys(p.predicted_intrinsics).sort()
+        ? Object.keys(p.predicted_intrinsics).sort((a, b) => a.localeCompare(b))
         : [];
 
     return (
@@ -58,9 +58,9 @@ export function PredictionPanel({ data }: PredictionPanelProps) {
             {p.all_scores != null && p.all_scores.length > 1 && (
                 <Group gap="xs">
                     <Text size="xs" c="dimmed">Scores:</Text>
-                    {p.all_scores.map((s, i) => (
+                    {p.all_scores.map((s) => (
                         <Badge
-                            key={i}
+                            key={s}
                             variant={s === p.confidence ? "filled" : "light"}
                             color={s === p.confidence ? "green" : "gray"}
                             size="xs"

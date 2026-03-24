@@ -32,10 +32,10 @@ function parseFeatures(
     if (typeof entry.raw === "string") {
         const parsed: Record<string, unknown> = {};
         for (const line of entry.raw.split("\n")) {
-            const match = line.trim().match(/^(\w+):\s*(.+)$/);
-            if (match && match[1] && match[2]) {
+            const match = /^(\w+):\s*(.+)$/.exec(line.trim());
+            if (match?.[1] && match[2]) {
                 const val = Number(match[2]);
-                parsed[match[1]] = isNaN(val) ? match[2] : val;
+                parsed[match[1]] = Number.isNaN(val) ? match[2] : val;
             }
         }
         return parsed;
@@ -43,7 +43,7 @@ function parseFeatures(
     return entry;
 }
 
-export function FeatureTable({ data }: FeatureTableProps) {
+export function FeatureTable({ data }: Readonly<FeatureTableProps>) {
     if (!data?.features || data.features.length === 0) {
         return (
             <Text size="xs" c="dimmed">

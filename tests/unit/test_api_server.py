@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Generator
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -948,6 +948,7 @@ class TestReceiveStep:
         assert len(buf) == 1
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 class TestEmitGameStateChanged:
     """Test _emit_game_state_changed function."""
 
@@ -1094,3 +1095,641 @@ class TestLiveStatusInitializing:
             assert data["run_name"] == "running-empty-run"
         finally:
             mod._game_manager = orig_mgr
+
+
+# ---------------------------------------------------------------------------
+# Tests for 503 responses when _data_store is None
+# ---------------------------------------------------------------------------
+
+
+class TestDataStoreNoneReturns503:
+    """Test that endpoints return 503 when _data_store is None."""
+
+    @pytest.fixture(autouse=True)
+    def _nullify_data_store(self) -> Generator[None, None, None]:
+        """Temporarily set _data_store to None for these tests."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._data_store
+        mod._data_store = None
+        yield
+        mod._data_store = orig
+
+    def test_list_runs_returns_empty(self, client: TestClient) -> None:
+        """list_runs returns empty list when _data_store is None."""
+        resp = client.get("/api/runs")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_list_games_returns_503(self, client: TestClient) -> None:
+        """list_games returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/games")
+        assert resp.status_code == 503
+
+    def test_get_step_returns_503(self, client: TestClient) -> None:
+        """get_step returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/step/1")
+        assert resp.status_code == 503
+
+    def test_graph_history_returns_503(self, client: TestClient) -> None:
+        """get_graph_history returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/graph-history")
+        assert resp.status_code == 503
+
+    def test_event_history_returns_503(self, client: TestClient) -> None:
+        """get_event_history returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/event-history")
+        assert resp.status_code == 503
+
+    def test_intrinsics_history_returns_503(self, client: TestClient) -> None:
+        """get_intrinsics_history returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/intrinsics-history")
+        assert resp.status_code == 503
+
+    def test_action_history_returns_503(self, client: TestClient) -> None:
+        """get_action_history returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/action-history")
+        assert resp.status_code == 503
+
+    def test_resolution_history_returns_503(self, client: TestClient) -> None:
+        """get_resolution_history returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/resolution-history")
+        assert resp.status_code == 503
+
+    def test_all_objects_returns_503(self, client: TestClient) -> None:
+        """get_all_objects returns 503 when _data_store is None."""
+        resp = client.get("/api/runs/test-run/all-objects")
+        assert resp.status_code == 503
+
+    def test_save_bookmarks_returns_503(self, client: TestClient) -> None:
+        """save_bookmarks returns 503 when _data_store is None."""
+        bookmarks = [{"step": 1, "game": 1, "annotation": "test", "created": "2026-01-01T00:00:00"}]
+        resp = client.post("/api/runs/test-run/bookmarks", json=bookmarks)
+        assert resp.status_code == 503
+
+    def test_get_bookmarks_returns_empty(self, client: TestClient) -> None:
+        """get_bookmarks returns empty list when _data_store is None."""
+        resp = client.get("/api/runs/test-run/bookmarks")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+
+# ---------------------------------------------------------------------------
+# Schema endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestGetSchema:
+    """Test GET /api/runs/{run}/schema endpoint."""
+
+    def test_returns_schema_from_store(self, client: TestClient) -> None:
+        """get_schema returns schema data from the store."""
+        import roc.reporting.api_server as mod
+
+        mock_schema = {"nodes": [{"label": "Object"}], "edges": [{"type": "HAS"}]}
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "get_schema") as mock_method:
+            mock_method.return_value = mock_schema
+            resp = client.get("/api/runs/test-run/schema")
+            assert resp.status_code == 200
+            assert resp.json() == mock_schema
+            mock_method.assert_called_once_with("test-run")
+
+    def test_returns_404_when_schema_not_found(self, client: TestClient) -> None:
+        """get_schema returns 404 when no schema exists for the run."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "get_schema") as mock_method:
+            mock_method.return_value = None
+            resp = client.get("/api/runs/test-run/schema")
+            assert resp.status_code == 404
+
+    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
+        """get_schema returns 503 when _data_store is None."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._data_store
+        mod._data_store = None
+        try:
+            resp = client.get("/api/runs/test-run/schema")
+            assert resp.status_code == 503
+        finally:
+            mod._data_store = orig
+
+
+# ---------------------------------------------------------------------------
+# Action map endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestGetActionMap:
+    """Test GET /api/runs/{run}/action-map endpoint."""
+
+    def test_returns_action_map_from_store(self, client: TestClient) -> None:
+        """get_action_map returns action map data from the store."""
+        import roc.reporting.api_server as mod
+
+        mock_map = [{"id": 0, "name": "wait"}, {"id": 1, "name": "north"}]
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "get_action_map") as mock_method:
+            mock_method.return_value = mock_map
+            resp = client.get("/api/runs/test-run/action-map")
+            assert resp.status_code == 200
+            assert resp.json() == mock_map
+            mock_method.assert_called_once_with("test-run")
+
+    def test_returns_empty_list_when_no_action_map(self, client: TestClient) -> None:
+        """get_action_map returns empty list when action_map is None."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "get_action_map") as mock_method:
+            mock_method.return_value = None
+            resp = client.get("/api/runs/test-run/action-map")
+            assert resp.status_code == 200
+            assert resp.json() == []
+
+    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
+        """get_action_map returns 503 when _data_store is None."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._data_store
+        mod._data_store = None
+        try:
+            resp = client.get("/api/runs/test-run/action-map")
+            assert resp.status_code == 503
+        finally:
+            mod._data_store = orig
+
+
+# ---------------------------------------------------------------------------
+# Bookmark edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestBookmarkEdgeCases:
+    """Test bookmark endpoint edge cases."""
+
+    def test_returns_empty_on_malformed_bookmarks_file(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """get_bookmarks returns empty list when bookmarks file is malformed."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        run_dir = tmp_path / "bad-run"
+        run_dir.mkdir()
+        bookmarks_file = run_dir / "bookmarks.json"
+        bookmarks_file.write_text("not valid json {{{")
+        resp = client.get("/api/runs/bad-run/bookmarks")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+
+# ---------------------------------------------------------------------------
+# get_steps_batch exception handling
+# ---------------------------------------------------------------------------
+
+
+class TestGetStepsBatchExceptionPath:
+    """Test get_steps_batch exception fallback."""
+
+    def test_returns_empty_on_data_store_exception(self, client: TestClient) -> None:
+        """get_steps_batch returns empty dict when data_store raises."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "get_steps_batch") as mock_method:
+            mock_method.side_effect = RuntimeError("DB error")
+            resp = client.get("/api/runs/test-run/steps?steps=1,2,3")
+            assert resp.status_code == 200
+            assert resp.json() == {}
+
+
+# ---------------------------------------------------------------------------
+# receive_step stop response
+# ---------------------------------------------------------------------------
+
+
+class TestReceiveStepStopResponse:
+    """Test POST /api/internal/step returns stop flag when requested."""
+
+    def test_returns_stop_when_manager_requests_stop(self, client: TestClient) -> None:
+        """receive_step includes stop:true when game_manager requests stop."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        buf = StepBuffer(capacity=100)
+        mod._data_store.set_live_session("stop-test-run", buf)
+
+        mock_mgr = MagicMock()
+        mock_mgr.is_stop_requested.return_value = True
+        orig_mgr = mod._game_manager
+        mod._game_manager = mock_mgr
+        try:
+            resp = client.post(
+                "/api/internal/step",
+                json={"step": 1, "game_number": 1},
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "ok"
+            assert data["stop"] is True
+        finally:
+            mod._game_manager = orig_mgr
+
+    def test_no_stop_when_manager_does_not_request_stop(self, client: TestClient) -> None:
+        """receive_step omits stop key when game_manager does not request stop."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        buf = StepBuffer(capacity=100)
+        mod._data_store.set_live_session("no-stop-test-run", buf)
+
+        mock_mgr = MagicMock()
+        mock_mgr.is_stop_requested.return_value = False
+        orig_mgr = mod._game_manager
+        mod._game_manager = mock_mgr
+        try:
+            resp = client.post(
+                "/api/internal/step",
+                json={"step": 1, "game_number": 1},
+            )
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["status"] == "ok"
+            assert "stop" not in data
+        finally:
+            mod._game_manager = orig_mgr
+
+
+# ---------------------------------------------------------------------------
+# receive_action_map endpoint
+# ---------------------------------------------------------------------------
+
+
+class TestReceiveActionMap:
+    """Test POST /api/internal/action-map endpoint."""
+
+    def test_stores_action_map(self, client: TestClient) -> None:
+        """receive_action_map stores the action map in data_store."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "set_action_map") as mock_method:
+            action_map = [{"id": 0, "name": "wait"}, {"id": 1, "name": "north"}]
+            resp = client.post(
+                "/api/internal/action-map",
+                json={"run_name": "map-test-run", "action_map": action_map},
+            )
+            assert resp.status_code == 200
+            assert resp.json() == {"status": "ok"}
+            mock_method.assert_called_once_with("map-test-run", action_map)
+
+    def test_ignores_missing_run_name(self, client: TestClient) -> None:
+        """receive_action_map does not store when run_name is empty."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "set_action_map") as mock_method:
+            resp = client.post(
+                "/api/internal/action-map",
+                json={"run_name": "", "action_map": [{"id": 0, "name": "wait"}]},
+            )
+            assert resp.status_code == 200
+            mock_method.assert_not_called()
+
+    def test_ignores_non_list_action_map(self, client: TestClient) -> None:
+        """receive_action_map does not store when action_map is not a list."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        with patch.object(mod._data_store, "set_action_map") as mock_method:
+            resp = client.post(
+                "/api/internal/action-map",
+                json={"run_name": "test-run", "action_map": "not-a-list"},
+            )
+            assert resp.status_code == 200
+            mock_method.assert_not_called()
+
+    def test_handles_no_data_store(self, client: TestClient) -> None:
+        """receive_action_map returns ok even when _data_store is None."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._data_store
+        mod._data_store = None
+        try:
+            resp = client.post(
+                "/api/internal/action-map",
+                json={"run_name": "test-run", "action_map": [{"id": 0}]},
+            )
+            assert resp.status_code == 200
+            assert resp.json() == {"status": "ok"}
+        finally:
+            mod._data_store = orig
+
+
+# ---------------------------------------------------------------------------
+# _notify_new_step function
+# ---------------------------------------------------------------------------
+
+
+class TestNotifyNewStep:
+    """Test _notify_new_step function."""
+
+    def test_emits_step_via_socket_when_loop_running(self) -> None:
+        """_notify_new_step emits socket event when loop is running."""
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        mock_loop = MagicMock()
+        mock_loop.is_running.return_value = True
+        mod._sio_loop = mock_loop
+        try:
+            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
+                step_data = StepData(step=1, game_number=1)
+                mod._notify_new_step(step_data)
+                mock_run.assert_called_once()
+                # Close the unawaited coroutine to avoid RuntimeWarning
+                coro = mock_run.call_args[0][0]
+                coro.close()
+        finally:
+            mod._sio_loop = orig_loop
+
+    def test_does_nothing_when_loop_is_none(self) -> None:
+        """_notify_new_step does nothing when _sio_loop is None."""
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        mod._sio_loop = None
+        try:
+            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
+                step_data = StepData(step=1, game_number=1)
+                mod._notify_new_step(step_data)
+                mock_run.assert_not_called()
+        finally:
+            mod._sio_loop = orig_loop
+
+    def test_does_nothing_when_loop_not_running(self) -> None:
+        """_notify_new_step does nothing when the event loop is not running."""
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        mock_loop = MagicMock()
+        mock_loop.is_running.return_value = False
+        mod._sio_loop = mock_loop
+        try:
+            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
+                step_data = StepData(step=1, game_number=1)
+                mod._notify_new_step(step_data)
+                mock_run.assert_not_called()
+        finally:
+            mod._sio_loop = orig_loop
+
+    def test_swallows_exceptions(self) -> None:
+        """_notify_new_step swallows exceptions to avoid breaking the game loop."""
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        mock_loop = MagicMock()
+        mock_loop.is_running.return_value = True
+        mod._sio_loop = mock_loop
+        try:
+            with patch("asyncio.run_coroutine_threadsafe", side_effect=RuntimeError("boom")):
+                step_data = StepData(step=1, game_number=1)
+                # Should not raise
+                mod._notify_new_step(step_data)
+        finally:
+            mod._sio_loop = orig_loop
+
+
+# ---------------------------------------------------------------------------
+# _emit_game_state_changed edge cases
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# live_status with manager but no live_run_name
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+class TestLiveStatusManagerNoRunName:
+    """Test live_status when manager is running but no live_run_name set."""
+
+    def test_returns_inactive_when_no_run_name(self, client: TestClient) -> None:
+        """live_status returns inactive when manager is running but no run name."""
+        import roc.reporting.api_server as mod
+
+        mock_mgr = MagicMock()
+        mock_mgr.state = "initializing"
+        orig_mgr = mod._game_manager
+        # Clear any live session so live_run_name is None
+        assert mod._data_store is not None
+        mod._data_store.clear_live_session()
+        mod._game_manager = mock_mgr
+        try:
+            resp = client.get("/api/live/status")
+            assert resp.status_code == 200
+            data = resp.json()
+            # No live_run_name means the fallback returns inactive
+            assert data["active"] is False
+        finally:
+            mod._game_manager = orig_mgr
+
+    def test_returns_inactive_when_manager_idle(self, client: TestClient) -> None:
+        """live_status returns inactive when manager state is idle."""
+        import roc.reporting.api_server as mod
+
+        mock_mgr = MagicMock()
+        mock_mgr.state = "idle"
+        orig_mgr = mod._game_manager
+        mod._game_manager = mock_mgr
+        try:
+            resp = client.get("/api/live/status")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["active"] is False
+        finally:
+            mod._game_manager = orig_mgr
+
+
+# ---------------------------------------------------------------------------
+# _capture_event_loop (startup handler)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+class TestCaptureEventLoop:
+    """Test the _capture_event_loop startup handler."""
+
+    def test_sets_sio_loop_and_signals_ready(self) -> None:
+        """_capture_event_loop sets _sio_loop and signals _server_ready."""
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        orig_ready = mod._server_ready
+        orig_summary_thread = mod._summary_thread
+        mod._server_ready = __import__("threading").Event()
+        mod._summary_thread = None
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(mod._capture_event_loop())
+            assert mod._sio_loop is loop
+            assert mod._server_ready.is_set()
+            loop.close()
+        finally:
+            mod._sio_loop = orig_loop
+            mod._server_ready = orig_ready
+            mod._summary_thread = orig_summary_thread
+
+    @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+    def test_starts_summary_thread_when_data_store_present(self) -> None:
+        """_capture_event_loop starts a summary thread when _data_store exists."""
+        import asyncio
+        import threading
+
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        orig_ready = mod._server_ready
+        orig_summary_thread = mod._summary_thread
+        mod._server_ready = threading.Event()
+        mod._summary_thread = None
+        try:
+            assert mod._data_store is not None
+            with patch.object(mod._data_store, "populate_run_summaries"):
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(mod._capture_event_loop())
+                # _capture_event_loop sets _summary_thread via global assignment;
+                # use getattr to bypass mypy type narrowing from the None assignment above
+                thread = getattr(mod, "_summary_thread")
+                assert isinstance(thread, threading.Thread)
+                assert thread.daemon is True
+                # Wait for the thread to finish (it's mocked so it returns immediately)
+                thread.join(timeout=2)
+                loop.close()
+        finally:
+            mod._sio_loop = orig_loop
+            mod._server_ready = orig_ready
+            mod._summary_thread = orig_summary_thread
+
+    def test_does_not_restart_summary_thread(self) -> None:
+        """_capture_event_loop does not restart summary thread if already set."""
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        orig_loop = mod._sio_loop
+        orig_ready = mod._server_ready
+        orig_summary_thread = mod._summary_thread
+        mod._server_ready = __import__("threading").Event()
+        existing_thread = MagicMock()
+        mod._summary_thread = existing_thread
+        try:
+            with patch.object(mod.sio, "emit", return_value=MagicMock()):
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(mod._capture_event_loop())
+                # Should not have been replaced
+                assert mod._summary_thread is existing_thread
+                loop.close()
+        finally:
+            mod._sio_loop = orig_loop
+            mod._server_ready = orig_ready
+            mod._summary_thread = orig_summary_thread
+
+
+# ---------------------------------------------------------------------------
+# stop_dashboard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+class TestStopDashboard:
+    """Test stop_dashboard function."""
+
+    def test_clears_buffer_and_session(self) -> None:
+        """stop_dashboard clears step buffer and live session."""
+        import roc.reporting.api_server as mod
+
+        assert mod._data_store is not None
+        buf = StepBuffer(capacity=100)
+        mod._data_store.set_live_session("stop-test", buf)
+        with patch("roc.reporting.step_buffer.clear_step_buffer") as mock_clear:
+            mod.stop_dashboard()
+            mock_clear.assert_called_once()
+        assert mod._data_store.live_run_name is None
+
+    def test_handles_no_data_store(self) -> None:
+        """stop_dashboard does not crash when _data_store is None."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._data_store
+        mod._data_store = None
+        try:
+            with patch("roc.reporting.step_buffer.clear_step_buffer"):
+                mod.stop_dashboard()
+        finally:
+            mod._data_store = orig
+
+
+# ---------------------------------------------------------------------------
+# start_dashboard
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+class TestStartDashboard:
+    """Test start_dashboard function."""
+
+    def test_returns_early_when_already_started(self) -> None:
+        """start_dashboard does nothing if already started."""
+        import roc.reporting.api_server as mod
+
+        orig = mod._started
+        mod._started = True
+        try:
+            # Should return immediately without doing anything
+            mod.start_dashboard()
+        finally:
+            mod._started = orig
+
+    def test_returns_early_when_dashboard_disabled(self) -> None:
+        """start_dashboard returns early when dashboard is disabled in config."""
+        import roc.reporting.api_server as mod
+
+        orig_started = mod._started
+        mod._started = False
+        try:
+            mock_cfg = MagicMock()
+            mock_cfg.dashboard_enabled = False
+            with patch("roc.config.Config.get", return_value=mock_cfg):
+                mod.start_dashboard()
+            assert mod._started is False
+        finally:
+            mod._started = orig_started
+
+    def test_returns_early_when_no_ducklake_store(self) -> None:
+        """start_dashboard returns early when DuckLakeStore is not available."""
+        import roc.reporting.api_server as mod
+
+        orig_started = mod._started
+        mod._started = False
+        try:
+            mock_cfg = MagicMock()
+            mock_cfg.dashboard_enabled = True
+            with (
+                patch("roc.config.Config.get", return_value=mock_cfg),
+                patch(
+                    "roc.reporting.observability.Observability.get_ducklake_store",
+                    return_value=None,
+                ),
+                patch.object(mod.sio, "emit", return_value=MagicMock()),
+            ):
+                mod.start_dashboard()
+            assert mod._started is False
+        finally:
+            mod._started = orig_started

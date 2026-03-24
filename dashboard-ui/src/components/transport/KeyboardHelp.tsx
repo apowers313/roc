@@ -44,7 +44,7 @@ function renderKeys(keys: readonly string[]) {
     ));
 }
 
-export function KeyboardHelp({ opened, onClose }: KeyboardHelpProps) {
+export function KeyboardHelp({ opened, onClose }: Readonly<KeyboardHelpProps>) {
     return (
         <Modal
             opened={opened}

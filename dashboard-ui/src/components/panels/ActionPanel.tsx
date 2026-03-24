@@ -9,7 +9,13 @@ interface ActionPanelProps {
     data: StepData | undefined;
 }
 
-export function ActionPanel({ data }: ActionPanelProps) {
+function actionLabel(a: NonNullable<StepData["action_taken"]>): string {
+    if (!a.action_name) return `Action #${a.action_id}`;
+    if (a.action_key) return `${a.action_name} (${a.action_key})`;
+    return a.action_name;
+}
+
+export function ActionPanel({ data }: Readonly<ActionPanelProps>) {
     const a = data?.action_taken;
 
     return (
@@ -17,11 +23,7 @@ export function ActionPanel({ data }: ActionPanelProps) {
             {a ? (
                 <Group gap="xs">
                     <Badge color="indigo" variant="filled" size="sm">
-                        {a.action_name
-                            ? a.action_key
-                                ? `${a.action_name} (${a.action_key})`
-                                : a.action_name
-                            : `Action #${a.action_id}`}
+                        {actionLabel(a)}
                     </Badge>
                     <Text size="xs" c="dimmed">
                         (id: {a.action_id})

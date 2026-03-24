@@ -8,7 +8,7 @@ interface AuralPerceptionProps {
     data: StepData | undefined;
 }
 
-export function AuralPerception({ data }: AuralPerceptionProps) {
+export function AuralPerception({ data }: Readonly<AuralPerceptionProps>) {
     const msg = data?.message;
     const rawPhonemes = data?.phonemes;
     // Filter out legacy format entries (plain arrays instead of {word, phonemes, is_break})
@@ -55,9 +55,9 @@ export function AuralPerception({ data }: AuralPerceptionProps) {
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                            {phonemes.map((entry, i) => (
+                            {phonemes.map((entry) => (
                                 <Table.Tr
-                                    key={i}
+                                    key={entry.word}
                                     style={
                                         entry.is_break
                                             ? { opacity: 0.5, fontStyle: "italic" }

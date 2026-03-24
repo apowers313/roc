@@ -63,17 +63,17 @@ class TestIntrinsicIntOp:
         from roc.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(0, 100))
-        assert op.normalize(0) == 0.0
-        assert op.normalize(100) == 1.0
-        assert op.normalize(50) == 0.5
+        assert op.normalize(0) == pytest.approx(0.0)
+        assert op.normalize(100) == pytest.approx(1.0)
+        assert op.normalize(50) == pytest.approx(0.5)
 
     def test_normalize_negative_range(self):
         from roc.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(-50, 50))
-        assert op.normalize(0) == 0.5
-        assert op.normalize(-50) == 0.0
-        assert op.normalize(50) == 1.0
+        assert op.normalize(0) == pytest.approx(0.5)
+        assert op.normalize(-50) == pytest.approx(0.0)
+        assert op.normalize(50) == pytest.approx(1.0)
 
 
 class TestIntrinsicPercentOp:
@@ -107,14 +107,14 @@ class TestIntrinsicPercentOp:
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         result = op.normalize(50, raw_intrinsics={"maxhp": 100})
-        assert result == 0.5
+        assert result == pytest.approx(0.5)
 
     def test_normalize_full(self):
         from roc.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         result = op.normalize(100, raw_intrinsics={"maxhp": 100})
-        assert result == 1.0
+        assert result == pytest.approx(1.0)
 
 
 class TestIntrinsicMapOp:
@@ -143,9 +143,9 @@ class TestIntrinsicMapOp:
         from roc.intrinsic import IntrinsicMapOp
 
         op = IntrinsicMapOp("hunger", config={0: 0.0, 1: 0.5, 2: 1.0})
-        assert op.normalize(0) == 0.0
-        assert op.normalize(1) == 0.5
-        assert op.normalize(2) == 1.0
+        assert op.normalize(0) == pytest.approx(0.0)
+        assert op.normalize(1) == pytest.approx(0.5)
+        assert op.normalize(2) == pytest.approx(1.0)
 
 
 class TestIntrinsicBoolOp:
@@ -160,13 +160,13 @@ class TestIntrinsicBoolOp:
         from roc.intrinsic import IntrinsicBoolOp
 
         op = IntrinsicBoolOp("blind")
-        assert op.normalize(True) == 1.0
+        assert op.normalize(True) == pytest.approx(1.0)
 
     def test_normalize_false(self):
         from roc.intrinsic import IntrinsicBoolOp
 
         op = IntrinsicBoolOp("blind")
-        assert op.normalize(False) == 0.0
+        assert op.normalize(False) == pytest.approx(0.0)
 
 
 class TestIntrinsicOpInitSubclass:
@@ -265,7 +265,7 @@ class TestIntrinsicNode:
         result = node.apply_transform(t)
         assert isinstance(result, IntrinsicNode)
         assert result.name == "hp"
-        assert pytest.approx(result.normalized_value) == 0.4
+        assert result.normalized_value == pytest.approx(0.4)
         assert result.raw_value is None
 
 
@@ -285,7 +285,7 @@ class TestIntrinsicData:
         Intrinsic.intrinsic_spec = {"hp": IntrinsicIntOp("hp", config=(0, 100))}
         data = IntrinsicData({"hp": 50})
         assert data.intrinsics == {"hp": 50}
-        assert pytest.approx(data.normalized_intrinsics["hp"]) == 0.5
+        assert data.normalized_intrinsics["hp"] == pytest.approx(0.5)
 
     def test_repr(self):
         from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp
@@ -305,7 +305,7 @@ class TestIntrinsicData:
         assert isinstance(nodes[0], IntrinsicNode)
         assert nodes[0].name == "hp"
         assert nodes[0].raw_value == 50
-        assert pytest.approx(nodes[0].normalized_value) == 0.5
+        assert nodes[0].normalized_value == pytest.approx(0.5)
 
 
 class TestConfigIntrinsics:

@@ -5,6 +5,10 @@ import type { StepData } from "../types/step-data";
 
 const BASE = "/api";
 
+function qsSuffix(qs: string): string {
+    return qs ? `?${qs}` : "";
+}
+
 async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
     const opts: RequestInit | undefined = signal ? { signal } : undefined;
     const res = opts ? await fetch(url, opts) : await fetch(url);
@@ -29,7 +33,7 @@ export async function fetchStep(
     step: number,
     game?: number,
 ): Promise<StepData> {
-    const params = game != null ? `?game=${game}` : "";
+    const params = game == null ? "" : `?game=${game}`;
     return fetchJson<StepData>(
         `${BASE}/runs/${encodeURIComponent(run)}/step/${step}${params}`,
     );
@@ -53,7 +57,7 @@ export async function fetchStepRange(
     run: string,
     game?: number,
 ): Promise<StepRange> {
-    const params = game != null ? `?game=${game}` : "";
+    const params = game == null ? "" : `?game=${game}`;
     return fetchJson<StepRange>(
         `${BASE}/runs/${encodeURIComponent(run)}/step-range${params}`,
     );
@@ -74,7 +78,7 @@ export async function fetchMetricsHistory(
     if (fields && fields.length > 0) params.set("fields", fields.join(","));
     const qs = params.toString();
     return fetchJson<MetricsPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/metrics-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/metrics-history${qsSuffix(qs)}`,
     );
 }
 
@@ -94,7 +98,7 @@ export async function fetchGraphHistory(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<GraphPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/graph-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/graph-history${qsSuffix(qs)}`,
     );
 }
 
@@ -111,7 +115,7 @@ export async function fetchEventHistory(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<EventPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/event-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/event-history${qsSuffix(qs)}`,
     );
 }
 
@@ -129,7 +133,7 @@ export async function fetchIntrinsicsHistory(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<IntrinsicsPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/intrinsics-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/intrinsics-history${qsSuffix(qs)}`,
     );
 }
 
@@ -148,7 +152,7 @@ export async function fetchActionHistory(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<ActionPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/action-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/action-history${qsSuffix(qs)}`,
     );
 }
 
@@ -166,7 +170,7 @@ export async function fetchResolutionHistory(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<ResolutionPoint[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/resolution-history${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/resolution-history${qsSuffix(qs)}`,
     );
 }
 
@@ -188,7 +192,7 @@ export async function fetchAllObjects(
     if (game != null) params.set("game", String(game));
     const qs = params.toString();
     return fetchJson<ResolvedObject[]>(
-        `${BASE}/runs/${encodeURIComponent(run)}/all-objects${qs ? `?${qs}` : ""}`,
+        `${BASE}/runs/${encodeURIComponent(run)}/all-objects${qsSuffix(qs)}`,
     );
 }
 

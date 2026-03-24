@@ -9,7 +9,7 @@ interface EventSummaryProps {
     data: StepData | undefined;
 }
 
-export function EventSummary({ data }: EventSummaryProps) {
+export function EventSummary({ data }: Readonly<EventSummaryProps>) {
     const summary = data?.event_summary?.[0] ?? null;
 
     if (!summary || typeof summary !== "object") {

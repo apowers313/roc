@@ -11,6 +11,34 @@ interface GameState {
     error?: string | null;
 }
 
+function gameMenuColor(isRunning: boolean, isStopping: boolean): string {
+    if (isRunning) return "green";
+    if (isStopping) return "yellow";
+    return "gray";
+}
+
+function GameStatusLabel({ isRunning, isStopping }: Readonly<{ isRunning: boolean; isStopping: boolean }>) {
+    if (isRunning) {
+        return (
+            <Badge color="green" size="xs" variant="filled">
+                Game Running
+            </Badge>
+        );
+    }
+    if (isStopping) {
+        return (
+            <Badge color="yellow" size="xs" variant="filled">
+                Stopping...
+            </Badge>
+        );
+    }
+    return (
+        <Text size="xs" c="dimmed">
+            No game running
+        </Text>
+    );
+}
+
 export function GameMenu() {
     const [gameState, setGameState] = useState<GameState>({ state: "idle" });
     const [numGames, setNumGames] = useState<number>(5);
@@ -73,7 +101,7 @@ export function GameMenu() {
                 <ActionIcon
                     size="sm"
                     variant="subtle"
-                    color={isRunning ? "green" : isStopping ? "yellow" : "gray"}
+                    color={gameMenuColor(isRunning, isStopping)}
                     aria-label="Game menu"
                 >
                     <Gamepad2 size={14} />
@@ -82,19 +110,7 @@ export function GameMenu() {
 
             <Menu.Dropdown>
                 <Menu.Label>
-                    {isRunning ? (
-                        <Badge color="green" size="xs" variant="filled">
-                            Game Running
-                        </Badge>
-                    ) : isStopping ? (
-                        <Badge color="yellow" size="xs" variant="filled">
-                            Stopping...
-                        </Badge>
-                    ) : (
-                        <Text size="xs" c="dimmed">
-                            No game running
-                        </Text>
-                    )}
+                    <GameStatusLabel isRunning={isRunning} isStopping={isStopping} />
                 </Menu.Label>
 
                 {gameState.error && !isRunning && (

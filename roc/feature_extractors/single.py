@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import IntGrid, Point
 from ..perception import (
     FeatureExtractor,
@@ -37,7 +38,9 @@ class SingleFeature(PointFeature[SingleNode]):
 
     def _dbfetch_nodes(self) -> SingleNode | None:
         """Looks up an existing SingleNode by type in the database."""
-        return SingleNode.find_one("src.type = $type", params={"type": self.type})
+        return SingleNode.find_one(
+            "src.type = $type", query_opts=FindQueryOpts(params={"type": self.type})
+        )
 
 
 class Single(FeatureExtractor[Point]):
@@ -82,6 +85,9 @@ class Single(FeatureExtractor[Point]):
         self.settled()
 
 
+_NEIGHBOR_OFFSETS = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+
+
 def is_unique_from_neighbors(data: IntGrid, point: Point) -> bool:
     """Helper function to determine if a point in a matrix has the same value as
     any points around it.
@@ -96,32 +102,9 @@ def is_unique_from_neighbors(data: IntGrid, point: Point) -> bool:
     """
     max_width = data.width - 1
     max_height = data.height - 1
-    # up left
-    if point.x > 0 and point.y > 0 and data.get_val(point.x - 1, point.y - 1) == point.val:
-        return False
-    # up
-    if point.y > 0 and data.get_val(point.x, point.y - 1) == point.val:
-        return False
-    # up right
-    if point.x < max_width and point.y > 0 and data.get_val(point.x + 1, point.y - 1) == point.val:
-        return False
-    # left
-    if point.x > 0 and data.get_val(point.x - 1, point.y) == point.val:
-        return False
-    # right
-    if point.x < max_width and data.get_val(point.x + 1, point.y) == point.val:
-        return False
-    # down left
-    if point.x > 0 and point.y < max_height and data.get_val(point.x - 1, point.y + 1) == point.val:
-        return False
-    # down
-    if point.y < max_height and data.get_val(point.x, point.y + 1) == point.val:
-        return False
-    # down right
-    if (
-        point.x < max_width
-        and point.y < max_height
-        and data.get_val(point.x + 1, point.y + 1) == point.val
-    ):
-        return False
+    for dx, dy in _NEIGHBOR_OFFSETS:
+        nx, ny = point.x + dx, point.y + dy
+        if 0 <= nx <= max_width and 0 <= ny <= max_height:
+            if data.get_val(nx, ny) == point.val:
+                return False
     return True

@@ -7,7 +7,7 @@ import { makeStepData, renderWithProviders } from "../../test-utils";
 import { StatusBar } from "./StatusBar";
 
 /** Helper that sets liveGameActive=true in context before rendering children. */
-function SetLiveActive({ children }: { children: ReactNode }) {
+function SetLiveActive({ children }: Readonly<{ children: ReactNode }>) {
     const { setLiveGameActive } = useDashboard();
     useEffect(() => { setLiveGameActive(true); }, [setLiveGameActive]);
     return <>{children}</>;

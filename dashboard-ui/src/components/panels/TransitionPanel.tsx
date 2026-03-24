@@ -8,6 +8,17 @@ interface TransitionPanelProps {
     data: StepData | undefined;
 }
 
+function deltaColor(value: number | undefined | null): string | undefined {
+    if (value == null) return undefined;
+    return value > 0 ? "green" : "red";
+}
+
+function formatDelta(value: number | undefined | null): string {
+    if (value == null) return "--";
+    const prefix = value > 0 ? "+" : "";
+    return prefix + value.toFixed(4);
+}
+
 /** Normalize a change entry -- old format is a plain string, new format is an object. */
 function normalizeChange(ch: TransformChangeData | string): TransformChangeData {
     if (typeof ch === "string") {
@@ -16,7 +27,7 @@ function normalizeChange(ch: TransformChangeData | string): TransformChangeData 
     return ch;
 }
 
-export function TransitionPanel({ data }: TransitionPanelProps) {
+export function TransitionPanel({ data }: Readonly<TransitionPanelProps>) {
     const t = data?.transform_summary;
 
     if (!t) {
@@ -73,8 +84,8 @@ export function TransitionPanel({ data }: TransitionPanelProps) {
                     </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                    {changes.map((ch, i) => (
-                        <Table.Tr key={i}>
+                    {changes.map((ch, idx) => (
+                        <Table.Tr key={ch.description}>
                             {hasStructured ? (
                                 <>
                                     <Table.Td>
@@ -95,20 +106,15 @@ export function TransitionPanel({ data }: TransitionPanelProps) {
                                         <Text
                                             size="xs"
                                             ff="monospace"
-                                            c={ch.normalized_change != null
-                                                ? ch.normalized_change > 0 ? "green" : "red"
-                                                : undefined}
+                                            c={deltaColor(ch.normalized_change)}
                                         >
-                                            {ch.normalized_change != null
-                                                ? (ch.normalized_change > 0 ? "+" : "") +
-                                                  ch.normalized_change.toFixed(4)
-                                                : "--"}
+                                            {formatDelta(ch.normalized_change)}
                                         </Text>
                                     </Table.Td>
                                 </>
                             ) : (
                                 <>
-                                    <Table.Td>{i + 1}</Table.Td>
+                                    <Table.Td>{idx + 1}</Table.Td>
                                     <Table.Td>
                                         <Text size="xs" ff="monospace" lineClamp={2}>
                                             {ch.description}

@@ -126,111 +126,105 @@ class Observability(metaclass=ObservabilityBase):
         roc_logger.init()
         global _disable_for_pytest_scanning
 
+        self._init_logging(settings)
+        self._init_metrics(settings)
+        self._init_tracing(settings)
+        self._init_profiling(settings)
+
+    def _init_logging(self, settings: Config) -> None:
+        """Initialize OTel logging, remote log, parquet, and event logger."""
         if settings.observability_logging and not _disable_for_pytest_scanning:
-            # log init
-            logger_provider = LoggerProvider(resource=resource)
-            otlp_log_exporter = OTLPLogExporter(endpoint=settings.observability_host, insecure=True)
-            logger_provider.add_log_record_processor(
-                BatchLogRecordProcessor(otlp_log_exporter, max_export_batch_size=32)
-            )
-
-            # remote logger exporter (synchronous for real-time querying)
-            if settings.debug_remote_log:
-                from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
-
-                self._remote_log_exporter = RemoteLoggerExporter(
-                    url=settings.debug_remote_log_url,
-                    session_id=instance_id,
-                )
-                logger_provider.add_log_record_processor(
-                    SimpleLogRecordProcessor(self._remote_log_exporter)
-                )
-                Observability._remote_log_configured = True
-
-            # Parquet exporter (source of truth for per-step data).
-            # Only created when _allow_parquet is set (by roc.init()),
-            # not during module-level init which just needs the tracer.
-            if Observability._allow_parquet:
-                from pathlib import Path
-
-                from roc.reporting.ducklake_store import DuckLakeStore
-
-                run_dir = Path(settings.data_dir) / instance_id
-                self._ducklake_store = DuckLakeStore(run_dir)
-                self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
-                logger_provider.add_log_record_processor(
-                    SimpleLogRecordProcessor(self._parquet_exporter)
-                )
-                Observability._parquet_configured = True
-
+            logger_provider = self._init_otlp_logging(settings)
             otel_logs.set_logger_provider(logger_provider=logger_provider)
+            self._add_loguru_sinks(settings)
+            self._init_event_logger(logger_provider)
+        else:
+            self._init_fallback_logging(settings)
 
-            # connect logs to loguru
+    def _init_otlp_logging(self, settings: Config) -> LoggerProvider:
+        """Set up OTLP log export with optional remote log and parquet exporters."""
+        logger_provider = LoggerProvider(resource=resource)
+        otlp_log_exporter = OTLPLogExporter(endpoint=settings.observability_host, insecure=True)
+        logger_provider.add_log_record_processor(
+            BatchLogRecordProcessor(otlp_log_exporter, max_export_batch_size=32)
+        )
+        self._attach_remote_log_exporter(settings, logger_provider)
+        self._attach_parquet_exporter(settings, logger_provider)
+        return logger_provider
+
+    def _init_fallback_logging(self, settings: Config) -> None:
+        """Set up local-only logging when OTLP is disabled."""
+        if not _disable_for_pytest_scanning:
+            logger_provider = LoggerProvider(resource=resource)
+            self._attach_remote_log_exporter(settings, logger_provider)
+            self._attach_parquet_exporter(settings, logger_provider)
+            otel_logs.set_logger_provider(logger_provider=logger_provider)
+        self.set_event_logger(NoOpEventLogger("roc"))
+
+    def _attach_remote_log_exporter(
+        self, settings: Config, logger_provider: LoggerProvider
+    ) -> None:
+        """Attach the remote logger exporter if configured."""
+        if not settings.debug_remote_log:
+            return
+        from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
+
+        self._remote_log_exporter = RemoteLoggerExporter(
+            url=settings.debug_remote_log_url,
+            session_id=instance_id,
+        )
+        logger_provider.add_log_record_processor(
+            SimpleLogRecordProcessor(self._remote_log_exporter)
+        )
+        Observability._remote_log_configured = True
+
+    def _attach_parquet_exporter(self, settings: Config, logger_provider: LoggerProvider) -> None:
+        """Attach the DuckLake/parquet exporter if _allow_parquet is set."""
+        if not Observability._allow_parquet:
+            return
+        from pathlib import Path
+
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        run_dir = Path(settings.data_dir) / instance_id
+        self._ducklake_store = DuckLakeStore(run_dir)
+        self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
+        logger_provider.add_log_record_processor(SimpleLogRecordProcessor(self._parquet_exporter))
+        Observability._parquet_configured = True
+
+    def _add_loguru_sinks(self, settings: Config) -> None:
+        """Connect loguru to OTel and optionally add live dashboard log sink."""
+        roc_logger.logger.add(
+            loguru_to_otel,
+            format="<level>{message}</level>",
+            level=settings.observability_logging_level,
+        )
+        if settings.dashboard_enabled or settings.dashboard_callback_url:
+            from roc.reporting.step_log_sink import step_log_sink
+
             roc_logger.logger.add(
-                loguru_to_otel,
+                step_log_sink,
                 format="<level>{message}</level>",
                 level=settings.observability_logging_level,
             )
 
-            # Live dashboard log capture -- ring buffer for StepData.logs
-            if settings.dashboard_enabled or settings.dashboard_callback_url:
-                from roc.reporting.step_log_sink import step_log_sink
-
-                roc_logger.logger.add(
-                    step_log_sink,
-                    format="<level>{message}</level>",
-                    level=settings.observability_logging_level,
-                )
-
-            # events init
-            event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
-
-            self.set_event_logger(
-                event_logger_provider.get_event_logger(
-                    "roc",
-                    version=roc_version,
-                    attributes=roc_common_attributes,
-                )
+    def _init_event_logger(self, logger_provider: LoggerProvider) -> None:
+        """Initialize the OTel event logger from the logger provider."""
+        event_logger_provider = EventLoggerProvider(logger_provider=logger_provider)
+        self.set_event_logger(
+            event_logger_provider.get_event_logger(
+                "roc",
+                version=roc_version,
+                attributes=roc_common_attributes,
             )
-            otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
-            roc_logger.logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
-        else:
-            # Even when OTel logging to OTLP is disabled, support remote log/parquet
-            _need_local_provider = not _disable_for_pytest_scanning
-            if _need_local_provider:
-                logger_provider = LoggerProvider(resource=resource)
-                if settings.debug_remote_log:
-                    from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
+        )
+        otel_events.set_event_logger_provider(event_logger_provider=event_logger_provider)
+        roc_logger.logger.debug(f"OpenTelemetry log initialized, instance ID {instance_id}.")
 
-                    self._remote_log_exporter = RemoteLoggerExporter(
-                        url=settings.debug_remote_log_url,
-                        session_id=instance_id,
-                    )
-                    logger_provider.add_log_record_processor(
-                        SimpleLogRecordProcessor(self._remote_log_exporter)
-                    )
-                    Observability._remote_log_configured = True
-
-                # Parquet exporter -- only when _allow_parquet is set
-                if Observability._allow_parquet:
-                    from pathlib import Path
-
-                    from roc.reporting.ducklake_store import DuckLakeStore
-
-                    run_dir = Path(settings.data_dir) / instance_id
-                    self._ducklake_store = DuckLakeStore(run_dir)
-                    self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
-                    logger_provider.add_log_record_processor(
-                        SimpleLogRecordProcessor(self._parquet_exporter)
-                    )
-                    Observability._parquet_configured = True
-
-                otel_logs.set_logger_provider(logger_provider=logger_provider)
-            self.set_event_logger(NoOpEventLogger("roc"))
-
+    def _init_metrics(self, settings: Config) -> None:
+        """Initialize OTel metrics if enabled."""
         if settings.observability_metrics and not _disable_for_pytest_scanning:
             roc_logger.logger.debug("initializing OpenTelemetry metrics...")
-            # metrics init
             otlp_metrics_exporter = OTLPMetricExporter(
                 endpoint=settings.observability_host, insecure=True
             )
@@ -244,7 +238,7 @@ class Observability(metaclass=ObservabilityBase):
                 labels=roc_common_attributes,
                 config=system_metrics_config,
             ).instrument()
-        # NOTE: this will be a NoOpMeterProvider if the block of code above wasn't executed
+        # NOTE: this will be a NoOpMeterProvider if the block above wasn't executed
         mp = otel_metrics.get_meter_provider()
         self.set_meter(
             mp.get_meter(
@@ -254,8 +248,9 @@ class Observability(metaclass=ObservabilityBase):
             )
         )
 
+    def _init_tracing(self, settings: Config) -> None:
+        """Initialize OTel tracing if enabled."""
         if settings.observability_tracing and not _disable_for_pytest_scanning:
-            # trace init
             roc_logger.logger.debug("initializing OpenTelemetry trace...")
             otlp_trace_exporter = OTLPSpanExporter(
                 endpoint=settings.observability_host, insecure=True
@@ -264,7 +259,7 @@ class Observability(metaclass=ObservabilityBase):
             span_processor = BatchSpanProcessor(otlp_trace_exporter)
             tracer_provider.add_span_processor(span_processor)
             otel_trace.set_tracer_provider(tracer_provider)
-        # NOTE: this will be a NoOpTracerProvider if the block of code above wasn't executed
+        # NOTE: this will be a NoOpTracerProvider if the block above wasn't executed
         tp = otel_trace.get_tracer_provider()
         self.set_tracer(
             tp.get_tracer(
@@ -274,19 +269,19 @@ class Observability(metaclass=ObservabilityBase):
             )
         )
 
-        if settings.observability_profiling and not _disable_for_pytest_scanning:
-            # profiling init
-            roc_logger.logger.debug("initializing Pyroscope profiling...")
-            pyroscope.configure(
-                application_name="roc",
-                # TODO: profiling in otel is current unstable, switch this to
-                # otel when it stabilizes
-                server_address=settings.observability_profiling_host,
-                sample_rate=100,  # default is 100
-                # detect_subprocesses=True,
-                oncpu=False,  # report cpu time only; default is True
-                tags=roc_common_attributes,
-            )
+    @staticmethod
+    def _init_profiling(settings: Config) -> None:
+        """Initialize Pyroscope profiling if enabled."""
+        if not settings.observability_profiling or _disable_for_pytest_scanning:
+            return
+        roc_logger.logger.debug("initializing Pyroscope profiling...")
+        pyroscope.configure(
+            application_name="roc",
+            server_address=settings.observability_profiling_host,
+            sample_rate=100,  # default is 100
+            oncpu=False,  # report cpu time only; default is True
+            tags=roc_common_attributes,
+        )
 
     @staticmethod
     def init(enable_parquet: bool = False) -> None:

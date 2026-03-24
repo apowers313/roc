@@ -31,7 +31,7 @@ const mockUseStepRange = vi.mocked(useStepRange);
  * Component that sets up live_following state by dispatching GO_LIVE,
  * then renders children.
  */
-function GoLiveSetup({ children }: { children: ReactNode }) {
+function GoLiveSetup({ children }: Readonly<{ children: ReactNode }>) {
     const { dispatchPlayback, setRun, setStepRange } = useDashboard();
 
     useEffect(() => {
@@ -43,7 +43,7 @@ function GoLiveSetup({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-function LiveWrapper({ children }: { children: ReactNode }) {
+function LiveWrapper({ children }: Readonly<{ children: ReactNode }>) {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
     });

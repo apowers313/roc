@@ -27,6 +27,18 @@ function escapeChar(ch: string): string {
     }
 }
 
+function normalizeColor(raw: string): string {
+    return raw.startsWith("#") ? raw : `#${raw}`;
+}
+
+/** Build an HTML span for a single cell. */
+function buildCellSpan(ch: string, fgColor: string, bgColor: string, highlighted: boolean): string {
+    if (highlighted) {
+        return `<span style="color:${fgColor};background:${bgColor};outline:2px solid #ff0;outline-offset:-1px;position:relative;z-index:1">${ch}</span>`;
+    }
+    return `<span style="color:${fgColor};background:${bgColor}">${ch}</span>`;
+}
+
 /** Build the HTML string for a character grid.
  *  If highlights is provided, matching cells get a bright outline.
  */
@@ -43,23 +55,11 @@ function buildGridHtml(data: GridData, highlights?: Set<string>): string {
         for (let c = 0; c < row.length; c++) {
             const charCode = row[c];
             if (charCode === undefined) continue;
-            const ch = escapeChar(String.fromCharCode(charCode));
-            const rawFg = fgRow[c] ?? "ffffff";
-            const rawBg = bgRow[c] ?? "000000";
-            const fgColor = rawFg.startsWith("#") ? rawFg : `#${rawFg}`;
-            const bgColor = rawBg.startsWith("#") ? rawBg : `#${rawBg}`;
-
-            // Highlight coordinates use (x=col, y=row)
-            const isHighlighted = highlights?.has(`${c},${r}`);
-            if (isHighlighted) {
-                spans.push(
-                    `<span style="color:${fgColor};background:${bgColor};outline:2px solid #ff0;outline-offset:-1px;position:relative;z-index:1">${ch}</span>`,
-                );
-            } else {
-                spans.push(
-                    `<span style="color:${fgColor};background:${bgColor}">${ch}</span>`,
-                );
-            }
+            const ch = escapeChar(String.fromCodePoint(charCode));
+            const fgColor = normalizeColor(fgRow[c] ?? "ffffff");
+            const bgColor = normalizeColor(bgRow[c] ?? "000000");
+            const isHighlighted = highlights?.has(`${c},${r}`) ?? false;
+            spans.push(buildCellSpan(ch, fgColor, bgColor, isHighlighted));
         }
         rows.push(spans.join(""));
     }
@@ -76,7 +76,7 @@ function buildGridHtml(data: GridData, highlights?: Set<string>): string {
  * No React.memo -- the parent re-renders when data changes, and we always
  * want to reflect the new data immediately.
  */
-export function CharGrid({ data, highlightRowOffset = 0 }: CharGridProps) {
+export function CharGrid({ data, highlightRowOffset = 0 }: Readonly<CharGridProps>) {
     const { points } = useHighlight();
 
     const highlightSet = points.length > 0

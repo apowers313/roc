@@ -85,7 +85,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         assert my_shape is not None
         obj = np.ndarray(my_shape, dtype=object).view(cls)
         for row, col in np.ndindex(my_shape):
-            obj[row, col] = list()
+            obj[row, col] = []
         obj.grid = grid
 
         return obj
@@ -147,14 +147,14 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
     def get_max_strength(self) -> int:
         """Returns the highest saliency strength value across all cells."""
-        max = 0
+        max_val = 0
         for y in range(self.height):
             for x in range(self.width):
                 curr = self.get_strength(x, y)
-                if max < curr:
-                    max = curr
+                if max_val < curr:
+                    max_val = curr
 
-        return max
+        return max_val
 
     def get_strength(self, x: int, y: int) -> int:
         """Returns the saliency strength at (x, y), including type-based bonuses."""
@@ -183,7 +183,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
     def feature_report(self) -> dict[str, int]:
         """Returns a count of unique features per feature type across the entire map."""
-        feature_id: dict[str, set[int]] = dict()
+        feature_id: dict[str, set[int]] = {}
 
         # create a set of unique IDs for every distinct feature
         for row, col in np.ndindex(self.shape):
@@ -233,7 +233,7 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
         # label points that are adjacent / diagonal
         structure = np.ones((3, 3), dtype=int)
-        labeled, ncomponents = label(peaks, structure)
+        labeled, _ncomponents = label(peaks, structure)
 
         # get values for each coordinate
         flat_indicies = np.ravel_multi_index(tuple(coords.T), fkimg.shape)
@@ -257,108 +257,129 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
 
         ds = DataSet[VisionAttentionSchema](df)
 
-        # record saliency attenuation metrics via RocMetrics (dual OTel + W&B)
-        from .saliency_attenuation import _otel_logger as sa_logger
-
-        RocMetrics.record_histogram(
-            "roc.saliency_attenuation.peak_count",
-            float(len(ds)),
-            description="Number of peaks found after attenuation",
-        )
-        if len(ds) > 0:
-            top_strength = float(ds.iloc[0]["strength"])
-            RocMetrics.record_histogram(
-                "roc.saliency_attenuation.top_peak_strength",
-                top_strength,
-                description="Strength of the top peak after attenuation",
-            )
         shifted = pre_peak != post_peak
-        if shifted:
-            RocMetrics.increment_counter(
-                "roc.saliency_attenuation.top_peak_shifted",
-                1,
-                {"shifted": True},
-                description="Count of times the top peak shifted due to attenuation",
-            )
-
-        # structured log record
-        import json
-        from time import time_ns
-
-        from opentelemetry import trace as otel_trace
-        from opentelemetry._logs import SeverityNumber
-        from opentelemetry.sdk._logs import LogRecord
-
-        span_context = otel_trace.get_current_span().get_span_context()
-
-        # Capture saliency map visualization data
-        saliency_grid: dict[str, Any] = {}
-        if self.grid is not None:
-            sm_dg = self.to_debug_grid()
-            saliency_grid = sm_dg.to_html_vals()
-
-        # Capture focus points as list of dicts
-        focus_list = []
-        for _, row in ds.iterrows():
-            focus_list.append(
-                {
-                    "x": int(row["x"]),
-                    "y": int(row["y"]),
-                    "strength": float(row["strength"]),
-                    "label": int(row["label"]),
-                }
-            )
-
-        log_record: dict[str, Any] = {
-            "event": "saliency_attenuation",
-            "flavor": attenuation.name,
-            "peak_count": len(ds),
-            "top_peak_strength": float(ds.iloc[0]["strength"]) if len(ds) > 0 else 0.0,
-            "top_peak_shifted": bool(shifted),
-            "pre_peak": list(pre_peak),
-            "post_peak": list(post_peak),
-            "saliency_grid": saliency_grid,
-            "focus_points": focus_list,
-        }
-
-        # Add flavor-specific fields
-        from .saliency_attenuation import ActiveInferenceAttenuation, LinearDeclineAttenuation
-
-        if isinstance(attenuation, LinearDeclineAttenuation):
-            log_record["history"] = [
-                {"x": loc.x, "y": loc.y, "tick": loc.tick} for loc in attenuation._history
-            ]
-            log_record["history_size"] = len(attenuation._history)
-        elif isinstance(attenuation, ActiveInferenceAttenuation):
-            entropies = [b.entropy() for b in attenuation._beliefs.values()]
-            log_record["entropy_at_focus"] = entropies[0] if entropies else 0.0
-            log_record["entropy_max"] = max(entropies) if entropies else 0.0
-            log_record["entropy_min"] = min(entropies) if entropies else 0.0
-            log_record["omega"] = attenuation._omega
-            log_record["beliefs_tracked"] = len(attenuation._beliefs)
-            log_record["vocab_size"] = attenuation._vocab.size
-        sa_logger.emit(
-            LogRecord(
-                timestamp=time_ns(),
-                severity_number=SeverityNumber.INFO,
-                severity_text="INFO",
-                body=json.dumps(log_record, default=str),
-                attributes={"event.name": "roc.saliency_attenuation"},
-                trace_id=span_context.trace_id,
-                span_id=span_context.span_id,
-                trace_flags=span_context.trace_flags,
-            )
-        )
-
-        # Update live state for dashboard (exclude saliency_grid -- too large)
-        from roc.reporting.state import State
-
-        State.get_states().attenuation_data.set(
-            {k: v for k, v in log_record.items() if k != "saliency_grid"}
-        )
+        _record_attenuation_metrics(ds, shifted)
+        peak_result = PeakShiftResult(shifted=shifted, pre_peak=pre_peak, post_peak=post_peak)
+        _emit_attenuation_log(ds, attenuation, peak_result, self)
 
         attenuation.notify_focus(ds)
         return ds
+
+
+def _record_attenuation_metrics(ds: DataSet[VisionAttentionSchema], shifted: bool) -> None:
+    """Record saliency attenuation metrics via RocMetrics."""
+    RocMetrics.record_histogram(
+        "roc.saliency_attenuation.peak_count",
+        float(len(ds)),
+        description="Number of peaks found after attenuation",
+    )
+    if len(ds) > 0:
+        RocMetrics.record_histogram(
+            "roc.saliency_attenuation.top_peak_strength",
+            float(ds.iloc[0]["strength"]),
+            description="Strength of the top peak after attenuation",
+        )
+    if shifted:
+        RocMetrics.increment_counter(
+            "roc.saliency_attenuation.top_peak_shifted",
+            1,
+            {"shifted": True},
+            description="Count of times the top peak shifted due to attenuation",
+        )
+
+
+@dataclass
+class PeakShiftResult:
+    """Captures the before/after state of peak attenuation."""
+
+    shifted: bool
+    pre_peak: Any
+    post_peak: Any
+
+
+def _emit_attenuation_log(
+    ds: DataSet[VisionAttentionSchema],
+    attenuation: Any,
+    peak_result: PeakShiftResult,
+    saliency_map: SaliencyMap,
+) -> None:
+    """Build and emit the structured attenuation log record."""
+    import json
+    from time import time_ns
+
+    from opentelemetry import trace as otel_trace
+    from opentelemetry._logs import SeverityNumber
+    from opentelemetry.sdk._logs import LogRecord
+
+    from .saliency_attenuation import _otel_logger as sa_logger
+
+    span_context = otel_trace.get_current_span().get_span_context()
+
+    saliency_grid: dict[str, Any] = {}
+    if saliency_map.grid is not None:
+        saliency_grid = saliency_map.to_debug_grid().to_html_vals()
+
+    focus_list = [
+        {
+            "x": int(row["x"]),
+            "y": int(row["y"]),
+            "strength": float(row["strength"]),
+            "label": int(row["label"]),
+        }
+        for _, row in ds.iterrows()
+    ]
+
+    log_record: dict[str, Any] = {
+        "event": "saliency_attenuation",
+        "flavor": attenuation.name,
+        "peak_count": len(ds),
+        "top_peak_strength": float(ds.iloc[0]["strength"]) if len(ds) > 0 else 0.0,
+        "top_peak_shifted": bool(peak_result.shifted),
+        "pre_peak": list(peak_result.pre_peak),
+        "post_peak": list(peak_result.post_peak),
+        "saliency_grid": saliency_grid,
+        "focus_points": focus_list,
+    }
+
+    _add_flavor_fields(log_record, attenuation)
+
+    sa_logger.emit(
+        LogRecord(
+            timestamp=time_ns(),
+            severity_number=SeverityNumber.INFO,
+            severity_text="INFO",
+            body=json.dumps(log_record, default=str),
+            attributes={"event.name": "roc.saliency_attenuation"},
+            trace_id=span_context.trace_id,
+            span_id=span_context.span_id,
+            trace_flags=span_context.trace_flags,
+        )
+    )
+
+    from roc.reporting.state import State
+
+    State.get_states().attenuation_data.set(
+        {k: v for k, v in log_record.items() if k != "saliency_grid"}
+    )
+
+
+def _add_flavor_fields(log_record: dict[str, Any], attenuation: Any) -> None:
+    """Add attenuation-flavor-specific fields to the log record."""
+    from .saliency_attenuation import ActiveInferenceAttenuation, LinearDeclineAttenuation
+
+    if isinstance(attenuation, LinearDeclineAttenuation):
+        log_record["history"] = [
+            {"x": loc.x, "y": loc.y, "tick": loc.tick} for loc in attenuation._history
+        ]
+        log_record["history_size"] = len(attenuation._history)
+    elif isinstance(attenuation, ActiveInferenceAttenuation):
+        entropies = [b.entropy() for b in attenuation._beliefs.values()]
+        log_record["entropy_at_focus"] = entropies[0] if entropies else 0.0
+        log_record["entropy_max"] = max(entropies) if entropies else 0.0
+        log_record["entropy_min"] = min(entropies) if entropies else 0.0
+        log_record["omega"] = attenuation._omega
+        log_record["beliefs_tracked"] = len(attenuation._beliefs)
+        log_record["vocab_size"] = attenuation._vocab.size
 
 
 class VisionAttention(Attention):
@@ -401,11 +422,11 @@ class VisionAttention(Attention):
             unsettled = set(FeatureExtractor.list()) - self.settled
             if len(unsettled) == 0:
                 assert self.saliency_map is not None
-                focus = self.saliency_map.get_focus()
+                focus_points = self.saliency_map.get_focus()
 
                 self.att_conn.send(
                     VisionAttentionData(
-                        focus_points=self.saliency_map.get_focus(),
+                        focus_points=focus_points,
                         saliency_map=self.saliency_map,
                     )
                 )

@@ -1,13 +1,11 @@
 import re
-from typing import Any, Callable, Generic, TypeVar, cast
+from typing import Any, Callable, cast
 from unittest.mock import MagicMock
 
 import pytest
 
 from roc.component import Component
 from roc.event import BusConnection, Event, EventBus, EventFilter
-
-# from roc.perception import Direction, ElementOrientation, ElementPoint, ElementSize, ElementType
 
 
 def normalize_whitespace(s: str) -> str:
@@ -29,11 +27,7 @@ class FakeData:
         self.baz = baz
 
 
-OutputDataType = TypeVar("OutputDataType")
-InputDataType = TypeVar("InputDataType")
-
-
-class StubComponent(Component, Generic[OutputDataType, InputDataType]):
+class StubComponent[OutputDataType, InputDataType](Component):
     """A dummy component for testing communications and capturing the results for inspection"""
 
     name: str = "testing-stub"

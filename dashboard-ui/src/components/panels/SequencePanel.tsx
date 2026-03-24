@@ -8,7 +8,19 @@ interface SequencePanelProps {
     data: StepData | undefined;
 }
 
-export function SequencePanel({ data }: SequencePanelProps) {
+function significanceColor(v: number): string {
+    if (v > 0.5) return "red";
+    if (v > 0.1) return "yellow";
+    return "green";
+}
+
+function normColor(v: number): string {
+    if (v > 0.7) return "red";
+    if (v > 0.3) return "yellow";
+    return "blue";
+}
+
+export function SequencePanel({ data }: Readonly<SequencePanelProps>) {
     const seq = data?.sequence_summary;
 
     if (!seq) {
@@ -19,7 +31,7 @@ export function SequencePanel({ data }: SequencePanelProps) {
         );
     }
 
-    const intrinsicKeys = Object.keys(seq.intrinsics).sort();
+    const intrinsicKeys = Object.keys(seq.intrinsics).sort((a, b) => a.localeCompare(b));
 
     return (
         <Stack gap="sm">
@@ -48,7 +60,7 @@ export function SequencePanel({ data }: SequencePanelProps) {
                         <Text size="xs" c="dimmed">Significance</Text>
                         <Badge
                             variant="filled"
-                            color={seq.significance > 0.5 ? "red" : seq.significance > 0.1 ? "yellow" : "green"}
+                            color={significanceColor(seq.significance)}
                             size="sm"
                         >
                             {seq.significance.toFixed(4)}
@@ -116,7 +128,7 @@ export function SequencePanel({ data }: SequencePanelProps) {
                                 <Progress
                                     value={Math.min(Math.max(norm * 100, 0), 100)}
                                     size="sm"
-                                    color={norm > 0.7 ? "red" : norm > 0.3 ? "yellow" : "blue"}
+                                    color={normColor(norm)}
                                 />
                             </div>
                         );

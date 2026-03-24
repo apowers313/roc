@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import Point, XLoc, YLoc
 from ..perception import (
     Direction,
@@ -59,7 +60,7 @@ class MotionFeature(VisualFeature[MotionNode]):
         """Looks up an existing MotionNode by type and direction."""
         return MotionNode.find_one(
             "src.type = $type AND src.direction = $direction",
-            params={"type": self.type, "direction": self.direction},
+            query_opts=FindQueryOpts(params={"type": self.type, "direction": self.direction}),
         )
 
 
@@ -94,7 +95,7 @@ class Motion(FeatureExtractor[MotionFeature]):
         d1 = e.data
 
         for d2 in self.delta_list:
-            if Point.isadjacent(x1=d1.point[0], y1=d1.point[1], x2=d2.point[0], y2=d2.point[1]):
+            if Point.isadjacent(xy1=(d1.point[0], d1.point[1]), xy2=(d2.point[0], d2.point[1])):
                 if d2.old_val == d1.new_val:
                     emit_motion(self, d2, d1)
                 if d1.old_val == d2.new_val:

@@ -152,21 +152,30 @@ class DuckLakeStore:
         step_list = ", ".join(str(int(s)) for s in steps)
         with self._lock:
             for table in tables:
-                try:
-                    if not self._table_exists(table):
-                        continue
-                    src = f'{self._alias}."{table}"'
-                    df = self._conn.execute(
-                        f"SELECT * FROM {src} WHERE step IN ({step_list})"
-                    ).fetchdf()
-                    if len(df) > 0 and "step" in df.columns:
-                        for s in steps:
-                            mask = df["step"] == s
-                            if mask.any():
-                                results[s][table] = df[mask].reset_index(drop=True)
-                except Exception:
-                    pass
+                self._query_table_for_steps(table, step_list, steps, results)
         return results
+
+    def _query_table_for_steps(
+        self,
+        table: str,
+        step_list: str,
+        steps: list[int],
+        results: dict[int, dict[str, pd.DataFrame]],
+    ) -> None:
+        """Query a single table for the given steps and split results (must hold lock)."""
+        try:
+            if not self._table_exists(table):
+                return
+            src = f'{self._alias}."{table}"'
+            df = self._conn.execute(f"SELECT * FROM {src} WHERE step IN ({step_list})").fetchdf()
+            if len(df) == 0 or "step" not in df.columns:
+                return
+            for s in steps:
+                mask = df["step"] == s
+                if mask.any():
+                    results[s][table] = df[mask].reset_index(drop=True)
+        except Exception:
+            pass
 
     def has_table(self, table: str) -> bool:
         """Check whether a table exists in the DuckLake catalog."""

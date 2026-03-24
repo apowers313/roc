@@ -8,6 +8,7 @@ import pytest
 from gruut import sentences
 
 from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeNode, PhonemeWord
+from roc.graphdb import FindQueryOpts
 
 
 @pytest.fixture(autouse=True)
@@ -49,7 +50,9 @@ class TestPhonemeFeature:
         )
         with patch.object(PhonemeNode, "find_one", return_value=None) as mock_find:
             result = feature._dbfetch_nodes()
-            mock_find.assert_called_once_with("src.type = $type", params={"type": 42})
+            mock_find.assert_called_once_with(
+                "src.type = $type", query_opts=FindQueryOpts(params={"type": 42})
+            )
             assert result is None
 
     def test_dbfetch_nodes_found(self):

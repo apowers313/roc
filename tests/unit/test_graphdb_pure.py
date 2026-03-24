@@ -309,14 +309,14 @@ class TestUtilityFunctions:
     def test_is_local_direct(self):
         class A:
             def foo(self):
-                pass
+                """Stub for locality testing."""
 
         assert _is_local(A, "foo") is True
 
     def test_is_local_inherited(self):
         class A:
             def foo(self):
-                pass
+                """Stub for locality testing."""
 
         class B(A):
             pass
@@ -328,11 +328,11 @@ class TestUtilityFunctions:
         # even if the child overrides it
         class A:
             def foo(self):
-                pass
+                """Stub for locality testing."""
 
         class B(A):
             def foo(self):
-                pass
+                """Stub for locality testing."""
 
         assert _is_local(B, "foo") is False
 
@@ -393,10 +393,10 @@ class TestUtilityFunctions:
     def test_get_methods(self):
         class MyClass:
             def foo(self):
-                pass
+                """Stub for method discovery testing."""
 
             def bar(self):
-                pass
+                """Stub for method discovery testing."""
 
         methods = _get_methods(MyClass)
         assert "foo" in methods
@@ -457,7 +457,7 @@ class TestNodeRegistration:
         class UniqueNodeA(Node):
             pass
 
-        with pytest.raises(Exception, match="node_register can't register"):
+        with pytest.raises(ValueError, match="node_register can't register"):
 
             class UniqueNodeA(Node):  # type: ignore
                 pass
@@ -466,7 +466,7 @@ class TestNodeRegistration:
         class DupLblNode(Node):
             pass
 
-        with pytest.raises(Exception, match="node_register can't register labels"):
+        with pytest.raises(ValueError, match="node_register can't register labels"):
 
             class DupLblNode2(Node):
                 labels: set[str] = {"DupLblNode"}
@@ -501,7 +501,7 @@ class TestEdgeRegistration:
         class UniqueEdgeA(Edge):
             pass
 
-        with pytest.raises(Exception, match="edge_register can't register type"):
+        with pytest.raises(ValueError, match="edge_register can't register type"):
 
             class UniqueEdgeB(Edge):
                 type: str = "UniqueEdgeA"
@@ -542,6 +542,7 @@ class TestSchemaPure:
         class BadLink(Edge):
             allowed_connections: EdgeConnectionsList = [("Src", "Missing")]
 
+        _ = BadLink
         with pytest.raises(SchemaValidationError) as exc_info:
             Schema.validate()
         assert len(exc_info.value.errors) >= 1
@@ -551,6 +552,7 @@ class TestSchemaPure:
         class NoConn(Edge):
             pass
 
+        _ = NoConn
         # no allowed_connections is fine -- just skip
         Schema.validate()
 
@@ -602,6 +604,7 @@ class TestSchemaPure:
         class MdEdge(Edge):
             allowed_connections: EdgeConnectionsList = [("MdNode", "MdNode")]
 
+        _ = MdEdge
         md = Schema._repr_markdown_()
         assert "``` mermaid" in md
         assert "MdNode" in md
@@ -707,7 +710,7 @@ class TestNodeDescriptionPure:
     def test_with_methods(self):
         class MethodNode(Node):
             def custom_method(self) -> None:
-                pass
+                """Stub for NodeDescription method testing."""
 
         nd = _NodeDescription(MethodNode)
         assert "custom_method" in nd.method_names
@@ -963,7 +966,7 @@ class TestNodeProperties:
 
 class TestEdgeProperties:
     def _make_edge(self, **kwargs: Any) -> Edge:
-        defaults = dict(type="T", src_id=NodeId(1), dst_id=NodeId(2), _id=EdgeId(99))
+        defaults = {"type": "T", "src_id": NodeId(1), "dst_id": NodeId(2), "_id": EdgeId(99)}
         defaults.update(kwargs)
         e = Edge(**defaults)
         e._no_save = True
@@ -997,3 +1000,208 @@ class TestDotGraphHeader:
         assert "digraph" in dot_graph_header
         assert "fontname" in dot_graph_header
         assert "shape=record" in dot_graph_header
+
+
+# ========================================================================
+# Schema.to_dict
+# ========================================================================
+class TestSchemaToDict:
+    def test_basic_schema_to_dict(self, clear_registries):
+        """to_dict returns a dict with mermaid, nodes, and edges keys."""
+
+        class DictNode(Node):
+            value: int = 0
+
+        class DictEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("DictNode", "DictNode")]
+
+        schema = Schema()
+        result = schema.to_dict()
+
+        assert "mermaid" in result
+        assert "nodes" in result
+        assert "edges" in result
+        assert isinstance(result["mermaid"], str)
+        assert "classDiagram" in result["mermaid"]
+
+    def test_nodes_structure(self, clear_registries):
+        """Node entries have name, parents, fields, and methods."""
+
+        class ParentNode(Node):
+            pass
+
+        class ChildNode(ParentNode):
+            name: str = "test"
+
+            def custom_method(self) -> bool:
+                """Stub for to_dict testing."""
+                return True
+
+        class DummyEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("ParentNode", "ChildNode")]
+
+        schema = Schema()
+        result = schema.to_dict()
+
+        child_nodes = [n for n in result["nodes"] if n["name"] == "ChildNode"]
+        assert len(child_nodes) == 1
+        child = child_nodes[0]
+        assert "ParentNode" in child["parents"]
+        assert isinstance(child["fields"], list)
+        assert isinstance(child["methods"], list)
+
+    def test_edges_structure(self, clear_registries):
+        """Edge entries have name, type, connections, and fields."""
+
+        class SrcNode(Node):
+            pass
+
+        class DstNode(Node):
+            pass
+
+        class ConnEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("SrcNode", "DstNode")]
+
+        schema = Schema()
+        result = schema.to_dict()
+
+        conn_edges = [e for e in result["edges"] if e["name"] == "ConnEdge"]
+        assert len(conn_edges) == 1
+        edge = conn_edges[0]
+        assert edge["type"] == "ConnEdge"
+        assert ["SrcNode", "DstNode"] in edge["connections"]
+        assert isinstance(edge["fields"], list)
+
+    def test_field_serialization(self, clear_registries):
+        """Fields include name, type, default, local, and exclude."""
+
+        class FieldNode(Node):
+            score: int = 42
+            labels: set[str] = Field(default_factory=lambda: {"FieldNode"}, exclude=True)
+
+        class FieldEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("FieldNode", "FieldNode")]
+
+        schema = Schema()
+        result = schema.to_dict()
+
+        field_nodes = [n for n in result["nodes"] if n["name"] == "FieldNode"]
+        assert len(field_nodes) == 1
+        fields = field_nodes[0]["fields"]
+        score_fields = [f for f in fields if f["name"] == "score"]
+        assert len(score_fields) == 1
+        assert score_fields[0]["type"] == "int"
+        assert score_fields[0]["default"] == "42"
+        assert score_fields[0]["exclude"] is False
+
+    def test_method_serialization(self, clear_registries):
+        """Methods include name, params, return_type, and local flag."""
+
+        class MethodNode(Node):
+            def compute(self, x: int, y: str = "default") -> bool:
+                """Stub for method serialization testing."""
+                return True
+
+        class MethodEdge(Edge):
+            allowed_connections: EdgeConnectionsList = [("MethodNode", "MethodNode")]
+
+        schema = Schema()
+        result = schema.to_dict()
+
+        method_nodes = [n for n in result["nodes"] if n["name"] == "MethodNode"]
+        assert len(method_nodes) == 1
+        methods = method_nodes[0]["methods"]
+        compute_methods = [m for m in methods if m["name"] == "compute"]
+        assert len(compute_methods) == 1
+        assert "x: int" in compute_methods[0]["params"]
+        assert compute_methods[0]["return_type"] == "bool"
+
+
+# ========================================================================
+# Schema._field_to_dict and Schema._method_to_dict static methods
+# ========================================================================
+class TestSchemaFieldToDict:
+    def test_field_with_default(self, clear_registries):
+        """Serializes a field with a default value."""
+
+        class FtdNode(Node):
+            count: int = 10
+
+        desc = _FieldDescription(FtdNode, "count")
+        result = Schema._field_to_dict(desc, FtdNode)
+        assert result["name"] == "count"
+        assert result["type"] == "int"
+        assert result["default"] == "10"
+        assert isinstance(result["local"], bool)
+        assert result["exclude"] is False
+
+    def test_field_without_default(self, clear_registries):
+        """Serializes a field without a default value (PydanticUndefined)."""
+
+        class ReqNode(Node):
+            required_field: str
+
+        desc = _FieldDescription(ReqNode, "required_field")
+        result = Schema._field_to_dict(desc, ReqNode)
+        assert result["name"] == "required_field"
+        assert result["default"] is None
+
+
+class TestSchemaMethodToDict:
+    def test_method_serialization(self, clear_registries):
+        """Serializes a method description to a dict."""
+
+        class MtdNode(Node):
+            def do_work(self, a: int, b: str = "hi") -> bool:
+                """Stub for method dict testing."""
+                return True
+
+        desc = _MethodDescription(MtdNode, "do_work")
+        result = Schema._method_to_dict(desc, MtdNode)
+        assert result["name"] == "do_work"
+        assert "a: int" in result["params"]
+        assert "b: str" in result["params"]
+        assert result["return_type"] == "bool"
+        assert isinstance(result["local"], bool)
+
+
+# ========================================================================
+# Schema._validate_edge_connections static method
+# ========================================================================
+class TestSchemaValidateEdgeConnections:
+    def test_valid_connections(self, clear_registries):
+        """No errors when all referenced nodes exist."""
+
+        class ValSrc(Node):
+            pass
+
+        class ValDst(Node):
+            pass
+
+        errors = Schema._validate_edge_connections("TestEdge", [("ValSrc", "ValDst")])
+        assert errors == []
+
+    def test_missing_src(self, clear_registries):
+        """Reports error for missing source node."""
+
+        class ValDst2(Node):
+            pass
+
+        errors = Schema._validate_edge_connections("TestEdge", [("Missing", "ValDst2")])
+        assert len(errors) == 1
+        assert "Missing" in errors[0]
+
+    def test_missing_dst(self, clear_registries):
+        """Reports error for missing destination node."""
+
+        class ValSrc2(Node):
+            pass
+
+        errors = Schema._validate_edge_connections("TestEdge", [("ValSrc2", "Missing")])
+        assert len(errors) == 1
+        assert "Missing" in errors[0]
+
+    def test_both_missing(self, clear_registries):
+        """Reports errors for both missing src and dst."""
+        errors = Schema._validate_edge_connections("TestEdge", [("MissA", "MissB")])
+        assert len(errors) == 2

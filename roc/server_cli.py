@@ -28,6 +28,7 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     import uvicorn
 
     from roc.config import Config
+    from roc.dashboard_cli import _mount_static_files, _resolve_ssl_certs
     from roc.reporting.api_server import app, sio
 
     cfg = Config.get()
@@ -44,28 +45,7 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
 
     srv._data_store = DataStore(data_dir=data_dir)
 
-    # Read SSL certs: Config.get() reads from .env if available
-    ssl_certfile = cfg.ssl_certfile if cfg.ssl_certfile else None
-    ssl_keyfile = cfg.ssl_keyfile if cfg.ssl_keyfile else None
-
-    # Fall back to reading .env directly if Config didn't pick up SSL.
-    if not ssl_certfile:
-        project_root = Path(__file__).parent.parent
-        env_path = Path.cwd() / ".env"
-        if not env_path.exists():
-            env_path = project_root / ".env"
-        if env_path.exists():
-            for line in env_path.read_text().splitlines():
-                line = line.strip()
-                if line.startswith("roc_ssl_certfile="):
-                    val = line.split("=", 1)[1].strip().strip('"')
-                    if Path(val).exists():
-                        ssl_certfile = val
-                elif line.startswith("roc_ssl_keyfile="):
-                    val = line.split("=", 1)[1].strip().strip('"')
-                    if Path(val).exists():
-                        ssl_keyfile = val
-
+    ssl_certfile, ssl_keyfile = _resolve_ssl_certs(cfg)
     proto = "https" if ssl_certfile else "http"
 
     # Initialize game manager for /api/game/* endpoints
@@ -80,13 +60,7 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
 
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
-
-    # Try to mount React static build if it exists
-    from fastapi.staticfiles import StaticFiles
-
-    dist_dir = Path(__file__).parent.parent / "dashboard-ui" / "dist"
-    if dist_dir.is_dir():
-        app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="static")
+    _mount_static_files(app)
 
     click.echo(f"ROC server at {proto}://{host}:{port}")
     click.echo(f"Data directory: {data_dir}")

@@ -39,7 +39,7 @@ def restore_component_state():
     eventbus_names.clear()
     eventbus_names.update(saved_bus_names)
     # Clean up any components we created
-    for c in list(component_set):
+    for c in [*component_set]:
         if c not in saved_set_refs:
             component_set.discard(c)
 
@@ -97,6 +97,7 @@ class TestComponentInitSubclass:
             name = "dup_comp"
             type = "unit_test_dup"
 
+        _ = _DupComp1
         with pytest.raises(ValueError, match="duplicate component name"):
 
             class _DupComp2(Component):
@@ -128,6 +129,7 @@ class TestComponentGetAndDeregister:
             name = "dereg_comp"
             type = "unit_test_dereg"
 
+        _ = _DeregComp
         key = _component_registry_key("dereg_comp", "unit_test_dereg")
         assert key in component_registry
         Component.deregister("dereg_comp", "unit_test_dereg")

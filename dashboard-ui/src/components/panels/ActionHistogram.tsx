@@ -77,7 +77,7 @@ export function buildBins(
     return bins;
 }
 
-export function ActionHistogram({ run, game }: ActionHistogramProps) {
+export function ActionHistogram({ run, game }: Readonly<ActionHistogramProps>) {
     const { data: history } = useActionHistory(run, game);
     const { data: actionMap } = useActionMap(run);
 

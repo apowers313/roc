@@ -20,7 +20,7 @@ interface SchemaPanelProps {
     run: string;
 }
 
-export function SchemaPanel({ run }: SchemaPanelProps) {
+export function SchemaPanel({ run }: Readonly<SchemaPanelProps>) {
     const { data: schema, isLoading, error } = useSchema(run);
 
     if (isLoading) {
@@ -81,7 +81,7 @@ export function SchemaPanel({ run }: SchemaPanelProps) {
                                     <Badge variant="light" color="blue" size="xs">
                                         {node.fields.filter((f) => f.local && !f.exclude).length} fields
                                     </Badge>
-                                    {node.methods.filter((m) => m.local).length > 0 && (
+                                    {node.methods.some((m) => m.local) && (
                                         <Badge variant="light" color="teal" size="xs">
                                             {node.methods.filter((m) => m.local).length} methods
                                         </Badge>
@@ -90,7 +90,7 @@ export function SchemaPanel({ run }: SchemaPanelProps) {
                             </Accordion.Control>
                             <Accordion.Panel>
                                 <Stack gap="xs">
-                                    {node.fields.filter((f) => !f.exclude).length > 0 && (
+                                    {node.fields.some((f) => !f.exclude) && (
                                         <ScrollArea>
                                             <Table striped highlightOnHover withTableBorder withColumnBorders fz="xs">
                                                 <Table.Thead>
@@ -113,14 +113,14 @@ export function SchemaPanel({ run }: SchemaPanelProps) {
                                                                     <Text size="xs" c="dimmed">{f.type}</Text>
                                                                 </Table.Td>
                                                                 <Table.Td>
-                                                                    {f.default != null ? (
+                                                                    {f.default == null ? (
+                                                                        <Text size="xs" c="dimmed">--</Text>
+                                                                    ) : (
                                                                         <Tooltip label={f.default} withArrow>
                                                                             <Text size="xs" c="dimmed" truncate="end" maw={200}>
                                                                                 {f.default}
                                                                             </Text>
                                                                         </Tooltip>
-                                                                    ) : (
-                                                                        <Text size="xs" c="dimmed">--</Text>
                                                                     )}
                                                                 </Table.Td>
                                                                 <Table.Td>
@@ -219,8 +219,8 @@ export function SchemaPanel({ run }: SchemaPanelProps) {
                                             </Table.Tr>
                                         </Table.Thead>
                                         <Table.Tbody>
-                                            {edge.connections.map(([src, dst], i) => (
-                                                <Table.Tr key={i}>
+                                            {edge.connections.map(([src, dst]) => (
+                                                <Table.Tr key={`${src}-${dst}`}>
                                                     <Table.Td>
                                                         <Code>{src}</Code>
                                                     </Table.Td>
@@ -237,7 +237,7 @@ export function SchemaPanel({ run }: SchemaPanelProps) {
                                         </Table.Tbody>
                                     </Table>
                                 </ScrollArea>
-                                {edge.fields.filter((f) => f.local && !f.exclude).length > 0 && (
+                                {edge.fields.some((f) => f.local && !f.exclude) && (
                                     <>
                                         <Text size="xs" fw={600} mt={8} mb={4}>Fields</Text>
                                         <ScrollArea>

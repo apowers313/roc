@@ -25,7 +25,7 @@ __all__ = [
     # Component Exports
     "Component",
     # Gym Exports
-    "GymComponent",
+    "NethackGym",
     # Perception Interface Exports
     "Perception",
     "PerceptionData",
@@ -64,7 +64,7 @@ def start() -> None:
     """Starts the agent."""
     global ng
     if ng is None:
-        raise Exception("Call .init() before .start()")
+        raise RuntimeError("Call .init() before .start()")
 
     if is_jupyter():
         # if running in Jupyter, start in a thread so that we can still inspect

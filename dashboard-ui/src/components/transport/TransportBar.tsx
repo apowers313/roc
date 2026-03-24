@@ -36,7 +36,7 @@ interface TransportBarProps {
     stepDataReadyRef?: React.RefObject<boolean>;
 }
 
-export function TransportBar({ connected, stepDataReadyRef }: TransportBarProps) {
+export function TransportBar({ connected, stepDataReadyRef }: Readonly<TransportBarProps>) {
     const {
         run,
         setRun,

@@ -76,7 +76,7 @@ class TestSingle:
 
         # reload node from database
         f = SingleFeature(origin_id=("foo", "bar"), type=3, point=(XLoc(1), YLoc(2)))
-        n = f.to_nodes()
+        f.to_nodes()
         assert len(cache) == 1
         assert len(cache_registry) == 1
         assert "Single" in cache_registry

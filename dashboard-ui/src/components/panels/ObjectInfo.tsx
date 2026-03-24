@@ -9,6 +9,13 @@ interface ObjectInfoProps {
     data: StepData | undefined;
 }
 
+/** Derive a stable React key from an object record. */
+function objectRowKey(obj: Record<string, unknown>): string {
+    if (typeof obj.id === "string" || typeof obj.id === "number") return String(obj.id);
+    if (typeof obj.name === "string" || typeof obj.name === "number") return String(obj.name);
+    return JSON.stringify(obj);
+}
+
 /** Extract display columns from a list of object records. */
 function getColumns(objects: Record<string, unknown>[]): string[] {
     const keys = new Set<string>();
@@ -34,11 +41,11 @@ function formatValue(v: unknown): string {
     if (v == null) return "--";
     if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
     if (typeof v === "boolean") return v ? "Y" : "N";
-    if (typeof v === "object") return JSON.stringify(v);
-    return String(v);
+    if (typeof v === "string") return v;
+    return JSON.stringify(v);
 }
 
-export function ObjectInfo({ data }: ObjectInfoProps) {
+export function ObjectInfo({ data }: Readonly<ObjectInfoProps>) {
     const objects = data?.object_info;
 
     if (!objects || objects.length === 0) {
@@ -65,11 +72,11 @@ export function ObjectInfo({ data }: ObjectInfoProps) {
                         layout="fixed"
                     >
                         <Table.Tbody>
-                            {objects.map((obj, i) => (
-                                <Table.Tr key={i}>
+                            {objects.map((obj) => (
+                                <Table.Tr key={typeof obj.raw === "string" ? obj.raw : JSON.stringify(obj)}>
                                     <Table.Td>
                                         <Text size="xs" style={{ fontFamily: "monospace" }}>
-                                            {String(obj.raw ?? JSON.stringify(obj))}
+                                            {typeof obj.raw === "string" ? obj.raw : JSON.stringify(obj.raw ?? obj)}
                                         </Text>
                                     </Table.Td>
                                 </Table.Tr>
@@ -106,8 +113,8 @@ export function ObjectInfo({ data }: ObjectInfoProps) {
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {objects.map((obj, i) => (
-                            <Table.Tr key={i}>
+                        {objects.map((obj) => (
+                            <Table.Tr key={objectRowKey(obj)}>
                                 {columns.map((col) => (
                                     <Table.Td
                                         key={col}

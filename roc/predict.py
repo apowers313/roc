@@ -14,8 +14,6 @@ from .transformer import Transformer, TransformResult
 class NoPrediction:
     """Sentinel indicating that no prediction could be made."""
 
-    None
-
 
 @dataclass
 class PredictionMeta:
@@ -71,7 +69,8 @@ class Predict(Component):
         )
         if len(candidates) == 0:
             self.last_prediction_meta = PredictionMeta(
-                made=False, candidate_count=0,
+                made=False,
+                candidate_count=0,
             )
             self.predict_conn.send(NoPrediction())
             return

@@ -7,21 +7,6 @@ import pytest
 from roc.expmod import ExpMod, expmod_registry
 
 
-@pytest.fixture(autouse=True)
-def clean_expmod_state():
-    orig_registry_snapshot = {k: set(v.keys()) for k, v in expmod_registry.items()}
-
-    yield
-
-    for modtype in list(expmod_registry.keys()):
-        if modtype not in orig_registry_snapshot:
-            del expmod_registry[modtype]
-        else:
-            for name in list(expmod_registry[modtype].keys()):
-                if name not in orig_registry_snapshot[modtype]:
-                    del expmod_registry[modtype][name]
-
-
 class TestParamsDict:
     def test_params_dict_returns_public_attrs(self):
         class TestExpMod(ExpMod):
@@ -33,10 +18,11 @@ class TestParamsDict:
                 super().__init__()
                 self.threshold = 0.5
 
+        _ = TestExpMod
         instance = expmod_registry["test-params-public"]["test"]
         result = instance.params_dict()
         assert "threshold" in result
-        assert result["threshold"] == 0.5
+        assert result["threshold"] == pytest.approx(0.5)
 
     def test_params_dict_excludes_private(self):
         class TestExpMod(ExpMod):
@@ -48,6 +34,7 @@ class TestParamsDict:
                 self._internal = "secret"
                 self.visible = 42
 
+        _ = TestExpMod
         instance = expmod_registry["test-params-private"]["test"]
         result = instance.params_dict()
         assert "_internal" not in result
@@ -64,6 +51,7 @@ class TestParamsDict:
                 self.value = 10
                 self.my_func = lambda: 42
 
+        _ = TestExpMod
         instance = expmod_registry["test-params-callable"]["test"]
         result = instance.params_dict()
         assert "value" in result

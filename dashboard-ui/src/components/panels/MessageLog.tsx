@@ -8,7 +8,7 @@ interface MessageLogProps {
     data: StepData | undefined;
 }
 
-export function MessageLog({ data }: MessageLogProps) {
+export function MessageLog({ data }: Readonly<MessageLogProps>) {
     const msg = data?.message;
 
     if (!msg) {

@@ -174,12 +174,10 @@ describe("TransportBar onChange handlers", () => {
                     break;
                 }
             }
-            if (!speedInput) {
-                // Fallback: just use the last input
-                speedInput = speedInputs[speedInputs.length - 1]!;
-            }
+            // Fallback: just use the last input
+            speedInput ??= speedInputs[speedInputs.length - 1]!;
 
-            const selected = await selectFirstOption(speedInput);
+            await selectFirstOption(speedInput);
             // Just verify no crash
             expect(speedInput).toBeInTheDocument();
         });

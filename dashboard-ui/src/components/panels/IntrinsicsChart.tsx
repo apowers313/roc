@@ -28,7 +28,7 @@ interface IntrinsicsChartProps {
     onStepClick?: (step: number) => void;
 }
 
-export function IntrinsicsChart({ run, game, currentStep, onStepClick }: IntrinsicsChartProps) {
+export function IntrinsicsChart({ run, game, currentStep, onStepClick }: Readonly<IntrinsicsChartProps>) {
     const { data: history } = useIntrinsicsHistory(run, game);
 
     if (!history || history.length === 0) {

@@ -13,7 +13,6 @@ interface BookmarkBarProps {
     isBookmarked: boolean;
     onToggle: () => void;
     onNavigate: (bookmark: { step: number; game: number }) => void;
-    onAnnotate: (step: number, annotation: string) => void;
 }
 
 export function BookmarkBar({
@@ -24,7 +23,7 @@ export function BookmarkBar({
     isBookmarked,
     onToggle,
     onNavigate,
-}: BookmarkBarProps) {
+}: Readonly<BookmarkBarProps>) {
     const range = stepMax - stepMin;
 
     return (
@@ -62,11 +61,15 @@ export function BookmarkBar({
                             ? `Step ${b.step}: ${b.annotation}`
                             : `Step ${b.step}`;
                         return (
-                            <div
+                            <button
                                 key={b.step}
+                                type="button"
                                 data-testid="bookmark-marker"
                                 title={label}
                                 onClick={() => onNavigate(b)}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") onNavigate(b);
+                                }}
                                 style={{
                                     position: "absolute",
                                     left: `${pct}%`,
@@ -81,7 +84,10 @@ export function BookmarkBar({
                                             : "#fab005",
                                     cursor: "pointer",
                                     opacity: b.step === currentStep ? 1 : 0.7,
+                                    border: "none",
+                                    padding: 0,
                                 }}
+                                aria-label={label}
                             />
                         );
                     })}

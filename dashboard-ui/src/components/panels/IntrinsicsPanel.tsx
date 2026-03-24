@@ -8,13 +8,19 @@ interface IntrinsicsPanelProps {
     data: StepData | undefined;
 }
 
+function normBarColor(v: number): string {
+    if (v > 0.7) return "red";
+    if (v > 0.3) return "yellow";
+    return "blue";
+}
+
 function sigColor(v: number): string {
     if (v > 0.5) return "red";
     if (v > 0.1) return "yellow";
     return "green";
 }
 
-export function IntrinsicsPanel({ data }: IntrinsicsPanelProps) {
+export function IntrinsicsPanel({ data }: Readonly<IntrinsicsPanelProps>) {
     const intr = data?.intrinsics;
     const sig = data?.significance;
 
@@ -28,7 +34,7 @@ export function IntrinsicsPanel({ data }: IntrinsicsPanelProps) {
 
     const normalized = intr.normalized ?? {};
     const raw = intr.raw ?? {};
-    const keys = Object.keys(normalized).sort();
+    const keys = Object.keys(normalized).sort((a, b) => a.localeCompare(b));
 
     return (
         <Stack gap="xs">
@@ -52,13 +58,13 @@ export function IntrinsicsPanel({ data }: IntrinsicsPanelProps) {
                                 {k}
                             </Text>
                             <Text size="xs" ff="monospace">
-                                {rawVal != null ? String(rawVal) : "--"}
+                                {rawVal == null ? "--" : String(rawVal)}
                             </Text>
                         </Group>
                         <Progress
                             value={Math.min(Math.max(norm * 100, 0), 100)}
                             size="sm"
-                            color={norm > 0.7 ? "red" : norm > 0.3 ? "yellow" : "blue"}
+                            color={normBarColor(norm)}
                         />
                     </div>
                 );

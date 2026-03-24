@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import IntGrid, XLoc, YLoc
 from ..perception import (
     FeatureExtractor,
@@ -54,7 +55,7 @@ class DeltaFeature(VisualFeature[DeltaNode]):
         """Looks up an existing DeltaNode by old and new values."""
         return DeltaNode.find_one(
             "src.old_val = $old_val AND src.new_val = $new_val",
-            params={"old_val": self.old_val, "new_val": self.new_val},
+            query_opts=FindQueryOpts(params={"old_val": self.old_val, "new_val": self.new_val}),
         )
 
 

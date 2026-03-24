@@ -2,14 +2,14 @@ import "@testing-library/jest-dom/vitest";
 
 // Mantine's ScrollArea uses ResizeObserver which jsdom doesn't implement.
 class ResizeObserverStub {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe() { /* stub for jsdom */ }
+    unobserve() { /* stub for jsdom */ }
+    disconnect() { /* stub for jsdom */ }
 }
-window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
 
-// Mantine requires window.matchMedia which jsdom doesn't implement.
-Object.defineProperty(window, "matchMedia", {
+// Mantine requires globalThis.matchMedia which jsdom doesn't implement.
+Object.defineProperty(globalThis, "matchMedia", {
     writable: true,
     value: (query: string) => ({
         matches: false,

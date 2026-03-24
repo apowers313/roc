@@ -11,6 +11,34 @@ interface GameState {
     error?: string | null;
 }
 
+function getGameIconColor(isRunning: boolean, isStopping: boolean): string | undefined {
+    if (isRunning) return "var(--mantine-color-green-5)";
+    if (isStopping) return "var(--mantine-color-yellow-5)";
+    return undefined;
+}
+
+function GameStatusLabel({ isRunning, isStopping }: Readonly<{ isRunning: boolean; isStopping: boolean }>) {
+    if (isRunning) {
+        return (
+            <Badge color="green" size="xs" variant="filled">
+                Game Running
+            </Badge>
+        );
+    }
+    if (isStopping) {
+        return (
+            <Badge color="yellow" size="xs" variant="filled">
+                Stopping...
+            </Badge>
+        );
+    }
+    return (
+        <Text size="xs" c="dimmed">
+            No game running
+        </Text>
+    );
+}
+
 function GameMenu() {
     const [gameState, setGameState] = useState<GameState>({ state: "idle" });
     const [numGames, setNumGames] = useState<number>(5);
@@ -62,7 +90,7 @@ function GameMenu() {
         gameState.state === "running" || gameState.state === "initializing";
     const isStopping = gameState.state === "stopping";
 
-    const iconColor = isRunning ? "var(--mantine-color-green-5)" : isStopping ? "var(--mantine-color-yellow-5)" : undefined;
+    const iconColor = getGameIconColor(isRunning, isStopping);
 
     return (
         <Menu position="bottom-start" withArrow shadow="md" onOpen={() => void refreshStatus()}>
@@ -84,19 +112,7 @@ function GameMenu() {
 
             <Menu.Dropdown>
                 <Menu.Label>
-                    {isRunning ? (
-                        <Badge color="green" size="xs" variant="filled">
-                            Game Running
-                        </Badge>
-                    ) : isStopping ? (
-                        <Badge color="yellow" size="xs" variant="filled">
-                            Stopping...
-                        </Badge>
-                    ) : (
-                        <Text size="xs" c="dimmed">
-                            No game running
-                        </Text>
-                    )}
+                    <GameStatusLabel isRunning={isRunning} isStopping={isStopping} />
                 </Menu.Label>
 
                 {gameState.error && !isRunning && (
@@ -154,7 +170,7 @@ function CopyLinkButton() {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = useCallback(() => {
-        void navigator.clipboard.writeText(window.location.href).then(() => {
+        void navigator.clipboard.writeText(globalThis.location.href).then(() => {
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
         });

@@ -117,7 +117,7 @@ class ExpMod:
             raise NotImplementedError(f"{cls.__name__} must implement class attribute 'name'")
 
         if cls.name in expmod_registry[cls.modtype]:
-            raise Exception(
+            raise ValueError(
                 f"ExpMod.register attempting to register duplicate name '{cls.name}' for module '{cls.modtype}'"
             )
         expmod_registry[cls.modtype][cls.name] = cls()
@@ -150,7 +150,7 @@ class ExpMod:
             else default
         )
         if name is None:
-            raise Exception(f"ExpMod couldn't get module for type: '{modtype}'")
+            raise LookupError(f"ExpMod couldn't get module for type: '{modtype}'")
 
         return cast(Self, expmod_registry[modtype][name])
 
@@ -169,10 +169,10 @@ class ExpMod:
             modtype = cls.modtype
 
         if modtype not in expmod_registry:
-            raise Exception(f"ExpMod.set can't find module for type: '{modtype}'")
+            raise LookupError(f"ExpMod.set can't find module for type: '{modtype}'")
 
         if name not in expmod_registry[modtype]:
-            raise Exception(
+            raise LookupError(
                 f"ExpMod.set can't find module for name: '{name}' in module '{modtype}'"
             )
 
@@ -213,36 +213,42 @@ class ExpMod:
 
         Raises:
             FileNotFoundError: If any listed module file cannot be found in any search path.
-            Exception: If ``expmods_use`` contains duplicate modtype entries.
+            ValueError: If ``expmods_use`` contains duplicate modtype entries.
         """
         settings = Config.get()
+        _load_expmod_files(settings)
+        _activate_expmods(settings)
 
-        mods = settings.expmods.copy()
-        basepaths = settings.expmod_dirs.copy()
-        basepaths.insert(0, "")
 
-        # load module files
-        missing_mods: list[str] = []
-        for base in basepaths:
-            for mod in mods:
-                file = mod if mod.endswith(".py") else mod + ".py"
-                try:
-                    expmod_loaded[mod] = ExpMod.import_file(file, base)
-                except FileNotFoundError:
-                    missing_mods.append(mod)
-            mods = missing_mods.copy()
-            missing_mods.clear()
+def _load_expmod_files(settings: Config) -> None:
+    """Load module files from configured search paths."""
+    mods = settings.expmods.copy()
+    basepaths = settings.expmod_dirs.copy()
+    basepaths.insert(0, "")
 
-        if len(mods) > 0:
-            raise FileNotFoundError(f"could not load experiment modules: {mods}")
+    missing_mods: list[str] = []
+    for base in basepaths:
+        for mod in mods:
+            file = mod if mod.endswith(".py") else mod + ".py"
+            try:
+                expmod_loaded[mod] = ExpMod.import_file(file, base)
+            except FileNotFoundError:
+                missing_mods.append(mod)
+        mods = missing_mods.copy()
+        missing_mods.clear()
 
-        # set modules
-        mod_name_count = Counter([m[0] for m in settings.expmods_use])
-        duplicate_names = {k: v for k, v in mod_name_count.items() if v > 1}
-        if len(duplicate_names) > 0:
-            dupes = ", ".join(duplicate_names.keys())
-            raise Exception(f"ExpMod.init found multiple attempts to set the same modules: {dupes}")
+    if len(mods) > 0:
+        raise FileNotFoundError(f"could not load experiment modules: {mods}")
 
-        for mod_tn in settings.expmods_use:
-            t, n = mod_tn
-            ExpMod.set(name=n, modtype=t)
+
+def _activate_expmods(settings: Config) -> None:
+    """Activate experiment modules from configuration, checking for duplicates."""
+    mod_name_count = Counter([m[0] for m in settings.expmods_use])
+    duplicate_names = {k: v for k, v in mod_name_count.items() if v > 1}
+    if len(duplicate_names) > 0:
+        dupes = ", ".join(duplicate_names.keys())
+        raise ValueError(f"ExpMod.init found multiple attempts to set the same modules: {dupes}")
+
+    for mod_tn in settings.expmods_use:
+        t, n = mod_tn
+        ExpMod.set(name=n, modtype=t)

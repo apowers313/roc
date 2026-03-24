@@ -33,6 +33,10 @@ from .reporting.observability import Observability
 
 _otel_logger = Observability.get_logger("roc.resolution")
 
+# OTel attribute/metric name constants (S1192: extract duplicated string literals).
+_METRIC_RESOLUTION_DECISION = "roc.resolution.decision"
+_OTEL_ATTR_EVENT_NAME = "event.name"
+
 if TYPE_CHECKING:
     from .sequencer import Frame
 
@@ -157,6 +161,48 @@ class ResolutionContext:
     tick: int
 
 
+@dataclass
+class ResolutionLogData:
+    """Data collected during resolution for structured logging."""
+
+    feature_strs: list[str]
+    context: ResolutionContext
+    observed_attrs: dict[str, Any] | None = None
+    log_posteriors: dict[NodeId | str, float] | None = None
+
+
+@dataclass
+class SpatialNodeAttrs:
+    """Visual attributes from a spatial feature node (FloodNode or LineNode)."""
+
+    shape: int
+    glyph_type: int
+    color: int
+    type_name: str
+
+
+def _apply_spatial_node_attrs(
+    result: dict[str, Any],
+    attrs: SpatialNodeAttrs,
+    *,
+    override_type: bool = False,
+) -> None:
+    """Apply char/glyph/color/type from a spatial node (FloodNode or LineNode).
+
+    Args:
+        result: The visual-attrs dict being built.
+        attrs: The spatial node attributes to apply.
+        override_type: If True, always set "type"; otherwise only set if absent.
+    """
+    result.setdefault("char", chr(attrs.shape))
+    result.setdefault("glyph", attrs.glyph_type)
+    result.setdefault("color", _COLOR_NAMES.get(attrs.color, str(attrs.color)))
+    if override_type:
+        result["type"] = attrs.type_name
+    else:
+        result.setdefault("type", attrs.type_name)
+
+
 def _extract_visual_attrs_from_nodes(
     nodes: Iterable[FeatureNode],
 ) -> dict[str, Any]:
@@ -175,25 +221,13 @@ def _extract_visual_attrs_from_nodes(
             result["color"] = f.attr_strs[0]
         elif isinstance(f, SingleNode):
             result["glyph"] = f.type
-            if "type" not in result:
-                result["type"] = "single"
+            result.setdefault("type", "single")
         elif isinstance(f, FloodNode):
-            if "char" not in result:
-                result["char"] = chr(f.shape)
-            if "glyph" not in result:
-                result["glyph"] = f.type
-            if "color" not in result:
-                result["color"] = _COLOR_NAMES.get(f.color, str(f.color))
-            result["type"] = "flood"
+            _apply_spatial_node_attrs(
+                result, SpatialNodeAttrs(f.shape, f.type, f.color, "flood"), override_type=True
+            )
         elif isinstance(f, LineNode):
-            if "char" not in result:
-                result["char"] = chr(f.shape)
-            if "glyph" not in result:
-                result["glyph"] = f.type
-            if "color" not in result:
-                result["color"] = _COLOR_NAMES.get(f.color, str(f.color))
-            if "type" not in result:
-                result["type"] = "line"
+            _apply_spatial_node_attrs(result, SpatialNodeAttrs(f.shape, f.type, f.color, "line"))
     return result
 
 
@@ -273,7 +307,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         description="number of candidate objects per resolution",
     )
     decision_counter = Observability.meter.create_counter(
-        "roc.resolution.decision",
+        _METRIC_RESOLUTION_DECISION,
         unit="resolution",
         description="resolution outcome: match or new_object",
     )
@@ -290,69 +324,45 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         self.candidates_histogram.record(len(candidates))
         feature_strs = [str(f) for f in feature_nodes]
         observed_attrs = _extract_visual_attrs_from_nodes(feature_nodes)
+        log_data = ResolutionLogData(feature_strs, context, observed_attrs)
 
         if not candidates:
             self.decision_counter.add(1, attributes={"outcome": "new_object"})
-            self._log_decision(
-                "new_object",
-                None,
-                feature_strs,
-                candidates,
-                context,
-                observed_attrs=observed_attrs,
-            )
+            self._log_decision("new_object", None, candidates, log_data)
             return None
 
         best_obj, best_dist = candidates[0]
         if best_dist <= 1:
             self.decision_counter.add(1, attributes={"outcome": "match"})
-            self._log_decision(
-                "match",
-                best_obj,
-                feature_strs,
-                candidates,
-                context,
-                best_distance=best_dist,
-                observed_attrs=observed_attrs,
-            )
+            self._log_decision("match", best_obj, candidates, log_data, best_distance=best_dist)
             return best_obj
         self.decision_counter.add(1, attributes={"outcome": "new_object"})
-        self._log_decision(
-            "new_object",
-            None,
-            feature_strs,
-            candidates,
-            context,
-            best_distance=best_dist,
-            observed_attrs=observed_attrs,
-        )
+        self._log_decision("new_object", None, candidates, log_data, best_distance=best_dist)
         return None
 
     def _log_decision(
         self,
         outcome: str,
         matched_obj: Object | None,
-        feature_strs: list[str],
         candidates: list[tuple[Object, float]],
-        context: ResolutionContext,
+        log_data: ResolutionLogData,
         *,
         best_distance: float | None = None,
-        observed_attrs: dict[str, Any] | None = None,
     ) -> None:
         """Emit an OTel log record describing this resolution decision."""
         record: dict[str, Any] = {
             "event": "resolution_decision",
             "algorithm": self.name,
             "outcome": outcome,
-            "tick": context.tick,
-            "x": int(context.x),
-            "y": int(context.y),
-            "features": feature_strs,
+            "tick": log_data.context.tick,
+            "x": int(log_data.context.x),
+            "y": int(log_data.context.y),
+            "features": log_data.feature_strs,
             "num_candidates": len(candidates),
             "matched_object_id": matched_obj.id if matched_obj is not None else None,
         }
-        if observed_attrs:
-            record["observed_attrs"] = observed_attrs
+        if log_data.observed_attrs:
+            record["observed_attrs"] = log_data.observed_attrs
         if best_distance is not None:
             record["best_distance"] = best_distance
         if matched_obj is not None:
@@ -373,7 +383,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
                 severity_number=SeverityNumber.INFO,
                 severity_text="INFO",
                 body=json.dumps(record, default=str),
-                attributes={"event.name": "roc.resolution.decision"},
+                attributes={_OTEL_ATTR_EVENT_NAME: _METRIC_RESOLUTION_DECISION},
                 trace_id=span_context.trace_id,
                 span_id=span_context.span_id,
                 trace_flags=span_context.trace_flags,
@@ -505,19 +515,12 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
 
         # Extract visual attrs from ALL feature nodes (before exclusion filtering)
         observed_attrs = _extract_visual_attrs_from_nodes(feature_nodes)
+        log_data = ResolutionLogData(feature_strs, context, observed_attrs)
 
         if not candidates:
             self.dirichlet_decision_counter.add(1, attributes={"outcome": "new_object"})
-            self._log_decision(
-                "new_object",
-                None,
-                feature_strs,
-                [],
-                {},
-                context,
-                observed_attrs=observed_attrs,
-                reason="no_candidates",
-            )
+            log_data.log_posteriors = {}
+            self._log_decision("new_object", None, [], log_data, reason="no_candidates")
             return None
 
         # Step 2: Compute priors (candidates + "new" hypothesis)
@@ -537,14 +540,12 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             self._update_alphas(result.id, feature_strs)
 
         # Log the decision
+        log_data.log_posteriors = log_posteriors
         self._log_decision(
             "match" if result is not None else "new_object",
             result,
-            feature_strs,
             candidates,
-            log_posteriors,
-            context,
-            observed_attrs=observed_attrs,
+            log_data,
         )
 
         return result
@@ -723,16 +724,14 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         self,
         outcome: str,
         matched_obj: Object | None,
-        feature_strs: list[str],
         candidates: list[Object],
-        log_posteriors: dict[NodeId | str, float],
-        context: ResolutionContext,
+        log_data: ResolutionLogData,
         *,
-        observed_attrs: dict[str, Any] | None = None,
         reason: str = "",
     ) -> None:
         """Emit an OTel log record describing this resolution decision."""
         # Build posteriors summary sorted by probability
+        log_posteriors = log_data.log_posteriors or {}
         posteriors_summary: list[tuple[str, float]] = []
         for k, lp in sorted(log_posteriors.items(), key=lambda x: x[1], reverse=True):
             posteriors_summary.append((str(k), round(math.exp(lp), 6)))
@@ -742,18 +741,18 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             "algorithm": self.name,
             "outcome": outcome,
             "reason": reason,
-            "tick": context.tick,
-            "x": int(context.x),
-            "y": int(context.y),
-            "features": feature_strs,
+            "tick": log_data.context.tick,
+            "x": int(log_data.context.x),
+            "y": int(log_data.context.y),
+            "features": log_data.feature_strs,
             "num_candidates": len(candidates),
             "posteriors": posteriors_summary,
             "matched_object_id": matched_obj.id if matched_obj is not None else None,
             "vocab_size": len(self._global_vocab),
             "total_objects_tracked": len(self._alphas),
         }
-        if observed_attrs:
-            record["observed_attrs"] = observed_attrs
+        if log_data.observed_attrs:
+            record["observed_attrs"] = log_data.observed_attrs
 
         if matched_obj is not None:
             record["matched_attrs"] = _extract_visual_attrs(matched_obj)
@@ -782,7 +781,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
                 severity_number=SeverityNumber.INFO,
                 severity_text="INFO",
                 body=json.dumps(record, default=str),
-                attributes={"event.name": "roc.resolution.decision"},
+                attributes={_OTEL_ATTR_EVENT_NAME: _METRIC_RESOLUTION_DECISION},
                 trace_id=span_context.trace_id,
                 span_id=span_context.span_id,
                 trace_flags=span_context.trace_flags,
@@ -841,6 +840,65 @@ class ObjectResolver(Component):
         """Only process events from the vision attention component."""
         return e.src_id.name == "vision" and e.src_id.type == "attention"
 
+    def _record_existing_match(self, o: Object, x: XLoc, y: YLoc, current_tick: int) -> None:
+        """Record metrics for an existing object match."""
+        self.resolved_object_counter.add(1, attributes={"new": False})
+        o.resolve_count += 1
+        logger.debug("object resolved: matched existing id={}", o.uuid)
+        if o.last_x is not None and o.last_y is not None:
+            dist = abs(int(x) - int(o.last_x)) + abs(int(y) - int(o.last_y))
+            self.spatial_distance_histogram.record(dist)
+        if o.last_tick > 0:
+            gap = current_tick - o.last_tick
+            self.temporal_gap_histogram.record(gap)
+
+    def _handle_new_object(
+        self,
+        fg: FeatureGroup,
+        x: XLoc,
+        y: YLoc,
+        resolution: ObjectResolutionExpMod,
+    ) -> Object:
+        """Create a new object and emit related telemetry."""
+        self.resolved_object_counter.add(1, attributes={"new": True})
+        o = Object.with_features(fg)
+        logger.info(
+            "object resolved: NEW object id={} at ({},{}) features={}",
+            o.uuid,
+            x,
+            y,
+            [str(f) for f in fg.feature_nodes],
+        )
+        if hasattr(resolution, "initialize_alphas"):
+            feature_strs = [str(f) for f in fg.feature_nodes]
+            resolution.initialize_alphas(o.id, feature_strs)
+
+        from roc.reporting.state import State
+
+        current_res = State.get_states().resolution.val
+        if isinstance(current_res, dict):
+            current_res["new_object_id"] = o.id
+
+        self._emit_new_object_event(o)
+        return o
+
+    @staticmethod
+    def _emit_new_object_event(o: Object) -> None:
+        """Emit an OTel event linking this step to the new object ID."""
+        span_context = otel_trace.get_current_span().get_span_context()
+        _otel_logger.emit(
+            LogRecord(
+                timestamp=time_ns(),
+                severity_number=SeverityNumber.INFO,
+                severity_text="INFO",
+                body=json.dumps({"new_object_id": o.id}, default=str),
+                attributes={_OTEL_ATTR_EVENT_NAME: "roc.resolution.new_object_id"},
+                trace_id=span_context.trace_id,
+                span_id=span_context.span_id,
+                trace_flags=span_context.trace_flags,
+            )
+        )
+
     @Observability.tracer.start_as_current_span("do_object_resolution")
     def do_object_resolution(self, e: AttentionEvent) -> None:
         """Resolves the highest-saliency focus point to an existing or new object."""
@@ -860,54 +918,9 @@ class ObjectResolver(Component):
         o = resolution.resolve(fg.feature_nodes, fg, ctx)
 
         if o is not None:
-            self.resolved_object_counter.add(1, attributes={"new": False})
-            o.resolve_count += 1
-            logger.debug("object resolved: matched existing id={}", o.uuid)
-            if o.last_x is not None and o.last_y is not None:
-                dist = abs(int(x) - int(o.last_x)) + abs(int(y) - int(o.last_y))
-                self.spatial_distance_histogram.record(dist)
-            if o.last_tick > 0:
-                gap = current_tick - o.last_tick
-                self.temporal_gap_histogram.record(gap)
+            self._record_existing_match(o, x, y, current_tick)
         else:
-            self.resolved_object_counter.add(1, attributes={"new": True})
-            o = Object.with_features(fg)
-            logger.info(
-                "object resolved: NEW object id={} at ({},{}) features={}",
-                o.uuid,
-                x,
-                y,
-                [str(f) for f in fg.feature_nodes],
-            )
-            # Initialize alphas for the new object in the ExpMod
-            if hasattr(resolution, "initialize_alphas"):
-                feature_strs = [str(f) for f in fg.feature_nodes]
-                resolution.initialize_alphas(o.id, feature_strs)
-
-            # Update the resolution state with the new object's ID so the
-            # dashboard can track all objects by their node ID.
-            from roc.reporting.state import State
-
-            current_res = State.get_states().resolution.val
-            if isinstance(current_res, dict):
-                current_res["new_object_id"] = o.id
-
-            # Emit a lightweight OTel event linking this step to the new object ID.
-            # The resolution _log_decision fires before the object exists, so this
-            # supplements it with the node ID for historical queries.
-            span_context = otel_trace.get_current_span().get_span_context()
-            _otel_logger.emit(
-                LogRecord(
-                    timestamp=time_ns(),
-                    severity_number=SeverityNumber.INFO,
-                    severity_text="INFO",
-                    body=json.dumps({"new_object_id": o.id}, default=str),
-                    attributes={"event.name": "roc.resolution.new_object_id"},
-                    trace_id=span_context.trace_id,
-                    span_id=span_context.span_id,
-                    trace_flags=span_context.trace_flags,
-                )
-            )
+            o = self._handle_new_object(fg, x, y, resolution)
 
         o.last_x = XLoc(int(x))
         o.last_y = YLoc(int(y))

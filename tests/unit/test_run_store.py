@@ -498,7 +498,7 @@ class TestGetStepDataEvents:
         store = RunStore(dl_store)
         sd = store.get_step_data(1)
         assert sd.attenuation is not None
-        assert sd.attenuation["base"] == 0.5
+        assert sd.attenuation["base"] == pytest.approx(0.5)
         # saliency_grid and focus_points should be filtered out
         assert "saliency_grid" not in sd.attenuation
 
@@ -578,7 +578,7 @@ class TestGetStepDataNewEvents:
         sd = store.get_step_data(1)
         assert sd.intrinsics is not None
         assert sd.intrinsics["raw"]["hp"] == 14
-        assert sd.intrinsics["normalized"]["hp"] == 0.5
+        assert sd.intrinsics["normalized"]["hp"] == pytest.approx(0.5)
 
     def test_includes_significance(self, tmp_path: Path):
         dl_store = DuckLakeStore(tmp_path)
@@ -596,7 +596,7 @@ class TestGetStepDataNewEvents:
         store = RunStore(dl_store)
         sd = store.get_step_data(1)
         assert sd.significance is not None
-        assert sd.significance == 10.5
+        assert sd.significance == pytest.approx(10.5)
 
     def test_includes_action(self, tmp_path: Path):
         dl_store = DuckLakeStore(tmp_path)
@@ -1825,12 +1825,12 @@ class TestParseFeatureAttrs:
     def test_composite_with_special_shape_chars(self):
         # comma as shape character
         features = ["FloodNode(100,5,1,,)"]
-        shape, color, glyph = parse_feature_attrs(features)
+        shape, _color, _glyph = parse_feature_attrs(features)
         assert shape == ","
 
         # closing paren as shape character
         features = ["FloodNode(100,5,1,))"]
-        shape, color, glyph = parse_feature_attrs(features)
+        shape, _color2, _glyph2 = parse_feature_attrs(features)
         assert shape == ")"
 
     def test_no_recognized_features(self):

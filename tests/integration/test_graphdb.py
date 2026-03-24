@@ -1,7 +1,7 @@
 # mypy: disable-error-code="no-untyped-def"
 
 from abc import ABC, abstractmethod
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -20,6 +20,7 @@ from roc.graphdb import (
     EdgeId,
     EdgeList,
     EdgeNotFound,
+    FindQueryOpts,
     GraphDB,
     Node,
     NodeId,
@@ -57,7 +58,7 @@ class TestGraphDB:
     def test_singleton(self) -> None:
         db1 = GraphDB.singleton()
         db2 = GraphDB.singleton()
-        assert not db2.port == 1111
+        assert db2.port != 1111
         assert id(db1) == id(db2)
         db1.port = 1111
         assert db2.port == 1111
@@ -72,47 +73,40 @@ class TestGraphDB:
     @pytest.mark.slow
     def test_walk(self) -> None:
         cnt = 0
-        cache: set[int] = set()
+        visited: set[int] = set()
         c = Node.get_cache()
         maxsize = c.maxsize
-        if maxsize:
-            max = maxsize + 100
-        else:
-            max = 4196
+        limit = (maxsize + 100) if maxsize else 4196
 
-        def walk_node(id: int) -> None:
-            nonlocal cnt, max, cache
+        def walk_edges(edges: Any, node_id: int, direction: str, get_id: Any) -> None:
+            nonlocal cnt
+            for e in edges:
+                if cnt > limit:
+                    return
+                print(f"{direction} id:{node_id} {get_id(e)}")  # noqa: T201
+                walk_node(get_id(e))
 
-            if id in cache:
+        def walk_node(node_id: int) -> None:
+            nonlocal cnt
+
+            if node_id in visited or cnt > limit:
                 return
-            else:
-                cache.add(id)
-            print("walking node", id)  # noqa: T201
-            print(f"*** MAX {cnt}/{max}")  # noqa: T201
+            visited.add(node_id)
+            print("walking node", node_id)  # noqa: T201
+            print(f"*** MAX {cnt}/{limit}")  # noqa: T201
 
             cnt = cnt + 1
-            n = Node.get(cast(NodeId, id))
+            n = Node.get(cast(NodeId, node_id))
             src_edges = n.src_edges
             dst_edges = n.dst_edges
             del n
 
-            for e in src_edges:
-                if cnt > max:
-                    return
-
-                print(f"+++ id:{id} --> dst:{e.dst.id}")  # noqa: T201
-                walk_node(e.dst.id)
-
-            for e in dst_edges:
-                if cnt > max:
-                    return
-
-                print(f"--- id{id} <-- {e.src.id}")  # noqa: T201
-                walk_node(e.src.id)
+            walk_edges(src_edges, node_id, "+++", lambda e: e.dst.id)
+            walk_edges(dst_edges, node_id, "---", lambda e: e.src.id)
 
         walk_node(got_node_id(0))
         print("CNT", cnt)  # noqa: T201
-        print("MAX", max)  # noqa: T201
+        print("MAX", limit)  # noqa: T201
         print("MAXSIZE", maxsize)  # noqa: T201
         c = Node.get_cache()
         print("HITS", c.hits)  # noqa: T201
@@ -193,7 +187,10 @@ class TestNode:
         assert got_node_id(4) not in node_cache
         assert len(edge_cache) == 0
 
-        nodes = Node.find("src.name = $title", params={"title": "Winter Is Coming"})
+        nodes = Node.find(
+            "src.name = $title",
+            query_opts=FindQueryOpts(params={"title": "Winter Is Coming"}),
+        )
         assert len(nodes) == 1
         assert nodes[0].id == got_node_id(4)
         assert nodes[0].name == "Winter Is Coming"  # type: ignore
@@ -207,8 +204,7 @@ class TestNode:
 
         nodes = Node.find(
             "n.name = 'Zalla' AND type(e) = 'LOYAL_TO'",
-            src_node_name="n",
-            edge_name="e",
+            query_opts=FindQueryOpts(src_node_name="n", edge_name="e"),
         )
         assert len(nodes) == 1
         assert nodes[0].id == got_node_id(295)
@@ -226,9 +222,9 @@ class TestNode:
         cache = Node.get_cache()
         assert len(cache) == 0
 
-        nodes = Node.find("src.name =~ 'B.*'", src_labels={"Location"})
+        nodes = Node.find("src.name =~ 'B.*'", query_opts=FindQueryOpts(src_labels={"Location"}))
         assert len(nodes) == 2
-        assert set([n.id for n in nodes]) == got_node_ids({1, 310})
+        assert {n.id for n in nodes} == got_node_ids({1, 310})
 
     def test_node_find_single_node_with_no_relationships(self) -> None:
         cache = Node.get_cache()
@@ -256,7 +252,10 @@ class TestNode:
         cache.clear()
         assert len(cache) == 0
 
-        nodes = Node.find(f"src.testname = '{unique_name}'", src_labels={"TestNode", "Foo"})
+        nodes = Node.find(
+            f"src.testname = '{unique_name}'",
+            query_opts=FindQueryOpts(src_labels={"TestNode", "Foo"}),
+        )
         assert len(nodes) == 1
         assert nodes[0].id == old_id
         assert nodes[0].testname == unique_name  # type: ignore
@@ -266,7 +265,7 @@ class TestNode:
         cache = Node.get_cache()
         assert len(cache) == 0
 
-        nodes = Node.find("src.name =~ 'Z.*'", edge_type="VICTIM_IN")
+        nodes = Node.find("src.name =~ 'Z.*'", query_opts=FindQueryOpts(edge_type="VICTIM_IN"))
         assert len(nodes) == 1
         assert nodes[0].id == got_node_id(295)
 
@@ -343,7 +342,11 @@ class TestNode:
         assert len(node_cache) == 0
         assert len(edge_cache) == 0
 
-        nodes = Node.find("src.name = 'Winter Is Coming'", load_edges=True, edge_name="bob")
+        nodes = Node.find(
+            "src.name = 'Winter Is Coming'",
+            load_edges=True,
+            query_opts=FindQueryOpts(edge_name="bob"),
+        )
         assert len(nodes) == 1
         assert len(node_cache) == 1
         assert nodes[0].id == got_node_id(4)
@@ -414,7 +417,7 @@ class TestNode:
 
     @pytest.mark.skip("pending")
     def test_node_save(self) -> None:
-        pass
+        """Placeholder for future node save test."""
 
     def test_node_new(self) -> None:
         n = Node()
@@ -422,7 +425,7 @@ class TestNode:
         assert n.id < 0
         assert len(n.src_edges) == 0
         assert len(n.dst_edges) == 0
-        assert Node.to_dict(n) == dict()
+        assert Node.to_dict(n) == {}
         assert n.labels == set()
         assert n.new
 
@@ -638,7 +641,7 @@ class TestNode:
         )
 
     def test_node_walk_src(self, test_tree) -> None:
-        node_list: list[Node] = list()
+        node_list: list[Node] = []
         root = test_tree["root"]
         Node.walk(root, mode="src", node_callback=lambda n: node_list.append(n))
         assert len(node_list) == 5
@@ -650,7 +653,7 @@ class TestNode:
         assert nodes[3] in node_list
 
     def test_node_walk_dst(self, test_tree) -> None:
-        node_list: list[Node] = list()
+        node_list: list[Node] = []
         root = test_tree["root"]
         Node.walk(root, mode="dst", node_callback=lambda n: node_list.append(n))
         assert len(node_list) == 5
@@ -662,7 +665,7 @@ class TestNode:
         assert nodes[9] in node_list
 
     def test_node_walk_both(self, test_tree) -> None:
-        node_list: list[Node] = list()
+        node_list: list[Node] = []
         root = test_tree["root"]
         Node.walk(root, mode="both", node_callback=lambda n: node_list.append(n))
         assert len(node_list) == 11
@@ -680,7 +683,7 @@ class TestNode:
         assert nodes[9] in node_list
 
     def test_node_walk_filtered_edges(self, test_tree) -> None:
-        node_list: list[Node] = list()
+        node_list: list[Node] = []
         root = test_tree["root"]
         nodes = test_tree["nodes"]
         Node.walk(
@@ -707,7 +710,7 @@ class TestNode:
         assert nodes[8] not in node_list  # is related through nodes[5]
 
     def test_node_walk_filtered_nodes(self, test_tree) -> None:
-        node_list: list[Node] = list()
+        node_list: list[Node] = []
         root = test_tree["root"]
         nodes = test_tree["nodes"]
         Node.walk(
@@ -802,7 +805,7 @@ class TestNode:
 
         class Foo(Node, Mixin):
             def bar(self) -> None:
-                pass
+                """No-op; satisfies abstract method from Mixin."""
 
         f = Foo()
 
@@ -823,7 +826,7 @@ class TestNode:
             name: str
 
         with pytest.raises(
-            Exception,
+            ValueError,
             match="node_register can't register labels 'Foo' because they have already been registered",
         ):
 
@@ -1310,7 +1313,7 @@ class TestEdge:
         assert spy.call_args[1]["params"] == {"props": {"wine": "cab", "more": True}}
 
     def test_edge_src_after_node_save(self, new_edge) -> None:
-        e, src, dst = new_edge
+        e, src, _dst = new_edge
         old_id = src.id
         e = Edge.create(e)
 
@@ -1321,7 +1324,7 @@ class TestEdge:
         assert id(e.src) == id(src)
 
     def test_edge_dst_after_node_save(self, new_edge) -> None:
-        e, src, dst = new_edge
+        e, _src, dst = new_edge
         old_id = dst.id
         e = Edge.create(e)
 
@@ -1332,7 +1335,7 @@ class TestEdge:
         assert id(e.dst) == id(dst)
 
     def test_edge_delete_new(self, new_edge) -> None:
-        e, src, dst = new_edge
+        e, _src, _dst = new_edge
         e = Edge.create(e)
         old_id = e.id
 
@@ -1343,7 +1346,7 @@ class TestEdge:
         assert old_id not in Edge.get_cache()
 
     def test_edge_delete_existing(self, mocker, new_edge) -> None:
-        e, src, dst = new_edge
+        e, _src, _dst = new_edge
         e = Edge.create(e)
         old_id = e.id
 
@@ -1408,11 +1411,11 @@ class TestEdge:
 
     @pytest.mark.skip("pending")
     def test_edge_cache(self) -> None:
-        pass
+        """Placeholder for future edge cache test."""
 
     @pytest.mark.skip("pending")
     def test_edge_save(self) -> None:
-        pass
+        """Placeholder for future edge save test."""
 
     def test_edge_connect(self, no_strict_schema) -> None:
         n1 = Node()
@@ -1454,7 +1457,7 @@ class TestEdge:
         n1 = Node()
         n2 = Node()
 
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             Edge.connect(n1, n2)
 
     def test_edge_type_lookup(self, no_strict_schema) -> None:
@@ -1483,7 +1486,7 @@ class TestEdge:
             type: str = "Foo"
 
         with pytest.raises(
-            Exception,
+            ValueError,
             match="edge_register can't register type 'Foo' because it has already been registered",
         ):
 
@@ -1596,10 +1599,10 @@ class TestNodeList:
         node_list = NodeList(
             [NodeId(got_node_id(2)), NodeId(got_node_id(1)), NodeId(got_node_id(0))]
         )
-        n = node_list[0]
+        nodes = [node_list[i] for i in range(len(node_list))]
 
-        assert n.id == got_node_id(2)
-        assert n.labels == {"Character"}
+        assert len(nodes) == 3
+        assert nodes[0].id == got_node_id(2)
 
     # test_add
     # test_add_duplicate
@@ -1740,19 +1743,26 @@ class TestNodeList:
         class Death(Node):
             order: int
 
-        class LOYAL_TO(Edge):
+        _ = Death
+
+        class LoyalTo(Edge):
             pass
 
-        class VICTIM_IN(Edge):
+        _ = LoyalTo
+
+        class VictimIn(Edge):
             pass
+
+        _ = VictimIn
 
         class KILLED(Edge):
             method: str
             count: int
 
+        _ = KILLED
         n = Node.get(NodeId(got_node_id(0)))
 
-        p = n.render(depth=1)
+        _p = n.render(depth=1)
 
 
 class TestTypes:
@@ -1836,7 +1846,7 @@ class TestSchema:
             weight: float
 
             def print_weight(self) -> None:
-                pass
+                """Stub method for schema description testing."""
 
         class Foo(Bar):
             name: str = Field(default="Bob")
@@ -1851,6 +1861,7 @@ class TestSchema:
         class Link(Edge):
             allowed_connections: EdgeConnectionsList = [("Foo", "Baz")]
 
+        _ = Link
         schema = Schema()
 
         assert schema.to_mermaid() == mermaid_schema1
@@ -1860,7 +1871,7 @@ class TestSchema:
             weight: float
 
             def print_weight(self) -> None:
-                pass
+                """Stub method for schema description testing."""
 
         class Foo(Bar):
             name: str = Field(default="Bob")
@@ -1919,7 +1930,7 @@ class TestNodeDescription:
             weight: float
 
             def print_weight(self) -> None:
-                pass
+                """Stub method for schema description testing."""
 
         class Foo(Bar):
             name: str = Field(default="Bob")

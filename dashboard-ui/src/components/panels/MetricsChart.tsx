@@ -32,7 +32,7 @@ interface MetricsChartProps {
     onStepClick?: (step: number) => void;
 }
 
-export function MetricsChart({ run, game, currentStep, onStepClick }: MetricsChartProps) {
+export function MetricsChart({ run, game, currentStep, onStepClick }: Readonly<MetricsChartProps>) {
     const { data: history } = useMetricsHistory(run, game, CHART_FIELDS);
 
     if (!history || history.length === 0) {

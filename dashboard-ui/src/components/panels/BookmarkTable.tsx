@@ -5,21 +5,22 @@ import { useState } from "react";
 
 import type { Bookmark } from "../../types/api";
 
+type EditableField = "step" | "game" | "annotation";
+
 interface BookmarkTableProps {
     bookmarks: Bookmark[];
     currentStep: number;
     onNavigate: (bookmark: { step: number; game: number }) => void;
-    onUpdateBookmark: (oldStep: number, updates: Partial<Pick<Bookmark, "step" | "game" | "annotation">>) => void;
+    onUpdateBookmark: (oldStep: number, updates: Partial<Pick<Bookmark, EditableField>>) => void;
 }
-
-type EditingField = { step: number; field: "step" | "game" | "annotation" };
+type EditingField = { step: number; field: EditableField };
 
 export function BookmarkTable({
     bookmarks,
     currentStep,
     onNavigate,
     onUpdateBookmark,
-}: BookmarkTableProps) {
+}: Readonly<BookmarkTableProps>) {
     const [editing, setEditing] = useState<EditingField | null>(null);
     const [editValue, setEditValue] = useState("");
 
@@ -42,13 +43,13 @@ export function BookmarkTable({
         if (!editing) return;
         const { step, field } = editing;
         if (field === "step") {
-            const newStep = parseInt(editValue, 10);
-            if (!isNaN(newStep) && newStep > 0) {
+            const newStep = Number.parseInt(editValue, 10);
+            if (Number.isFinite(newStep) && newStep > 0) {
                 onUpdateBookmark(step, { step: newStep });
             }
         } else if (field === "game") {
-            const newGame = parseInt(editValue, 10);
-            if (!isNaN(newGame) && newGame > 0) {
+            const newGame = Number.parseInt(editValue, 10);
+            if (Number.isFinite(newGame) && newGame > 0) {
                 onUpdateBookmark(step, { game: newGame });
             }
         } else {
@@ -79,7 +80,7 @@ export function BookmarkTable({
                         e.stopPropagation();
                     }}
                     autoFocus
-                    styles={{ input: { fontSize: 10, height: 20, minHeight: 20, fontFamily: field !== "annotation" ? "monospace" : undefined } }}
+                    styles={{ input: { fontSize: 10, height: 20, minHeight: 20, fontFamily: field === "annotation" ? undefined : "monospace" } }}
                 />
             );
         }
@@ -88,7 +89,7 @@ export function BookmarkTable({
             <Text
                 size="xs"
                 c={isAnnotation && !displayValue ? "dimmed" : undefined}
-                style={!isAnnotation ? { fontFamily: "monospace" } : undefined}
+                style={isAnnotation ? undefined : { fontFamily: "monospace" }}
             >
                 {isAnnotation ? (displayValue || "double-click to edit") : displayValue}
             </Text>

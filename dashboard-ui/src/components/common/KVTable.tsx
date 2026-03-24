@@ -16,11 +16,14 @@ function formatValue(value: unknown): string {
     if (typeof value === "number") {
         return Number.isInteger(value) ? String(value) : value.toFixed(4);
     }
-    const s = String(value);
+    if (typeof value === "string") {
+        return value.length > 80 ? value.slice(0, 77) + "..." : value;
+    }
+    const s = JSON.stringify(value);
     return s.length > 80 ? s.slice(0, 77) + "..." : s;
 }
 
-export function KVTable({ data, emptyText = "No data", title }: KVTableProps) {
+export function KVTable({ data, emptyText = "No data", title }: Readonly<KVTableProps>) {
     if (!data || Object.keys(data).length === 0) {
         return (
             <Text size="xs" c="dimmed">

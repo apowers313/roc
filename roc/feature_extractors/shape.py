@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -39,7 +40,9 @@ class ShapeFeature(PointFeature[ShapeNode]):
 
     def _dbfetch_nodes(self) -> ShapeNode | None:
         """Looks up an existing ShapeNode by type."""
-        return ShapeNode.find_one("src.type = $type", params={"type": self.type})
+        return ShapeNode.find_one(
+            "src.type = $type", query_opts=FindQueryOpts(params={"type": self.type})
+        )
 
 
 class Shape(FeatureExtractor[Point]):
@@ -52,7 +55,7 @@ class Shape(FeatureExtractor[Point]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.queue: list[SingleFeature] = list()
+        self.queue: list[SingleFeature] = []
         self.vd: VisionData | None = None
         self.single_settled = False
 
@@ -87,7 +90,6 @@ class Shape(FeatureExtractor[Point]):
         if self.single_settled and self.vd is not None:
             for s in self.queue:
                 x, y = s.point
-                p = Point(x, y, self.vd.chars[y, x])
                 self.pb_conn.send(
                     ShapeFeature(
                         origin_id=self.id,

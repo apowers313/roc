@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar
 from weakref import ReferenceType, WeakValueDictionary, ref
 
 import numpy as np
@@ -18,8 +18,6 @@ from .component import Component
 from .event import Event, EventBus
 from .graphdb import Edge, EdgeConnectionsList, Node
 from .location import XLoc, YLoc
-
-FeatureType = TypeVar("FeatureType")
 
 
 class VisionData:
@@ -158,7 +156,6 @@ class FeatureNode(Node):
 
 
 cache_registry: dict[str, WeakValueDictionary[int, Node]] = defaultdict(WeakValueDictionary)
-FeatureNodeType = TypeVar("FeatureNodeType", bound=FeatureNode)
 
 
 @dataclass(kw_only=True)
@@ -170,7 +167,7 @@ class Feature:
 
 
 @dataclass(kw_only=True)
-class VisualFeature(Feature, ABC, Generic[FeatureNodeType]):
+class VisualFeature[FeatureNodeType: FeatureNode](Feature, ABC):
     """A visual feature that can be converted to graph nodes, with caching."""
 
     def to_nodes(self) -> FeatureNodeType:
@@ -213,7 +210,7 @@ class VisualFeature(Feature, ABC, Generic[FeatureNodeType]):
 
 
 @dataclass(kw_only=True)
-class AreaFeature(VisualFeature[FeatureNodeType]):
+class AreaFeature[FeatureNodeType: FeatureNode](VisualFeature[FeatureNodeType]):
     """A visual feature covering multiple adjacent screen locations."""
 
     type: int
@@ -230,7 +227,7 @@ class AreaFeature(VisualFeature[FeatureNodeType]):
 
 
 @dataclass(kw_only=True)
-class PointFeature(VisualFeature[FeatureNodeType]):
+class PointFeature[FeatureNodeType: FeatureNode](VisualFeature[FeatureNodeType]):
     """A visual feature at a single screen location."""
 
     type: int
@@ -270,7 +267,7 @@ class Perception(Component, ABC):
 fe_list: list[ReferenceType[FeatureExtractor[Any]]] = []
 
 
-class FeatureExtractor(Perception, Generic[FeatureType], ABC):
+class FeatureExtractor[FeatureType](Perception, ABC):
     """Abstract base for components that extract specific features from perception data."""
 
     def __init__(self) -> None:
@@ -309,8 +306,8 @@ class FeatureExtractor(Perception, Generic[FeatureType], ABC):
 
 def _to_numpy(d: dict[str, Any], k: str) -> np.ndarray[Any, Any]:
     """Extracts a key from a dict and ensures it is a numpy array."""
-    if not k in d:
-        raise Exception(f"Expected '{k}' to exist in dict for .from_dict()")
+    if k not in d:
+        raise KeyError(f"Expected '{k}' to exist in dict for .from_dict()")
 
     v = d[k]
     if not isinstance(v, np.ndarray):

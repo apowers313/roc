@@ -11,6 +11,8 @@ from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
 
 from roc.reporting.ducklake_store import DuckLakeStore
 
+_GAME_METRICS_EVENT = "roc.game_metrics"
+
 
 class ParquetExporter(LogExporter):
     """Route OTel log records to DuckLake tables.
@@ -99,28 +101,7 @@ class ParquetExporter(LogExporter):
         try:
             with self._lock:
                 for log_data in batch:
-                    record = getattr(log_data, "log_record", log_data)
-                    attrs = dict(record.attributes) if record.attributes else {}
-                    event_name = attrs.get("event.name")
-
-                    if event_name == "roc.game_start":
-                        self._game_counter += 1
-                    # Step counter: roc.screen is the primary tick marker;
-                    # fall back to roc.game_metrics when screen emission is off.
-                    if event_name == "roc.screen":
-                        self._step_counter += 1
-                        self._step_incremented = True
-                    elif event_name == "roc.game_metrics" and not self._step_incremented:
-                        self._step_counter += 1
-                    elif event_name == "roc.game_metrics":
-                        self._step_incremented = False  # reset for next tick
-
-                    entry = self._record_to_dict(record, attrs)
-                    entry["step"] = self._step_counter
-                    entry["game_number"] = self._game_counter
-
-                    table = self._route(event_name)
-                    self._queue.append((table, entry))
+                    self._enqueue_record(log_data)
 
             if self._background:
                 self._data_ready.set()
@@ -130,6 +111,32 @@ class ParquetExporter(LogExporter):
             return LogExportResult.SUCCESS
         except Exception:
             return LogExportResult.FAILURE
+
+    def _enqueue_record(self, log_data: Any) -> None:
+        """Process a single log record: update counters and queue for writing."""
+        record = getattr(log_data, "log_record", log_data)
+        attrs = dict(record.attributes) if record.attributes else {}
+        event_name = attrs.get("event.name")
+
+        self._update_counters(event_name)
+
+        entry = self._record_to_dict(record, attrs)
+        entry["step"] = self._step_counter
+        entry["game_number"] = self._game_counter
+        table = self._route(event_name)
+        self._queue.append((table, entry))
+
+    def _update_counters(self, event_name: str | None) -> None:
+        """Update game and step counters based on event type."""
+        if event_name == "roc.game_start":
+            self._game_counter += 1
+        if event_name == "roc.screen":
+            self._step_counter += 1
+            self._step_incremented = True
+        elif event_name == _GAME_METRICS_EVENT and not self._step_incremented:
+            self._step_counter += 1
+        elif event_name == _GAME_METRICS_EVENT:
+            self._step_incremented = False
 
     def shutdown(self) -> None:
         """Stop background thread and write any remaining queued records."""
@@ -157,7 +164,7 @@ class ParquetExporter(LogExporter):
             return "screens"
         if event_name == "roc.attention.saliency":
             return "saliency"
-        if event_name == "roc.game_metrics":
+        if event_name == _GAME_METRICS_EVENT:
             return "metrics"
         if event_name is not None:
             return "events"

@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from gruut import sentences
 
+from ..graphdb import FindQueryOpts
+
 from ..location import Point
 from ..perception import (
     AuditoryData,
@@ -47,7 +49,9 @@ class PhonemeFeature(Feature):
 
     def _dbfetch_nodes(self) -> PhonemeNode | None:
         """Looks up an existing PhonemeNode."""
-        return PhonemeNode.find_one("src.type = $type", params={"type": 42})  # XXX TODO type
+        return PhonemeNode.find_one(
+            "src.type = $type", query_opts=FindQueryOpts(params={"type": 42})
+        )  # XXX TODO type
 
 
 class Phoneme(FeatureExtractor[Point]):

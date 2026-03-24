@@ -11,20 +11,16 @@ import re
 import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from itertools import islice
 from pathlib import Path
 from typing import (
     Any,
     Callable,
-    Collection,
-    Generic,
-    Iterable,
     Literal,
     NewType,
     TypeGuard,
-    TypeVar,
     _SpecialForm,
     cast,
     overload,
@@ -48,12 +44,8 @@ from .reporting.observability import Observability
 from .utils import _timestamp_str
 
 RecordFn = Callable[[str, Iterator[Any]], None]
-CacheType = TypeVar("CacheType")
-CacheId = TypeVar("CacheId")
 EdgeId = NewType("EdgeId", int)
 NodeId = NewType("NodeId", int)
-EdgeType = TypeVar("EdgeType", bound="Edge")
-NodeType = TypeVar("NodeType", bound="Node")
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
 
@@ -69,6 +61,21 @@ def no_callback(_: Any) -> None:
     """Helper function that accepts any value and returns None. Great for
     default callback functions.
     """
+
+
+QueryParamType = dict[str, Any]
+
+
+@dataclass
+class FindQueryOpts:
+    """Options for building a Cypher MATCH query in Node.find / Node.find_one."""
+
+    src_node_name: str = "src"
+    src_labels: set[str] | None = None
+    edge_name: str = "e"
+    edge_type: str = ""
+    params: QueryParamType | None = None
+    params_to_str: bool = True
 
 
 class ErrorSavingDuringDelWarning(Warning):
@@ -87,8 +94,6 @@ class StrictSchemaWarning(Warning):
 # GRAPHDB
 #########
 graph_db_singleton: GraphDB | None = None
-
-QueryParamType = dict[str, Any]
 
 
 class GraphDB:
@@ -233,7 +238,7 @@ class GraphDB:
                 pbar.update(1)
                 return True
 
-            G = GraphDB.to_networkx(node_ids=ids, filter=progress_update, db=db)
+            G = GraphDB.to_networkx(node_ids=ids, node_filter=progress_update, db=db)
 
         # format timestamp
         if timestamp:
@@ -299,10 +304,24 @@ class GraphDB:
         return graph_db_singleton
 
     @staticmethod
+    def _add_node_to_nx(graph: nx.DiGraph, n: Node) -> None:
+        """Add a single node and its outgoing edges to a NetworkX graph."""
+        n_data = Node.to_dict(n, include_labels=True)
+
+        if "labels" in n_data and isinstance(n_data["labels"], set):
+            n_data["labels"] = ", ".join(n_data["labels"])
+
+        graph.add_node(n.id, **n_data)
+
+        for e in n.src_edges:
+            e_data = Edge.to_dict(e, include_type=True)
+            graph.add_edge(e.src_id, e.dst_id, **e_data)
+
+    @staticmethod
     def to_networkx(
         db: GraphDB | None = None,
         node_ids: set[NodeId] | None = None,
-        filter: NodeFilterFn | None = None,
+        node_filter: NodeFilterFn | None = None,
     ) -> nx.DiGraph:
         """Converts the entire graph database (and local cache of objects) into
         a NetworkX graph
@@ -312,7 +331,7 @@ class GraphDB:
                 Defaults to the GraphDB singleton if not specified.
             node_ids (set[NodeId] | None, optional): The NodeIDs to add to the
                 NetworkX graph. Defaults to all IDs if not specified.
-            filter (NodeFilterFn | None, optional): A Node filter to filter out
+            node_filter (NodeFilterFn | None, optional): A Node filter to filter out
                 nodes before adding them to the NetworkX graph. Also useful for a
                 callback that can be used for progress updates. Defaults to None.
 
@@ -321,29 +340,13 @@ class GraphDB:
         """
         db = db or GraphDB.singleton()
         node_ids = node_ids or Node.all_ids(db=db)
-        filter = filter or true_filter
+        node_filter = node_filter or true_filter
         G = nx.DiGraph()
 
-        def nx_add(n: Node) -> None:
-            n_data = Node.to_dict(n, include_labels=True)
-
-            # TODO: this converts labels to a string, but maybe there's a better
-            # way to preserve the list so that it can be used for filtering in
-            # external programs
-            if "labels" in n_data and isinstance(n_data["labels"], set):
-                n_data["labels"] = ", ".join(n_data["labels"])
-
-            G.add_node(n.id, **n_data)
-
-            for e in n.src_edges:
-                e_data = Edge.to_dict(e, include_type=True)
-                G.add_edge(e.src_id, e.dst_id, **e_data)
-
-        # iterate all specified node_ids, adding all of them to the nx graph
         def nx_add_many(nodes: list[Node]) -> None:
             for n in nodes:
-                if filter(n):
-                    nx_add(n)
+                if node_filter(n):
+                    GraphDB._add_node_to_nx(G, n)
 
         Node.get_many(node_ids, load_edges=True, progress_callback=nx_add_many)
 
@@ -353,11 +356,7 @@ class GraphDB:
 #######
 # CACHE
 #######
-CacheKey = TypeVar("CacheKey")
-CacheValue = TypeVar("CacheValue")
-
-
-class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
+class GraphCache[CacheKey, CacheValue](LRUCache[CacheKey, CacheValue]):
     """A generic cache that is used for both the Node cache and the Edge cache"""
 
     def __init__(self, maxsize: int):
@@ -405,14 +404,14 @@ class GraphCache(LRUCache[CacheKey, CacheValue], Generic[CacheKey, CacheValue]):
 
     def flush(self) -> None:
         """Flushes the cache by saving every Node and Edge"""
-        node_ids = {n_id for n_id in self}
+        node_ids = set(self)
         while len(node_ids) > 0:
             cache_id = node_ids.pop()
             cache_item = self[cache_id]
             if isinstance(cache_item, Node):
-                cache_item.__class__.save(cache_item)
+                Node.save(cache_item)
             elif isinstance(cache_item, Edge):
-                cache_item.__class__.save(cache_item)
+                Edge.save(cache_item)
 
 
 #######
@@ -431,10 +430,10 @@ class EdgeCreateFailed(Exception):
 def _get_next_new_edge_id() -> EdgeId:
     """Returns the next temporary negative EdgeId for unsaved edges."""
     global next_new_edge
-    id = next_new_edge
+    new_id = next_new_edge
     next_new_edge = cast(EdgeId, next_new_edge - 1)
 
-    return id
+    return new_id
 
 
 class Edge(BaseModel, extra="allow"):
@@ -511,7 +510,7 @@ class Edge(BaseModel, extra="allow"):
                 edgetype = cls.type
 
         if edgetype in edge_registry:
-            raise Exception(
+            raise ValueError(
                 f"edge_register can't register type '{edgetype}' because it has already been registered"
             )
 
@@ -523,7 +522,7 @@ class Edge(BaseModel, extra="allow"):
         return f'{_dot_safe_node_str(self.src_id)} -> {_dot_safe_node_str(self.dst_id)} [label="{name}"]'
 
     @classmethod
-    def get_cache(self) -> EdgeCache:
+    def get_cache(cls) -> EdgeCache:
         """Gets the edge cache
 
         Returns:
@@ -574,7 +573,7 @@ class Edge(BaseModel, extra="allow"):
         """
         db = db or GraphDB.singleton()
         edge_list = list(db.raw_fetch(f"MATCH (n)-[e]-(m) WHERE id(e) = {id} RETURN e LIMIT 1"))
-        if not len(edge_list) == 1:
+        if len(edge_list) != 1:
             raise EdgeNotFound(f"Couldn't find edge ID: {id}")
 
         e = edge_list[0]["e"]
@@ -738,7 +737,7 @@ class Edge(BaseModel, extra="allow"):
 
         # couldn't find any type
         if clstype is None:
-            raise Exception("no Edge type provided")
+            raise ValueError("no Edge type provided")
 
         # check allowed_connections
         _check_schema(cls, clstype, src_node, dst_node, db)
@@ -808,6 +807,26 @@ EdgeConnectionsList = Iterable[tuple[str, str]]
 edge_registry: dict[str, type[Edge]] = {}
 
 
+def _connection_is_allowed(
+    allowed_connections: list[tuple[str, str]],
+    src_names: set[str],
+    dst_names: set[str],
+) -> bool:
+    """Check if any allowed connection matches the src and dst node class names."""
+    return any(conn[0] in src_names and conn[1] in dst_names for conn in allowed_connections)
+
+
+def _check_strict_schema(edge_cls: type[Edge], db: GraphDB) -> None:
+    """Raise or warn when allowed_connections is missing in strict schema mode."""
+    if not db.strict_schema:
+        return
+    err_msg = f"allowed_connections missing in '{edge_cls.__name__}' and strict_schema is set"
+    if db.strict_schema_warns:
+        warnings.warn(err_msg, StrictSchemaWarning)
+    else:
+        raise ValueError(err_msg)
+
+
 def _check_schema(
     edge_cls: type[Edge],
     clstype: str,
@@ -825,25 +844,14 @@ def _check_schema(
     dst_names = _get_node_parent_names(dst.__class__)
     dst_names.add(dst_name)
 
-    # check if the src (or it's parents) are allowed to connect to dst (or it's parents)
-    if allowed_connections is not None:
-        found = False
-        for conn in allowed_connections:
-            if conn[0] in src_names and conn[1] in dst_names:
-                found = True
-                break
+    if allowed_connections is None:
+        _check_strict_schema(edge_cls, db)
+        return
 
-        if not found:
-            raise Exception(
-                f"attempting to connect edge '{clstype}' from '{src_name}' to '{dst_name}' not in allowed connections list"
-            )
-    # no allowed_connections set, which is a no-no for strict mode
-    elif db.strict_schema:
-        err_msg = f"allowed_connections missing in '{edge_cls.__name__}' and strict_schema is set"
-        if db.strict_schema_warns:
-            warnings.warn(err_msg, StrictSchemaWarning)
-        else:
-            raise Exception(err_msg)
+    if not _connection_is_allowed(allowed_connections, src_names, dst_names):
+        raise ValueError(
+            f"attempting to connect edge '{clstype}' from '{src_name}' to '{dst_name}' not in allowed connections list"
+        )
 
 
 #######
@@ -865,9 +873,9 @@ class EdgeFetchIterator(Iterable[Edge]):
         if self.cur >= len(self.__edge_list):
             raise StopIteration
 
-        id = self.__edge_list[self.cur]
+        edge_id = self.__edge_list[self.cur]
         self.cur = self.cur + 1
-        return Edge.get(id)
+        return Edge.get(edge_id)
 
 
 class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
@@ -976,7 +984,7 @@ class EdgeList(MutableSet[Edge | EdgeId], Sequence[Edge]):
 
         if type is not None:
             if self.db.strict_schema and type not in edge_registry:
-                raise Exception(f"Edge type '{type}' not a known Edge type")
+                raise ValueError(f"Edge type '{type}' not a known Edge type")
             edge_ids = [e for e in edge_ids if Edge.get(e).type == type]
 
         if id is not None:
@@ -999,9 +1007,9 @@ class NodeCreationFailed(Exception):
 def _get_next_new_node_id() -> NodeId:
     """Returns the next temporary negative NodeId for unsaved nodes."""
     global next_new_node
-    id = next_new_node
+    new_id = next_new_node
     next_new_node = cast(NodeId, next_new_node - 1)
-    return id
+    return new_id
 
 
 class Node(BaseModel, extra="allow"):
@@ -1109,7 +1117,7 @@ class Node(BaseModel, extra="allow"):
         clsname = cls.__name__
 
         if not hasattr(cls, "labels"):
-            new_lbls = {c.__name__ for c in cls.__mro__ if issubclass(c, Node) and not c is Node}
+            new_lbls = {c.__name__ for c in cls.__mro__ if issubclass(c, Node) and c is not Node}
 
             def default_subclass_fields() -> set[str]:
                 return new_lbls
@@ -1123,13 +1131,13 @@ class Node(BaseModel, extra="allow"):
                 labels_key = frozenset(cls.labels)
 
         if clsname in node_registry:
-            raise Exception(
+            raise ValueError(
                 f"""node_register can't register '{clsname}' because that name has already been registered"""
             )
 
         if labels_key in node_label_registry:
-            labels = ", ".join(sorted(list(labels_key)))
-            raise Exception(
+            labels = ", ".join(sorted(labels_key))
+            raise ValueError(
                 f"""node_register can't register labels '{labels}' because they have already been registered"""
             )
 
@@ -1162,7 +1170,7 @@ class Node(BaseModel, extra="allow"):
     def neighborhood(self, depth: int = 1) -> NodeList:
         """Returns all nodes within the given graph distance from this node."""
         if depth < 0:
-            raise Exception("neighborhood depth must be greater than zero")
+            raise ValueError("neighborhood depth must be greater than zero")
         elif depth == 0:
             return NodeList([self.id])
         elif depth == 1:
@@ -1284,108 +1292,142 @@ class Node(BaseModel, extra="allow"):
 
         return ret
 
+    @staticmethod
+    def _build_find_query(
+        opts: FindQueryOpts,
+        src_labels: set[str],
+        where: str,
+        load_edges: bool,
+    ) -> str:
+        """Build the Cypher MATCH query string for Node.find."""
+        if load_edges:
+            edge_fmt = f"{opts.edge_name}"
+        else:
+            edge_fmt = (
+                f"{{id: id({opts.edge_name}), start: id(startNode({opts.edge_name})),"
+                f" end: id(endNode({opts.edge_name}))}}"
+            )
+
+        src_label_str = f":{':'.join(src_labels)}" if src_labels else ""
+        edge_type_str = f":{opts.edge_type}" if opts.edge_type else ""
+
+        return f"""
+                MATCH ({opts.src_node_name}{src_label_str})-[{opts.edge_name}{edge_type_str}*0..1]-()
+                WITH {opts.src_node_name}, head({opts.edge_name}) AS {opts.edge_name}
+                WHERE {where}
+                RETURN {opts.src_node_name} AS n, collect({edge_fmt}) AS edges
+                """
+
+    @staticmethod
+    def _load_full_edges(
+        node_id: NodeId, raw_edges: list[Any]
+    ) -> tuple[list[EdgeId], list[EdgeId]]:
+        """Load full edge objects from query results, populating the edge cache.
+
+        Returns src_edges and dst_edges ID lists for the given node.
+        """
+        src_edges: list[EdgeId] = []
+        dst_edges: list[EdgeId] = []
+        edge_cache = Edge.get_cache()
+        for e in raw_edges:
+            if node_id == e.start_id:
+                src_edges.append(e.id)
+            else:
+                dst_edges.append(e.id)
+
+            if e.id in edge_cache:
+                continue
+
+            props = e.properties if hasattr(e, "properties") else {}
+            new_edge = Edge(
+                src_id=e.start_id,
+                dst_id=e.end_id,
+                _id=e.id,
+                type=e.type,
+                **props,
+            )
+            edge_cache[e.id] = new_edge
+        return src_edges, dst_edges
+
+    @staticmethod
+    def _extract_edge_ids(
+        node_id: NodeId, raw_edges: list[Any]
+    ) -> tuple[list[EdgeId], list[EdgeId]]:
+        """Extract edge IDs from lightweight query results (id-only mode)."""
+        src_edges = [e["id"] for e in raw_edges if e["start"] == node_id]
+        dst_edges = [e["id"] for e in raw_edges if e["end"] == node_id]
+        return src_edges, dst_edges
+
+    @classmethod
+    def _get_or_create_node(
+        cls,
+        n: Any,
+        src_edges: list[EdgeId],
+        dst_edges: list[EdgeId],
+    ) -> Self:
+        """Look up a node in cache or create it from query results."""
+        node_cache = cls.get_cache()
+        if n.id in node_cache:
+            return cast(Self, node_cache[n.id])
+
+        mkcls = cls
+        cls_lbls = frozenset(n.labels)
+        if cls is Node and cls_lbls in node_label_registry:
+            mkcls = cast(type[Self], node_label_registry[cls_lbls])
+
+        new_node = mkcls(
+            _id=n.id,
+            _src_edges=EdgeList(src_edges),
+            _dst_edges=EdgeList(dst_edges),
+            labels=n.labels,
+            **n.properties,
+        )
+        node_cache[n.id] = new_node
+        return new_node
+
     @classmethod
     def find(
         cls,
         where: str,
-        src_node_name: str = "src",
-        src_labels: set[str] = set(),
-        edge_name: str = "e",
-        edge_type: str = "",
-        params: QueryParamType = dict(),
+        *,
+        query_opts: FindQueryOpts | None = None,
         db: GraphDB | None = None,
         load_edges: bool = False,
-        params_to_str: bool = True,
     ) -> list[Self]:
         """Queries the graph database for nodes matching a WHERE clause and returns them."""
+        opts = query_opts or FindQueryOpts()
+        src_labels = opts.src_labels if opts.src_labels is not None else set()
+        params = opts.params if opts.params is not None else {}
         db = db or GraphDB.singleton()
 
-        if load_edges:
-            edge_fmt = f"{edge_name}"
-        else:
-            edge_fmt = f"{{id: id({edge_name}), start: id(startNode({edge_name})), end: id(endNode({edge_name}))}}"
-
-        if len(src_labels) == 0:
-            src_label_str = ""
-        else:
-            src_label_str = f":{':'.join(src_labels)}"
-
-        if len(edge_type) > 0:
-            edge_type = ":" + edge_type
-
-        if params_to_str:
+        if opts.params_to_str:
             for k in params.keys():
                 params[k] = str(params[k])
 
-        res_iter = db.raw_fetch(
-            f"""
-                MATCH ({src_node_name}{src_label_str})-[{edge_name}{edge_type}*0..1]-() 
-                WITH {src_node_name}, head({edge_name}) AS {edge_name}
-                WHERE {where}
-                RETURN {src_node_name} AS n, collect({edge_fmt}) AS edges
-                """,
-            params=params,
-        )
+        query = cls._build_find_query(opts, src_labels, where, load_edges)
+        res_iter = db.raw_fetch(query, params=params)
+        return cls._collect_find_results(res_iter, load_edges)
 
-        ret_list = list()
+    @classmethod
+    def _collect_find_results(
+        cls,
+        res_iter: Any,
+        load_edges: bool,
+    ) -> list[Self]:
+        """Process raw query results into a list of typed nodes."""
+        ret_list: list[Self] = []
         for r in res_iter:
             logger.trace(f"find result: {r}")
             n = r["n"]
             if n is None:
-                # NOTE: I can't think of any circumstances where there would be
-                # multiple "None" results, so I think this is just an empty list
                 continue
 
             if load_edges:
-                # XXX: memgraph converts edges to Relationship objects if you
-                # return the whole edge
-                src_edges = list()
-                dst_edges = list()
-                edge_cache = Edge.get_cache()
-                for e in r["edges"]:
-                    # add edge_id to to the right list for the node creation below
-                    if n.id == e.start_id:
-                        src_edges.append(e.id)
-                    else:
-                        dst_edges.append(e.id)
-
-                    # edge already loaded, continue to next one
-                    if e.id in edge_cache:
-                        continue
-
-                    # create a new edge
-                    props = {}
-                    if hasattr(e, "properties"):
-                        props = e.properties
-                    new_edge = Edge(
-                        src_id=e.start_id,
-                        dst_id=e.end_id,
-                        _id=e.id,
-                        type=e.type,
-                        **props,
-                    )
-                    edge_cache[e.id] = new_edge
+                src_edges, dst_edges = Node._load_full_edges(n.id, r["edges"])
             else:
-                # edges are just the IDs
-                src_edges = [e["id"] for e in r["edges"] if e["start"] == n.id]
-                dst_edges = [e["id"] for e in r["edges"] if e["end"] == n.id]
+                src_edges, dst_edges = Node._extract_edge_ids(n.id, r["edges"])
 
-            node_cache = cls.get_cache()
-            if n.id in node_cache:
-                new_node = cast(Self, node_cache[n.id])
-            else:
-                mkcls = cls
-                cls_lbls = frozenset(n.labels)
-                if cls is Node and cls_lbls in node_label_registry:
-                    mkcls = cast(type[Self], node_label_registry[cls_lbls])
-                new_node = mkcls(
-                    _id=n.id,
-                    _src_edges=EdgeList(src_edges),
-                    _dst_edges=EdgeList(dst_edges),
-                    labels=n.labels,
-                    **n.properties,
-                )
-                node_cache[n.id] = new_node
+            new_node = cls._get_or_create_node(n, src_edges, dst_edges)
             ret_list.append(new_node)
 
         return ret_list
@@ -1394,14 +1436,10 @@ class Node(BaseModel, extra="allow"):
     def find_one(
         cls,
         where: str,
-        src_node_name: str = "src",
-        src_labels: set[str] = set(),
-        edge_name: str = "e",
-        edge_type: str = "",
-        params: QueryParamType = dict(),
+        *,
+        query_opts: FindQueryOpts | None = None,
         db: GraphDB | None = None,
         load_edges: bool = False,
-        params_to_str: bool = True,
         exactly_one: bool = False,
     ) -> Self | None:
         """Calls Node.find and expects to return exactly one Node. Raises an
@@ -1417,25 +1455,20 @@ class Node(BaseModel, extra="allow"):
         """
         nodes = cls.find(
             where=where,
-            src_node_name=src_node_name,
-            src_labels=src_labels,
-            edge_name=edge_name,
-            edge_type=edge_type,
-            params=params,
+            query_opts=query_opts,
             db=db,
             load_edges=load_edges,
-            params_to_str=params_to_str,
         )
 
         match len(nodes):
             case 0:
                 if exactly_one:
-                    raise Exception("expect exactly one node in find_one")
+                    raise ValueError("expect exactly one node in find_one")
                 return None
             case 1:
                 return nodes[0]
             case _:
-                raise Exception("expected zero or one node in find_one")
+                raise ValueError("expected zero or one node in find_one")
 
     @classmethod
     def get_many(
@@ -1445,7 +1478,6 @@ class Node(BaseModel, extra="allow"):
         batch_size: int = 128,
         db: GraphDB | None = None,
         load_edges: bool = False,
-        return_nodes: bool = False,
         progress_callback: ProgressFn | None = None,
     ) -> list[Node]:
         """Loads multiple nodes by ID in batches, using the cache where possible."""
@@ -1612,7 +1644,7 @@ class Node(BaseModel, extra="allow"):
 
         res = list(db.raw_fetch(f"CREATE (n{label_str} $props) RETURN id(n) as id", params=params))
 
-        if not len(res) >= 1:
+        if len(res) < 1:
             raise NodeCreationFailed(f"Couldn't create node ID: {id}")
 
         new_id = res[0]["id"]
@@ -1703,8 +1735,7 @@ class Node(BaseModel, extra="allow"):
     @staticmethod
     def mklabels(labels: set[str]) -> str:
         """Converts a list of strings into proper Cypher syntax for a graph database query"""
-        labels_list = [i for i in labels]
-        labels_list.sort()
+        labels_list = sorted(labels)
         label_str = ":".join(labels_list)
         if len(label_str) > 0:
             label_str = ":" + label_str
@@ -1744,6 +1775,17 @@ class Node(BaseModel, extra="allow"):
             return n
 
     @staticmethod
+    def _walk_edges(
+        edges: EdgeList,
+        get_neighbor: Callable[[Edge], Node],
+        config: WalkConfig,
+    ) -> None:
+        """Walk edges in a given direction, recursing into neighbors that pass the filter."""
+        for e in edges:
+            if config.edge_filter(e):
+                Node._walk_recursive(get_neighbor(e), config)
+
+    @staticmethod
     def walk(
         n: Node,
         *,
@@ -1751,7 +1793,6 @@ class Node(BaseModel, extra="allow"):
         edge_filter: EdgeFilterFn | None = None,
         node_filter: NodeFilterFn | None = None,
         node_callback: NodeCallbackFn | None = None,
-        _walk_history: set[int] | None = None,
     ) -> None:
         """Performs a depth-first search (DFS) of the graph starting from the
         specified node.
@@ -1770,48 +1811,31 @@ class Node(BaseModel, extra="allow"):
                 to None which results in all Nodes being included.
             node_callback (NodeCallbackFn | None, optional): Called on each
                 included Node. Defaults to None.
-            _walk_history (set[int] | None, optional): For internal recurision
-                use only.
         """
-        # if we have walked this node before, just return
-        _walk_history = _walk_history or set()
-        if n.id in _walk_history:
+        config = WalkConfig(
+            mode=mode,
+            edge_filter=edge_filter or cast(EdgeFilterFn, true_filter),
+            node_filter=node_filter or true_filter,
+            node_callback=node_callback or no_callback,
+        )
+        Node._walk_recursive(n, config)
+
+    @staticmethod
+    def _walk_recursive(n: Node, config: WalkConfig) -> None:
+        """Internal recursive DFS helper that uses config.walk_history for visited tracking."""
+        if n.id in config.walk_history:
             return
-        _walk_history.add(n.id)
+        config.walk_history.add(n.id)
 
-        edge_filter = edge_filter or cast(EdgeFilterFn, true_filter)
-        node_filter = node_filter or true_filter
-        node_callback = node_callback or no_callback
-
-        # callback for this node, if not filtered
-        if node_filter(n):
-            node_callback(n)
-        else:
+        if not config.node_filter(n):
             return
+        config.node_callback(n)
 
-        if mode == "src" or mode == "both":
-            for e in n.src_edges:
-                if edge_filter(e):
-                    Node.walk(
-                        e.dst,
-                        mode=mode,
-                        edge_filter=edge_filter,
-                        node_filter=node_filter,
-                        node_callback=node_callback,
-                        _walk_history=_walk_history,
-                    )
+        if config.mode in ("src", "both"):
+            Node._walk_edges(n.src_edges, lambda e: e.dst, config)
 
-        if mode == "dst" or mode == "both":
-            for e in n.dst_edges:
-                if edge_filter(e):
-                    Node.walk(
-                        e.src,
-                        mode=mode,
-                        edge_filter=edge_filter,
-                        node_filter=node_filter,
-                        node_callback=node_callback,
-                        _walk_history=_walk_history,
-                    )
+        if config.mode in ("dst", "both"):
+            Node._walk_edges(n.dst_edges, lambda e: e.src, config)
 
 
 #######
@@ -1833,9 +1857,9 @@ class NodeFetchIterator(Iterable[Node]):
         if self.cur >= len(self._node_list):
             raise StopIteration
 
-        id = self._node_list[self.cur]
+        node_id = self._node_list[self.cur]
         self.cur = self.cur + 1
-        return Node.get(id)
+        return Node.get(node_id)
 
 
 class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
@@ -1951,10 +1975,12 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
 
         return NodeList(node_ids)
 
-    def to_dot(self, depth: int = 1, extra_styles: dict[int, str] = dict()) -> str:
+    def to_dot(self, extra_styles: dict[int, str] | None = None) -> str:
         """Converts the NodeList and all the Edges between Nodes in the list
         into a string representing Graphviz DOT diagram.
         """
+        if extra_styles is None:
+            extra_styles = {}
         ret = dot_graph_header
 
         nodes = [Node.get(nid) for nid in self._nodes]
@@ -1983,6 +2009,18 @@ EdgeFilterFn = Callable[[Edge], TypeGuard[Edge]]
 ProgressFn = Callable[[list[Node]], None]
 NodeCallbackFn = Callable[[Node], None]
 EdgeCallbackFn = Callable[[Edge], None]
+
+
+@dataclass
+class WalkConfig:
+    """Configuration for graph walk traversal."""
+
+    mode: WalkMode
+    edge_filter: EdgeFilterFn
+    node_filter: NodeFilterFn
+    node_callback: NodeCallbackFn
+    walk_history: set[int] = field(default_factory=set)
+
 
 NodeCache = GraphCache[NodeId, Node]
 node_cache: NodeCache | None = None
@@ -2039,6 +2077,23 @@ class Schema:
         self.nodes = [_NodeDescription(node_cls) for node_cls in node_registry.values()]
         self.nodes.sort(key=lambda n: n.name)
 
+    @staticmethod
+    def _validate_edge_connections(
+        edge_name: str, allowed_connections: list[tuple[str, str]]
+    ) -> list[str]:
+        """Check that all src/dst node types in allowed_connections are registered."""
+        errors: list[str] = []
+        for src, dst in allowed_connections:
+            if src not in node_registry:
+                errors.append(
+                    f"Edge '{edge_name}' requires src Node '{src}', which is not registered"
+                )
+            if dst not in node_registry:
+                errors.append(
+                    f"Edge '{edge_name}' requires dst Node '{dst}', which is not registered"
+                )
+        return errors
+
     @classmethod
     def validate(cls) -> None:
         """Ensures that the GraphDB schema is valid by checking that all the
@@ -2050,20 +2105,9 @@ class Schema:
         errors: list[str] = []
         for edge_name, edge_cls in edge_registry.items():
             allowed_connections = _pydantic_get_default(edge_cls, "allowed_connections")
-
             if allowed_connections is None:
                 continue
-
-            for src, dst in allowed_connections:
-                if src not in node_registry:
-                    errors.append(
-                        f"Edge '{edge_name}' requires src Node '{src}', which is not registered"
-                    )
-
-                if dst not in node_registry:
-                    errors.append(
-                        f"Edge '{edge_name}' requires dst Node '{dst}', which is not registered"
-                    )
+            errors.extend(cls._validate_edge_connections(edge_name, allowed_connections))
 
         if len(errors) > 0:
             raise SchemaValidationError(errors)
@@ -2107,6 +2151,28 @@ class Schema:
         ret += "}"
         return ret
 
+    @staticmethod
+    def _field_to_dict(f: _FieldDescription, model: type[object]) -> dict[str, Any]:
+        """Serialize a field description to a dictionary."""
+        return {
+            "name": f.name,
+            "type": f.type,
+            "default": f.default_val_str if f.default_val is not PydanticUndefined else None,
+            "local": _is_local(model, f.name),
+            "exclude": bool(f.exclude),
+        }
+
+    @staticmethod
+    def _method_to_dict(m: _MethodDescription, model: type[object]) -> dict[str, Any]:
+        """Serialize a method description to a dictionary."""
+        param_list = [f"{p.name}: {p.type}{p.formatted_default}" for p in m.params]
+        return {
+            "name": m.name,
+            "params": ", ".join(param_list),
+            "return_type": m.return_type,
+            "local": _is_local(model, m.name),
+        }
+
     def to_dict(self) -> dict[str, Any]:
         """Serialize the schema to a JSON-friendly dictionary.
 
@@ -2115,32 +2181,8 @@ class Schema:
         """
         nodes = []
         for n in self.nodes:
-            fields = []
-            for f in n.fields:
-                fields.append(
-                    {
-                        "name": f.name,
-                        "type": f.type,
-                        "default": f.default_val_str
-                        if f.default_val is not PydanticUndefined
-                        else None,
-                        "local": _is_local(n.model, f.name),
-                        "exclude": bool(f.exclude),
-                    }
-                )
-            methods = []
-            for m in n.methods:
-                param_list = [
-                    f"{p.name}: {p.type}{p.formatted_default}" for p in m.params
-                ]
-                methods.append(
-                    {
-                        "name": m.name,
-                        "params": ", ".join(param_list),
-                        "return_type": m.return_type,
-                        "local": _is_local(n.model, m.name),
-                    }
-                )
+            fields = [Schema._field_to_dict(f, n.model) for f in n.fields]
+            methods = [Schema._method_to_dict(m, n.model) for m in n.methods]
             nodes.append(
                 {
                     "name": n.name,
@@ -2152,20 +2194,8 @@ class Schema:
 
         edges = []
         for e in self.edges:
-            connections = [[c[0], c[1]] for c in e.allowed_connections]
-            fields = []
-            for f in e.fields:
-                fields.append(
-                    {
-                        "name": f.name,
-                        "type": f.type,
-                        "default": f.default_val_str
-                        if f.default_val is not PydanticUndefined
-                        else None,
-                        "local": _is_local(e.model, f.name),
-                        "exclude": bool(f.exclude),
-                    }
-                )
+            connections = [[a, b] for a, b in e.allowed_connections]
+            fields = [Schema._field_to_dict(f, e.model) for f in e.fields]
             edges.append(
                 {
                     "name": e.name,
@@ -2212,8 +2242,7 @@ def _dot_safe_node_str(nid: NodeId) -> str:
 
 def _is_local(c: type[object], attr: str) -> bool:
     """Returns True if the attribute is defined directly on the class, not inherited."""
-    local_to_parent = [_is_local(p, attr) for p in c.__mro__ if p is not c]
-    if any(local_to_parent):
+    if any(_is_local(p, attr) for p in c.__mro__ if p is not c):
         return False
 
     if attr in c.__dict__:

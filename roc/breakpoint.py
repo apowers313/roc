@@ -4,13 +4,14 @@ import inspect
 import os
 from dataclasses import dataclass
 from threading import Lock
-from typing import Callable, Dict, Optional, TypeAlias
+from collections.abc import Callable
+from typing import Dict, Optional
 
 from tabulate import tabulate
 
 from .logger import logger
 
-ConditionFn: TypeAlias = Callable[[], bool]
+type ConditionFn = Callable[[], bool]
 
 
 @dataclass
@@ -21,7 +22,7 @@ class BreakpointInfo:
     src: str | None
 
 
-_breakpoints_dict: Dict[str, BreakpointInfo] = dict()
+_breakpoints_dict: Dict[str, BreakpointInfo] = {}
 
 
 class Breakpoint:
@@ -109,7 +110,7 @@ class Breakpoint:
             name = "<unknown>"
 
         if name in _breakpoints_dict and not overwrite:
-            raise Exception(
+            raise ValueError(
                 f"'{name}' already exists in breakpoints, call 'remove' first or specify 'overwrite=True' while adding"
             )
 
@@ -127,7 +128,7 @@ class Breakpoint:
         global _breakpoints_dict
 
         if name not in _breakpoints_dict:
-            raise Exception(f"can't remove '{name}' from breakpoints because it doesn't exist")
+            raise KeyError(f"can't remove '{name}' from breakpoints because it doesn't exist")
 
         del _breakpoints_dict[name]
 

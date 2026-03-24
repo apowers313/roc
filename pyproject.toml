@@ -148,6 +148,7 @@ exclude = [
   "experiments",
   ".fttemplates",
   "tmp",
+  "dashboard-ui",
 ]
 ignore = ["DEP003"]
 

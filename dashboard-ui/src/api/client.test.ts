@@ -1,17 +1,32 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+    fetchActionHistory,
+    fetchAllObjects,
     fetchBookmarks,
     fetchEventHistory,
     fetchGames,
     fetchGraphHistory,
+    fetchIntrinsicsHistory,
     fetchMetricsHistory,
+    fetchResolutionHistory,
     fetchRuns,
     fetchStep,
     fetchStepRange,
     fetchStepsBatch,
     saveBookmarks,
 } from "./client";
+
+function okJson(data: unknown) {
+    return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(data),
+    });
+}
+
+function errorResponse(status: number, statusText: string) {
+    return Promise.resolve({ ok: false, status, statusText });
+}
 
 describe("API client", () => {
     const mockFetch = vi.fn();
@@ -23,17 +38,6 @@ describe("API client", () => {
     afterEach(() => {
         vi.restoreAllMocks();
     });
-
-    function okJson(data: unknown) {
-        return Promise.resolve({
-            ok: true,
-            json: () => Promise.resolve(data),
-        });
-    }
-
-    function errorResponse(status: number, statusText: string) {
-        return Promise.resolve({ ok: false, status, statusText });
-    }
 
     describe("fetchRuns", () => {
         it("fetches runs from /api/runs", async () => {
@@ -234,6 +238,148 @@ describe("API client", () => {
             await expect(saveBookmarks("run1", [])).rejects.toThrow(
                 "API error: 400 Bad Request",
             );
+        });
+    });
+
+    describe("fetchIntrinsicsHistory", () => {
+        it("fetches intrinsics history without game filter", async () => {
+            const data = [{ step: 1, raw: { hp: 10 }, normalized: { hp: 0.5 } }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchIntrinsicsHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/intrinsics-history",
+            );
+        });
+
+        it("includes game parameter when provided", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchIntrinsicsHistory("run1", 3);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/intrinsics-history?game=3",
+            );
+        });
+
+        it("throws on non-ok response", async () => {
+            mockFetch.mockReturnValue(errorResponse(500, "Internal Server Error"));
+
+            await expect(fetchIntrinsicsHistory("run1")).rejects.toThrow(
+                "API error: 500 Internal Server Error",
+            );
+        });
+    });
+
+    describe("fetchActionHistory", () => {
+        it("fetches action history without game filter", async () => {
+            const data = [{ step: 1, action_id: 5, action_name: "move_north" }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchActionHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/action-history",
+            );
+        });
+
+        it("includes game parameter when provided", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchActionHistory("run1", 2);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/action-history?game=2",
+            );
+        });
+    });
+
+    describe("fetchResolutionHistory", () => {
+        it("fetches resolution history without game filter", async () => {
+            const data = [{ step: 1, outcome: "match", correct: true }];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchResolutionHistory("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/resolution-history",
+            );
+        });
+
+        it("includes game parameter when provided", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchResolutionHistory("run1", 4);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/resolution-history?game=4",
+            );
+        });
+    });
+
+    describe("fetchAllObjects", () => {
+        it("fetches all objects without game filter", async () => {
+            const data = [
+                {
+                    shape: "circle",
+                    glyph: "@",
+                    color: "white",
+                    node_id: "n1",
+                    step_added: 1,
+                    match_count: 5,
+                    feature_type: "glyph",
+                },
+            ];
+            mockFetch.mockReturnValue(okJson(data));
+
+            const result = await fetchAllObjects("run1");
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/all-objects",
+            );
+        });
+
+        it("includes game parameter when provided", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+
+            await fetchAllObjects("run1", 2);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs/run1/all-objects?game=2",
+            );
+        });
+    });
+
+    describe("fetchStepsBatch with signal", () => {
+        it("passes AbortSignal to fetch", async () => {
+            const data = { "1": { step: 1 } };
+            mockFetch.mockReturnValue(okJson(data));
+            const controller = new AbortController();
+
+            const result = await fetchStepsBatch("run1", [1], undefined, controller.signal);
+            expect(result).toEqual(data);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining("/api/runs/run1/steps?"),
+                { signal: controller.signal },
+            );
+        });
+
+        it("fetches without signal when not provided", async () => {
+            const data = { "1": { step: 1 } };
+            mockFetch.mockReturnValue(okJson(data));
+
+            await fetchStepsBatch("run1", [1]);
+            expect(mockFetch).toHaveBeenCalledWith(
+                expect.stringContaining("/api/runs/run1/steps?"),
+            );
+        });
+
+        it("calls fetch with signal when game is provided", async () => {
+            const data = {};
+            mockFetch.mockReturnValue(okJson(data));
+            const controller = new AbortController();
+
+            await fetchStepsBatch("run1", [1, 2], 3, controller.signal);
+            const callArgs = mockFetch.mock.calls[0];
+            expect(callArgs).toHaveLength(2);
+            expect(callArgs![1]).toEqual({ signal: controller.signal });
         });
     });
 });

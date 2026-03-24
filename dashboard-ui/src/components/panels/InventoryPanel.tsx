@@ -8,7 +8,7 @@ interface InventoryPanelProps {
     data: StepData | undefined;
 }
 
-export function InventoryPanel({ data }: InventoryPanelProps) {
+export function InventoryPanel({ data }: Readonly<InventoryPanelProps>) {
     const inv = data?.inventory;
 
     if (!inv || inv.length === 0) {

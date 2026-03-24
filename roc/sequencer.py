@@ -35,33 +35,23 @@ class Frame(Node):
     @property
     def transforms(self) -> list[Transform]:
         """All transforms associated with this frame's change node."""
-        ret: list[Transform] = []
-
         changes = self.src_edges.select(type="Change")
         if len(changes) == 0:
-            return ret
+            return []
         assert len(changes) == 1
-        transform_node = changes[0].dst
 
-        for n in self.successors:
-            if isinstance(n, Transform):
-                change_edges = n.src_edges.select(type="Change")
-                for e in change_edges:
-                    if isinstance(e.dst, Transform):
-                        ret.append(e.dst)
-
-        return ret
+        return [
+            e.dst
+            for n in self.successors
+            if isinstance(n, Transform)
+            for e in n.src_edges.select(type="Change")
+            if isinstance(e.dst, Transform)
+        ]
 
     @property
     def transformable(self) -> list[Transformable]:
         """All transformable attributes attached to this frame."""
-        ret: list[Transformable] = []
-
-        for n in self.successors:
-            if isinstance(n, Transformable):
-                ret.append(n)
-
-        return ret
+        return [n for n in self.successors if isinstance(n, Transformable)]
 
     @staticmethod
     def merge_transforms(src: Frame, mod: Frame) -> Frame:
@@ -81,21 +71,11 @@ class Frame(Node):
         """All Objects referenced by this frame's feature groups."""
         ret: list[Object] = []
 
-        # print(
-        #     self.neighborhood(depth=2).to_dot(extra_styles={self.id: "style=filled, fillcolor=red"})
-        # )
-
-        # print("predecessors", self.predecessors)
-        # print("successors", self.successors)
-
         for e in self.src_edges:
-            # print("e.dst", e.dst)
             if isinstance(e.dst, FeatureGroup):
-                # print("found feature group")
                 feature_group = e.dst
                 for fg_edge in feature_group.src_edges:
                     if isinstance(fg_edge.dst, Object):
-                        # print("found object")
                         ret.append(fg_edge.dst)
 
         return ret

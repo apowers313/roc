@@ -27,12 +27,12 @@ function KVSection({
     entries,
     onPointClick,
     highlightSet,
-}: {
+}: Readonly<{
     title: string;
     entries: [string, unknown][];
     onPointClick?: (x: number, y: number, label: string) => void;
     highlightSet?: Set<string>;
-}) {
+}>) {
     if (entries.length === 0) return null;
     return (
         <InfoCard title={title}>
@@ -76,7 +76,7 @@ interface HistoryEntry {
     tick: number;
 }
 
-export function AttenuationPanel({ data }: AttenuationPanelProps) {
+export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
     const { togglePoint, points } = useHighlight();
     const highlightSet = new Set(points.map((p) => `${p.x},${p.y}`));
     const att = data?.attenuation;
@@ -131,7 +131,7 @@ export function AttenuationPanel({ data }: AttenuationPanelProps) {
                         Flavor
                     </Text>
                     <Badge size="xs" variant="light" color="grape">
-                        {String(att[flavorKey])}
+                        {renderValue(att[flavorKey])}
                     </Badge>
                 </Group>
             )}
@@ -162,13 +162,13 @@ export function AttenuationPanel({ data }: AttenuationPanelProps) {
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                            {history.slice(-10).map((h, i) => {
+                            {history.slice(-10).map((h) => {
                                 const hlX = h.x;
                                 const hlY = h.y;
                                 const isHl = highlightSet.has(`${hlX},${hlY}`);
                                 return (
                                 <Table.Tr
-                                    key={i}
+                                    key={`${h.x}-${h.y}-${h.tick}`}
                                     onClick={() => togglePoint({ x: hlX, y: hlY, label: `attn tick ${h.tick}` })}
                                     style={{
                                         cursor: "pointer",

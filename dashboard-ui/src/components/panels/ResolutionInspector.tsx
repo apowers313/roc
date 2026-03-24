@@ -1,6 +1,7 @@
 /** Resolution Inspector -- structured display of object resolution decisions. */
 
 import { Badge, Group, Stack, Table, Text, UnstyledButton } from "@mantine/core";
+import type { ReactNode } from "react";
 
 import { InfoCard } from "../common/InfoCard";
 import { useHighlight } from "../../state/highlight";
@@ -41,11 +42,12 @@ const NH_COLOR_MAP: Record<string, string> = {
 function formatValue(v: unknown): string {
     if (v == null) return "--";
     if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(4);
-    return String(v);
+    if (typeof v === "string") return v;
+    return JSON.stringify(v);
 }
 
 /** Inline glyph character with its color. */
-function GlyphBadge({ char, color }: { char?: string; color?: string }) {
+function GlyphBadge({ char, color }: Readonly<{ char?: string; color?: string }>) {
     if (!char) return null;
     const fg = color ? NH_COLOR_MAP[color] ?? "#fff" : "#fff";
     return (
@@ -76,6 +78,24 @@ function parseAttrsFromFeatures(features: unknown): Record<string, string> {
     return attrs;
 }
 
+function comparisonBackground(same: boolean, different: boolean): string | undefined {
+    if (different) return "rgba(248, 81, 73, 0.15)";
+    if (same) return "rgba(63, 185, 80, 0.15)";
+    return undefined;
+}
+
+function renderMatchedValue(
+    label: string,
+    matchVal: string | undefined,
+    matchedAttrs: Record<string, string> | undefined,
+): ReactNode {
+    if (label === "shape" && matchVal) {
+        return <GlyphBadge char={String(matchVal)} color={matchedAttrs?.color} />;
+    }
+    if (matchVal != null) return String(matchVal);
+    return matchedAttrs ? "--" : "?";
+}
+
 interface CandidateDetail {
     id: string;
     value: number;
@@ -96,7 +116,7 @@ function buildCandidateDetails(d: Record<string, unknown>): CandidateDetail[] {
             return {
                 id: String(e.id),
                 value: dist ?? prob ?? 0,
-                valueLabel: dist != null ? "distance" : "probability",
+                valueLabel: dist == null ? "probability" : "distance",
                 char: e.char as string | undefined,
                 color: e.color as string | undefined,
                 glyph: e.glyph as number | undefined,
@@ -122,7 +142,7 @@ function buildCandidateDetails(d: Record<string, unknown>): CandidateDetail[] {
     return [];
 }
 
-export function ResolutionInspector({ data }: ResolutionInspectorProps) {
+export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>) {
     const { togglePoint, points } = useHighlight();
     const d = data?.resolution_metrics;
 
@@ -134,7 +154,7 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
         );
     }
 
-    const outcome = String(d.outcome ?? "unknown");
+    const outcome = typeof d.outcome === "string" ? d.outcome : "unknown";
     const outcomeLabel = OUTCOME_LABELS[outcome] ?? outcome.toUpperCase();
     const outcomeColor = OUTCOME_COLORS[outcome] ?? "gray";
     const isMatch = outcome === "match";
@@ -158,7 +178,7 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
         summaryRows.push({ label: "Location", value: location, clickable: true });
     }
     if (d.tick != null) {
-        summaryRows.push({ label: "Tick", value: String(d.tick) });
+        summaryRows.push({ label: "Tick", value: formatValue(d.tick) });
     }
     for (const { key, label } of SUMMARY_KEYS) {
         if (d[key] != null) {
@@ -244,17 +264,15 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
                                         <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
                                             {label === "shape" && obsVal ? (
                                                 <GlyphBadge char={obsVal} color={observedAttrs.color} />
-                                            ) : obsVal ?? "--"}
+                                            ) : (obsVal ?? "--")}
                                         </Table.Td>
                                         <Table.Td style={{
                                             fontSize: 10,
                                             fontFamily: "monospace",
                                             padding: "1px 4px",
-                                            background: different ? "rgba(248, 81, 73, 0.15)" : same ? "rgba(63, 185, 80, 0.15)" : undefined,
+                                            background: comparisonBackground(same, different),
                                         }}>
-                                            {label === "shape" && matchVal ? (
-                                                <GlyphBadge char={String(matchVal)} color={matchedAttrs?.color} />
-                                            ) : matchVal != null ? String(matchVal) : (matchedAttrs ? "--" : "?")}
+                                            {renderMatchedValue(label, matchVal, matchedAttrs)}
                                         </Table.Td>
                                     </Table.Tr>
                                 );
@@ -334,8 +352,8 @@ export function ResolutionInspector({ data }: ResolutionInspectorProps) {
                                 </Table.Tr>
                             </Table.Thead>
                             <Table.Tbody>
-                                {candidates.map((c, i) => (
-                                    <Table.Tr key={i}>
+                                {candidates.map((c) => (
+                                    <Table.Tr key={c.id}>
                                         {hasGlyphs && (
                                             <Table.Td style={{ padding: "1px 4px", textAlign: "center" }}>
                                                 <GlyphBadge char={c.char} color={c.color} />

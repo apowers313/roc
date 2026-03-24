@@ -27,7 +27,7 @@ const SEVERITY_COLORS: Record<string, string> = {
 
 const LEVEL_OPTIONS = ["DEBUG", "INFO", "WARN", "ERROR"];
 
-export function LogMessages({ data }: LogMessagesProps) {
+export function LogMessages({ data }: Readonly<LogMessagesProps>) {
     const [minLevel, setMinLevel] = useState("DEBUG");
 
     const logs = data?.logs ?? [];
@@ -65,8 +65,9 @@ export function LogMessages({ data }: LogMessagesProps) {
                                 const color =
                                     SEVERITY_COLORS[level] ??
                                     "var(--mantine-color-text)";
+                                const logKey = `${level}-${log.timestamp ?? i}-${String(log.body ?? "").slice(0, 40)}`;
                                 return (
-                                    <Table.Tr key={i}>
+                                    <Table.Tr key={logKey}>
                                         <Table.Td
                                             style={{
                                                 color,

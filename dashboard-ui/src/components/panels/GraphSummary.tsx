@@ -8,9 +8,12 @@ interface GraphSummaryProps {
     data: StepData | undefined;
 }
 
-function CacheGauge({ label, count, max }: { label: string; count: number; max: number }) {
+function CacheGauge({ label, count, max }: Readonly<{ label: string; count: number; max: number }>) {
     const pct = max > 0 ? (count / max) * 100 : 0;
-    const color = pct > 80 ? "red" : pct > 60 ? "yellow" : "teal";
+    let color: string;
+    if (pct > 80) color = "red";
+    else if (pct > 60) color = "yellow";
+    else color = "teal";
     return (
         <div>
             <Group justify="space-between" mb={2}>
@@ -26,7 +29,7 @@ function CacheGauge({ label, count, max }: { label: string; count: number; max: 
     );
 }
 
-export function GraphSummary({ data }: GraphSummaryProps) {
+export function GraphSummary({ data }: Readonly<GraphSummaryProps>) {
     const gs = data?.graph_summary;
     if (!gs) {
         return (

@@ -5,7 +5,7 @@ from __future__ import annotations
 import multiprocessing
 from abc import ABC
 from collections import deque
-from typing import Any, Callable, Generic, TypeVar
+from typing import Any, Callable
 
 import reactivex as rx
 from loguru import logger
@@ -18,8 +18,6 @@ from rich.pretty import pretty_repr
 from .component import Component, ComponentId
 from .reporting.observability import Observability
 
-EventData = TypeVar("EventData")
-
 event_counter = Observability.meter.create_counter(
     "roc.event", unit="event", description="total number of events"
 )
@@ -28,7 +26,7 @@ thread_count = multiprocessing.cpu_count() * 2
 pool_scheduler = ThreadPoolScheduler(thread_count)
 
 
-class Event(ABC, Generic[EventData]):
+class Event[EventData](ABC):
     """An abstract event class for sending messages between Components over an EventBus.
 
     Generic over EventData, the type of data carried by the event.
@@ -61,7 +59,6 @@ class Event(ABC, Generic[EventData]):
     def __repr__(self) -> str:
         data_str = pretty_repr(
             self.data,
-            # max_depth=4, # Maximum depth of nested data structure
             max_length=5,  # Maximum length of containers before abbreviating
             max_string=60,  # Maximum length of string before truncating
             expand_all=False,  # Expand all containers regardless of available width
@@ -72,11 +69,11 @@ class Event(ABC, Generic[EventData]):
         return f"[EVENT: {self.src_id} >>> {self.bus.name}]: {data_str}"
 
 
-EventFilter = Callable[[Event[EventData]], bool]
-EventListener = Callable[[Event[EventData]], None]
+type EventFilter[EventData] = Callable[[Event[EventData]], bool]
+type EventListener[EventData] = Callable[[Event[EventData]], None]
 
 
-class BusConnection(Generic[EventData]):
+class BusConnection[EventData]:
     """A connection between an EventBus and a Component, used to send Events.
 
     Generic over EventData, the type of data sent over this connection.
@@ -113,8 +110,6 @@ class BusConnection(Generic[EventData]):
             filter: Optional additional filter beyond the component's event_filter.
         """
         pipe_args: list[Callable[[Any], Observable[Event[EventData]]]] = [
-            # op.filter(lambda e: e.src is not self.attached_component),
-            # op.do_action(lambda e: print("before filter", e)),
             op.filter(self.attached_component.event_filter),
         ]
         if filter is not None:
@@ -132,13 +127,11 @@ class BusConnection(Generic[EventData]):
         for sub in self.subscribers:
             sub.dispose()
 
-        # del self.attached_component
-
 
 eventbus_names: set[str] = set()
 
 
-class EventBus(Generic[EventData]):
+class EventBus[EventData]:
     """A communication channel for sending events between Components.
 
     Generic over EventData, the type of data allowed to be sent over the bus.
@@ -151,7 +144,7 @@ class EventBus(Generic[EventData]):
 
     def __init__(self, name: str, cache_depth: int = 0) -> None:
         if name in eventbus_names:
-            raise Exception(f"Duplicate EventBus name: {name}")
+            raise ValueError(f"Duplicate EventBus name: {name}")
         self.name = name
         eventbus_names.add(name)
         self.subject = rx.Subject[Event[EventData]]()
@@ -172,11 +165,6 @@ class EventBus(Generic[EventData]):
             BusConnection[EventData]: A new connection that can be used to send data
         """
         return BusConnection[EventData](self, component)
-
-    # def next(self) -> Event[EventData]:
-    #     obs = self.subject.pipe(op.first())
-    #     ret: Event[EventData] = obs.run()
-    #     return ret
 
     @staticmethod
     def clear_names() -> None:

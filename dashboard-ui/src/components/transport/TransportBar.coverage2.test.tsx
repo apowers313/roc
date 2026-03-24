@@ -10,7 +10,7 @@ import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import { DashboardProvider, useDashboard } from "../../state/context";
 import { HighlightProvider } from "../../state/highlight";
@@ -37,7 +37,7 @@ const mockUseStepRange = vi.mocked(useStepRange);
 /**
  * GoLive wrapper -- puts playback into live_following state.
  */
-function GoLiveSetup({ children }: { children: ReactNode }) {
+function GoLiveSetup({ children }: Readonly<{ children: ReactNode }>) {
     const { dispatchPlayback, setRun, setStepRange, setGame } = useDashboard();
 
     useEffect(() => {
@@ -50,7 +50,7 @@ function GoLiveSetup({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-function LiveWrapper({ children }: { children: ReactNode }) {
+function LiveWrapper({ children }: Readonly<{ children: ReactNode }>) {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false } },
     });

@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 
+from ..graphdb import FindQueryOpts
 from ..location import Point
 from ..perception import (
     FeatureExtractor,
@@ -63,7 +64,7 @@ class ColorNode(FeatureNode):
             case 16:
                 color = "MAX"
             case _:
-                raise Exception("impossible color")
+                raise ValueError("impossible color")
 
         return [color]
 
@@ -99,7 +100,9 @@ class ColorFeature(PointFeature[ColorNode]):
 
     def _dbfetch_nodes(self) -> ColorNode | None:
         """Looks up an existing ColorNode by type."""
-        return ColorNode.find_one("src.type = $type", params={"type": self.type})
+        return ColorNode.find_one(
+            "src.type = $type", query_opts=FindQueryOpts(params={"type": self.type})
+        )
 
 
 class Color(FeatureExtractor[Point]):
@@ -112,7 +115,7 @@ class Color(FeatureExtractor[Point]):
 
     def __init__(self) -> None:
         super().__init__()
-        self.queue: list[SingleFeature] = list()
+        self.queue: list[SingleFeature] = []
         self.vd: VisionData | None = None
         self.single_settled = False
 

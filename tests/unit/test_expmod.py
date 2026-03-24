@@ -7,36 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from roc.expmod import ExpMod, expmod_loaded, expmod_modtype_current, expmod_registry
-
-
-@pytest.fixture(autouse=True)
-def clean_expmod_state():
-    """Save and restore expmod global state between tests.
-
-    Only removes entries added during the test -- does not blow away
-    pre-existing entries that other modules may have registered.
-    """
-    orig_registry_snapshot = {k: set(v.keys()) for k, v in expmod_registry.items()}
-    orig_current = dict(expmod_modtype_current)
-    orig_loaded = dict(expmod_loaded)
-
-    yield
-
-    # Remove any entries added during the test (but don't remove pre-existing ones)
-    for modtype in list(expmod_registry.keys()):
-        if modtype not in orig_registry_snapshot:
-            del expmod_registry[modtype]
-        else:
-            for name in list(expmod_registry[modtype].keys()):
-                if name not in orig_registry_snapshot[modtype]:
-                    del expmod_registry[modtype][name]
-
-    # Restore current and loaded
-    expmod_modtype_current.clear()
-    expmod_modtype_current.update(orig_current)
-    expmod_loaded.clear()
-    expmod_loaded.update(orig_loaded)
+from roc.expmod import ExpMod, expmod_modtype_current, expmod_registry
 
 
 class TestExpModInitSubclass:
@@ -61,6 +32,7 @@ class TestExpModInitSubclass:
             modtype = "test-dup-check"
             name = "original"
 
+        _ = OriginalMod
         with pytest.raises(Exception, match="duplicate name"):
 
             class DuplicateMod(ExpMod):

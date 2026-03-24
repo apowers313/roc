@@ -8,7 +8,7 @@ interface InfoCardProps {
     children: ReactNode;
 }
 
-export function InfoCard({ title, children }: InfoCardProps) {
+export function InfoCard({ title, children }: Readonly<InfoCardProps>) {
     return (
         <Paper p="xs" withBorder>
             <Text size="xs" fw={600} mb={4}>

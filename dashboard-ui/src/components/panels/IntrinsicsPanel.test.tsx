@@ -74,7 +74,7 @@ describe("IntrinsicsPanel", () => {
             },
             significance: 0.7,
         });
-        const { container } = renderWithProviders(<IntrinsicsPanel data={data} />);
+        renderWithProviders(<IntrinsicsPanel data={data} />);
         const badge = screen.getByText("0.7000");
         // Badge should exist and show value
         expect(badge).toBeInTheDocument();

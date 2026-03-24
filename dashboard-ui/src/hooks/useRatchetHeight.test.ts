@@ -28,7 +28,7 @@ class MockResizeObserver {
         roCallback = cb;
     }
     observe() { mockObserve(); }
-    unobserve() {}
+    unobserve() { /* stub */ }
     disconnect() { mockDisconnect(); }
 }
 

@@ -183,21 +183,15 @@ class Config(BaseSettings):
             ConfigMapIntrinsic(
                 name="hunger",
                 config={
-                    0: 0.5,  # SATIATED = 0
-                    1: 1.0,  # NOT_HUNGRY = 1
-                    2: 0.75,  # HUNGRY = 2
-                    3: 0.5,  # WEAK = 3
-                    4: 0.25,  # FAINTING = 4
-                    5: 0.1,  # FAINTED = 5
-                    6: 0.0,  # STARVED = 6
+                    0: 0.5,  # satiated
+                    1: 1.0,  # not hungry
+                    2: 0.75,  # hungry
+                    3: 0.5,  # weak
+                    4: 0.25,  # fainting
+                    5: 0.1,  # fainted
+                    6: 0.0,  # starved
                 },
             ),
-            # char
-            # wis
-            # intel
-            # con
-            # dex
-            # str
         ],
     )
     # graphdb controls
@@ -258,27 +252,8 @@ class Config(BaseSettings):
     ) -> None:
         """Initializes the settings by reading the configuration files and environment variables"""
         global _config_singleton
-        initialized = _config_singleton is not None
-        if initialized and not force:
-            # Build a detailed warning message with caller info and changed keys
-            frame = inspect.stack()[1]
-            caller_info = f"{frame.filename}:{frame.lineno}"
-
-            passed_conf = config or {}
-            changed_keys: list[str] = []
-            if passed_conf and _config_singleton is not None:
-                for key, new_val in passed_conf.items():
-                    if hasattr(_config_singleton, key):
-                        old_val = getattr(_config_singleton, key)
-                        if old_val != new_val:
-                            changed_keys.append(f"  {key}: {old_val!r} -> {new_val!r}")
-
-            msg = f"Config already initialized, returning existing configuration. Called from {caller_info}"
-            if changed_keys:
-                diff = "\n".join(changed_keys)
-                msg += f"\nChanged keys that will be IGNORED:\n{diff}"
-
-            warnings.warn(msg, ConfigInitWarning)
+        if _config_singleton is not None and not force:
+            _warn_already_initialized(config, _config_singleton)
             return
 
         passed_conf = config or {}
@@ -289,6 +264,30 @@ class Config(BaseSettings):
         """Reset the configuration. Mostly used for testing."""
         global _config_singleton
         _config_singleton = None
+
+
+def _warn_already_initialized(config: dict[str, Any] | None, current: Config) -> None:
+    """Build and emit a warning when Config.init is called after initialization."""
+    frame = inspect.stack()[2]
+    caller_info = f"{frame.filename}:{frame.lineno}"
+    changed_keys = _find_changed_keys(config or {}, current)
+
+    msg = f"Config already initialized, returning existing configuration. Called from {caller_info}"
+    if changed_keys:
+        diff = "\n".join(changed_keys)
+        msg += f"\nChanged keys that will be IGNORED:\n{diff}"
+    warnings.warn(msg, ConfigInitWarning)
+
+
+def _find_changed_keys(passed_conf: dict[str, Any], current: Config) -> list[str]:
+    """Compare passed config against current singleton and return descriptions of differences."""
+    changed: list[str] = []
+    for key, new_val in passed_conf.items():
+        if hasattr(current, key):
+            old_val = getattr(current, key)
+            if old_val != new_val:
+                changed.append(f"  {key}: {old_val!r} -> {new_val!r}")
+    return changed
 
 
 Config.init()

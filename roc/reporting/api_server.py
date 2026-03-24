@@ -13,7 +13,7 @@ import json
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 import numpy as np
 import socketio
@@ -40,6 +40,10 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 
 app = FastAPI(title="ROC Debug Dashboard API")
 
+_NOT_INITIALIZED = "Dashboard not initialized"
+_NOT_INITIALIZED_RESPONSE: dict[int | str, dict[str, Any]] = {
+    503: {"description": _NOT_INITIALIZED}
+}
 
 _server_ready = threading.Event()
 
@@ -90,8 +94,8 @@ async def _handle_file_not_found(request: Request, exc: FileNotFoundError) -> JS
 class GameSummary(BaseModel):
     game_number: int
     steps: int
-    start_ts: int | None
-    end_ts: int | None
+    start_ts: int | None = None
+    end_ts: int | None = None
 
 
 class StepRange(BaseModel):
@@ -140,24 +144,27 @@ def list_runs(min_steps: int = 10) -> list[RunSummary]:
     return _data_store.list_runs(min_steps)
 
 
-@app.get("/api/runs/{run_name}/games")
+@app.get("/api/runs/{run_name}/games", responses=_NOT_INITIALIZED_RESPONSE)
 def list_games(run_name: str) -> list[GameSummary]:
     """List games in a run."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     games = _data_store.list_games(run_name)
     return [GameSummary(**g) for g in games]
 
 
-@app.get("/api/runs/{run_name}/step/{step}")
+@app.get(
+    "/api/runs/{run_name}/step/{step}",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_step(
     run_name: str,
     step: int,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get all data for a specific step."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     t0 = time.monotonic()
     step_data = _data_store.get_step_data(run_name, step)
     t1 = time.monotonic()
@@ -173,11 +180,11 @@ def get_step(
     return JSONResponse(content=data)
 
 
-@app.get("/api/runs/{run_name}/steps")
+@app.get("/api/runs/{run_name}/steps", responses=_NOT_INITIALIZED_RESPONSE)
 def get_steps_batch(
     run_name: str,
-    steps: str = Query(description="Comma-separated step numbers"),
-    game: int | None = Query(default=None),
+    steps: Annotated[str, Query(description="Comma-separated step numbers")],
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get data for multiple steps in a single request.
 
@@ -185,7 +192,7 @@ def get_steps_batch(
     Steps that fail to load are silently skipped.
     """
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     t0 = time.monotonic()
     step_nums = [int(s.strip()) for s in steps.split(",") if s.strip()]
     try:
@@ -204,120 +211,147 @@ def get_steps_batch(
     return JSONResponse(content=result)
 
 
-@app.get("/api/runs/{run_name}/step-range")
+@app.get("/api/runs/{run_name}/step-range", responses=_NOT_INITIALIZED_RESPONSE)
 def get_step_range(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> StepRange:
     """Get min/max step for a run or game."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     min_step, max_step = _data_store.get_step_range(run_name, game)
     return StepRange(min=min_step, max=max_step)
 
 
-@app.get("/api/runs/{run_name}/metrics-history")
+@app.get(
+    "/api/runs/{run_name}/metrics-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_metrics_history(
     run_name: str,
-    game: int | None = Query(default=None),
-    fields: str | None = Query(default=None, description="Comma-separated field names"),
+    game: Annotated[int | None, Query()] = None,
+    fields: Annotated[str | None, Query(description="Comma-separated field names")] = None,
 ) -> JSONResponse:
     """Get game_metrics for all steps in a game (for charting trends)."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     field_list = [f.strip() for f in fields.split(",") if f.strip()] if fields else None
     data = _data_store.get_metrics_history(run_name, game, field_list)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/graph-history")
+@app.get(
+    "/api/runs/{run_name}/graph-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_graph_history(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get graph_summary for all steps in a game (for charting cache utilization)."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_graph_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/event-history")
+@app.get(
+    "/api/runs/{run_name}/event-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_event_history(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get event_summary for all steps in a game (for charting event activity)."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_event_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/intrinsics-history")
+@app.get(
+    "/api/runs/{run_name}/intrinsics-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_intrinsics_history(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get intrinsics for all steps in a game (for charting trends)."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_intrinsics_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/action-history")
+@app.get(
+    "/api/runs/{run_name}/action-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_action_history(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get action taken for all steps in a game (for charting action distribution)."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_action_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/resolution-history")
+@app.get(
+    "/api/runs/{run_name}/resolution-history",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_resolution_history(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get resolution accuracy history for charting correct/incorrect/new counts."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_resolution_history(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/all-objects")
+@app.get(
+    "/api/runs/{run_name}/all-objects",
+    responses=_NOT_INITIALIZED_RESPONSE,
+)
 def get_all_objects(
     run_name: str,
-    game: int | None = Query(default=None),
+    game: Annotated[int | None, Query()] = None,
 ) -> JSONResponse:
     """Get all resolved objects with attributes, match counts, and creation step."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     data = _data_store.get_all_objects(run_name, game)
     return JSONResponse(content=_convert_numpy(data))
 
 
-@app.get("/api/runs/{run_name}/schema")
+@app.get(
+    "/api/runs/{run_name}/schema",
+    responses={
+        404: {"description": "Resource not found"},
+        503: {"description": "Dashboard not initialized"},
+    },
+)
 def get_schema(run_name: str) -> JSONResponse:
     """Get the graph database schema for a run."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     schema = _data_store.get_schema(run_name)
     if schema is None:
         raise HTTPException(status_code=404, detail="No schema found for this run")
     return JSONResponse(content=schema)
 
 
-@app.get("/api/runs/{run_name}/action-map")
+@app.get("/api/runs/{run_name}/action-map", responses=_NOT_INITIALIZED_RESPONSE)
 def get_action_map(run_name: str) -> JSONResponse:
     """Get the full action-id-to-name mapping for a run."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     action_map = _data_store.get_action_map(run_name)
     if action_map is None:
         return JSONResponse(content=[])
@@ -339,11 +373,11 @@ def get_bookmarks(run_name: str) -> list[Bookmark]:
         return []
 
 
-@app.post("/api/runs/{run_name}/bookmarks")
+@app.post("/api/runs/{run_name}/bookmarks", responses=_NOT_INITIALIZED_RESPONSE)
 def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> dict[str, str]:
     """Save bookmarks for a run."""
     if _data_store is None:
-        raise HTTPException(status_code=503, detail="Dashboard not initialized")
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
     bookmarks_file = _data_store.data_dir / run_name / "bookmarks.json"
     bookmarks_file.parent.mkdir(parents=True, exist_ok=True)
     bookmarks_file.write_text(json.dumps([b.model_dump() for b in bookmarks], indent=2))
@@ -357,7 +391,7 @@ def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> dict[str, str]:
 
 class LiveStatus(BaseModel):
     active: bool
-    run_name: str | None
+    run_name: str | None = None
     step: int
     game_number: int
     step_min: int
@@ -398,7 +432,7 @@ def live_status() -> LiveStatus:
     )
 
 
-@app.get("/api/live/step/{step}")
+@app.get("/api/live/step/{step}", responses={404: {"description": "Resource not found"}})
 def live_step(step: int) -> JSONResponse:
     """Get step data from the live StepBuffer (in-memory)."""
     if _data_store is None or _data_store.live_buffer is None:
@@ -439,8 +473,14 @@ def game_status() -> GameStatus:
     )
 
 
-@app.post("/api/game/start")
-def game_start(num_games: int = Query(default=5)) -> dict[str, str]:
+@app.post(
+    "/api/game/start",
+    responses={
+        409: {"description": "Game already running or already stopped"},
+        503: {"description": "Dashboard not initialized"},
+    },
+)
+def game_start(num_games: Annotated[int, Query()] = 5) -> dict[str, str]:
     """Start a new game subprocess."""
     if _game_manager is None:
         raise HTTPException(status_code=503, detail="Game manager not initialized")
@@ -451,7 +491,13 @@ def game_start(num_games: int = Query(default=5)) -> dict[str, str]:
         raise HTTPException(status_code=409, detail=str(e))
 
 
-@app.post("/api/game/stop")
+@app.post(
+    "/api/game/stop",
+    responses={
+        409: {"description": "Game already running or already stopped"},
+        503: {"description": "Dashboard not initialized"},
+    },
+)
 def game_stop() -> dict[str, str]:
     """Stop the running game."""
     if _game_manager is None:

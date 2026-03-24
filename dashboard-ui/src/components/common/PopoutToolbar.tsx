@@ -14,7 +14,7 @@ interface PopoutButtonProps {
     size?: string;
 }
 
-function PopoutButton({ title, icon: Icon, children, size }: PopoutButtonProps) {
+function PopoutButton({ title, icon: Icon, children, size }: Readonly<PopoutButtonProps>) {
     const [opened, { open, close }] = useDisclosure(false);
 
     return (
@@ -41,7 +41,7 @@ interface PopoutToolbarProps {
 }
 
 /** Container for PopoutButton elements. Renders nothing if children is empty. */
-export function PopoutToolbar({ children }: PopoutToolbarProps) {
+export function PopoutToolbar({ children }: Readonly<PopoutToolbarProps>) {
     return (
         <Group
             gap={4}

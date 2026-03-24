@@ -60,9 +60,10 @@ class TestNoAttenuation:
 
     def test_different_image_sizes(self) -> None:
         """Works with various image dimensions."""
+        rng = np.random.default_rng(seed=42)
         sm = MagicMock(spec=SaliencyMap)
         for shape in [(5, 3), (80, 21), (1, 1)]:
-            img = np.random.rand(*shape)
+            img = rng.random(shape)
             result = NoAttenuation().attenuate(img, sm)
             np.testing.assert_array_equal(result, img)
 

@@ -1,8 +1,11 @@
 """Identifies contiguous regions of the same glyph value using flood-fill labeling."""
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
+
+from ..graphdb import FindQueryOpts
 from scipy.ndimage import label
 
 from ..location import IntGrid, TypedPointCollection
@@ -54,12 +57,14 @@ class FloodFeature(AreaFeature[FloodNode]):
         """Looks up an existing FloodNode by type, size, color, and shape."""
         return FloodNode.find_one(
             "src.type = $type AND src.size = $size AND src.color = $color AND src.shape = $shape",
-            params={
-                "type": self.type,
-                "size": self.size,
-                "color": self.color,
-                "shape": self.shape,
-            },
+            query_opts=FindQueryOpts(
+                params={
+                    "type": self.type,
+                    "size": self.size,
+                    "color": self.color,
+                    "shape": self.shape,
+                }
+            ),
         )
 
 
@@ -86,32 +91,40 @@ class Flood(FeatureExtractor[TypedPointCollection]):
         unique_nums, unique_count = np.unique(data, return_counts=True)
         for idx in range(len(unique_nums)):
             if unique_count[idx] >= MIN_FLOOD_SIZE:
-                val = unique_nums[idx]
-                d2 = np.copy(data)
-                # label only finds non-zero values
-                # this handles the case when value is zero
-                if val == 0:
-                    d2[d2 == val] = NONZERO_VAL
-                    val = NONZERO_VAL
-
-                d2[d2 != val] = 0
-                labeled, ncomponents = label(d2, structure)
-                for n in range(1, ncomponents + 1):
-                    point_list = indices[labeled == n]
-                    if val == NONZERO_VAL:
-                        val = 0
-                    if len(point_list) >= MIN_FLOOD_SIZE:
-                        point_set = {(p[0], p[1]) for p in point_list}
-                        rep = point_list[0]
-                        self.pb_conn.send(
-                            FloodFeature(
-                                origin_id=self.id,
-                                points=point_set,
-                                type=val,
-                                size=len(point_set),
-                                color=int(vd.colors[rep[1], rep[0]]),
-                                shape=int(vd.chars[rep[1], rep[0]]),
-                            )
-                        )
+                self._process_flood_value(unique_nums[idx], data, indices, structure, vd)
 
         self.settled()
+
+    def _process_flood_value(
+        self,
+        raw_val: int,
+        data: IntGrid,
+        indices: Any,
+        structure: Any,
+        vd: VisionData,
+    ) -> None:
+        """Label and emit flood features for a single glyph value."""
+        val = raw_val
+        d2 = np.copy(data)
+        if val == 0:
+            d2[d2 == val] = NONZERO_VAL
+            val = NONZERO_VAL
+
+        d2[d2 != val] = 0
+        labeled, ncomponents = label(d2, structure)
+        original_val = 0 if raw_val == 0 else val
+        for n in range(1, ncomponents + 1):
+            point_list = indices[labeled == n]
+            if len(point_list) >= MIN_FLOOD_SIZE:
+                point_set = {(p[0], p[1]) for p in point_list}
+                rep = point_list[0]
+                self.pb_conn.send(
+                    FloodFeature(
+                        origin_id=self.id,
+                        points=point_set,
+                        type=original_val,
+                        size=len(point_set),
+                        color=int(vd.colors[rep[1], rep[0]]),
+                        shape=int(vd.chars[rep[1], rep[0]]),
+                    )
+                )

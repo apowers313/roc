@@ -45,7 +45,7 @@ interface MermaidDiagramProps {
     onSvgReady?: (svg: string) => void;
 }
 
-export function MermaidDiagram({ definition, onSvgReady }: MermaidDiagramProps) {
+export function MermaidDiagram({ definition, onSvgReady }: Readonly<MermaidDiagramProps>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [error, setError] = useState<string | null>(null);
 
