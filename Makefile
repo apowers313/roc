@@ -138,11 +138,24 @@ edit-docs:
 coverage:
 	uv run coverage run -m pytest
 	uv run coverage lcov
+	uv run coverage xml
 	uv run coverage report
 
 .PHONY: coverage-server
 coverage-server:
 	cd htmlcov && python3 -m http.server 9099
+
+# SonarQube
+.PHONY: sonar-reports
+sonar-reports:
+	uv run ruff check --config=./pyproject.toml . --output-format json --output-file ruff-report.json --exit-zero
+	[ -s ruff-report.json ] || echo '[]' > ruff-report.json
+	uv run mypy --config-file pyproject.toml ./ --junit-xml mypy-report.xml || true
+	cd dashboard-ui && npx vitest run --coverage || true
+
+.PHONY: sonar
+sonar: sonar-reports
+	SONAR_TOKEN=$(SONAR_TOKEN) npx @sonar/scan
 
 .PHONY: doc-coverage
 doc-coverage:
@@ -202,7 +215,7 @@ clean:
 pre-commit: 
 
 .PHONY: pre-push
-pre-push: lint test-unit doc-coverage coverage docs
+pre-push: lint test-unit doc-coverage coverage sonar docs
 
 .PHONY: upgrade-python
 upgrade-python:

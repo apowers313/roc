@@ -272,6 +272,8 @@ norecursedirs = [
   "experiments",
   ".fttemplates",
   "tmp",
+  "node_modules",
+  "dashboard-ui",
 ]
 
 doctest_optionflags = [
