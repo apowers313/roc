@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.game_manager import GameManager, _SIGKILL_TIMEOUT
+from roc.game_manager import GameManager, _GRACEFUL_TIMEOUT, _SIGKILL_TIMEOUT
 
 
 class TestInitialState:
@@ -183,7 +183,7 @@ class TestStopGame:
             gm.stop_game()
 
     @patch("roc.game_manager.threading.Thread")
-    def test_sends_sigterm_to_process(self, mock_thread_cls: MagicMock, tmp_path: Path) -> None:
+    def test_sets_stop_requested_flag(self, mock_thread_cls: MagicMock, tmp_path: Path) -> None:
         mock_thread_cls.return_value = MagicMock()
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 12345
@@ -192,27 +192,43 @@ class TestStopGame:
         gm._state = "running"
         gm._process = mock_proc
 
+        assert not gm.is_stop_requested()
         gm.stop_game()
-
-        mock_proc.send_signal.assert_called_once_with(signal.SIGTERM)
+        assert gm.is_stop_requested()
         assert gm.state == "stopping"
 
     @patch("roc.game_manager.threading.Thread")
-    def test_handles_already_exited_process(
+    def test_does_not_send_sigterm_immediately(
         self, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
         mock_thread_cls.return_value = MagicMock()
         mock_proc = MagicMock(spec=subprocess.Popen)
         mock_proc.pid = 12345
-        mock_proc.send_signal.side_effect = ProcessLookupError()
 
         gm = GameManager(data_dir=tmp_path)
         gm._state = "running"
         gm._process = mock_proc
 
-        # Should not raise
         gm.stop_game()
-        assert gm.state == "stopping"
+        mock_proc.send_signal.assert_not_called()
+
+    @patch("roc.game_manager.threading.Thread")
+    def test_starts_shutdown_watchdog_thread(
+        self, mock_thread_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_thread = MagicMock()
+        mock_thread_cls.return_value = mock_thread
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.pid = 12345
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._state = "running"
+        gm._process = mock_proc
+
+        gm.stop_game()
+        mock_thread_cls.assert_called_once()
+        assert mock_thread_cls.call_args[1]["target"] == gm._shutdown_watchdog
+        mock_thread.start.assert_called_once()
 
 
 class TestMonitorProcess:
@@ -345,43 +361,152 @@ class TestStreamLogs:
         gm._stream_logs()
 
 
-class TestSigkillWatchdog:
+class TestShutdownWatchdog:
     def test_returns_immediately_when_process_is_none(self, tmp_path: Path) -> None:
         gm = GameManager(data_dir=tmp_path)
         gm._process = None
         # Should return without error
-        gm._sigkill_watchdog()
+        gm._shutdown_watchdog()
 
-    def test_does_not_kill_if_process_exits_before_timeout(self, tmp_path: Path) -> None:
+    def test_returns_if_process_exits_during_graceful_wait(self, tmp_path: Path) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
-        mock_proc.wait.return_value = 0  # exits cleanly
+        mock_proc.wait.return_value = 0  # exits cleanly during graceful wait
 
         gm = GameManager(data_dir=tmp_path)
         gm._process = mock_proc
 
-        gm._sigkill_watchdog()
+        gm._shutdown_watchdog()
 
-        mock_proc.wait.assert_called_once_with(timeout=_SIGKILL_TIMEOUT)
+        # Only called once (graceful tier), no SIGTERM sent
+        mock_proc.wait.assert_called_once_with(timeout=_GRACEFUL_TIMEOUT)
+        mock_proc.send_signal.assert_not_called()
         mock_proc.kill.assert_not_called()
 
-    def test_escalates_to_sigkill_on_timeout(self, tmp_path: Path) -> None:
+    def test_sends_sigterm_after_graceful_timeout(self, tmp_path: Path) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
-        mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="play", timeout=10)
+        mock_proc.pid = 12345
+        # First wait (graceful) times out, second wait (SIGTERM) succeeds
+        mock_proc.wait.side_effect = [
+            subprocess.TimeoutExpired(cmd="play", timeout=_GRACEFUL_TIMEOUT),
+            0,
+        ]
 
         gm = GameManager(data_dir=tmp_path)
         gm._process = mock_proc
 
-        gm._sigkill_watchdog()
+        gm._shutdown_watchdog()
 
+        mock_proc.send_signal.assert_called_once_with(signal.SIGTERM)
+        mock_proc.kill.assert_not_called()
+
+    def test_escalates_to_sigkill_after_sigterm_timeout(self, tmp_path: Path) -> None:
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.pid = 12345
+        # Both waits time out
+        mock_proc.wait.side_effect = [
+            subprocess.TimeoutExpired(cmd="play", timeout=_GRACEFUL_TIMEOUT),
+            subprocess.TimeoutExpired(cmd="play", timeout=_SIGKILL_TIMEOUT),
+        ]
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._process = mock_proc
+
+        gm._shutdown_watchdog()
+
+        mock_proc.send_signal.assert_called_once_with(signal.SIGTERM)
         mock_proc.kill.assert_called_once()
 
-    def test_handles_already_gone_on_kill(self, tmp_path: Path) -> None:
+    def test_handles_already_gone_on_sigterm(self, tmp_path: Path) -> None:
         mock_proc = MagicMock(spec=subprocess.Popen)
-        mock_proc.wait.side_effect = subprocess.TimeoutExpired(cmd="play", timeout=10)
+        mock_proc.pid = 12345
+        mock_proc.wait.side_effect = subprocess.TimeoutExpired(
+            cmd="play", timeout=_GRACEFUL_TIMEOUT
+        )
+        mock_proc.send_signal.side_effect = ProcessLookupError()
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._process = mock_proc
+
+        # Should not raise
+        gm._shutdown_watchdog()
+        mock_proc.kill.assert_not_called()
+
+    def test_handles_already_gone_on_sigkill(self, tmp_path: Path) -> None:
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.pid = 12345
+        mock_proc.wait.side_effect = [
+            subprocess.TimeoutExpired(cmd="play", timeout=_GRACEFUL_TIMEOUT),
+            subprocess.TimeoutExpired(cmd="play", timeout=_SIGKILL_TIMEOUT),
+        ]
         mock_proc.kill.side_effect = ProcessLookupError()
 
         gm = GameManager(data_dir=tmp_path)
         gm._process = mock_proc
 
         # Should not raise
-        gm._sigkill_watchdog()
+        gm._shutdown_watchdog()
+
+
+class TestIsStopRequested:
+    def test_false_initially(self, tmp_path: Path) -> None:
+        gm = GameManager(data_dir=tmp_path)
+        assert not gm.is_stop_requested()
+
+    def test_true_after_stop_game(self, tmp_path: Path) -> None:
+        gm = GameManager(data_dir=tmp_path)
+        gm._state = "running"
+        gm._process = MagicMock(spec=subprocess.Popen)
+        gm._process.pid = 1
+
+        with patch("roc.game_manager.threading.Thread"):
+            gm.stop_game()
+        assert gm.is_stop_requested()
+
+    @patch("roc.game_manager.threading.Thread")
+    @patch("roc.game_manager.subprocess.Popen")
+    def test_cleared_on_start_game(
+        self, mock_popen_cls: MagicMock, mock_thread_cls: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_popen_cls.return_value = MagicMock()
+        mock_thread_cls.return_value = MagicMock()
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._stop_requested.set()
+        assert gm.is_stop_requested()
+
+        gm.start_game()
+        assert not gm.is_stop_requested()
+
+
+class TestMonitorProcessStopRequested:
+    def test_user_stop_does_not_set_error_message(self, tmp_path: Path) -> None:
+        """When state is 'stopping' and exit code is non-zero, no error is set."""
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.poll.return_value = 0
+        mock_proc.wait.return_value = 0
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._state = "stopping"
+        gm._process = mock_proc
+
+        with patch("roc.game_manager.time.sleep"):
+            gm._monitor_process(set())
+
+        assert gm._exit_code == 0
+        assert gm._error_message is None
+
+    def test_user_stop_with_exit_code_1_no_error(self, tmp_path: Path) -> None:
+        """Exit code 1 during user-initiated stop is not an error."""
+        mock_proc = MagicMock(spec=subprocess.Popen)
+        mock_proc.poll.return_value = 1
+        mock_proc.wait.return_value = 1
+
+        gm = GameManager(data_dir=tmp_path)
+        gm._state = "stopping"
+        gm._process = mock_proc
+
+        with patch("roc.game_manager.time.sleep"):
+            gm._monitor_process(set())
+
+        assert gm._exit_code == 1
+        assert gm._error_message is None

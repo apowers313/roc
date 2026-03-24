@@ -15,6 +15,8 @@ from typing import Any, Callable, Literal
 
 from loguru import logger
 
+# Seconds to wait for cooperative shutdown (game checks REST response) before SIGTERM
+_GRACEFUL_TIMEOUT = 5
 # Seconds to wait after SIGTERM before escalating to SIGKILL
 _SIGKILL_TIMEOUT = 10
 
@@ -39,10 +41,15 @@ class GameManager:
         self._monitor_thread: threading.Thread | None = None
         self._log_thread: threading.Thread | None = None
         self._lock = threading.Lock()
+        self._stop_requested = threading.Event()
 
     @property
     def state(self) -> str:
         return self._state
+
+    def is_stop_requested(self) -> bool:
+        """Check whether a cooperative stop has been requested."""
+        return self._stop_requested.is_set()
 
     def start_game(self, num_games: int = 5) -> str:
         """Spawn a game subprocess.
@@ -58,6 +65,7 @@ class GameManager:
             self._set_state("initializing")
             self._exit_code = None
             self._error_message = None
+            self._stop_requested.clear()
 
         # Snapshot existing run directories before spawning
         existing_runs = set()
@@ -112,25 +120,21 @@ class GameManager:
         return "starting"
 
     def stop_game(self) -> None:
-        """Send SIGTERM to the game subprocess, escalate to SIGKILL after timeout."""
+        """Request cooperative shutdown, escalate to SIGTERM then SIGKILL."""
         with self._lock:
             if self._state not in ("initializing", "running"):
                 raise RuntimeError(f"Cannot stop game: state is {self._state}")
             self._set_state("stopping")
 
-        if self._process is not None:
-            logger.info("Sending SIGTERM to game subprocess (pid={})", self._process.pid)
-            try:
-                self._process.send_signal(signal.SIGTERM)
-            except ProcessLookupError:
-                logger.warning("Game subprocess already exited")
-                return
+        self._stop_requested.set()
+        logger.info("Cooperative stop requested for game subprocess")
 
-            # Start a watchdog thread that escalates to SIGKILL if needed
+        if self._process is not None:
+            # Start a watchdog that escalates: graceful -> SIGTERM -> SIGKILL
             threading.Thread(
-                target=self._sigkill_watchdog,
+                target=self._shutdown_watchdog,
                 daemon=True,
-                name="game-sigkill-watchdog",
+                name="game-shutdown-watchdog",
             ).start()
 
     def get_status(self) -> dict[str, Any]:
@@ -193,8 +197,12 @@ class GameManager:
         try:
             exit_code = self._process.wait(timeout=None)
             self._exit_code = exit_code
+            was_stopping = self._state == "stopping"
             if exit_code == 0:
                 logger.info("Game subprocess exited cleanly (code 0)")
+            elif was_stopping:
+                # User-initiated stop: non-zero exit is expected (SIGTERM -> exit 1)
+                logger.info("Game subprocess stopped (code {})", exit_code)
             elif exit_code < 0:
                 sig = -exit_code
                 sig_name = (
@@ -217,11 +225,31 @@ class GameManager:
             self._set_state("idle")
             # Keep _current_run_name so the UI can still show the last run
 
-    def _sigkill_watchdog(self) -> None:
-        """Wait for the process to exit after SIGTERM; escalate to SIGKILL."""
+    def _shutdown_watchdog(self) -> None:
+        """Escalate shutdown: wait for cooperative exit, then SIGTERM, then SIGKILL."""
         proc = self._process
         if proc is None:
             return
+
+        # Tier 1: wait for the game to exit cooperatively (via REST stop response)
+        try:
+            proc.wait(timeout=_GRACEFUL_TIMEOUT)
+            return  # game exited cleanly
+        except subprocess.TimeoutExpired:
+            pass
+
+        # Tier 2: send SIGTERM
+        logger.warning(
+            "Game did not exit within {}s of stop request, sending SIGTERM (pid={})",
+            _GRACEFUL_TIMEOUT,
+            proc.pid,
+        )
+        try:
+            proc.send_signal(signal.SIGTERM)
+        except ProcessLookupError:
+            return  # already gone
+
+        # Tier 3: wait for SIGTERM, then escalate to SIGKILL
         try:
             proc.wait(timeout=_SIGKILL_TIMEOUT)
         except subprocess.TimeoutExpired:
