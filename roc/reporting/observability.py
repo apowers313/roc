@@ -25,7 +25,8 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExport
 from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
 from opentelemetry.metrics import Meter, Observation
 from opentelemetry.sdk._events import EventLoggerProvider
-from opentelemetry.sdk._logs import LoggerProvider, LogRecord
+from opentelemetry._logs import LogRecord
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
     SimpleLogRecordProcessor,
@@ -547,7 +548,6 @@ def loguru_to_otel(msg: str) -> None:
         severity_text=level_name,
         severity_number=severity_number,
         body=body,
-        resource=resource,
         attributes=attrs,
     )
 

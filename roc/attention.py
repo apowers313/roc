@@ -221,7 +221,9 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         fkimg = attenuation.attenuate(fkimg, self)
         post_peak = np.unravel_index(np.argmax(fkimg), fkimg.shape)
 
-        # find peaks through dilation
+        # Find isolated peaks via morphological reconstruction. Floods inward
+        # from image borders; only cells higher than the flood survive as peaks.
+        # https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_holes_and_peaks.html
         seed = np.copy(fkimg)
         seed[1:-1, 1:-1] = fkimg.min()
         rec = reconstruction(seed, fkimg, method="dilation")
@@ -309,7 +311,7 @@ def _emit_attenuation_log(
 
     from opentelemetry import trace as otel_trace
     from opentelemetry._logs import SeverityNumber
-    from opentelemetry.sdk._logs import LogRecord
+    from opentelemetry._logs import LogRecord
 
     from .saliency_attenuation import _otel_logger as sa_logger
 

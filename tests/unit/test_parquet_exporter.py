@@ -17,7 +17,7 @@ def _read_table(store: DuckLakeStore, table: str) -> pd.DataFrame:
     """Read all rows from a DuckLake table."""
     if not store.has_table(table):
         return pd.DataFrame()
-    return store.execute(f'SELECT * FROM lake."{table}" ORDER BY step').fetchdf()
+    return store.execute(f'SELECT * FROM lake."{table}" ORDER BY step').fetchdf()  # nosec B608
 
 
 def _has_table(store: DuckLakeStore, table: str) -> bool:
@@ -240,12 +240,12 @@ class TestEdgeCases:
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
         result = exporter.export([object()])
-        from opentelemetry.sdk._logs.export import LogExportResult
+        from opentelemetry.sdk._logs.export import LogRecordExportResult
 
-        assert result == LogExportResult.FAILURE
+        assert result == LogRecordExportResult.FAILURE
 
     def test_record_with_no_attributes(self, tmp_path: Path):
-        from opentelemetry.sdk._logs import LogRecord as SDKLogRecord
+        from opentelemetry._logs import LogRecord as SDKLogRecord
 
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)

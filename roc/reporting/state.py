@@ -14,7 +14,7 @@ from typing import Any, Iterable
 import nle
 from opentelemetry import trace as otel_trace
 from opentelemetry._logs import SeverityNumber
-from opentelemetry.sdk._logs import LogRecord
+from opentelemetry._logs import LogRecord
 
 from roc.action import Action, ActionData, TakeAction
 from roc.attention import Attention, SaliencyMap, VisionAttentionData
@@ -28,7 +28,7 @@ from roc.object import Object, ObjectResolver, ResolvedObject
 from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeWord
 from roc.perception import AuditoryData, Perception, PerceptionData
 from roc.predict import NoPrediction, Predict, PredictData
-from roc.reporting.observability import Observability, Observation, instance_id, resource
+from roc.reporting.observability import Observability, Observation, instance_id
 from roc.sequencer import Sequencer  # noqa: F401
 from roc.significance import Significance, SignificanceData
 from roc.transformer import TransformResult, Transformer
@@ -647,7 +647,6 @@ def _emit_state_record(event_name: str, body: str) -> None:
         severity_number=SeverityNumber.INFO,
         severity_text="INFO",
         body=body,
-        resource=resource,
         attributes={"event.name": event_name},
         trace_id=span_context.trace_id,
         span_id=span_context.span_id,

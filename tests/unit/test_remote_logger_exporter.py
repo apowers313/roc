@@ -7,8 +7,9 @@ from time import time_ns
 from unittest.mock import MagicMock
 
 from opentelemetry._logs import SeverityNumber
-from opentelemetry.sdk._logs import LoggerProvider, LogRecord
-from opentelemetry.sdk._logs.export import LogExportResult, SimpleLogRecordProcessor
+from opentelemetry._logs import LogRecord
+from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs.export import LogRecordExportResult, SimpleLogRecordProcessor
 
 from roc.reporting.remote_logger_exporter import RemoteLoggerExporter
 
@@ -36,7 +37,7 @@ class TestRemoteLoggerExporterPost:
         )
         batch = _make_log_data("test message")
         result = exporter.export(batch)
-        assert result == LogExportResult.SUCCESS
+        assert result == LogRecordExportResult.SUCCESS
 
     def test_exporter_handles_connection_error(self):
         """Exporter should not raise on connection failure."""
@@ -47,7 +48,7 @@ class TestRemoteLoggerExporterPost:
         )
         batch = _make_log_data("test message")
         result = exporter.export(batch)
-        assert result == LogExportResult.FAILURE
+        assert result == LogRecordExportResult.FAILURE
 
     def test_exporter_formats_records_as_remote_logger_json(self, httpserver):
         """Records should match the Remote Logger's expected format."""
@@ -185,4 +186,4 @@ class TestRemoteLoggerExporterEdgeCases:
         )
         batch = _make_log_data("test")
         result = exporter.export(batch)
-        assert result == LogExportResult.FAILURE
+        assert result == LogRecordExportResult.FAILURE

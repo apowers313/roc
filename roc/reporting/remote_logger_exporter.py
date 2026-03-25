@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
+from opentelemetry.sdk._logs.export import LogExporter, LogRecordExportResult
 
 _SEVERITY_MAP = {
     1: "TRACE",
@@ -58,14 +58,14 @@ class RemoteLoggerExporter(LogExporter):
             self._ssl_ctx.check_hostname = False
             self._ssl_ctx.verify_mode = ssl.CERT_NONE
 
-    def export(self, batch: Sequence[Any]) -> LogExportResult:
+    def export(self, batch: Sequence[Any]) -> LogRecordExportResult:
         """Export log records to the Remote Logger endpoint.
 
         Args:
             batch: Sequence of LogData objects from OTel.
 
         Returns:
-            LogExportResult.SUCCESS or LogExportResult.FAILURE.
+            LogRecordExportResult.SUCCESS or LogRecordExportResult.FAILURE.
         """
         try:
             logs = []
@@ -105,10 +105,10 @@ class RemoteLoggerExporter(LogExporter):
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            urllib.request.urlopen(req, timeout=self._timeout, context=self._ssl_ctx)
-            return LogExportResult.SUCCESS
+            urllib.request.urlopen(req, timeout=self._timeout, context=self._ssl_ctx)  # nosec B310
+            return LogRecordExportResult.SUCCESS
         except Exception:
-            return LogExportResult.FAILURE
+            return LogRecordExportResult.FAILURE
 
     def shutdown(self) -> None:
         """No resources to clean up."""

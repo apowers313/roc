@@ -4,9 +4,7 @@ from time import time_ns
 from typing import Any
 
 from opentelemetry._logs import SeverityNumber
-from opentelemetry.sdk._logs import LogRecord
-
-from roc.reporting.observability import resource
+from opentelemetry._logs import LogRecord
 
 
 def make_log_record(
@@ -39,6 +37,5 @@ def make_log_record(
         severity_number=severity,
         severity_text=severity.name if severity else "INFO",
         body=body,
-        resource=resource,
         attributes=attrs if attrs else None,
     )

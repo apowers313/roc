@@ -7,7 +7,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Any
 
-from opentelemetry.sdk._logs.export import LogExporter, LogExportResult
+from opentelemetry.sdk._logs.export import LogExporter, LogRecordExportResult
 
 from roc.reporting.ducklake_store import DuckLakeStore
 
@@ -96,7 +96,7 @@ class ParquetExporter(LogExporter):
         for table, records in by_table.items():
             self._store.insert(table, records)
 
-    def export(self, batch: Sequence[Any]) -> LogExportResult:
+    def export(self, batch: Sequence[Any]) -> LogRecordExportResult:
         """Route log records to the queue (or write directly if no background thread)."""
         try:
             with self._lock:
@@ -108,9 +108,9 @@ class ParquetExporter(LogExporter):
             else:
                 self._drain()
 
-            return LogExportResult.SUCCESS
+            return LogRecordExportResult.SUCCESS
         except Exception:
-            return LogExportResult.FAILURE
+            return LogRecordExportResult.FAILURE
 
     def _enqueue_record(self, log_data: Any) -> None:
         """Process a single log record: update counters and queue for writing."""
