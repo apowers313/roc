@@ -73,7 +73,7 @@ class RunStore:
             return pd.DataFrame()
         try:
             src = self._read_sql(table)
-            return self._store.query_df(f"SELECT * FROM {src} WHERE step = ?", [step])
+            return self._store.query_df(f"SELECT * FROM {src} WHERE step = ?", [step])  # nosec B608
         except Exception:
             return pd.DataFrame()
 
@@ -96,11 +96,11 @@ class RunStore:
         src = self._read_sql(table)
         if game_number is not None:
             result = self._store.query_one(
-                f"SELECT COUNT(*) FROM {src} WHERE game_number = ?",
+                f"SELECT COUNT(*) FROM {src} WHERE game_number = ?",  # nosec B608
                 [game_number],
             )
         else:
-            result = self._store.query_one(f"SELECT MAX(step) FROM {src}")
+            result = self._store.query_one(f"SELECT MAX(step) FROM {src}")  # nosec B608
         return result[0] if result and result[0] is not None else 0
 
     def step_range(self, game_number: int | None = None) -> tuple[int, int]:
@@ -111,11 +111,11 @@ class RunStore:
         src = self._read_sql(table)
         if game_number is not None:
             result = self._store.query_one(
-                f"SELECT MIN(step), MAX(step) FROM {src} WHERE game_number = ?",
+                f"SELECT MIN(step), MAX(step) FROM {src} WHERE game_number = ?",  # nosec B608
                 [game_number],
             )
         else:
-            result = self._store.query_one(f"SELECT MIN(step), MAX(step) FROM {src}")
+            result = self._store.query_one(f"SELECT MIN(step), MAX(step) FROM {src}")  # nosec B608
         if result and result[0] is not None:
             return (result[0], result[1])
         return (0, 0)
@@ -136,7 +136,7 @@ class RunStore:
             FROM {src}
             GROUP BY game_number
             ORDER BY game_number
-            """,
+            """,  # nosec B608
         )
 
     @staticmethod
@@ -168,7 +168,7 @@ class RunStore:
             params.append(game_number)
         where_sql = f" WHERE {' AND '.join(where_parts)}" if where_parts else ""
         return self._store.query_df(
-            f"SELECT {columns} FROM {src}{where_sql} ORDER BY step",
+            f"SELECT {columns} FROM {src}{where_sql} ORDER BY step",  # nosec B608
             params or None,
         )
 

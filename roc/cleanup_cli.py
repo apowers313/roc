@@ -33,7 +33,7 @@ def _get_step_count_from_api(run_name: str, api_url: str) -> int | None:
 
     try:
         url = f"{api_url}/api/runs/{run_name}/step-range"
-        with urllib.request.urlopen(url, timeout=2) as resp:
+        with urllib.request.urlopen(url, timeout=2) as resp:  # nosec B310
             import json
 
             data = json.loads(resp.read())

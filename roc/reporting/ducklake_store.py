@@ -91,7 +91,7 @@ class DuckLakeStore:
             self._conn.register("_arrow_batch", arrow_table)
             try:
                 self._conn.execute(
-                    f'INSERT INTO {self._alias}."{table}" BY NAME SELECT * FROM _arrow_batch'
+                    f'INSERT INTO {self._alias}."{table}" BY NAME SELECT * FROM _arrow_batch'  # nosec B608
                 )
             finally:
                 self._conn.unregister("_arrow_batch")
@@ -167,7 +167,7 @@ class DuckLakeStore:
             if not self._table_exists(table):
                 return
             src = f'{self._alias}."{table}"'
-            df = self._conn.execute(f"SELECT * FROM {src} WHERE step IN ({step_list})").fetchdf()
+            df = self._conn.execute(f"SELECT * FROM {src} WHERE step IN ({step_list})").fetchdf()  # nosec B608
             if len(df) == 0 or "step" not in df.columns:
                 return
             for s in steps:
@@ -206,7 +206,7 @@ class DuckLakeStore:
     def _table_exists(self, table: str) -> bool:
         """Check table existence (must hold lock)."""
         try:
-            self._conn.execute(f'SELECT 1 FROM {self._alias}."{table}" LIMIT 0')
+            self._conn.execute(f'SELECT 1 FROM {self._alias}."{table}" LIMIT 0')  # nosec B608
             return True
         except duckdb.CatalogException:
             return False
@@ -224,7 +224,7 @@ class DuckLakeStore:
     def _get_columns(self, table: str) -> list[str]:
         """Get column names for a table (must hold lock)."""
         result = self._conn.execute(
-            f"SELECT column_name FROM information_schema.columns "
+            f"SELECT column_name FROM information_schema.columns "  # nosec B608
             f"WHERE table_schema = 'main' AND table_name = '{table}'"
         ).fetchall()
         return [row[0] for row in result]

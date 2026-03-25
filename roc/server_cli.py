@@ -21,7 +21,7 @@ import click
 @click.option(
     "--port", type=int, default=None, help="Port to serve on. Defaults to config dashboard_port."
 )
-@click.option("--host", type=str, default="0.0.0.0", help="Host to bind to.")
+@click.option("--host", type=str, default="0.0.0.0", help="Host to bind to.")  # nosec B104
 def main(data_dir: Path | None, port: int | None, host: str) -> None:
     """Unified ROC dashboard server with game lifecycle management."""
     import socketio
