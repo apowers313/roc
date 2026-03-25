@@ -44,7 +44,7 @@ setup: install pre-commit-install
 
 .PHONY: install
 install:
-	uv venv --python 3.13
+	uv venv --python 3.13 --allow-existing
 	uv sync
 	uv run mypy --install-types --non-interactive ./
 
