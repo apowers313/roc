@@ -155,7 +155,7 @@ sonar-reports:
 
 .PHONY: sonar
 sonar: sonar-reports
-	SONAR_TOKEN=$(SONAR_TOKEN) npx @sonar/scan
+	@if [ -z "$$SONAR_TOKEN" ]; then echo "ERROR: SONAR_TOKEN environment variable is not set. Export it before pushing." >&2; exit 1; else npx @sonar/scan; fi
 
 .PHONY: doc-coverage
 doc-coverage:
@@ -215,7 +215,11 @@ clean:
 pre-commit: 
 
 .PHONY: pre-push
-pre-push: lint test-unit doc-coverage coverage sonar docs
+pre-push: check-safety lint test-unit doc-coverage coverage sonar docs qodo-review
+
+.PHONY: qodo-review
+qodo-review:
+	qodo run code_review --ci --yes
 
 .PHONY: upgrade-python
 upgrade-python:
