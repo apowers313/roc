@@ -79,8 +79,35 @@ jobs:
         run: |
           make doc-coverage
 
+  dashboard-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: dashboard-ui/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm -C dashboard-ui install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm -C dashboard-ui lint
+
+      - name: Run tests
+        run: pnpm -C dashboard-ui test
+
   build:
-    needs: unit-tests
+    needs: [unit-tests, dashboard-tests]
 
     runs-on: ubuntu-latest
 

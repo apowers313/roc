@@ -12,6 +12,9 @@ resolution-markers = [
     "(python_full_version < '3.13' and platform_machine != 'aarch64' and sys_platform == 'linux') or (python_full_version < '3.13' and sys_platform != 'darwin' and sys_platform != 'linux')",
 ]
 
+[manifest]
+overrides = [{ name = "jsonlines", specifier = ">=4.0.0" }]
+
 [[package]]
 name = "alabaster"
 version = "0.7.16"
@@ -1244,14 +1247,14 @@ wheels = [
 
 [[package]]
 name = "jsonlines"
-version = "1.2.0"
+version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "six" },
+    { name = "attrs" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/cd/0beacbcfdf9b3af9e7c615cb3dba7ec4be1030d4b283e3c9717e3fd9af3c/jsonlines-1.2.0.tar.gz", hash = "sha256:43b8d5588a9d4862c8a4a49580e38e20ec595aee7ad6fe469b10fb83fbefde88", size = 6075 }
+sdist = { url = "https://files.pythonhosted.org/packages/35/87/bcda8e46c88d0e34cad2f09ee2d0c7f5957bccdb9791b0b934ec84d84be4/jsonlines-4.0.0.tar.gz", hash = "sha256:0c6d2c09117550c089995247f605ae4cf77dd1533041d366351f6f298822ea74", size = 11359 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/9a/ab96291470e305504aa4b7a2e0ec132e930da89eb3ca7a82fbe03167c131/jsonlines-1.2.0-py2.py3-none-any.whl", hash = "sha256:0ebd5b0c3efe0d4b5018b320fb0ee1a7b680ab39f6eb853715859f818d386cc8", size = 7645 },
+    { url = "https://files.pythonhosted.org/packages/f8/62/d9ba6323b9202dd2fe166beab8a86d29465c41a0288cbe229fac60c1ab8d/jsonlines-4.0.0-py3-none-any.whl", hash = "sha256:185b334ff2ca5a91362993f42e83588a360cf95ce4b71a73548502bda52a7c55", size = 8701 },
 ]
 
 [[package]]

@@ -133,6 +133,9 @@ cleanup = "roc.cleanup_cli:main"
 
 [tool.uv]
 default-groups = ["dev"]
+# gruut depends on jsonlines 1.2.0 which has invalid escape sequences (\*)
+# that became SyntaxErrors in Python 3.13.12+
+override-dependencies = ["jsonlines>=4.0.0"]
 
 [tool.deptry]
 # https://fpgmaas.github.io/deptry/usage/
