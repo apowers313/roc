@@ -1,0 +1,141 @@
+<Prompt name="check-architectural-drift" title="Check Architectural Drift" description="Verify the codebase against the architectural invariants defined in CLAUDE.md and report any violations" tags={["architecture", "quality", "invariants"]}>
+
+  <Role preset="architect" extend expertise="Python event-driven systems, architectural enforcement, static analysis">
+    You are an architectural auditor performing a compliance check. You are thorough and precise -- you report specific file:line violations, not vague concerns. You distinguish between hard violations (rules actually broken) and drift risks (patterns that are heading toward violation).
+  </Role>
+
+  <Task>
+    Read the Architectural Invariants and What NOT to Do sections from CLAUDE.md, then systematically verify each rule against the actual codebase. Report violations ordered by severity.
+  </Task>
+
+  <Constraints extend>
+    Follow these phases in order.
+
+    ## Phase 1: Load the Rules
+
+    Read CLAUDE.md and extract all rules from:
+    1. **Architectural Invariants** (numbered rules 1-10)
+    2. **What NOT to Do** (bulleted negative constraints)
+
+    List each rule by number/name so the audit trail is clear.
+
+    ## Phase 2: Systematic Verification
+
+    Check each invariant against the actual codebase. Use the specific verification strategies below.
+
+    ### Invariant 1: Bus-only inter-component communication
+    - Search pipeline components (attention.py, object.py, sequencer.py, transformer.py, predict.py, action.py, significance.py) for imports of OTHER pipeline components
+    - For each import found, verify it ONLY accesses the `.bus` class attribute
+    - Flag any direct method calls on other component instances
+
+    ### Invariant 2: Game-specific code confined to perception layer
+    - Search all files under roc/ for `import nle`, `import gymnasium`, `from nle`, `from gymnasium`
+    - Flag any imports outside of gymnasium.py, feature_extractors/, and the documented exception in reporting/state.py
+
+    ### Invariant 3: Algorithm selection through ExpMod
+    - Search for direct instantiation of resolution, action, attenuation, or prediction algorithm classes
+    - Verify all algorithm call sites use `SomeExpMod.get(default="name")` pattern
+    - Check object.py, action.py, predict.py, saliency_attenuation.py, attention.py
+
+    ### Invariant 4: EventBuses as class-level attributes
+    - Search for `EventBus[` or `EventBus(` and verify each is a class-level attribute on a Component subclass
+    - Flag any bus creation in functions, methods, or module scope (test files excluded)
+
+    ### Invariant 5: Database access is layered
+    - Search for `mgclient` imports outside graphdb.py
+    - Search for `duckdb` imports outside ducklake_store.py
+    - Flag any raw DB calls
+
+    ### Invariant 6: No raw threads in pipeline components
+    - Search pipeline component files for `threading.Thread`, `threading.Lock`, `threading.Event`
+    - Verify threading usage is confined to roc/reporting/ and game_manager.py
+
+    ### Invariant 7: Config singleton
+    - Search for `Config()` direct construction (not `Config.get()` or `Config.init()`)
+
+    ### Invariant 8: Edge schema constraints
+    - For each Edge subclass with `allowed_connections`, find all `connect()` or `Edge.create()` calls
+    - Verify the source and destination node types match an entry in allowed_connections
+
+    ### Invariant 9: PHYSICAL vs RELATIONAL feature distinction
+    - Check resolution algorithms in object.py for feature filtering
+    - Verify only PHYSICAL features are used for identity matching
+
+    ### Invariant 10: One UI server, one API server
+    - Check server_cli.py, dashboard_cli.py, and Makefile for server startup patterns
+    - Verify no code creates additional HTTP servers
+
+    ### What NOT to Do checks
+    - Scan for synchronous blocking calls (time.sleep, requests.get without timeout) in event handlers
+    - Check for Node field modifications inside loops
+    - Look for direct algorithm instantiation bypassing ExpMod
+
+    ## Phase 3: Report Findings
+
+    For each invariant, report one of:
+    - **PASS** -- no violations found
+    - **VIOLATION** -- specific file:line with explanation of what is wrong
+    - **DRIFT RISK** -- not a violation yet but heading that direction (e.g., a workaround comment, a TODO that suggests bypassing a rule)
+
+    Order violations by severity: hard violations first, then drift risks.
+
+    ## Phase 4: Recommendations
+
+    For any violations found:
+    1. Describe the minimal fix
+    2. Assess whether the fix is safe to apply now or needs discussion
+    3. Note if CLAUDE.md itself needs updating (e.g., a new justified exception)
+  </Constraints>
+
+  <Constraint type="must">Read actual source files -- do not rely on grep alone for import analysis</Constraint>
+  <Constraint type="must">Report specific file:line for every violation</Constraint>
+  <Constraint type="must">Distinguish between hard violations and drift risks</Constraint>
+  <Constraint type="must">Check every numbered invariant -- do not skip any</Constraint>
+  <Constraint type="must-not">Make any code changes -- this is an audit only</Constraint>
+  <Constraint type="must-not">Flag test files for invariant violations (tests are allowed to break rules for testing purposes)</Constraint>
+  <Constraint type="must-not">Report false positives -- verify each finding before reporting</Constraint>
+
+  <Format>
+    ## Architectural Drift Audit - <Date />
+
+    ### Summary
+    | Invariant | Status | Violations | Drift Risks |
+    |-----------|--------|------------|-------------|
+    | 1. Bus communication | [PASS/FAIL] | [count] | [count] |
+    | 2. Game-specific confinement | [PASS/FAIL] | [count] | [count] |
+    | ... | ... | ... | ... |
+
+    **Overall**: [X/10 invariants passing, Y violations, Z drift risks]
+
+    ### Violations (by severity)
+
+    #### [Invariant N]: [Rule name]
+    - **File**: `roc/example.py:123`
+    - **What**: [Description of the violation]
+    - **Fix**: [Minimal fix description]
+    - **Safe to fix now?**: [Yes/No/Needs discussion]
+
+    ### Drift Risks
+
+    #### [Invariant N]: [Rule name]
+    - **File**: `roc/example.py:456`
+    - **What**: [Description of the concerning pattern]
+    - **Risk**: [What could go wrong if this continues]
+
+    ### Recommendations
+    1. [Highest priority fix]
+    2. [Next priority]
+
+    ### CLAUDE.md Updates Needed
+    - [Any rules that need updating based on findings]
+  </Format>
+
+  <SuccessCriteria>
+    <Criterion>Every numbered invariant (1-10) is explicitly checked and reported</Criterion>
+    <Criterion>Every violation includes specific file:line reference</Criterion>
+    <Criterion>No false positives -- each finding is verified against actual code</Criterion>
+    <Criterion>Fixes are described but NOT applied</Criterion>
+    <Criterion>Summary table gives an at-a-glance status</Criterion>
+  </SuccessCriteria>
+
+</Prompt>

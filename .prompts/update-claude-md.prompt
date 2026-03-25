@@ -1,0 +1,104 @@
+<Prompt name="update-claude-md" title="Update CLAUDE.md" description="Review recent code changes and propose additions to CLAUDE.md to keep architectural documentation current" tags={["architecture", "documentation", "claude-md"]}>
+
+  <Role preset="architect" extend expertise="Python event-driven systems, component architectures, architectural documentation">
+    You are an architectural reviewer who understands that CLAUDE.md is the primary defense against architectural drift in an AI-assisted codebase. You focus on capturing non-obvious decisions, constraints, and patterns -- not restating what the code already says.
+  </Role>
+
+  <Task>
+    Review recent code changes and the current state of CLAUDE.md. Identify architectural decisions, patterns, constraints, or invariants that were established or changed but are not yet captured in CLAUDE.md. Propose additions or corrections -- do not rewrite content that is already accurate.
+  </Task>
+
+  <Constraints extend>
+    Follow these phases in order.
+
+    ## Phase 1: Understand What Changed
+
+    Examine recent changes to understand their architectural significance:
+
+    1. Run `git diff HEAD~10 --stat` to see which files changed recently (adjust range as needed)
+    2. Run `git log --oneline -20` to see recent commit messages
+    3. For files that touch core architecture (component.py, event.py, expmod.py, graphdb.py, or any new Component/ExpMod), read the actual changes with `git diff`
+    4. Look for:
+       - New Component subclasses or ExpMod modtypes
+       - New EventBus definitions or changes to bus topology
+       - New Edge subclasses or changes to allowed_connections
+       - New config options
+       - Changes to the data pipeline flow
+       - New reporting/observability patterns
+       - New CLI entry points
+
+    ## Phase 2: Read Current CLAUDE.md
+
+    Read the full CLAUDE.md and understand what it currently documents. Pay special attention to:
+    - Architectural Invariants section (are any violated or outdated?)
+    - Data Pipeline diagram (does it still match reality?)
+    - Event Bus Topology table (are all buses listed?)
+    - ExpMod table (are all modtypes and implementations listed?)
+    - Auto-loaded components list (is it complete?)
+    - What NOT to Do section (are there new failure modes to add?)
+
+    ## Phase 3: Identify Gaps
+
+    Compare what changed against what CLAUDE.md documents. Focus on:
+    - **New invariants**: Were any new architectural rules established that are not documented?
+    - **Changed patterns**: Did any existing patterns change (e.g., new bus connections, new ExpMod modtypes)?
+    - **New components**: Are there new auto-loaded components, feature extractors, or reporting modules?
+    - **Stale content**: Does CLAUDE.md describe something that no longer exists or works differently?
+    - **Missing constraints**: Are there new "what not to do" failure modes discovered during implementation?
+
+    Do NOT propose additions for:
+    - Implementation details that are obvious from reading the code
+    - Temporary state or in-progress work
+    - Things already covered by git history
+    - Code patterns or conventions that match existing documentation
+
+    ## Phase 4: Propose Changes
+
+    For each gap found, propose a specific addition or correction:
+    - Show exactly where in CLAUDE.md the change belongs (section name)
+    - Write the proposed text in the style of the existing document
+    - Explain WHY this needs to be documented (what goes wrong if it is not?)
+
+    Present proposals as a numbered list, not as a diff. The user will review and approve before any changes are made.
+
+    ## Phase 5: Apply Approved Changes
+
+    After the user reviews and approves (or modifies) the proposals:
+    - Apply only the approved changes to CLAUDE.md
+    - Keep the existing structure and style
+    - Do not reorganize or rewrite sections that are not part of the approved changes
+  </Constraints>
+
+  <Constraint type="must">Read the actual code changes, not just commit messages</Constraint>
+  <Constraint type="must">Propose additions only -- do not rewrite content that is already accurate</Constraint>
+  <Constraint type="must">Explain WHY each addition matters (what breaks without it)</Constraint>
+  <Constraint type="must">Wait for user approval before modifying CLAUDE.md</Constraint>
+  <Constraint type="must-not">Add implementation details that are obvious from reading the code</Constraint>
+  <Constraint type="must-not">Document temporary state or in-progress work</Constraint>
+  <Constraint type="must-not">Reorganize or rewrite sections beyond what is specifically approved</Constraint>
+  <Constraint type="must-not">Stage, commit, or push any changes</Constraint>
+
+  <Format>
+    ## Proposed CLAUDE.md Updates
+
+    ### 1. [Section Name] -- [Brief description]
+    **Why**: [What goes wrong if this is not documented]
+    **Proposed text**:
+    > [The text to add, in CLAUDE.md style]
+
+    ### 2. [Section Name] -- [Brief description]
+    ...
+
+    ---
+    **No changes needed**: [List sections reviewed that are still accurate]
+  </Format>
+
+  <SuccessCriteria>
+    <Criterion>All architecturally significant recent changes are reviewed</Criterion>
+    <Criterion>Proposals are specific about where they belong in CLAUDE.md</Criterion>
+    <Criterion>Each proposal explains why it matters</Criterion>
+    <Criterion>No unnecessary rewrites of accurate existing content</Criterion>
+    <Criterion>User has reviewed and approved before any file changes</Criterion>
+  </SuccessCriteria>
+
+</Prompt>
