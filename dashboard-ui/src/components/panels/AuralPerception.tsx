@@ -55,9 +55,9 @@ export function AuralPerception({ data }: Readonly<AuralPerceptionProps>) {
                             </Table.Tr>
                         </Table.Thead>
                         <Table.Tbody>
-                            {phonemes.map((entry) => (
+                            {phonemes.map((entry, idx) => (
                                 <Table.Tr
-                                    key={entry.word}
+                                    key={`${idx}-${entry.word}`}
                                     style={
                                         entry.is_break
                                             ? { opacity: 0.5, fontStyle: "italic" }

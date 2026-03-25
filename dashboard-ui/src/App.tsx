@@ -36,6 +36,7 @@ import { ActionHistogram } from "./components/panels/ActionHistogram";
 import { ActionPanel } from "./components/panels/ActionPanel";
 import { AllObjects } from "./components/panels/AllObjects";
 import { AuralPerception } from "./components/panels/AuralPerception";
+import { AttentionSpread } from "./components/panels/AttentionSpread";
 import { AttenuationPanel } from "./components/panels/AttenuationPanel";
 import { BookmarkTable } from "./components/panels/BookmarkTable";
 import { EventHistory } from "./components/panels/EventHistory";
@@ -581,6 +582,7 @@ export function App() {
                     </Section>
 
                     <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet" expmod={toDisplayString(data?.attenuation?.flavor)}>
+                        <AttentionSpread data={data} />
                         <Grid>
                             <Grid.Col span={{ base: 12, md: 8 }}>
                                 <SaliencyMap data={data} />

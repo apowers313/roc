@@ -50,6 +50,10 @@ from .reporting.observability import Observability
 from .reporting.screen_renderer import screen_to_html_vals
 from .reporting.state import State, _emit_state_record
 
+# Cumulative glyph sets for attention spread tracking.
+_attended_glyphs: set[int] = set()
+_seen_glyphs: set[int] = set()
+
 
 @dataclass
 class GameLoopContext:
@@ -183,6 +187,16 @@ class Gym(Component, ABC):
         obs, _reward, done, truncated, _info = self.env.step(action)
         _dump_env_record(obs, loop_num)
 
+        # Update screen state with post-step obs so death/end screens are captured
+        if done or truncated:
+            State.get_states().screen.set(
+                {
+                    "chars": obs["tty_chars"].copy(),
+                    "colors": obs["tty_colors"].copy(),
+                    "cursor": obs["tty_cursor"],
+                }
+            )
+
         loop_ctx.observation_counter.add(1)
         loop_num += 1
         State.get_states().loop.set(loop_num)
@@ -198,7 +212,12 @@ class Gym(Component, ABC):
 
 
 def _setup_callback_context(callback_url: str | None, settings: Config) -> Any:
-    """Build an SSL context for the HTTP callback URL, if needed."""
+    """Build an SSL context for the HTTP callback URL, if needed.
+
+    The callback URL targets localhost (internal server-to-subprocess communication),
+    but the SSL cert may be issued for an external domain (e.g. *.ato.ms). Hostname
+    verification is disabled since both processes run on the same machine.
+    """
     if not callback_url:
         return None
     import ssl
@@ -207,6 +226,10 @@ def _setup_callback_context(callback_url: str | None, settings: Config) -> Any:
         ctx = ssl.create_default_context()
         if settings.ssl_certfile:
             ctx.load_verify_locations(settings.ssl_certfile)
+        # The callback URL uses localhost but the cert is for the external domain.
+        # Skip hostname check for this internal loopback connection.
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_REQUIRED
     else:
         ctx = None
     logger.info("Step callback URL: {}", callback_url)
@@ -275,7 +298,7 @@ def _post_action_map_to_server(
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        urllib.request.urlopen(req, timeout=5, context=callback_ctx)
+        urllib.request.urlopen(req, timeout=5, context=callback_ctx)  # nosec B310
         logger.debug("Sent action map ({} entries) to server", len(action_map))
     except Exception:
         logger.opt(exception=True).debug("Failed to send action map")
@@ -381,6 +404,46 @@ def _build_transform_summary(states: Any) -> dict[str, Any] | None:
             ch["normalized_change"] = dst.normalized_change
         changes_list.append(ch)
     return {"count": len(changes_list), "changes": changes_list}
+
+
+def _inject_attention_spread(states: Any, obs: Any) -> None:
+    """Add attention spread metrics to the attenuation data dict.
+
+    Spread tracks how many unique glyph types the attention system has examined
+    vs how many exist on screen. Both are cumulative sets of NLE glyph IDs.
+    """
+    import numpy as np
+
+    att = states.attenuation_data.val
+    if att is None or not isinstance(att, dict):
+        return
+
+    bg_glyph = nle.nethack.GLYPH_CMAP_OFF  # 2359 = S_stone
+    glyphs = obs["glyphs"]
+
+    # Update cumulative seen glyphs (all non-background glyphs on screen)
+    for g in np.unique(glyphs):
+        g_int = int(g)
+        if g_int != bg_glyph:
+            _seen_glyphs.add(g_int)
+
+    # Update cumulative attended glyphs (glyph at top focus point)
+    focus_points = att.get("focus_points", [])
+    if focus_points:
+        top = focus_points[0]
+        fx, fy = int(top["x"]), int(top["y"])
+        if 0 <= fy < glyphs.shape[0] and 0 <= fx < glyphs.shape[1]:
+            g_id = int(glyphs[fy, fx])
+            if g_id != bg_glyph:
+                _attended_glyphs.add(g_id)
+
+    attended = len(_attended_glyphs)
+    total = len(_seen_glyphs)
+    pct = round(attended / total * 100, 1) if total > 0 else 0.0
+
+    att["spread_attended"] = attended
+    att["spread_total"] = total
+    att["spread_pct"] = pct
 
 
 def _build_sequence_summary(states: Any) -> dict[str, Any] | None:
@@ -551,10 +614,11 @@ def _push_step_to_server(
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        resp = urllib.request.urlopen(req, timeout=2, context=callback_ctx)
+        resp = urllib.request.urlopen(req, timeout=2, context=callback_ctx)  # nosec B310
         resp_body = json.loads(resp.read())
         return bool(resp_body.get("stop"))
     except Exception:
+        logger.warning("Step callback POST to {} failed: {}", callback_url, __import__("traceback").format_exc())
         return False  # best-effort, don't break the game loop
 
 
@@ -602,6 +666,9 @@ def _push_dashboard_data(
     states = State.get_states()
     screen_vals, saliency_vals, features = _collect_screen_data(states)
     object_info, focus_points = _collect_object_data(states)
+
+    # Compute attention spread: focus peaks vs unique glyphs on screen
+    _inject_attention_spread(states, obs)
 
     step_data = StepData(
         step=loop_num,

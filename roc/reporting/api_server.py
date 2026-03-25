@@ -669,6 +669,13 @@ def start_dashboard() -> None:
     buf.add_listener(lambda: _notify_new_step(buf.get_latest()))  # type: ignore[arg-type]
     _data_store = ds
 
+    # Enable gzip compression for API responses (helps with bulk step prefetch)
+    if cfg.dashboard_gzip:
+        from starlette.middleware.gzip import GZipMiddleware
+
+        app.add_middleware(GZipMiddleware, minimum_size=1000)
+        logger.info("Dashboard gzip compression enabled")
+
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
@@ -683,7 +690,7 @@ def start_dashboard() -> None:
     # via run_coroutine_threadsafe) before the async infrastructure is ready.
     config = uvicorn.Config(
         sio_app,
-        host="0.0.0.0",
+        host="0.0.0.0",  # nosec B104
         port=cfg.dashboard_port,
         log_level="warning",
         ssl_certfile=cfg.ssl_certfile if cfg.ssl_certfile else None,

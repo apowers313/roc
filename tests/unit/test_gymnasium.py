@@ -346,6 +346,36 @@ class TestSetupCallbackContext:
         result = _setup_callback_context("https://localhost:8000/step", Config.get())
         assert isinstance(result, ssl.SSLContext)
 
+    def test_https_context_disables_hostname_check(self):
+        """SSL context must skip hostname verification for localhost callbacks.
+
+        Root cause: server_cli.py builds the callback URL as
+        ``https://localhost:<port>/api/internal/step`` because the game subprocess
+        runs on the same machine. However, the SSL certificate is issued for the
+        external domain (*.ato.ms), not for ``localhost``. Python's default SSL
+        context enforces hostname verification, so every POST from the game
+        subprocess to the dashboard server silently fails with:
+
+            ssl.SSLCertVerificationError: Hostname mismatch,
+            certificate is not valid for 'localhost'.
+
+        The exception was swallowed by a bare ``except Exception`` in
+        ``_push_step_to_server``, making live mode appear broken with zero steps
+        received despite the game running normally.
+
+        This test ensures the SSL context disables hostname checking (since the
+        connection is internal loopback) while still requiring certificate
+        verification against the loaded CA bundle.
+        """
+        import ssl
+
+        from roc.gymnasium import _setup_callback_context
+
+        result = _setup_callback_context("https://localhost:8000/step", Config.get())
+        assert isinstance(result, ssl.SSLContext)
+        assert result.check_hostname is False
+        assert result.verify_mode == ssl.CERT_REQUIRED
+
 
 class TestExtractGameMetrics:
     """Tests for _extract_game_metrics helper."""
@@ -709,6 +739,131 @@ class TestBuildPredictionData:
         states = MagicMock()
         states.predict.val = None
         assert _build_prediction_data(states) is None
+
+
+class TestInjectAttentionSpread:
+    """Tests for _inject_attention_spread -- cumulative glyph tracking."""
+
+    def setup_method(self):
+        """Reset cumulative glyph sets before each test."""
+        import roc.gymnasium as gym_mod
+
+        gym_mod._attended_glyphs.clear()
+        gym_mod._seen_glyphs.clear()
+
+    def _make_states(self, focus_points: list[dict[str, Any]]) -> MagicMock:
+        states = MagicMock()
+        states.attenuation_data.val = {
+            "peak_count": len(focus_points),
+            "focus_points": focus_points,
+        }
+        return states
+
+    def _make_obs(self, glyph_grid: list[list[int]]) -> dict[str, Any]:
+        return {"glyphs": np.array(glyph_grid, dtype=np.int32)}
+
+    def test_single_step_one_attended_glyph(self):
+        """After one step, numerator is 1 (one glyph attended)."""
+        from roc.gymnasium import _inject_attention_spread
+
+        # 3x3 map: background=2359, floor=2371, player=333
+        bg = 2359
+        obs = self._make_obs([
+            [bg, 2360, bg],
+            [2371, 333, 2371],
+            [bg, 2360, bg],
+        ])
+        # Top focus point at (1, 1) = player glyph 333
+        states = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
+
+        _inject_attention_spread(states, obs)
+
+        att = states.attenuation_data.val
+        assert att["spread_attended"] == 1  # only player glyph
+        assert att["spread_total"] == 3  # 333, 2360, 2371
+        assert att["spread_pct"] == 33.3
+
+    def test_two_steps_same_glyph_no_growth(self):
+        """Attending the same glyph twice does not increase numerator."""
+        from roc.gymnasium import _inject_attention_spread
+
+        bg = 2359
+        obs = self._make_obs([
+            [bg, 2360, bg],
+            [2371, 333, 2371],
+            [bg, 2360, bg],
+        ])
+        states1 = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
+        states2 = self._make_states([{"x": 1, "y": 1, "strength": 0.9, "label": 1}])
+
+        _inject_attention_spread(states1, obs)
+        _inject_attention_spread(states2, obs)
+
+        att = states2.attenuation_data.val
+        assert att["spread_attended"] == 1  # same glyph both times
+        assert att["spread_total"] == 3
+
+    def test_two_steps_different_glyphs_grows(self):
+        """Attending different glyphs across steps increases numerator."""
+        from roc.gymnasium import _inject_attention_spread
+
+        bg = 2359
+        obs = self._make_obs([
+            [bg, 2360, bg],
+            [2371, 333, 2371],
+            [bg, 2360, bg],
+        ])
+        # Step 1: attend player (1,1) = 333
+        states1 = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
+        _inject_attention_spread(states1, obs)
+
+        # Step 2: attend wall (1,0) = 2360
+        states2 = self._make_states([{"x": 1, "y": 0, "strength": 1.0, "label": 1}])
+        _inject_attention_spread(states2, obs)
+
+        att = states2.attenuation_data.val
+        assert att["spread_attended"] == 2  # 333 + 2360
+        assert att["spread_total"] == 3
+
+    def test_new_glyph_on_screen_grows_denominator(self):
+        """A new glyph appearing on screen increases the denominator."""
+        from roc.gymnasium import _inject_attention_spread
+
+        bg = 2359
+        obs1 = self._make_obs([[bg, 2360, 2371]])
+        states1 = self._make_states([{"x": 1, "y": 0, "strength": 1.0, "label": 1}])
+        _inject_attention_spread(states1, obs1)
+        assert states1.attenuation_data.val["spread_total"] == 2  # 2360, 2371
+
+        # Step 2: monster glyph 413 appears
+        obs2 = self._make_obs([[413, 2360, 2371]])
+        states2 = self._make_states([{"x": 1, "y": 0, "strength": 1.0, "label": 1}])
+        _inject_attention_spread(states2, obs2)
+        assert states2.attenuation_data.val["spread_total"] == 3  # 2360, 2371, 413
+
+    def test_no_attenuation_data_is_noop(self):
+        """When attenuation data is None, nothing happens."""
+        from roc.gymnasium import _inject_attention_spread
+
+        states = MagicMock()
+        states.attenuation_data.val = None
+        obs = self._make_obs([[2359]])
+        _inject_attention_spread(states, obs)  # should not raise
+
+    def test_background_glyph_excluded(self):
+        """Background glyph (S_stone) is excluded from both sets."""
+        from roc.gymnasium import _inject_attention_spread
+
+        bg = 2359
+        # Only background glyphs -- focus point lands on background
+        obs = self._make_obs([[bg, bg, bg]])
+        states = self._make_states([{"x": 0, "y": 0, "strength": 1.0, "label": 1}])
+        _inject_attention_spread(states, obs)
+
+        att = states.attenuation_data.val
+        assert att["spread_attended"] == 0
+        assert att["spread_total"] == 0
+        assert att["spread_pct"] == 0.0
 
 
 class TestPushStepToServer:

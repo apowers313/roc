@@ -104,9 +104,16 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
     const focusKey = "focus_points";
     const eventKey = "event";
 
-    const peakEntries = peakKeys
+    // Derive the winning focus point from focus_points[0]
+    const fpList = att[focusKey] as Array<{ x: number; y: number }> | undefined;
+    const focusPoint = fpList && fpList.length > 0 ? [fpList[0].x, fpList[0].y] : null;
+
+    const peakEntries: [string, unknown][] = peakKeys
         .filter((k) => k in att)
         .map((k) => [k, att[k]] as [string, unknown]);
+    if (focusPoint) {
+        peakEntries.push(["focus_point", focusPoint]);
+    }
     const entropyEntries = entropyKeys
         .filter((k) => k in att)
         .map((k) => [k, att[k]] as [string, unknown]);
@@ -114,8 +121,10 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
         .filter((k) => k in att)
         .map((k) => [k, att[k]] as [string, unknown]);
 
+    const spreadKeys = ["spread_attended", "spread_total", "spread_pct"];
     const knownKeys = new Set([
         ...peakKeys, ...entropyKeys, ...beliefKeys, ...linearKeys,
+        ...spreadKeys,
         flavorKey, historyKey, focusKey, eventKey,
     ]);
     const otherEntries = Object.entries(att)
@@ -125,16 +134,6 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
 
     return (
         <Stack gap="xs">
-            {att[flavorKey] != null && (
-                <Group gap="xs">
-                    <Text size="xs" fw={500}>
-                        Flavor
-                    </Text>
-                    <Badge size="xs" variant="light" color="grape">
-                        {renderValue(att[flavorKey])}
-                    </Badge>
-                </Group>
-            )}
             <Grid gutter="xs">
                 <Grid.Col span={4}>
                     <KVSection
