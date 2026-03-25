@@ -3,6 +3,7 @@
 
 # tempfiles
 *~
+*.swp
 tmp/
 
 # coverage data
