@@ -618,7 +618,11 @@ def _push_step_to_server(
         resp_body = json.loads(resp.read())
         return bool(resp_body.get("stop"))
     except Exception:
-        logger.warning("Step callback POST to {} failed: {}", callback_url, __import__("traceback").format_exc())
+        logger.warning(
+            "Step callback POST to {} failed: {}",
+            callback_url,
+            __import__("traceback").format_exc(),
+        )
         return False  # best-effort, don't break the game loop
 
 

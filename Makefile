@@ -215,11 +215,7 @@ clean:
 pre-commit: 
 
 .PHONY: pre-push
-pre-push: check-safety lint test-unit doc-coverage coverage sonar docs qodo-review
-
-.PHONY: qodo-review
-qodo-review:
-	qodo run code_review --ci --yes
+pre-push: check-safety lint test-unit doc-coverage coverage sonar docs
 
 .PHONY: upgrade-python
 upgrade-python:

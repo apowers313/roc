@@ -768,11 +768,13 @@ class TestInjectAttentionSpread:
 
         # 3x3 map: background=2359, floor=2371, player=333
         bg = 2359
-        obs = self._make_obs([
-            [bg, 2360, bg],
-            [2371, 333, 2371],
-            [bg, 2360, bg],
-        ])
+        obs = self._make_obs(
+            [
+                [bg, 2360, bg],
+                [2371, 333, 2371],
+                [bg, 2360, bg],
+            ]
+        )
         # Top focus point at (1, 1) = player glyph 333
         states = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
 
@@ -788,11 +790,13 @@ class TestInjectAttentionSpread:
         from roc.gymnasium import _inject_attention_spread
 
         bg = 2359
-        obs = self._make_obs([
-            [bg, 2360, bg],
-            [2371, 333, 2371],
-            [bg, 2360, bg],
-        ])
+        obs = self._make_obs(
+            [
+                [bg, 2360, bg],
+                [2371, 333, 2371],
+                [bg, 2360, bg],
+            ]
+        )
         states1 = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
         states2 = self._make_states([{"x": 1, "y": 1, "strength": 0.9, "label": 1}])
 
@@ -808,11 +812,13 @@ class TestInjectAttentionSpread:
         from roc.gymnasium import _inject_attention_spread
 
         bg = 2359
-        obs = self._make_obs([
-            [bg, 2360, bg],
-            [2371, 333, 2371],
-            [bg, 2360, bg],
-        ])
+        obs = self._make_obs(
+            [
+                [bg, 2360, bg],
+                [2371, 333, 2371],
+                [bg, 2360, bg],
+            ]
+        )
         # Step 1: attend player (1,1) = 333
         states1 = self._make_states([{"x": 1, "y": 1, "strength": 1.0, "label": 1}])
         _inject_attention_spread(states1, obs)

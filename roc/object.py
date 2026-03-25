@@ -581,7 +581,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             lp = log_posteriors[k]
             ll = log_likelihoods.get(k, float("-inf"))
             prior = log_priors.get(k, float("-inf"))
-            alphas = self._alphas.get(k, {}) if k != "new" else {}
+            alphas = self._alphas.get(cast(NodeId, k), {}) if k != "new" else {}
             alpha_sum = round(sum(alphas.values()), 1) if alphas else 0
             logger.debug(
                 "[dirichlet]   {} => posterior={:.4f} (p={:.4f}) "
@@ -721,9 +721,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         alphas = self._alphas.get(obj_id, {})
         alpha_sum = sum(alphas.values())
         if alpha_sum == 0:
-            logger.debug(
-                "[dirichlet] ll obj:{} alpha_sum=0, treating as new", obj_id
-            )
+            logger.debug("[dirichlet] ll obj:{} alpha_sum=0, treating as new", obj_id)
             return self._log_likelihood_new(feature_strs)
 
         # Add prior_alpha for any unseen features in vocab
