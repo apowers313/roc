@@ -18,7 +18,7 @@ from cachetools import LRUCache
 from loguru import logger
 from flexihumanhash import FlexiHumanHash
 from opentelemetry._logs import SeverityNumber
-from opentelemetry.sdk._logs import LogRecord
+from opentelemetry._logs import LogRecord
 from pydantic import Field
 
 from .attention import Attention, AttentionEvent
@@ -448,6 +448,30 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         return float(len(features_strs ^ obj_features))
 
 
+# NOTE: Dirichlet-Categorical resolution is currently unsuitable for production use.
+#
+# Even with just ONE candidate that shares 2 of 3 features, the math favors matching:
+#
+# With a candidate that has ShapeNode(-) and ColorNode(GREY) in its alphas (2.0 each)
+# but not SingleNode(2365):
+# - Candidate ll: log(2/13) + log(2/13) + log(1/13) = -6.31
+# - New ll: 3 * log(1/10) = -6.91
+#
+# The candidate wins, giving posterior ~0.65 -- above the 0.5 threshold. The number of
+# candidates is irrelevant. The problem is that with only 3 physical features, a 2-of-3
+# overlap is too strong a signal for the model to reject. A grey - wall at (10,5) matches
+# a grey - wall object from (20,8) because they share Shape and Color -- that's 67%
+# feature agreement, enough for the Dirichlet likelihood to beat "new".
+#
+# The core problem: every Single-detected cell gets exactly 3 PHYSICAL features, and 2/3
+# overlap (same shape + color, different glyph) is enough for an incorrect match. There
+# aren't additional physical features available for these cells.
+#
+# Even exact 3/3 matches (like @ at tick 7: obj:-54 p=0.6559) can't reach 0.7. The
+# posteriors top out around 0.65 because the "new" hypothesis always takes a significant
+# share. Nothing will ever match at this threshold. The problem isn't solvable with
+# threshold tuning alone -- with only 3 features, there isn't enough posterior mass to
+# confidently distinguish correct from incorrect matches. Both land in the 0.5-0.66 range.
 class DirichletCategoricalResolution(ObjectResolutionExpMod):
     """Bayesian object resolution using Dirichlet-Categorical model.
 
@@ -461,7 +485,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
     prior_alpha: float = 1.0
     spatial_scale: float = 3.0
     temporal_scale: float = 50.0
-    confidence_threshold: float = 0.5
+    confidence_threshold: float = 0.7
     excluded_feature_labels: set[str] = set()
 
     # Telemetry
@@ -510,6 +534,20 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         active_features = self._filter_features(feature_nodes)
         feature_strs = [str(f) for f in active_features]
 
+        logger.debug(
+            "[dirichlet] tick={} pos=({},{}) | all_features={} physical={} "
+            "feature_strs={} | candidates={} vocab={} tracked_objects={}",
+            context.tick,
+            context.x,
+            context.y,
+            len(list(feature_nodes)),
+            len(active_features),
+            feature_strs,
+            len(candidates),
+            len(self._global_vocab),
+            len(self._alphas),
+        )
+
         # Update global vocabulary
         self._global_vocab.update(feature_strs)
 
@@ -521,6 +559,11 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             self.dirichlet_decision_counter.add(1, attributes={"outcome": "new_object"})
             log_data.log_posteriors = {}
             self._log_decision("new_object", None, [], log_data, reason="no_candidates")
+            logger.info(
+                "[dirichlet] tick={} -> NEW (no candidates) | features={}",
+                context.tick,
+                feature_strs,
+            )
             return None
 
         # Step 2: Compute priors (candidates + "new" hypothesis)
@@ -532,12 +575,51 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         # Step 4: Compute posteriors
         log_posteriors = self._compute_posteriors(log_priors, log_likelihoods)
 
+        # Log detailed posterior breakdown
+        for k in sorted(log_posteriors, key=lambda k: log_posteriors[k], reverse=True):
+            label = "new" if k == "new" else f"obj:{k}"
+            lp = log_posteriors[k]
+            ll = log_likelihoods.get(k, float("-inf"))
+            prior = log_priors.get(k, float("-inf"))
+            alphas = self._alphas.get(k, {}) if k != "new" else {}
+            alpha_sum = round(sum(alphas.values()), 1) if alphas else 0
+            logger.debug(
+                "[dirichlet]   {} => posterior={:.4f} (p={:.4f}) "
+                "ll={:.4f} prior={:.4f} alpha_sum={}",
+                label,
+                lp,
+                math.exp(lp),
+                ll,
+                prior,
+                alpha_sum,
+            )
+
         # Step 5: Decision
         result = self._decide(candidates, log_posteriors)
 
         # Step 6: Update alphas if matched
         if result is not None:
             self._update_alphas(result.id, feature_strs)
+            logger.info(
+                "[dirichlet] tick={} -> MATCH obj:{} (p={:.4f}) | features={}",
+                context.tick,
+                result.id,
+                math.exp(log_posteriors[result.id]),
+                feature_strs,
+            )
+        else:
+            best_key = max(log_posteriors, key=lambda k: log_posteriors[k])
+            best_p = math.exp(log_posteriors[best_key])
+            logger.info(
+                "[dirichlet] tick={} -> NEW (best={} p={:.4f} thresh={}) "
+                "| candidates={} features={}",
+                context.tick,
+                "new" if best_key == "new" else f"obj:{best_key}",
+                best_p,
+                self.confidence_threshold,
+                len(candidates),
+                feature_strs,
+            )
 
         # Log the decision
         log_data.log_posteriors = log_posteriors
@@ -551,16 +633,36 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         return result
 
     def _find_candidates(self, feature_nodes: Collection[FeatureNode]) -> list[Object]:
-        """Find candidate Objects using reverse index.
+        """Find candidate Objects using reverse index (PHYSICAL features only).
 
         Uses the reverse index (_feature_to_objects) to find candidates in O(f)
-        instead of walking the graph via predecessors.select().
+        instead of walking the graph via predecessors.select(). Only PHYSICAL
+        features are used for lookup to avoid pulling in irrelevant candidates
+        via shared relational features like DistanceNode.
         """
         seen: set[NodeId] = set()
         candidates: list[Object] = []
 
         for fn in feature_nodes:
-            for obj_id in _feature_to_objects.get(fn.id, ()):
+            if fn.kind != FeatureKind.PHYSICAL:
+                continue
+            obj_ids = _feature_to_objects.get(fn.id, ())
+            if obj_ids:
+                logger.debug(
+                    "[dirichlet] reverse-index HIT: fn.id={} ({}) -> {} objects",
+                    fn.id,
+                    str(fn),
+                    len(obj_ids),
+                )
+            else:
+                logger.debug(
+                    "[dirichlet] reverse-index MISS: fn.id={} ({}) not in index "
+                    "(index has {} feature entries)",
+                    fn.id,
+                    str(fn),
+                    len(_feature_to_objects),
+                )
+            for obj_id in obj_ids:
                 if obj_id not in seen:
                     seen.add(obj_id)
                     obj = Object.get(obj_id)
@@ -619,7 +721,9 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         alphas = self._alphas.get(obj_id, {})
         alpha_sum = sum(alphas.values())
         if alpha_sum == 0:
-            # No alpha information -- treat as new
+            logger.debug(
+                "[dirichlet] ll obj:{} alpha_sum=0, treating as new", obj_id
+            )
             return self._log_likelihood_new(feature_strs)
 
         # Add prior_alpha for any unseen features in vocab
@@ -629,15 +733,44 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         log_ll = 0.0
         for f in feature_strs:
             alpha_j = alphas.get(f, self.prior_alpha)
-            log_ll += math.log(alpha_j / total_alpha)
+            contrib = math.log(alpha_j / total_alpha)
+            log_ll += contrib
+            logger.debug(
+                "[dirichlet]   ll obj:{} feature='{}' alpha_j={} total_alpha={:.1f} "
+                "contrib={:.4f} (in_alphas={})",
+                obj_id,
+                f,
+                alpha_j,
+                total_alpha,
+                contrib,
+                f in alphas,
+            )
 
+        logger.debug(
+            "[dirichlet] ll obj:{} => {:.4f} | alpha_sum={:.1f} vocab={} "
+            "obj_alpha_keys={} observed={}",
+            obj_id,
+            log_ll,
+            alpha_sum,
+            vocab_size,
+            len(alphas),
+            len(feature_strs),
+        )
         return log_ll
 
     def _log_likelihood_new(self, feature_strs: list[str]) -> float:
         """Log-likelihood under the new-object (uniform) model."""
         vocab_size = max(len(self._global_vocab), 1)
         prob = self.prior_alpha / (vocab_size * self.prior_alpha)
-        return len(feature_strs) * math.log(prob)
+        log_ll = len(feature_strs) * math.log(prob)
+        logger.debug(
+            "[dirichlet] ll new => {:.4f} | vocab={} n_features={} per_feature={:.4f}",
+            log_ll,
+            vocab_size,
+            len(feature_strs),
+            math.log(prob),
+        )
+        return log_ll
 
     @Observability.tracer.start_as_current_span("compute_likelihoods")
     def _compute_likelihoods(
@@ -719,6 +852,12 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         for f in feature_strs:
             self._alphas[object_id][f] = self.prior_alpha + 1.0
         self._global_vocab.update(feature_strs)
+        logger.debug(
+            "[dirichlet] initialized alphas for obj:{} with {} features: {}",
+            object_id,
+            len(feature_strs),
+            feature_strs,
+        )
 
     def _log_decision(
         self,
@@ -870,7 +1009,8 @@ class ObjectResolver(Component):
             [str(f) for f in fg.feature_nodes],
         )
         if hasattr(resolution, "initialize_alphas"):
-            feature_strs = [str(f) for f in fg.feature_nodes]
+            physical_nodes = [f for f in fg.feature_nodes if f.kind == FeatureKind.PHYSICAL]
+            feature_strs = [str(f) for f in physical_nodes]
             resolution.initialize_alphas(o.id, feature_strs)
 
         from roc.reporting.state import State
