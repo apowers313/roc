@@ -11,6 +11,7 @@ vi.mock("../../api/queries", () => ({
     useResolutionHistory: vi.fn(() => ({ data: undefined })),
 }));
 
+import type { ResolutionPoint } from "../../api/client";
 import { renderWithProviders } from "../../test-utils";
 import { ResolutionChart } from "./ResolutionChart";
 import { useResolutionHistory } from "../../api/queries";
@@ -31,7 +32,7 @@ describe("ResolutionChart", () => {
 
     it("shows 'No resolution history' when data is empty array", () => {
         mockUseResolutionHistory.mockReturnValue({
-            data: [],
+            data: [] as ResolutionPoint[],
         } as ReturnType<typeof useResolutionHistory>);
 
         renderWithProviders(

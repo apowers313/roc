@@ -152,10 +152,10 @@ describe("TanStack Query hooks (additional coverage)", () => {
                     shape: "circle",
                     glyph: "@",
                     color: "white",
+                    type: "glyph",
                     node_id: "n1",
                     step_added: 1,
                     match_count: 5,
-                    feature_type: "glyph",
                 },
             ];
             mockFetchAllObjects.mockResolvedValue(data);

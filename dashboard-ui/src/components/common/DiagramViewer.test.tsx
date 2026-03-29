@@ -122,7 +122,7 @@ describe("DiagramViewer", () => {
         });
 
         const buttons = getActionButtons();
-        fireEvent.click(buttons[3]);
+        fireEvent.click(buttons[3]!);
 
         expect(URL.createObjectURL).toHaveBeenCalled();
         expect(clickSpy).toHaveBeenCalled();
@@ -142,7 +142,7 @@ describe("DiagramViewer", () => {
         });
 
         const buttons = getActionButtons();
-        fireEvent.click(buttons[4]);
+        fireEvent.click(buttons[4]!);
 
         expect(openSpy).toHaveBeenCalledWith("blob:mock-url", "_blank");
     });
@@ -167,7 +167,7 @@ describe("DiagramViewer", () => {
         });
 
         const buttons = getActionButtons();
-        fireEvent.click(buttons[3]);
+        fireEvent.click(buttons[3]!);
 
         expect(clickSpy).toHaveBeenCalled();
     });
@@ -183,7 +183,7 @@ describe("DiagramViewer", () => {
         // Don't trigger SVG ready -- svgString stays null
         const buttons = getActionButtons();
         // Download button is disabled; clicking it should not call createObjectURL
-        fireEvent.click(buttons[3]);
+        fireEvent.click(buttons[3]!);
         expect(URL.createObjectURL).not.toHaveBeenCalled();
     });
 
@@ -191,7 +191,7 @@ describe("DiagramViewer", () => {
         const openSpy = vi.spyOn(globalThis, "open").mockImplementation(() => null);
         renderWithProviders(<DiagramViewer definition="classDiagram" />);
         const buttons = getActionButtons();
-        fireEvent.click(buttons[4]);
+        fireEvent.click(buttons[4]!);
         expect(openSpy).not.toHaveBeenCalled();
     });
 });

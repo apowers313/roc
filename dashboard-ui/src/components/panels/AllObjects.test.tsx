@@ -7,6 +7,10 @@ import { AllObjects } from "./AllObjects";
 
 vi.mock("../../api/queries", () => ({
     useAllObjects: vi.fn(),
+    useObjectHistory: vi.fn().mockReturnValue({
+        data: { info: { uuid: 1, resolve_count: 0 }, states: [], transforms: [] },
+        isLoading: false,
+    }),
 }));
 
 import { useAllObjects } from "../../api/queries";
@@ -24,7 +28,7 @@ const OBJ_A: ResolvedObject = {
     node_id: "-10",
     step_added: 5,
     match_count: 3,
-    feature_type: "Single",
+    type: "Single",
 };
 
 const OBJ_B: ResolvedObject = {
@@ -34,7 +38,7 @@ const OBJ_B: ResolvedObject = {
     node_id: "-14",
     step_added: 2,
     match_count: 10,
-    feature_type: "Flood",
+    type: "Flood",
 };
 
 const OBJ_NULL: ResolvedObject = {
@@ -44,7 +48,7 @@ const OBJ_NULL: ResolvedObject = {
     node_id: null,
     step_added: null,
     match_count: 0,
-    feature_type: null,
+    type: null,
 };
 
 describe("AllObjects", () => {
@@ -89,7 +93,7 @@ describe("AllObjects", () => {
         mockObjects([OBJ_NULL]);
         renderWithProviders(<AllObjects run="test-run" />);
         const dashes = screen.getAllByText("--");
-        // shape, glyph, color, feature_type, node_id, step_added are all null
+        // shape, glyph, color, type, node_id, step_added are all null
         expect(dashes.length).toBeGreaterThanOrEqual(5);
     });
 
@@ -196,7 +200,7 @@ describe("AllObjects", () => {
             node_id: "-99",
             step_added: 1,
             match_count: 1,
-            feature_type: "Single",
+            type: "Single",
         };
         mockObjects([objUnknownColor]);
         const { container } = renderWithProviders(<AllObjects run="test-run" />);

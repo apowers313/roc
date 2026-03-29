@@ -16,51 +16,20 @@ import { useEffect, type ReactNode } from "react";
 import { DashboardProvider, useDashboard } from "./state/context";
 import { HighlightProvider } from "./state/highlight";
 
-let capturedOnNewStep: ((data: unknown) => void) | undefined;
-let mockLiveStatusValue: unknown = null;
+vi.mock("socket.io-client");
+vi.mock("./api/queries");
+vi.mock("./hooks/usePrefetchWindow");
+vi.mock("./hooks/useLiveUpdates");
+vi.mock("./api/client");
 
-vi.mock("socket.io-client", () => {
-    const mockSocket = { on: vi.fn(), disconnect: vi.fn() };
-    return { io: vi.fn(() => mockSocket) };
-});
-
-vi.mock("./api/queries", () => ({
-    useStepData: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        isPlaceholderData: false,
-    })),
-    useRuns: vi.fn(() => ({ data: undefined })),
-    useGames: vi.fn(() => ({ data: undefined })),
-    useStepRange: vi.fn(() => ({ data: undefined })),
-    useResolutionHistory: vi.fn(() => ({ data: undefined })),
-    useAllObjects: vi.fn(() => ({ data: undefined })),
-    useIntrinsicsHistory: vi.fn(() => ({ data: undefined })),
-    useMetricsHistory: vi.fn(() => ({ data: undefined })),
-    useGraphHistory: vi.fn(() => ({ data: undefined })),
-    useEventHistory: vi.fn(() => ({ data: undefined })),
-    useActionHistory: vi.fn(() => ({ data: undefined })),
-}));
-
-vi.mock("./hooks/usePrefetchWindow", () => ({
-    usePrefetchWindow: vi.fn(),
-}));
-
-vi.mock("./hooks/useLiveUpdates", () => ({
-    useLiveUpdates: vi.fn((opts?: { onNewStep?: (data: unknown) => void }) => {
-        capturedOnNewStep = opts?.onNewStep;
-        return { connected: false, liveStatus: mockLiveStatusValue };
-    }),
-}));
-
-vi.mock("./api/client", () => ({
-    fetchBookmarks: vi.fn(() => Promise.resolve([])),
-    saveBookmarks: vi.fn(() => Promise.resolve(undefined)),
-}));
-
-import { renderWithProviders, makeStepData } from "./test-utils";
+import { renderWithProviders, makeStepData, stubDefaultFetch } from "./test-utils";
 import { App } from "./App";
 import { useStepData, useGames } from "./api/queries";
+import {
+    getCapturedOnNewStep,
+    resetLiveUpdatesMock,
+    setMockLiveStatusValue,
+} from "./hooks/__mocks__/useLiveUpdates";
 
 const mockUseStepData = vi.mocked(useStepData);
 const mockUseGames = vi.mocked(useGames);
@@ -97,21 +66,8 @@ function NonStandardSpeedWrapper({ children }: Readonly<{ children: ReactNode }>
 
 describe("App (coverage2)", () => {
     beforeEach(() => {
-        capturedOnNewStep = undefined;
-        mockLiveStatusValue = null;
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-            ok: true,
-            json: () =>
-                Promise.resolve({
-                    active: false,
-                    run_name: null,
-                    step: 0,
-                    game_number: 0,
-                    step_min: 0,
-                    step_max: 0,
-                    game_numbers: [],
-                }),
-        }));
+        resetLiveUpdatesMock();
+        stubDefaultFetch();
         mockUseStepData.mockReturnValue({
             data: undefined,
             isLoading: false,
@@ -173,15 +129,15 @@ describe("App (coverage2)", () => {
             // Verify the panels that receive onStepClick are present
             expect(screen.getByText("Intrinsics & Significance")).toBeInTheDocument();
             expect(screen.getByText("Object Resolution")).toBeInTheDocument();
-            expect(screen.getByText("Graph & Events")).toBeInTheDocument();
-            expect(screen.getByText("All Objects")).toBeInTheDocument();
+            expect(screen.getByText("Transitions")).toBeInTheDocument();
+            expect(screen.getAllByText("Prediction").length).toBeGreaterThanOrEqual(1);
         });
     });
 
     describe("onNewStep in paused mode with atEdge detection", () => {
         it("dispatches PUSH_ARRIVED with atEdge=true when at the live edge", () => {
             // Set up live mode
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 50,
@@ -189,10 +145,10 @@ describe("App (coverage2)", () => {
                 step_min: 1,
                 step_max: 50,
                 game_numbers: [1],
-            };
+            });
 
             renderWithProviders(<App />);
-            expect(capturedOnNewStep).toBeDefined();
+            expect(getCapturedOnNewStep()).toBeDefined();
 
             // Navigate away to exit live_following
             act(() => {
@@ -201,12 +157,12 @@ describe("App (coverage2)", () => {
 
             // Push arrives -- we're at the edge (step >= stepMax)
             act(() => {
-                capturedOnNewStep!(makeStepData({ step: 51, game_number: 1 }));
+                getCapturedOnNewStep()!(makeStepData({ step: 51, game_number: 1 }));
             });
         });
 
         it("dispatches PUSH_ARRIVED with atEdge=false when not at edge", () => {
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 50,
@@ -214,10 +170,10 @@ describe("App (coverage2)", () => {
                 step_min: 1,
                 step_max: 50,
                 game_numbers: [1],
-            };
+            });
 
             renderWithProviders(<App />);
-            expect(capturedOnNewStep).toBeDefined();
+            expect(getCapturedOnNewStep()).toBeDefined();
 
             // Navigate to step 1 (far from edge) to exit live_following
             act(() => {
@@ -226,7 +182,7 @@ describe("App (coverage2)", () => {
 
             // Now push for step 52 arrives for the same game while we're at step 1
             act(() => {
-                capturedOnNewStep!(makeStepData({ step: 52, game_number: 1 }));
+                getCapturedOnNewStep()!(makeStepData({ step: 52, game_number: 1 }));
             });
         });
     });
@@ -241,7 +197,7 @@ describe("App (coverage2)", () => {
 
             // Enable live status so we can test the bookmark navigation path
             // that dispatches USER_NAVIGATE in live_following mode
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 50,
@@ -249,7 +205,7 @@ describe("App (coverage2)", () => {
                 step_min: 1,
                 step_max: 50,
                 game_numbers: [1, 2],
-            };
+            });
 
             renderWithProviders(<App />);
 
@@ -276,7 +232,7 @@ describe("App (coverage2)", () => {
 
     describe("live data preference in following mode", () => {
         it("uses live push data when in live_following mode", () => {
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 50,
@@ -284,7 +240,7 @@ describe("App (coverage2)", () => {
                 step_min: 1,
                 step_max: 50,
                 game_numbers: [1],
-            };
+            });
 
             mockUseStepData.mockReturnValue({
                 data: makeStepData({ step: 49, game_number: 1 }),
@@ -293,11 +249,11 @@ describe("App (coverage2)", () => {
             } as unknown as ReturnType<typeof useStepData>);
 
             renderWithProviders(<App />);
-            expect(capturedOnNewStep).toBeDefined();
+            expect(getCapturedOnNewStep()).toBeDefined();
 
             // Push live data
             act(() => {
-                capturedOnNewStep!(makeStepData({ step: 50, game_number: 1 }));
+                getCapturedOnNewStep()!(makeStepData({ step: 50, game_number: 1 }));
             });
 
             // In live_following mode, the push data is preferred

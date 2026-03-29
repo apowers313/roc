@@ -1,10 +1,11 @@
 /** All Objects panel -- sortable table of every resolved object. */
 
 import { Table, Text } from "@mantine/core";
-import { useCallback, useState } from "react";
+import { type ReactNode, useCallback, useState } from "react";
 
 import type { ResolvedObject } from "../../api/client";
 import { useAllObjects } from "../../api/queries";
+import { ObjectLink } from "../common/ObjectLink";
 
 /** Map NetHack color names to CSS colors. */
 const NH_COLOR_MAP: Record<string, string> = {
@@ -125,6 +126,29 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
                 <Table.Tbody>
                     {sorted.map((obj: ResolvedObject, i: number) => {
                         const fg = obj.color ? NH_COLOR_MAP[obj.color] ?? "#fff" : "#fff";
+                        let shapeCell: ReactNode;
+                        if (obj.shape && obj.node_id) {
+                            shapeCell = (
+                                <ObjectLink
+                                    objectId={Number(obj.node_id)}
+                                    glyph={obj.shape}
+                                    color={obj.color ?? undefined}
+                                />
+                            );
+                        } else if (obj.shape) {
+                            shapeCell = (
+                                <Text
+                                    component="span"
+                                    ff="monospace"
+                                    fw={700}
+                                    style={{ color: fg, background: "#000", padding: "0 3px", borderRadius: 2, fontSize: 13 }}
+                                >
+                                    {obj.shape}
+                                </Text>
+                            );
+                        } else {
+                            shapeCell = "--";
+                        }
                         return (
                             <Table.Tr
                                 key={obj.node_id ?? `new-${obj.step_added}`}
@@ -137,16 +161,7 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
                                     {i + 1}
                                 </Table.Td>
                                 <Table.Td style={{ padding: "1px 4px", textAlign: "center" }}>
-                                    {obj.shape ? (
-                                        <Text
-                                            component="span"
-                                            ff="monospace"
-                                            fw={700}
-                                            style={{ color: fg, background: "#000", padding: "0 3px", borderRadius: 2, fontSize: 13 }}
-                                        >
-                                            {obj.shape}
-                                        </Text>
-                                    ) : "--"}
+                                    {shapeCell}
                                 </Table.Td>
                                 <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
                                     {obj.glyph ?? "--"}

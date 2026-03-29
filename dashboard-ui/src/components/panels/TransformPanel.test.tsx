@@ -1,10 +1,19 @@
 import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeStepData, renderWithProviders } from "../../test-utils";
 import { TransitionPanel } from "./TransitionPanel";
 import { PredictionPanel } from "./PredictionPanel";
 import { SequencePanel } from "./SequencePanel";
+
+// ObjectLink (used by TransitionPanel and SequencePanel) imports ObjectModal
+// which calls useObjectHistory
+vi.mock("../../api/queries", () => ({
+    useObjectHistory: vi.fn().mockReturnValue({
+        data: { info: { uuid: 1, resolve_count: 0 }, states: [], transforms: [] },
+        isLoading: false,
+    }),
+}));
 
 describe("TransitionPanel", () => {
     it("shows 'No transform data' when data is undefined", () => {
@@ -20,7 +29,7 @@ describe("TransitionPanel", () => {
         expect(screen.getByText("No changes this step")).toBeInTheDocument();
     });
 
-    it("renders structured changes table with type/name/delta", () => {
+    it("renders intrinsic changes in three-column layout", () => {
         const data = makeStepData({
             transform_summary: {
                 count: 2,
@@ -31,14 +40,14 @@ describe("TransitionPanel", () => {
             },
         });
         renderWithProviders(<TransitionPanel data={data} />);
-        expect(screen.getByText("2")).toBeInTheDocument();
+        expect(screen.getByText("Intrinsic Changes")).toBeInTheDocument();
         expect(screen.getByText("hp")).toBeInTheDocument();
         expect(screen.getByText("hunger")).toBeInTheDocument();
         expect(screen.getByText("-0.1000")).toBeInTheDocument();
         expect(screen.getByText("+0.0500")).toBeInTheDocument();
     });
 
-    it("falls back to description-only when no type info", () => {
+    it("falls back to description when no name info", () => {
         const data = makeStepData({
             transform_summary: {
                 count: 1,
@@ -58,6 +67,67 @@ describe("TransitionPanel", () => {
         });
         renderWithProviders(<TransitionPanel data={data} />);
         expect(screen.getByText("Node(-755, labels={'Frame'})")).toBeInTheDocument();
+    });
+
+    it("shows object changes as summary rows", () => {
+        const data = makeStepData({
+            transform_summary: {
+                count: 0,
+                changes: [],
+                object_transforms: [
+                    { uuid: 42, glyph: "@", changes: [
+                        { property: "x", type: "continuous", delta: 2, old_value: 10, new_value: 12 },
+                    ]},
+                ],
+            },
+        });
+        renderWithProviders(<TransitionPanel data={data} />);
+        expect(screen.getByText("Object Changes")).toBeInTheDocument();
+        expect(screen.getByText("@")).toBeInTheDocument();
+        // Three-column: Previous, Current, Delta headers
+        expect(screen.getByText("Previous", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText("Current", { exact: false })).toBeInTheDocument();
+        expect(screen.getByText("Delta")).toBeInTheDocument();
+    });
+
+    it("handles empty object transforms gracefully", () => {
+        const data = makeStepData({
+            transform_summary: {
+                count: 1,
+                changes: [{ description: "foo" }],
+            },
+        });
+        renderWithProviders(<TransitionPanel data={data} />);
+        expect(screen.queryByText("Object Changes")).not.toBeInTheDocument();
+    });
+
+    it("shows no changes when count is 0 and no object transforms", () => {
+        const data = makeStepData({
+            transform_summary: { count: 0, changes: [], object_transforms: [] },
+        });
+        renderWithProviders(<TransitionPanel data={data} />);
+        expect(screen.getByText("No changes this step")).toBeInTheDocument();
+    });
+
+    it("shows object delta summary for multiple changes", () => {
+        const data = makeStepData({
+            transform_summary: {
+                count: 0,
+                changes: [],
+                object_transforms: [{
+                    uuid: 42,
+                    glyph: "@",
+                    changes: [
+                        { property: "x", type: "continuous", delta: 2 },
+                        { property: "color_type", type: "discrete", delta: null, old_value: 7, new_value: 3 },
+                    ],
+                }],
+            },
+        });
+        renderWithProviders(<TransitionPanel data={data} />);
+        // Delta column shows summary of all changes
+        expect(screen.getByText(/x: \+2/)).toBeInTheDocument();
+        expect(screen.getByText(/color_type: 7 -> 3/)).toBeInTheDocument();
     });
 });
 
@@ -123,10 +193,75 @@ describe("SequencePanel", () => {
             },
         });
         renderWithProviders(<SequencePanel data={data} />);
-        expect(screen.getByText("42")).toBeInTheDocument();
-        expect(screen.getByText("3")).toBeInTheDocument();
-        expect(screen.getByText("abc12345")).toBeInTheDocument();
+        // Single-line header: "Frame: tick=42 | 3 objects | 2 intrinsics | significance=0.1234"
+        expect(screen.getByText(/tick=42/)).toBeInTheDocument();
+        expect(screen.getByText(/3 objects/)).toBeInTheDocument();
+        expect(screen.getByText(/significance=0.1234/)).toBeInTheDocument();
         expect(screen.getByText("(5, 10)")).toBeInTheDocument();
-        expect(screen.getByText("0.1234")).toBeInTheDocument();
+    });
+
+    it("shows glyph column for objects", () => {
+        const data = makeStepData({
+            sequence_summary: {
+                tick: 1,
+                object_count: 1,
+                objects: [
+                    { id: "abc12345", x: 5, y: 3, glyph: "@", resolve_count: 2 },
+                ],
+                intrinsic_count: 0,
+                intrinsics: {},
+            },
+        });
+        renderWithProviders(<SequencePanel data={data} />);
+        expect(screen.getByText("Glyph")).toBeInTheDocument();
+        expect(screen.getByText("@")).toBeInTheDocument();
+    });
+
+    it("shows -- for missing glyph", () => {
+        const data = makeStepData({
+            sequence_summary: {
+                tick: 1,
+                object_count: 1,
+                objects: [{ id: "abc12345" }],
+                intrinsic_count: 0,
+                intrinsics: {},
+            },
+        });
+        renderWithProviders(<SequencePanel data={data} />);
+        // The glyph column shows "--" for missing glyph
+        const cells = screen.getAllByText("--");
+        expect(cells.length).toBeGreaterThan(0);
+    });
+
+    it("shows color and shape columns", () => {
+        const data = makeStepData({
+            sequence_summary: {
+                tick: 1,
+                object_count: 1,
+                objects: [{ id: "abc12345", x: 5, y: 3, glyph: "@", color: 7, shape: 64 }],
+                intrinsic_count: 0,
+                intrinsics: {},
+            },
+        });
+        renderWithProviders(<SequencePanel data={data} />);
+        expect(screen.getByText("Color")).toBeInTheDocument();
+        expect(screen.getByText("Shape")).toBeInTheDocument();
+        expect(screen.getByText("7")).toBeInTheDocument();
+        expect(screen.getByText("64")).toBeInTheDocument();
+    });
+
+    it("shows matched_previous column", () => {
+        const data = makeStepData({
+            sequence_summary: {
+                tick: 1,
+                object_count: 1,
+                objects: [{ id: "abc12345", matched_previous: true }],
+                intrinsic_count: 0,
+                intrinsics: {},
+            },
+        });
+        renderWithProviders(<SequencePanel data={data} />);
+        expect(screen.getByText("Matched")).toBeInTheDocument();
+        expect(screen.getByText("Yes")).toBeInTheDocument();
     });
 });

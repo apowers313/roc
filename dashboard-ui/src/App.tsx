@@ -37,6 +37,7 @@ import { ActionPanel } from "./components/panels/ActionPanel";
 import { AllObjects } from "./components/panels/AllObjects";
 import { AuralPerception } from "./components/panels/AuralPerception";
 import { AttentionSpread } from "./components/panels/AttentionSpread";
+import { AttentionCycleSummary, type CycleSummaryEntry } from "./components/panels/AttentionCycleSummary";
 import { AttenuationPanel } from "./components/panels/AttenuationPanel";
 import { BookmarkTable } from "./components/panels/BookmarkTable";
 import { EventHistory } from "./components/panels/EventHistory";
@@ -453,6 +454,21 @@ export function App() {
     // historical step loads.
     const data = isFollowing ? liveData ?? restData : restData;
 
+    // Attention cycle stepper state -- reset when step changes
+    const [selectedSaliencyCycle, setSelectedSaliencyCycle] = useState(0);
+    useEffect(() => { setSelectedSaliencyCycle(0); }, [step]);
+
+    // Build cycle summary entries from saliency_cycles data
+    const cycleSummaryEntries: CycleSummaryEntry[] = useMemo(() => {
+        const cycles = data?.saliency_cycles;
+        if (!cycles) return [];
+        return cycles.map((c) => ({
+            preIorPeak: c.pre_ior_peak ?? { x: 0, y: 0, strength: 0 },
+            postIorPeak: c.post_ior_peak ?? { x: 0, y: 0, strength: 0 },
+            focusedPoint: c.focused_point ?? { x: 0, y: 0, strength: 0 },
+        }));
+    }, [data?.saliency_cycles]);
+
     // Click-to-navigate handler for history charts
     const handleChartStepClick = useCallback(
         (clickedStep: number) => {
@@ -583,9 +599,19 @@ export function App() {
 
                     <Section value="attention" title="Visual Attention" icon={ScanEye} color="violet" expmod={toDisplayString(data?.attenuation?.flavor)}>
                         <AttentionSpread data={data} />
+                        {cycleSummaryEntries.length > 1 && (
+                            <AttentionCycleSummary
+                                cycles={cycleSummaryEntries}
+                                selectedCycle={selectedSaliencyCycle}
+                                onCycleChange={setSelectedSaliencyCycle}
+                            />
+                        )}
                         <Grid>
                             <Grid.Col span={{ base: 12, md: 8 }}>
-                                <SaliencyMap data={data} />
+                                <SaliencyMap
+                                    data={data}
+                                    cycleIndex={cycleSummaryEntries.length > 1 ? selectedSaliencyCycle : undefined}
+                                />
                             </Grid.Col>
                             <Grid.Col span={{ base: 12, md: 4 }}>
                                 <AttenuationPanel data={data} />
@@ -617,7 +643,7 @@ export function App() {
                     </Section>
 
                     <Section value="transitions" title="Transitions" icon={ArrowRightLeft} color="orange">
-                        <TransitionPanel data={data} />
+                        <TransitionPanel data={data} onStepClick={handleChartStepClick} />
                     </Section>
 
                     <Section value="prediction" title="Prediction" icon={BrainCircuit} color="cyan" expmod={[data?.prediction?.candidate_expmod, data?.prediction?.confidence_expmod].filter((v): v is string => v != null)}>

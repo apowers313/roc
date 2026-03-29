@@ -12,39 +12,10 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-// Mock socket.io-client
-vi.mock("socket.io-client", () => {
-    const mockSocket = {
-        on: vi.fn(),
-        disconnect: vi.fn(),
-    };
-    return { io: vi.fn(() => mockSocket) };
-});
-
-// Mock query hooks
-vi.mock("./api/queries", () => ({
-    useStepData: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        isPlaceholderData: false,
-    })),
-    useRuns: vi.fn(() => ({ data: undefined })),
-    useGames: vi.fn(() => ({ data: undefined })),
-    useStepRange: vi.fn(() => ({ data: undefined })),
-    useResolutionHistory: vi.fn(() => ({ data: undefined })),
-    useAllObjects: vi.fn(() => ({ data: undefined })),
-}));
-
-// Mock prefetch window
-vi.mock("./hooks/usePrefetchWindow", () => ({
-    usePrefetchWindow: vi.fn(),
-}));
-
-// Mock bookmarks
-vi.mock("./api/client", () => ({
-    fetchBookmarks: vi.fn().mockResolvedValue([]),
-    saveBookmarks: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("socket.io-client");
+vi.mock("./api/queries");
+vi.mock("./hooks/usePrefetchWindow");
+vi.mock("./api/client");
 
 import { renderWithProviders } from "./test-utils";
 import { App } from "./App";

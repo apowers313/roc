@@ -1,8 +1,16 @@
-import { screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { makeStepData, renderWithProviders } from "../../test-utils";
 import { ResolutionInspector } from "./ResolutionInspector";
+
+// ResolutionInspector uses ObjectLink which imports ObjectModal -> useObjectHistory
+vi.mock("../../api/queries", () => ({
+    useObjectHistory: vi.fn().mockReturnValue({
+        data: { info: { uuid: 1, resolve_count: 0 }, states: [], transforms: [] },
+        isLoading: false,
+    }),
+}));
 
 describe("ResolutionInspector", () => {
     it("shows 'No resolution data' when data is undefined", () => {
@@ -83,5 +91,56 @@ describe("ResolutionInspector", () => {
         renderWithProviders(<ResolutionInspector data={data} />);
         expect(screen.getByText("Candidates")).toBeInTheDocument();
         expect(screen.getByText("-14")).toBeInTheDocument();
+    });
+});
+
+describe("ResolutionInspector multi-cycle", () => {
+    it("renders summary table with correct columns", () => {
+        const data = makeStepData({
+            resolution_cycles: [
+                { outcome: "match", features: ["ShapeNode(@)", "ColorNode(WHITE)"], x: 10, y: 5, num_candidates: 3 },
+                { outcome: "new_object", features: ["ShapeNode(d)", "ColorNode(RED)"], x: 15, y: 8, num_candidates: 0 },
+                { outcome: "match", features: ["ShapeNode(.)"], x: 22, y: 1, num_candidates: 5 },
+                { outcome: "match", features: ["ShapeNode(#)"], x: 30, y: 2, num_candidates: 2 },
+            ],
+        });
+        renderWithProviders(<ResolutionInspector data={data} />);
+        // Summary table columns -- some appear in both summary and detail
+        expect(screen.getAllByText("Outcome").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("Object").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("Location").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("Candidates").length).toBeGreaterThanOrEqual(1);
+        // Summary table should show "Resolution Summary" title
+        expect(screen.getByText("Resolution Summary")).toBeInTheDocument();
+    });
+
+    it("stepper switches resolution detail", () => {
+        const data = makeStepData({
+            resolution_cycles: [
+                { outcome: "match", features: ["ShapeNode(@)"], x: 10, y: 5, num_candidates: 3 },
+                { outcome: "new_object", features: ["ShapeNode(d)"], x: 15, y: 8, num_candidates: 0 },
+            ],
+        });
+        renderWithProviders(<ResolutionInspector data={data} />);
+        // Initially shows cycle 1 detail -- MATCHED appears in summary table and detail
+        expect(screen.getAllByText("MATCHED").length).toBeGreaterThanOrEqual(1);
+        // Click cycle 2
+        const cycle2Label = screen.getByText("Cycle 2");
+        fireEvent.click(cycle2Label);
+        // Now should show cycle 2 detail (new_object) -- NEW OBJECT in both summary and detail
+        expect(screen.getAllByText("NEW OBJECT").length).toBeGreaterThanOrEqual(1);
+    });
+});
+
+describe("backward compatibility", () => {
+    it("wraps single resolution_metrics as fallback (no resolution_cycles)", () => {
+        const data = makeStepData({
+            resolution_metrics: { outcome: "match", features: ["ShapeNode(@)"] },
+        });
+        renderWithProviders(<ResolutionInspector data={data} />);
+        // Should still render correctly without cycles
+        expect(screen.getByText("MATCHED")).toBeInTheDocument();
+        // No stepper should appear
+        expect(screen.queryByText("Cycle 1")).not.toBeInTheDocument();
     });
 });

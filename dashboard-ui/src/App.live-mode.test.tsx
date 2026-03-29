@@ -11,32 +11,9 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 let capturedOnNewStep: ((data: unknown) => void) | undefined;
 let mockLiveStatusValue: unknown = null;
 
-vi.mock("socket.io-client", () => {
-    const mockSocket = { on: vi.fn(), disconnect: vi.fn() };
-    return { io: vi.fn(() => mockSocket) };
-});
-
-vi.mock("./api/queries", () => ({
-    useStepData: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        isPlaceholderData: false,
-    })),
-    useRuns: vi.fn(() => ({ data: undefined })),
-    useGames: vi.fn(() => ({ data: undefined })),
-    useStepRange: vi.fn(() => ({ data: undefined })),
-    useResolutionHistory: vi.fn(() => ({ data: undefined })),
-    useAllObjects: vi.fn(() => ({ data: undefined })),
-    useIntrinsicsHistory: vi.fn(() => ({ data: undefined })),
-    useMetricsHistory: vi.fn(() => ({ data: undefined })),
-    useGraphHistory: vi.fn(() => ({ data: undefined })),
-    useEventHistory: vi.fn(() => ({ data: undefined })),
-    useActionHistory: vi.fn(() => ({ data: undefined })),
-}));
-
-vi.mock("./hooks/usePrefetchWindow", () => ({
-    usePrefetchWindow: vi.fn(),
-}));
+vi.mock("socket.io-client");
+vi.mock("./api/queries");
+vi.mock("./hooks/usePrefetchWindow");
 
 vi.mock("./hooks/useLiveUpdates", () => ({
     useLiveUpdates: vi.fn((opts?: { onNewStep?: (data: unknown) => void }) => {
@@ -45,10 +22,7 @@ vi.mock("./hooks/useLiveUpdates", () => ({
     }),
 }));
 
-vi.mock("./api/client", () => ({
-    fetchBookmarks: vi.fn(() => Promise.resolve([])),
-    saveBookmarks: vi.fn(() => Promise.resolve(undefined)),
-}));
+vi.mock("./api/client");
 
 import { renderWithProviders, makeStepData } from "./test-utils";
 import { App } from "./App";

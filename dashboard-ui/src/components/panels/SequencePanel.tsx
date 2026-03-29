@@ -1,23 +1,24 @@
 /** Sequence panel -- frame composition: objects, intrinsics, significance. */
 
-import { Badge, Group, Progress, Stack, Table, Text } from "@mantine/core";
+import { Stack, Table, Text } from "@mantine/core";
 
-import type { StepData } from "../../types/step-data";
+import type { StepData, TransformChangeData } from "../../types/step-data";
+import { ObjectLink } from "../common/ObjectLink";
 
 interface SequencePanelProps {
     data: StepData | undefined;
 }
 
-function significanceColor(v: number): string {
-    if (v > 0.5) return "red";
-    if (v > 0.1) return "yellow";
-    return "green";
-}
-
-function normColor(v: number): string {
-    if (v > 0.7) return "red";
-    if (v > 0.3) return "yellow";
-    return "blue";
+/** Check if an intrinsic name appears in transform_summary.changes. */
+function isIntrinsicMatched(
+    name: string,
+    changes: (TransformChangeData | string)[] | undefined,
+): boolean {
+    if (!changes) return false;
+    return changes.some((ch) => {
+        if (typeof ch === "string") return false;
+        return ch.name === name;
+    });
 }
 
 export function SequencePanel({ data }: Readonly<SequencePanelProps>) {
@@ -32,44 +33,18 @@ export function SequencePanel({ data }: Readonly<SequencePanelProps>) {
     }
 
     const intrinsicKeys = Object.keys(seq.intrinsics).sort((a, b) => a.localeCompare(b));
+    const rawIntrinsics = data?.intrinsics?.raw;
+    const transformChanges = data?.transform_summary?.changes;
 
     return (
         <Stack gap="sm">
-            {/* Header stats */}
-            <Group gap="md">
-                <Group gap={4}>
-                    <Text size="xs" c="dimmed">Tick</Text>
-                    <Badge variant="light" color="blue" size="sm">
-                        {seq.tick}
-                    </Badge>
-                </Group>
-                <Group gap={4}>
-                    <Text size="xs" c="dimmed">Objects</Text>
-                    <Badge variant="light" color="violet" size="sm">
-                        {seq.object_count}
-                    </Badge>
-                </Group>
-                <Group gap={4}>
-                    <Text size="xs" c="dimmed">Intrinsics</Text>
-                    <Badge variant="light" color="teal" size="sm">
-                        {seq.intrinsic_count}
-                    </Badge>
-                </Group>
-                {seq.significance != null && (
-                    <Group gap={4}>
-                        <Text size="xs" c="dimmed">Significance</Text>
-                        <Badge
-                            variant="filled"
-                            color={significanceColor(seq.significance)}
-                            size="sm"
-                        >
-                            {seq.significance.toFixed(4)}
-                        </Badge>
-                    </Group>
-                )}
-            </Group>
+            {/* Header -- single-line format per design Section 11.4 */}
+            <Text size="xs" c="dimmed" ff="monospace">
+                {"Frame: tick=" + seq.tick + " | " + seq.object_count + " objects | " + seq.intrinsic_count + " intrinsics"}
+                {seq.significance != null && (" | significance=" + seq.significance.toFixed(4))}
+            </Text>
 
-            {/* Objects table */}
+            {/* Objects table -- columns: #, Glyph, Pos, Color, Matched, Resolves (no Shape) */}
             {seq.objects.length > 0 && (
                 <Table
                     striped
@@ -80,60 +55,122 @@ export function SequencePanel({ data }: Readonly<SequencePanelProps>) {
                 >
                     <Table.Thead>
                         <Table.Tr>
-                            <Table.Th>ID</Table.Th>
-                            <Table.Th>Position</Table.Th>
+                            <Table.Th>#</Table.Th>
+                            <Table.Th>Glyph</Table.Th>
+                            <Table.Th>Pos</Table.Th>
+                            <Table.Th>Color</Table.Th>
+                            <Table.Th>Shape</Table.Th>
+                            <Table.Th>Matched</Table.Th>
                             <Table.Th>Resolves</Table.Th>
                         </Table.Tr>
                     </Table.Thead>
                     <Table.Tbody>
-                        {seq.objects.map((obj) => (
-                            <Table.Tr key={obj.id}>
-                                <Table.Td>
-                                    <Text size="xs" ff="monospace">{obj.id}</Text>
-                                </Table.Td>
-                                <Table.Td>
-                                    <Text size="xs" ff="monospace">
-                                        {obj.x != null && obj.y != null
-                                            ? `(${obj.x}, ${obj.y})`
-                                            : "--"}
-                                    </Text>
-                                </Table.Td>
-                                <Table.Td>
-                                    <Text size="xs" ff="monospace">
-                                        {obj.resolve_count ?? "--"}
-                                    </Text>
-                                </Table.Td>
-                            </Table.Tr>
-                        ))}
+                        {seq.objects.map((obj) => {
+                            const nodeId = Number(obj.id);
+                            const hasValidId = Number.isFinite(nodeId) && nodeId !== 0;
+                            let matchedLabel = "--";
+                            if (obj.matched_previous === true) matchedLabel = "Yes";
+                            else if (obj.matched_previous === false) matchedLabel = "No";
+                            return (
+                                <Table.Tr key={obj.id}>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {obj.cycle_number ?? "--"}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        {obj.glyph && hasValidId ? (
+                                            <ObjectLink
+                                                objectId={nodeId}
+                                                glyph={obj.glyph}
+                                            />
+                                        ) : (
+                                            <Text size="xs" ff="monospace" fw={700}>
+                                                {obj.glyph ?? "--"}
+                                            </Text>
+                                        )}
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {obj.x != null && obj.y != null
+                                                ? `(${obj.x}, ${obj.y})`
+                                                : "--"}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {obj.color == null ? "--" : String(obj.color)}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {obj.shape == null ? "--" : String(obj.shape)}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {matchedLabel}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {obj.resolve_count ?? "--"}
+                                        </Text>
+                                    </Table.Td>
+                                </Table.Tr>
+                            );
+                        })}
                     </Table.Tbody>
                 </Table>
             )}
 
-            {/* Intrinsic bars */}
+            {/* Intrinsics table -- columns: Name, Raw, Normalized, Matched */}
             {intrinsicKeys.length > 0 && (
-                <Stack gap="xs">
-                    <Text size="xs" fw={600}>Frame Intrinsics</Text>
-                    {intrinsicKeys.map((k) => {
-                        const norm = seq.intrinsics[k] ?? 0;
-                        return (
-                            <div key={k}>
-                                <Group justify="space-between" gap={4}>
-                                    <Text size="xs" c="dimmed" style={{ width: 100 }}>
-                                        {k}
-                                    </Text>
-                                    <Text size="xs" ff="monospace">
-                                        {norm.toFixed(4)}
-                                    </Text>
-                                </Group>
-                                <Progress
-                                    value={Math.min(Math.max(norm * 100, 0), 100)}
-                                    size="sm"
-                                    color={normColor(norm)}
-                                />
-                            </div>
-                        );
-                    })}
-                </Stack>
+                <Table
+                    striped
+                    highlightOnHover
+                    withTableBorder
+                    withColumnBorders
+                    fz="xs"
+                >
+                    <Table.Thead>
+                        <Table.Tr>
+                            <Table.Th>Name</Table.Th>
+                            <Table.Th>Raw</Table.Th>
+                            <Table.Th>Normalized</Table.Th>
+                            <Table.Th>Matched</Table.Th>
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {intrinsicKeys.map((k) => {
+                            const norm = seq.intrinsics[k] ?? 0;
+                            const raw = rawIntrinsics?.[k];
+                            const matched = isIntrinsicMatched(k, transformChanges);
+                            return (
+                                <Table.Tr key={k}>
+                                    <Table.Td>
+                                        <Text size="xs" c="dimmed">{k}</Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {raw == null ? "--" : String(raw)}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {norm.toFixed(4)}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {matched ? "Yes" : "No"}
+                                        </Text>
+                                    </Table.Td>
+                                </Table.Tr>
+                            );
+                        })}
+                    </Table.Tbody>
+                </Table>
             )}
         </Stack>
     );

@@ -1,34 +1,210 @@
-/** Transition panel -- what changed between consecutive frames. */
+/** Transition panel -- three-column prev / current / delta view of frame changes. */
 
-import { Badge, Group, Stack, Table, Text } from "@mantine/core";
+import { Badge, Group, Stack, Table, Text, UnstyledButton } from "@mantine/core";
 
-import type { StepData, TransformChangeData } from "../../types/step-data";
+import type {
+    ObjectTransformChangeData,
+    ObjectTransformData,
+    SequenceObjectData,
+    StepData,
+    TransformChangeData,
+} from "../../types/step-data";
+import { ObjectLink } from "../common/ObjectLink";
 
 interface TransitionPanelProps {
     data: StepData | undefined;
+    onStepClick?: (step: number) => void;
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function deltaColor(value: number | undefined | null): string | undefined {
     if (value == null) return undefined;
     return value > 0 ? "green" : "red";
 }
 
-function formatDelta(value: number | undefined | null): string {
+function fmtDelta(value: number | undefined | null): string {
     if (value == null) return "--";
     const prefix = value > 0 ? "+" : "";
-    return prefix + value.toFixed(4);
+    return prefix + (Number.isInteger(value) ? String(value) : value.toFixed(4));
 }
 
 /** Normalize a change entry -- old format is a plain string, new format is an object. */
 function normalizeChange(ch: TransformChangeData | string): TransformChangeData {
-    if (typeof ch === "string") {
-        return { description: ch };
-    }
+    if (typeof ch === "string") return { description: ch };
     return ch;
 }
 
-export function TransitionPanel({ data }: Readonly<TransitionPanelProps>) {
+// ---------------------------------------------------------------------------
+// Row types for the three-column table
+// ---------------------------------------------------------------------------
+
+interface ObjectRow {
+    uuid: number;
+    glyph?: string;
+    color?: string;
+    nodeId?: number;
+    prevLabel: string;
+    currentLabel: string;
+    deltaLabel: string;
+    status: "matched" | "new" | "gone";
+}
+
+interface IntrinsicRow {
+    name: string;
+    prev: string;
+    current: string;
+    delta: string;
+    deltaNum: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Build rows from available data
+// ---------------------------------------------------------------------------
+
+function positionLabel(x?: number | null, y?: number | null): string {
+    if (x == null && y == null) return "--";
+    return `(${x ?? "?"}, ${y ?? "?"})`;
+}
+
+function extractPosition(changes: ObjectTransformChangeData[]): { oldX?: number; oldY?: number; newX?: number; newY?: number } {
+    const result: Record<string, number | undefined> = {};
+    for (const ch of changes) {
+        if (ch.property === "x" || ch.property === "y") {
+            result[`old${ch.property.toUpperCase()}`] = ch.old_value == null ? undefined : Number(ch.old_value);
+            result[`new${ch.property.toUpperCase()}`] = ch.new_value == null ? undefined : Number(ch.new_value);
+        }
+    }
+    return { oldX: result.oldX, oldY: result.oldY, newX: result.newX, newY: result.newY };
+}
+
+function fmtChangeVal(v: unknown): string {
+    if (v == null) return "?";
+    if (typeof v === "number") return String(v);
+    if (typeof v === "string") return v;
+    return JSON.stringify(v);
+}
+
+function summarizeDelta(changes: ObjectTransformChangeData[]): string {
+    if (changes.length === 0) return "(no change)";
+    return changes.map((ch) => {
+        if (ch.type === "discrete") {
+            return `${ch.property}: ${fmtChangeVal(ch.old_value)} -> ${fmtChangeVal(ch.new_value)}`;
+        }
+        return `${ch.property}: ${fmtDelta(ch.delta)}`;
+    }).join(", ");
+}
+
+function buildObjectRows(
+    transforms: ObjectTransformData[],
+    currentObjects: SequenceObjectData[],
+): ObjectRow[] {
+    const rows: ObjectRow[] = [];
+    const transformUuids = new Set(transforms.map((t) => t.uuid));
+
+    // Matched / gone objects from transforms
+    for (const t of transforms) {
+        const pos = extractPosition(t.changes);
+
+        if (t.status === "gone") {
+            rows.push({
+                uuid: t.uuid,
+                glyph: t.glyph,
+                color: t.color,
+                nodeId: t.node_id,
+                prevLabel: positionLabel(pos.oldX, pos.oldY),
+                currentLabel: "--",
+                deltaLabel: "(gone)",
+                status: "gone",
+            });
+            continue;
+        }
+
+        if (t.status === "new") {
+            rows.push({
+                uuid: t.uuid,
+                glyph: t.glyph,
+                color: t.color,
+                nodeId: t.node_id,
+                prevLabel: "--",
+                currentLabel: positionLabel(pos.newX, pos.newY),
+                deltaLabel: "(new)",
+                status: "new",
+            });
+            continue;
+        }
+
+        // Default: matched (has changes in both frames)
+        rows.push({
+            uuid: t.uuid,
+            glyph: t.glyph,
+            color: t.color,
+            nodeId: t.node_id,
+            prevLabel: positionLabel(pos.oldX, pos.oldY),
+            currentLabel: positionLabel(pos.newX, pos.newY),
+            deltaLabel: summarizeDelta(t.changes),
+            status: "matched",
+        });
+    }
+
+    // New objects from sequence_summary that aren't already in transforms
+    for (const obj of currentObjects) {
+        if (obj.matched_previous === false) {
+            // Check if already covered by a transform with status="new"
+            const alreadyCovered = transforms.some(
+                (t) => t.status === "new" && String(t.uuid) === obj.id,
+            );
+            if (alreadyCovered) continue;
+            // Also skip if there's a matching transform by node_id
+            if (transformUuids.has(Number(obj.id))) continue;
+
+            rows.push({
+                uuid: Number(obj.id) || 0,
+                glyph: obj.glyph,
+                nodeId: Number(obj.id) || undefined,
+                prevLabel: "--",
+                currentLabel: positionLabel(obj.x, obj.y),
+                deltaLabel: "(new)",
+                status: "new",
+            });
+        }
+    }
+
+    return rows;
+}
+
+function buildIntrinsicRows(
+    changes: TransformChangeData[],
+    intrinsics: Record<string, number> | undefined,
+): IntrinsicRow[] {
+    return changes.map((ch) => {
+        const norm = normalizeChange(ch);
+        const delta = norm.normalized_change;
+        const name = norm.name ?? norm.description;
+        // Use current intrinsic values from sequence_summary when available
+        const currentVal = intrinsics?.[name];
+        const prevVal = currentVal != null && delta != null ? currentVal - delta : undefined;
+        return {
+            name,
+            prev: prevVal == null ? "--" : prevVal.toFixed(4),
+            current: currentVal == null ? "--" : currentVal.toFixed(4),
+            delta: delta == null ? "--" : fmtDelta(delta),
+            deltaNum: delta ?? null,
+        };
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+const STATUS_COLORS: Record<string, string | undefined> = { new: "blue", gone: "red" };
+
+export function TransitionPanel({ data, onStepClick }: Readonly<TransitionPanelProps>) {
     const t = data?.transform_summary;
+    const seq = data?.sequence_summary;
 
     if (!t) {
         return (
@@ -38,7 +214,14 @@ export function TransitionPanel({ data }: Readonly<TransitionPanelProps>) {
         );
     }
 
-    if (t.count === 0) {
+    const objectTransforms = t.object_transforms ?? [];
+    const currentObjects = seq?.objects ?? [];
+    const objectRows = buildObjectRows(objectTransforms, currentObjects);
+    const intrinsicRows = buildIntrinsicRows(t.changes.map(normalizeChange), seq?.intrinsics);
+
+    const hasContent = objectRows.length > 0 || intrinsicRows.length > 0;
+
+    if (!hasContent) {
         return (
             <Text size="xs" c="dimmed">
                 No changes this step
@@ -46,86 +229,158 @@ export function TransitionPanel({ data }: Readonly<TransitionPanelProps>) {
         );
     }
 
-    const changes = t.changes.map(normalizeChange);
-
-    // Check if we have structured data (type/name fields) or just descriptions
-    const hasStructured = changes.some((ch) => ch.type != null);
+    const prevTick = seq ? seq.tick - 1 : null;
+    const currentTick = seq?.tick ?? null;
 
     return (
         <Stack gap="sm">
-            <Group gap="xs">
-                <Text size="sm" fw={600}>Changes</Text>
-                <Badge variant="filled" color="orange" size="sm">
-                    {t.count}
-                </Badge>
-            </Group>
-
-            <Table
-                striped
-                highlightOnHover
-                withTableBorder
-                withColumnBorders
-                fz="xs"
-            >
-                <Table.Thead>
-                    <Table.Tr>
-                        {hasStructured ? (
-                            <>
-                                <Table.Th>Type</Table.Th>
-                                <Table.Th>Name</Table.Th>
+            {/* Object Changes */}
+            {objectRows.length > 0 && (
+                <>
+                    <Group gap="xs">
+                        <Text size="sm" fw={600}>Object Changes</Text>
+                        <Badge variant="filled" color="violet" size="sm">
+                            {objectRows.length}
+                        </Badge>
+                    </Group>
+                    <Table
+                        striped
+                        highlightOnHover
+                        withTableBorder
+                        withColumnBorders
+                        fz="xs"
+                    >
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>Object</Table.Th>
+                                <Table.Th>
+                                    Previous
+                                    {prevTick != null && onStepClick && (
+                                        <>
+                                            {" ("}
+                                            <UnstyledButton
+                                                component="span"
+                                                style={{ fontSize: 10, textDecoration: "underline dotted", fontFamily: "monospace" }}
+                                                onClick={() => onStepClick(prevTick)}
+                                            >
+                                                tick={prevTick}
+                                            </UnstyledButton>
+                                            {")"}
+                                        </>
+                                    )}
+                                </Table.Th>
+                                <Table.Th>
+                                    Current
+                                    {currentTick != null && onStepClick && (
+                                        <>
+                                            {" ("}
+                                            <UnstyledButton
+                                                component="span"
+                                                style={{ fontSize: 10, textDecoration: "underline dotted", fontFamily: "monospace" }}
+                                                onClick={() => onStepClick(currentTick)}
+                                            >
+                                                tick={currentTick}
+                                            </UnstyledButton>
+                                            {")"}
+                                        </>
+                                    )}
+                                </Table.Th>
                                 <Table.Th>Delta</Table.Th>
-                            </>
-                        ) : (
-                            <>
-                                <Table.Th>#</Table.Th>
-                                <Table.Th>Change</Table.Th>
-                            </>
-                        )}
-                    </Table.Tr>
-                </Table.Thead>
-                <Table.Tbody>
-                    {changes.map((ch, idx) => (
-                        <Table.Tr key={ch.description}>
-                            {hasStructured ? (
-                                <>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {objectRows.map((row) => (
+                                <Table.Tr key={row.uuid}>
                                     <Table.Td>
-                                        <Badge
-                                            variant="light"
-                                            color="grape"
-                                            size="xs"
-                                        >
-                                            {ch.type ?? "unknown"}
-                                        </Badge>
+                                        {row.glyph && row.nodeId ? (
+                                            <ObjectLink
+                                                objectId={row.nodeId}
+                                                glyph={row.glyph}
+                                                color={row.color}
+                                            />
+                                        ) : (
+                                            <Text size="xs" ff="monospace" fw={700}>
+                                                {row.glyph ?? String(row.uuid)}
+                                            </Text>
+                                        )}
                                     </Table.Td>
                                     <Table.Td>
                                         <Text size="xs" ff="monospace">
-                                            {ch.name ?? ch.description}
+                                            {row.prevLabel}
+                                        </Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">
+                                            {row.currentLabel}
                                         </Text>
                                     </Table.Td>
                                     <Table.Td>
                                         <Text
                                             size="xs"
                                             ff="monospace"
-                                            c={deltaColor(ch.normalized_change)}
+                                            c={STATUS_COLORS[row.status]}
                                         >
-                                            {formatDelta(ch.normalized_change)}
+                                            {row.deltaLabel}
                                         </Text>
                                     </Table.Td>
-                                </>
-                            ) : (
-                                <>
-                                    <Table.Td>{idx + 1}</Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </>
+            )}
+
+            {/* Intrinsic Changes */}
+            {intrinsicRows.length > 0 && (
+                <>
+                    <Group gap="xs">
+                        <Text size="sm" fw={600}>Intrinsic Changes</Text>
+                        <Badge variant="filled" color="orange" size="sm">
+                            {intrinsicRows.length}
+                        </Badge>
+                    </Group>
+                    <Table
+                        striped
+                        highlightOnHover
+                        withTableBorder
+                        withColumnBorders
+                        fz="xs"
+                    >
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th>Intrinsic</Table.Th>
+                                <Table.Th>Previous</Table.Th>
+                                <Table.Th>Current</Table.Th>
+                                <Table.Th>Delta</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {intrinsicRows.map((row) => (
+                                <Table.Tr key={row.name}>
                                     <Table.Td>
-                                        <Text size="xs" ff="monospace" lineClamp={2}>
-                                            {ch.description}
+                                        <Text size="xs" c="dimmed">{row.name}</Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">{row.prev}</Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text size="xs" ff="monospace">{row.current}</Text>
+                                    </Table.Td>
+                                    <Table.Td>
+                                        <Text
+                                            size="xs"
+                                            ff="monospace"
+                                            c={deltaColor(row.deltaNum)}
+                                        >
+                                            {row.delta}
                                         </Text>
                                     </Table.Td>
-                                </>
-                            )}
-                        </Table.Tr>
-                    ))}
-                </Table.Tbody>
-            </Table>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </>
+            )}
         </Stack>
     );
 }

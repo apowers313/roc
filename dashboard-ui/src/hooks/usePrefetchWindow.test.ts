@@ -77,7 +77,7 @@ describe("usePrefetchWindow", () => {
         expect(firstBatch).toContain(51);
     });
 
-    it("uses small batch size (5) for responsiveness", () => {
+    it("uses batch size of 50 for efficiency", () => {
         const { Wrapper } = createWrapper();
         renderHook(
             () => usePrefetchWindow("run1", 50, 1, 100),
@@ -86,9 +86,9 @@ describe("usePrefetchWindow", () => {
 
         act(() => { vi.advanceTimersByTime(400); });
 
-        // First batch should have at most 5 steps
+        // First batch should have at most 50 steps
         const firstBatch = mockFetchStepsBatch.mock.calls[0]![1];
-        expect(firstBatch.length).toBeLessThanOrEqual(5);
+        expect(firstBatch.length).toBeLessThanOrEqual(50);
     });
 
     it("respects stepMin and stepMax bounds", () => {

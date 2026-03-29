@@ -1,9 +1,10 @@
 /** Resolution Inspector -- structured display of object resolution decisions. */
 
-import { Badge, Group, Stack, Table, Text, UnstyledButton } from "@mantine/core";
-import type { ReactNode } from "react";
+import { Badge, Group, SegmentedControl, Stack, Table, Text, UnstyledButton } from "@mantine/core";
+import { useState, type ReactNode } from "react";
 
 import { InfoCard } from "../common/InfoCard";
+import { ObjectLink } from "../common/ObjectLink";
 import { useHighlight } from "../../state/highlight";
 import type { StepData } from "../../types/step-data";
 
@@ -142,9 +143,232 @@ function buildCandidateDetails(d: Record<string, unknown>): CandidateDetail[] {
     return [];
 }
 
+interface SummaryRow {
+    label: string;
+    value: string;
+    clickable?: boolean;
+}
+
+function buildSummaryRows(d: Record<string, unknown>): SummaryRow[] {
+    const rows: SummaryRow[] = [];
+    const hasLocation = d.x != null && d.y != null;
+    const location = hasLocation ? `(${String(d.x)}, ${String(d.y)})` : null;
+    if (location) {
+        rows.push({ label: "Location", value: location, clickable: true });
+    }
+    if (d.tick != null) {
+        rows.push({ label: "Tick", value: formatValue(d.tick) });
+    }
+    for (const { key, label } of SUMMARY_KEYS) {
+        if (d[key] != null) {
+            rows.push({ label, value: formatValue(d[key]) });
+        }
+    }
+    return rows;
+}
+
+interface ComparisonSectionProps {
+    observedAttrs: Record<string, string>;
+    matchedAttrs: Record<string, string> | undefined;
+}
+
+const COMPARISON_ROW_DEFS = [
+    { label: "shape", obsKey: "shape", matchKey: "char" },
+    { label: "color", obsKey: "color", matchKey: "color" },
+    { label: "glyph", obsKey: "glyph", matchKey: "glyph" },
+] as const;
+
+function ComparisonSection({ observedAttrs, matchedAttrs }: Readonly<ComparisonSectionProps>) {
+    return (
+        <Table
+            horizontalSpacing={4}
+            verticalSpacing={1}
+            withRowBorders
+            mb={4}
+            fz="xs"
+            style={{ width: "auto" }}
+        >
+            <Table.Thead>
+                <Table.Tr>
+                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "30%" }}>
+                        attr
+                    </Table.Th>
+                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
+                        observed
+                    </Table.Th>
+                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
+                        matched
+                    </Table.Th>
+                </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+                {COMPARISON_ROW_DEFS.map(({ label, obsKey, matchKey }) => {
+                    const obsVal = observedAttrs[obsKey];
+                    const matchVal = matchedAttrs?.[matchKey];
+                    if (!obsVal && !matchVal) return null;
+                    const same = obsVal != null && matchVal != null && String(obsVal) === String(matchVal);
+                    const different = obsVal != null && matchVal != null && String(obsVal) !== String(matchVal);
+                    return (
+                        <Table.Tr key={label}>
+                            <Table.Td style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", padding: "1px 4px" }}>
+                                {label}
+                            </Table.Td>
+                            <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                {label === "shape" && obsVal ? (
+                                    <GlyphBadge char={obsVal} color={observedAttrs.color} />
+                                ) : (obsVal ?? "--")}
+                            </Table.Td>
+                            <Table.Td style={{
+                                fontSize: 10,
+                                fontFamily: "monospace",
+                                padding: "1px 4px",
+                                background: comparisonBackground(same, different),
+                            }}>
+                                {renderMatchedValue(label, matchVal, matchedAttrs)}
+                            </Table.Td>
+                        </Table.Tr>
+                    );
+                })}
+            </Table.Tbody>
+        </Table>
+    );
+}
+
+interface CandidatesSectionProps {
+    candidates: CandidateDetail[];
+}
+
+function CandidatesSection({ candidates }: Readonly<CandidatesSectionProps>) {
+    const valueHeader = candidates[0]!.valueLabel;
+    const hasGlyphs = candidates.some((c) => c.char);
+    return (
+        <InfoCard title="Candidates">
+            <div style={{ maxHeight: 120, overflowY: "auto" }}>
+                <Table
+                    horizontalSpacing={4}
+                    verticalSpacing={1}
+                    withRowBorders
+                    striped
+                    style={{ width: "auto" }}
+                >
+                    <Table.Thead>
+                        <Table.Tr>
+                            {hasGlyphs && (
+                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: 30 }}>
+                                </Table.Th>
+                            )}
+                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
+                                node id
+                            </Table.Th>
+                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
+                                {valueHeader}
+                            </Table.Th>
+                            {hasGlyphs && (
+                                <>
+                                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
+                                        glyph
+                                    </Table.Th>
+                                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
+                                        color
+                                    </Table.Th>
+                                </>
+                            )}
+                        </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                        {candidates.map((c) => (
+                            <Table.Tr key={c.id}>
+                                {hasGlyphs && (
+                                    <Table.Td style={{ padding: "1px 4px", textAlign: "center" }}>
+                                        <GlyphBadge char={c.char} color={c.color} />
+                                    </Table.Td>
+                                )}
+                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                    {c.id}
+                                </Table.Td>
+                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                    {formatValue(c.value)}
+                                </Table.Td>
+                                {hasGlyphs && (
+                                    <>
+                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                            {c.glyph ?? ""}
+                                        </Table.Td>
+                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
+                                            {c.color ?? ""}
+                                        </Table.Td>
+                                    </>
+                                )}
+                            </Table.Tr>
+                        ))}
+                    </Table.Tbody>
+                </Table>
+            </div>
+        </InfoCard>
+    );
+}
+
+function CycleSummaryTable({ cycles }: Readonly<{ cycles: Record<string, unknown>[] }>) {
+    return (
+        <InfoCard title="Resolution Summary">
+            <Table striped withTableBorder withColumnBorders fz="xs">
+                <Table.Thead>
+                    <Table.Tr>
+                        <Table.Th>#</Table.Th>
+                        <Table.Th>Outcome</Table.Th>
+                        <Table.Th>Object</Table.Th>
+                        <Table.Th>Location</Table.Th>
+                        <Table.Th>Candidates</Table.Th>
+                    </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>
+                    {cycles.map((c, idx) => {
+                        const outcome = typeof c.outcome === "string" ? c.outcome : "unknown";
+                        const color = OUTCOME_COLORS[outcome] ?? "gray";
+                        const attrs = parseAttrsFromFeatures(c.features);
+                        const matchedAttrs = c.matched_attrs as Record<string, string> | undefined;
+                        // Prefer matched glyph for MATCHED outcomes, fall back to observed shape
+                        const glyphChar = matchedAttrs?.char ?? attrs.shape;
+                        const glyphColor = matchedAttrs?.color ?? attrs.color;
+                        const loc =
+                            c.x != null && c.y != null ? `(${Number(c.x)}, ${Number(c.y)})` : "--";
+                        const numCandidates = c.num_candidates == null ? "--" : Number(c.num_candidates);
+                        return (
+                            <Table.Tr key={`cycle-${String(c.x)}-${String(c.y)}-${idx}`}>
+                                <Table.Td>{idx + 1}</Table.Td>
+                                <Table.Td>
+                                    <Badge size="xs" color={color} variant="filled">
+                                        {OUTCOME_LABELS[outcome] ?? outcome}
+                                    </Badge>
+                                </Table.Td>
+                                <Table.Td>
+                                    <GlyphBadge char={glyphChar} color={glyphColor} />
+                                </Table.Td>
+                                <Table.Td>
+                                    <Text size="xs" ff="monospace">{loc}</Text>
+                                </Table.Td>
+                                <Table.Td>
+                                    <Text size="xs" ff="monospace">{numCandidates}</Text>
+                                </Table.Td>
+                            </Table.Tr>
+                        );
+                    })}
+                </Table.Tbody>
+            </Table>
+        </InfoCard>
+    );
+}
+
 export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>) {
     const { togglePoint, points } = useHighlight();
-    const d = data?.resolution_metrics;
+    const [selectedCycle, setSelectedCycle] = useState(0);
+    const cycles = data?.resolution_cycles;
+    const hasCycles = cycles != null && cycles.length > 0;
+
+    // Use selected cycle data if available, otherwise fall back to resolution_metrics
+    const d = hasCycles
+        ? (cycles[selectedCycle] as Record<string, unknown> | undefined) ?? null
+        : data?.resolution_metrics;
 
     if (!d) {
         return (
@@ -165,48 +389,32 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
     // Matched object's stored attributes (from backend matched_attrs)
     const matchedAttrs = d.matched_attrs as Record<string, string> | undefined;
 
-    // Location -- backend x = col, y = row (matching CharGrid convention).
     const hasLocation = d.x != null && d.y != null;
-    const location = hasLocation ? `(${d.x}, ${d.y})` : null;
-
-    // Summary rows
-    const summaryRows: { label: string; value: string; clickable?: boolean }[] = [];
     const locX = hasLocation ? Number(d.x) : 0;
     const locY = hasLocation ? Number(d.y) : 0;
-    const isLocHighlighted = hasLocation && points.some((p) => p.x === locX && p.y === locY);
-    if (location) {
-        summaryRows.push({ label: "Location", value: location, clickable: true });
-    }
-    if (d.tick != null) {
-        summaryRows.push({ label: "Tick", value: formatValue(d.tick) });
-    }
-    for (const { key, label } of SUMMARY_KEYS) {
-        if (d[key] != null) {
-            summaryRows.push({ label, value: formatValue(d[key]) });
-        }
-    }
+    const locHlColor = hasLocation ? points.find((p) => p.x === locX && p.y === locY)?.color : undefined;
 
-    // Candidates with glyph details
+    const summaryRows = buildSummaryRows(d);
     const candidates = buildCandidateDetails(d);
-    const valueHeader = candidates.length > 0 ? candidates[0]!.valueLabel : "value";
-    const hasGlyphs = candidates.some((c) => c.char);
-
-    // Features
-    const features = d.features;
-    const featureList = Array.isArray(features) ? features : null;
-
-    // Build attribute comparison rows for matches.
-    // observedAttrs keys: shape, color, glyph (from feature string parsing)
-    // matchedAttrs keys: char, color, glyph (from backend _extract_visual_attrs)
-    const comparisonRows = [
-        { label: "shape", obsKey: "shape", matchKey: "char" },
-        { label: "color", obsKey: "color", matchKey: "color" },
-        { label: "glyph", obsKey: "glyph", matchKey: "glyph" },
-    ] as const;
+    const featureList = Array.isArray(d.features) ? d.features : null;
     const hasComparison = isMatch && (matchedAttrs != null || Object.keys(observedAttrs).length > 0);
 
     return (
         <Stack gap="xs">
+            {hasCycles && cycles.length > 1 && (
+                <>
+                    <CycleSummaryTable cycles={cycles as Record<string, unknown>[]} />
+                    <SegmentedControl
+                        size="xs"
+                        data={cycles.map((_, i) => ({
+                            label: `Cycle ${i + 1}`,
+                            value: String(i),
+                        }))}
+                        value={String(selectedCycle)}
+                        onChange={(v) => setSelectedCycle(Number(v))}
+                    />
+                </>
+            )}
             <InfoCard title="Resolution">
                 <Group gap="xs" mb={4}>
                     <Badge size="xs" color={outcomeColor} variant="filled">
@@ -218,7 +426,15 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
                     {isMatch && matchedAttrs?.char && (
                         <>
                             <Text size="xs" c="dimmed">{"\u2192"}</Text>
-                            <GlyphBadge char={matchedAttrs.char} color={matchedAttrs.color} />
+                            {d.matched_object_id == null ? (
+                                <GlyphBadge char={matchedAttrs.char} color={matchedAttrs.color} />
+                            ) : (
+                                <ObjectLink
+                                    objectId={Number(d.matched_object_id)}
+                                    glyph={matchedAttrs.char}
+                                    color={matchedAttrs.color}
+                                />
+                            )}
                         </>
                     )}
                     {isMatch && !matchedAttrs?.char && observedAttrs.shape && (
@@ -228,57 +444,7 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
 
                 {/* Side-by-side attribute comparison for matches */}
                 {hasComparison && (
-                    <Table
-                        horizontalSpacing={4}
-                        verticalSpacing={1}
-                        withRowBorders
-                        mb={4}
-                        fz="xs"
-                        style={{ width: "auto" }}
-                    >
-                        <Table.Thead>
-                            <Table.Tr>
-                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "30%" }}>
-                                    attr
-                                </Table.Th>
-                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
-                                    observed
-                                </Table.Th>
-                                <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: "35%" }}>
-                                    matched
-                                </Table.Th>
-                            </Table.Tr>
-                        </Table.Thead>
-                        <Table.Tbody>
-                            {comparisonRows.map(({ label, obsKey, matchKey }) => {
-                                const obsVal = observedAttrs[obsKey];
-                                const matchVal = matchedAttrs?.[matchKey];
-                                if (!obsVal && !matchVal) return null;
-                                const same = obsVal != null && matchVal != null && String(obsVal) === String(matchVal);
-                                const different = obsVal != null && matchVal != null && String(obsVal) !== String(matchVal);
-                                return (
-                                    <Table.Tr key={label}>
-                                        <Table.Td style={{ fontSize: 10, color: "var(--mantine-color-dimmed)", padding: "1px 4px" }}>
-                                            {label}
-                                        </Table.Td>
-                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                            {label === "shape" && obsVal ? (
-                                                <GlyphBadge char={obsVal} color={observedAttrs.color} />
-                                            ) : (obsVal ?? "--")}
-                                        </Table.Td>
-                                        <Table.Td style={{
-                                            fontSize: 10,
-                                            fontFamily: "monospace",
-                                            padding: "1px 4px",
-                                            background: comparisonBackground(same, different),
-                                        }}>
-                                            {renderMatchedValue(label, matchVal, matchedAttrs)}
-                                        </Table.Td>
-                                    </Table.Tr>
-                                );
-                            })}
-                        </Table.Tbody>
-                    </Table>
+                    <ComparisonSection observedAttrs={observedAttrs} matchedAttrs={matchedAttrs} />
                 )}
 
                 {summaryRows.length > 0 && (
@@ -294,7 +460,7 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
                                     key={row.label}
                                     style={{
                                         cursor: row.clickable ? "pointer" : undefined,
-                                        background: row.clickable && isLocHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,
+                                        background: row.clickable && locHlColor ? `${locHlColor}26` : undefined,
                                     }}
                                     onClick={row.clickable && hasLocation ? () => togglePoint({ x: locX, y: locY, label: `resolved @ (${locX},${locY})` }) : undefined}
                                 >
@@ -318,69 +484,7 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
             </InfoCard>
 
             {candidates.length > 0 && (
-                <InfoCard title="Candidates">
-                    <div style={{ maxHeight: 120, overflowY: "auto" }}>
-                        <Table
-                            horizontalSpacing={4}
-                            verticalSpacing={1}
-                            withRowBorders
-                            striped
-                            style={{ width: "auto" }}
-                        >
-                            <Table.Thead>
-                                <Table.Tr>
-                                    {hasGlyphs && (
-                                        <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px", width: 30 }}>
-                                        </Table.Th>
-                                    )}
-                                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
-                                        node id
-                                    </Table.Th>
-                                    <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
-                                        {valueHeader}
-                                    </Table.Th>
-                                    {hasGlyphs && (
-                                        <>
-                                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
-                                                glyph
-                                            </Table.Th>
-                                            <Table.Th style={{ fontSize: 10, fontWeight: 600, padding: "2px 4px" }}>
-                                                color
-                                            </Table.Th>
-                                        </>
-                                    )}
-                                </Table.Tr>
-                            </Table.Thead>
-                            <Table.Tbody>
-                                {candidates.map((c) => (
-                                    <Table.Tr key={c.id}>
-                                        {hasGlyphs && (
-                                            <Table.Td style={{ padding: "1px 4px", textAlign: "center" }}>
-                                                <GlyphBadge char={c.char} color={c.color} />
-                                            </Table.Td>
-                                        )}
-                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                            {c.id}
-                                        </Table.Td>
-                                        <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                            {formatValue(c.value)}
-                                        </Table.Td>
-                                        {hasGlyphs && (
-                                            <>
-                                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                                    {c.glyph ?? ""}
-                                                </Table.Td>
-                                                <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                                    {c.color ?? ""}
-                                                </Table.Td>
-                                            </>
-                                        )}
-                                    </Table.Tr>
-                                ))}
-                            </Table.Tbody>
-                        </Table>
-                    </div>
-                </InfoCard>
+                <CandidatesSection candidates={candidates} />
             )}
 
             {featureList && featureList.length > 0 && (

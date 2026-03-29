@@ -1,4 +1,4 @@
-/** Saliency map panel -- heatmap character grid. */
+/** Saliency map panel -- heatmap character grid with multi-cycle support. */
 
 import { Text } from "@mantine/core";
 
@@ -7,10 +7,17 @@ import { CharGrid } from "../common/CharGrid";
 
 interface SaliencyMapProps {
     data: StepData | undefined;
+    cycleIndex?: number;
 }
 
-export function SaliencyMap({ data }: Readonly<SaliencyMapProps>) {
-    if (!data?.saliency) {
+export function SaliencyMap({ data, cycleIndex }: Readonly<SaliencyMapProps>) {
+    // Use cycle-specific saliency if available, otherwise fall back to top-level
+    const saliency =
+        cycleIndex != null && data?.saliency_cycles?.[cycleIndex]
+            ? data.saliency_cycles[cycleIndex].saliency
+            : data?.saliency;
+
+    if (!saliency) {
         return (
             <Text size="xs" c="dimmed">
                 No saliency data
@@ -18,5 +25,5 @@ export function SaliencyMap({ data }: Readonly<SaliencyMapProps>) {
         );
     }
 
-    return <CharGrid data={data.saliency} />;
+    return <CharGrid data={saliency} />;
 }

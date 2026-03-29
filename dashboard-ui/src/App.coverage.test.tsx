@@ -7,81 +7,28 @@
 import { screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
-// Capture the onNewStep callback from useLiveUpdates
-let capturedOnNewStep: ((data: unknown) => void) | undefined;
-let mockLiveStatusValue: unknown = null;
+vi.mock("socket.io-client");
+vi.mock("./api/queries");
+vi.mock("./hooks/usePrefetchWindow");
+vi.mock("./hooks/useLiveUpdates");
+vi.mock("./api/client");
 
-// Mock socket.io-client
-vi.mock("socket.io-client", () => {
-    const mockSocket = {
-        on: vi.fn(),
-        disconnect: vi.fn(),
-    };
-    return { io: vi.fn(() => mockSocket) };
-});
-
-// Mock the query hooks -- must include all hooks used by child panels
-vi.mock("./api/queries", () => ({
-    useStepData: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        isPlaceholderData: false,
-    })),
-    useRuns: vi.fn(() => ({ data: undefined })),
-    useGames: vi.fn(() => ({ data: undefined })),
-    useStepRange: vi.fn(() => ({ data: undefined })),
-    useResolutionHistory: vi.fn(() => ({ data: undefined })),
-    useAllObjects: vi.fn(() => ({ data: undefined })),
-    useIntrinsicsHistory: vi.fn(() => ({ data: undefined })),
-    useMetricsHistory: vi.fn(() => ({ data: undefined })),
-    useGraphHistory: vi.fn(() => ({ data: undefined })),
-    useEventHistory: vi.fn(() => ({ data: undefined })),
-    useActionHistory: vi.fn(() => ({ data: undefined })),
-}));
-
-// Mock prefetch window hook
-vi.mock("./hooks/usePrefetchWindow", () => ({
-    usePrefetchWindow: vi.fn(),
-}));
-
-// Mock useLiveUpdates to capture the onNewStep callback
-vi.mock("./hooks/useLiveUpdates", () => ({
-    useLiveUpdates: vi.fn((opts?: { onNewStep?: (data: unknown) => void }) => {
-        capturedOnNewStep = opts?.onNewStep;
-        return { connected: false, liveStatus: mockLiveStatusValue };
-    }),
-}));
-
-// Mock bookmarks -- must return a thenable for any run name
-vi.mock("./api/client", () => ({
-    fetchBookmarks: vi.fn(() => Promise.resolve([])),
-    saveBookmarks: vi.fn(() => Promise.resolve(undefined)),
-}));
-
-import { renderWithProviders, makeStepData, makeGridData } from "./test-utils";
+import { renderWithProviders, makeStepData, makeGridData, stubDefaultFetch } from "./test-utils";
 import { App } from "./App";
 import { useStepData, useGames } from "./api/queries";
+import {
+    getCapturedOnNewStep,
+    resetLiveUpdatesMock,
+    setMockLiveStatusValue,
+} from "./hooks/__mocks__/useLiveUpdates";
 
 const mockUseStepData = vi.mocked(useStepData);
 const mockUseGames = vi.mocked(useGames);
 
 describe("App (additional coverage)", () => {
     beforeEach(() => {
-        capturedOnNewStep = undefined;
-        mockLiveStatusValue = null;
-        vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
-            ok: true,
-            json: () =>
-                Promise.resolve({
-                    active: false,
-                    run_name: null,
-                    step: 0,
-                    game_number: 0,
-                    step_min: 0,
-                    step_max: 0,
-                    game_numbers: [],
-                }),
-        }));
+        resetLiveUpdatesMock();
+        stubDefaultFetch();
         mockUseStepData.mockReturnValue({
             data: undefined,
             isLoading: false,
@@ -209,13 +156,13 @@ describe("App (additional coverage)", () => {
             expect(screen.getByText("Log Messages")).toBeInTheDocument();
             expect(screen.getByText("Intrinsics & Significance")).toBeInTheDocument();
             expect(screen.getByText("Inventory")).toBeInTheDocument();
-            expect(screen.getAllByText("Perception").length).toBeGreaterThanOrEqual(1);
-            expect(screen.getAllByText("Attention").length).toBeGreaterThanOrEqual(1);
+            expect(screen.getByText("Visual Perception")).toBeInTheDocument();
+            expect(screen.getByText("Visual Attention")).toBeInTheDocument();
             expect(screen.getByText("Object Resolution")).toBeInTheDocument();
-            expect(screen.getByText("All Objects")).toBeInTheDocument();
-            expect(screen.getByText("Transforms & Prediction")).toBeInTheDocument();
+            expect(screen.getByText("Sequences")).toBeInTheDocument();
+            expect(screen.getByText("Transitions")).toBeInTheDocument();
+            expect(screen.getAllByText("Prediction").length).toBeGreaterThanOrEqual(1);
             expect(screen.getByText("Actions")).toBeInTheDocument();
-            expect(screen.getByText("Graph & Events")).toBeInTheDocument();
         });
     });
 
@@ -278,7 +225,7 @@ describe("App (additional coverage)", () => {
 
     describe("goLive callback", () => {
         it("go live via L key when liveRunName is set", () => {
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 50,
@@ -286,14 +233,14 @@ describe("App (additional coverage)", () => {
                 step_min: 1,
                 step_max: 50,
                 game_numbers: [1],
-            };
+            });
 
             renderWithProviders(<App />);
             fireEvent.keyDown(document, { key: "l" });
         });
 
         it("go live does nothing when liveRunName is empty", () => {
-            mockLiveStatusValue = null;
+            setMockLiveStatusValue(null);
 
             renderWithProviders(<App />);
             fireEvent.keyDown(document, { key: "l" });
@@ -302,7 +249,7 @@ describe("App (additional coverage)", () => {
 
     describe("liveStatus effects", () => {
         it("sets liveRunName and liveGameNumber from active live status", () => {
-            mockLiveStatusValue = {
+            setMockLiveStatusValue({
                 active: true,
                 run_name: "live-run",
                 step: 25,
@@ -310,7 +257,7 @@ describe("App (additional coverage)", () => {
                 step_min: 1,
                 step_max: 25,
                 game_numbers: [1, 2],
-            };
+            });
 
             renderWithProviders(<App />);
             // Should auto-select the live run without crashing
@@ -333,10 +280,10 @@ describe("App (additional coverage)", () => {
     describe("onNewStep callback (live push handling)", () => {
         it("stores live data from push", () => {
             renderWithProviders(<App />);
-            expect(capturedOnNewStep).toBeDefined();
+            expect(getCapturedOnNewStep()).toBeDefined();
 
             act(() => {
-                capturedOnNewStep!(makeStepData({ step: 5, game_number: 1 }));
+                getCapturedOnNewStep()!(makeStepData({ step: 5, game_number: 1 }));
             });
         });
     });

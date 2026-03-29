@@ -22,6 +22,7 @@ describe("MermaidDiagram", () => {
     it("renders empty div when definition is provided and render succeeds", async () => {
         vi.mocked(mermaid.render).mockResolvedValue({
             svg: '<svg><text>rendered</text></svg>',
+            diagramType: "classDiagram",
             bindFunctions: undefined,
         });
 
@@ -43,6 +44,7 @@ describe("MermaidDiagram", () => {
         const svgOutput = '<svg xmlns="http://www.w3.org/2000/svg"><text>test</text></svg>';
         vi.mocked(mermaid.render).mockResolvedValue({
             svg: svgOutput,
+            diagramType: "classDiagram",
             bindFunctions: undefined,
         });
 
@@ -83,6 +85,7 @@ describe("MermaidDiagram", () => {
     it("does not render when definition is empty", () => {
         vi.mocked(mermaid.render).mockResolvedValue({
             svg: "<svg></svg>",
+            diagramType: "classDiagram",
             bindFunctions: undefined,
         });
 
@@ -95,6 +98,7 @@ describe("MermaidDiagram", () => {
     it("cleans up on unmount (cancellation flag)", async () => {
         vi.mocked(mermaid.render).mockResolvedValue({
             svg: "<svg>ok</svg>",
+            diagramType: "classDiagram",
             bindFunctions: undefined,
         });
 

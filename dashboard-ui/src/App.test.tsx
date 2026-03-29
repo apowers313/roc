@@ -1,33 +1,9 @@
 import { screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-// Mock socket.io-client
-vi.mock("socket.io-client", () => {
-    const mockSocket = {
-        on: vi.fn(),
-        disconnect: vi.fn(),
-    };
-    return { io: vi.fn(() => mockSocket) };
-});
-
-// Mock the query hooks
-vi.mock("./api/queries", () => ({
-    useStepData: vi.fn(() => ({
-        data: undefined,
-        isLoading: false,
-        isPlaceholderData: false,
-    })),
-    useRuns: vi.fn(() => ({ data: undefined })),
-    useGames: vi.fn(() => ({ data: undefined })),
-    useStepRange: vi.fn(() => ({ data: undefined })),
-    useResolutionHistory: vi.fn(() => ({ data: undefined })),
-    useAllObjects: vi.fn(() => ({ data: undefined })),
-}));
-
-// Mock prefetch window hook
-vi.mock("./hooks/usePrefetchWindow", () => ({
-    usePrefetchWindow: vi.fn(),
-}));
+vi.mock("socket.io-client");
+vi.mock("./api/queries");
+vi.mock("./hooks/usePrefetchWindow");
 
 import { renderWithProviders, makeStepData, makeGridData } from "./test-utils";
 import { App } from "./App";
@@ -61,8 +37,8 @@ describe("App", () => {
         renderWithProviders(<App />);
 
         expect(screen.getByText("Game State")).toBeInTheDocument();
-        expect(screen.getByText("Perception")).toBeInTheDocument();
-        expect(screen.getByText("Attention")).toBeInTheDocument();
+        expect(screen.getByText("Visual Perception")).toBeInTheDocument();
+        expect(screen.getByText("Visual Attention")).toBeInTheDocument();
         expect(screen.getByText("Object Resolution")).toBeInTheDocument();
         expect(screen.getByText("Log Messages")).toBeInTheDocument();
     });

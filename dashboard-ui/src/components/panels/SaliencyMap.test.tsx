@@ -23,4 +23,28 @@ describe("SaliencyMap", () => {
 
         expect(container.querySelector("pre")).toBeTruthy();
     });
+
+    it("uses saliency_cycles when cycleIndex is provided", () => {
+        const cycleGrid = makeGridData({
+            chars: [[90, 91], [92, 93]], // Z [ \ ]
+        });
+        const data = makeStepData({
+            saliency: makeGridData(),
+            saliency_cycles: [
+                { saliency: cycleGrid, attenuation: {} },
+            ],
+        });
+        const { container } = renderWithProviders(
+            <SaliencyMap data={data} cycleIndex={0} />,
+        );
+        expect(container.querySelector("pre")).toBeTruthy();
+    });
+
+    it("falls back to top-level saliency when no cycles (backward compat)", () => {
+        const data = makeStepData({ saliency: makeGridData() });
+        const { container } = renderWithProviders(
+            <SaliencyMap data={data} cycleIndex={undefined} />,
+        );
+        expect(container.querySelector("pre")).toBeTruthy();
+    });
 });
