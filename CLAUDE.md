@@ -154,6 +154,10 @@ Action  <--- also receives ActionRequest from Gymnasium
 NethackGym  [executes action in environment]
 ```
 
+**Pipeline synchronization**: Action waits for both `ActionRequest` (from Gymnasium) and a prediction result (from Predict bus) before issuing `TakeAction`. Predict is the last step of the pipeline, so waiting for the prediction result naturally ensures the entire pipeline has completed. Do NOT add custom synchronization mechanisms (barriers, settled signals, gating) between pipeline stages and Action -- the predict bus is the synchronization point.
+
+The Gymnasium's observation/action loop is synchronous: it sends observations, sends ActionRequest, then blocks waiting for TakeAction on the action bus cache (`cache_depth=10`). The game does not advance until Action responds.
+
 **Auto-loaded components** (auto = True):
 - `VisionAttention` (vision / attention)
 - `CrossModalAttention` (cross-modal / attention) -- placeholder
