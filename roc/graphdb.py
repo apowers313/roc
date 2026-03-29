@@ -491,7 +491,11 @@ class Edge(BaseModel, extra="allow"):
 
     def __del__(self) -> None:
         # logger.trace(f"Edge.__del__: {self}")
-        Edge.save(self)
+        try:
+            Edge.save(self, db=self._db)
+        except Exception as e:
+            err_msg = f"error saving during del: {e}"
+            warnings.warn(err_msg, ErrorSavingDuringDelWarning)
 
     def __repr__(self) -> str:
         return f"Edge({self.id} [{self.src_id}>>{self.dst_id}])"
@@ -2270,12 +2274,17 @@ def _get_node_parent_names(model: type[BaseModel]) -> set[str]:
 
 def _clean_annotation(annotation: Any) -> str:
     """Converts a type annotation to a clean string representation."""
+    import types
     import typing
 
     if isinstance(annotation, str):
         return annotation
     elif annotation is None:
         return "None"
+    elif isinstance(annotation, types.UnionType):
+        # Handle Python 3.10+ union syntax: float | None, int | str, etc.
+        args = [_clean_annotation(arg) for arg in annotation.__args__]
+        return " | ".join(args)
     elif isinstance(annotation, typing._GenericAlias):  # type: ignore
         # Handle generics like List, Dict, etc.
         origin = annotation.__origin__
