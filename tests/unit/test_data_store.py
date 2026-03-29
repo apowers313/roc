@@ -178,12 +178,17 @@ class TestSessionLifecycle:
 
         ds.clear_live_session()
 
-        name_after: str | None = ds.live_run_name
-        buf_after: StepBuffer | None = ds.live_buffer
-        assert name_after is None
-        assert buf_after is None
+        # Buffer is retained after clear (for historical queries)
+        assert ds.live_run_name == "test-run"
+        assert ds.live_buffer is buf
 
-    def test_clear_session_clears_indices(self, tmp_path: Path) -> None:
+        # Setting a new session replaces the old buffer
+        buf2 = StepBuffer(capacity=100)
+        ds.set_live_session("test-run-2", buf2)
+        assert ds.live_run_name == "test-run-2"
+        assert ds.live_buffer is buf2
+
+    def test_clear_session_retains_data(self, tmp_path: Path) -> None:
         ds = DataStore(tmp_path)
         buf = StepBuffer(capacity=100)
         ds.set_live_session("test-run", buf)
@@ -193,9 +198,8 @@ class TestSessionLifecycle:
 
         ds.clear_live_session()
 
-        # After clearing, querying uses RunStore path (would fail for non-existent dir)
-        with pytest.raises(FileNotFoundError):
-            ds.get_graph_history("test-run", game=1)
+        # Data is still accessible after clear
+        assert len(ds.get_graph_history("test-run", game=1)) == 1
 
 
 class TestResolutionHistory:

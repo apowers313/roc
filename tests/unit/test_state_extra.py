@@ -752,7 +752,7 @@ class TestEmitTransformLogEdgeDetails:
             assert body["changes"][0]["normalized_change"] == -0.5
 
     def test_edge_without_name(self):
-        """Transform edges without name attr only have description."""
+        """Transform edges without name attr (e.g. Frame nodes) are filtered out."""
         import json
 
         from roc.reporting.state import StateList, _emit_transform_log
@@ -774,8 +774,9 @@ class TestEmitTransformLogEdgeDetails:
         with patch("roc.reporting.state._get_otel_logger") as mock_logger:
             _emit_transform_log(current_states)
             body = json.loads(mock_logger.return_value.emit.call_args[0][0].body)
-            assert "type" not in body["changes"][0]
-            assert body["changes"][0]["description"] == "some change"
+            # Non-intrinsic nodes (no name attr) are filtered out
+            assert body["count"] == 0
+            assert len(body["changes"]) == 0
 
 
 class TestEmitSequenceLog:

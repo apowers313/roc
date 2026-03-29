@@ -149,7 +149,6 @@ class TestFrame:
 class TestFrameAttribute:
     def test_allowed_connections(self):
         expected = [
-            ("Frame", "FeatureGroup"),
             ("Frame", "TakeAction"),
             ("TakeAction", "Frame"),
             ("Frame", "IntrinsicNode"),

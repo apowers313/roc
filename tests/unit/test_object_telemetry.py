@@ -116,14 +116,19 @@ def _make_attention_event(x: int, y: int):
     """Build a minimal mock AttentionEvent for do_object_resolution."""
     import pandas as pd
 
+    from roc.attention import VisionAttentionData
+
     focus_points = pd.DataFrame([{"x": x, "y": y, "strength": 1.0, "label": 0}])
     mock_feature = MagicMock()
     saliency_map = MagicMock()
     saliency_map.get_val.return_value = [mock_feature]
 
+    att_data = MagicMock(spec=VisionAttentionData)
+    att_data.focus_points = focus_points
+    att_data.saliency_map = saliency_map
+
     event = MagicMock()
-    event.data.focus_points = focus_points
-    event.data.saliency_map = saliency_map
+    event.data = att_data
     return event
 
 
@@ -151,6 +156,7 @@ class TestResolutionTelemetry:
 
         with (
             patch("roc.object.FeatureGroup.with_features"),
+            patch("roc.object.Features.connect"),
             patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
             patch("roc.sequencer.tick", 11),
             patch.object(ObjectResolver, "spatial_distance_histogram") as mock_spatial,
@@ -175,6 +181,7 @@ class TestResolutionTelemetry:
 
         with (
             patch("roc.object.FeatureGroup.with_features"),
+            patch("roc.object.Features.connect"),
             patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
             patch("roc.sequencer.tick", 42),
             patch.object(ObjectResolver, "spatial_distance_histogram"),
@@ -194,6 +201,7 @@ class TestResolutionTelemetry:
 
         with (
             patch("roc.object.FeatureGroup.with_features"),
+            patch("roc.object.Features.connect"),
             patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
             patch("roc.object.Object.with_features", return_value=Object()),
             patch("roc.sequencer.tick", 1),
@@ -219,6 +227,7 @@ class TestResolutionTelemetry:
 
         with (
             patch("roc.object.FeatureGroup.with_features"),
+            patch("roc.object.Features.connect"),
             patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
             patch("roc.sequencer.tick", 10),
             patch.object(ObjectResolver, "spatial_distance_histogram"),

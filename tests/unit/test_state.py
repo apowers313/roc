@@ -422,6 +422,7 @@ class TestSaliencySync:
 
         from roc.attention import (
             Attention,
+            AttentionSettled,
             SaliencyMap,
             VisionAttentionData,
             VisionAttentionSchema,
@@ -437,9 +438,10 @@ class TestSaliencySync:
 
         # Manually register the subscriber (same logic as State.init)
         # to avoid test pollution from full init().
-        def test_handler(e: Event[VisionAttentionData]) -> None:
+        def test_handler(e: Event[VisionAttentionData | AttentionSettled]) -> None:
             # Subscriber must NOT update salency -- only attention
-            states.attention.set(deepcopy(e.data))
+            if isinstance(e.data, VisionAttentionData):
+                states.attention.set(deepcopy(e.data))
 
         sub = Attention.bus.subject.subscribe(test_handler)
 
@@ -460,7 +462,7 @@ class TestSaliencySync:
                 saliency_map=mock_sm,
             )
 
-            evt = Event[VisionAttentionData](
+            evt: Event[VisionAttentionData | AttentionSettled] = Event(
                 att_data,
                 MagicMock(),
                 Attention.bus,

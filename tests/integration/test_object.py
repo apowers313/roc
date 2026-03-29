@@ -9,6 +9,7 @@ from helpers.util import StubComponent
 
 from roc.attention import VisionAttention
 from roc.component import Component
+from roc.config import Config
 from roc.event import Event
 from roc.feature_extractors.color import Color, ColorFeature
 from roc.feature_extractors.delta import Delta
@@ -469,6 +470,9 @@ class TestObjectResolver:
         ObjectResolver()
 
     def test_basic(self, empty_components) -> None:
+        # Use single-cycle attention for this test (testing resolution, not multi-cycle)
+        Config.get().attention_cycles = 1
+
         object_resolver = Component.get("resolver", "object")
         assert isinstance(object_resolver, ObjectResolver)
         attention = Component.get("vision", "attention")

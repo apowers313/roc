@@ -976,8 +976,9 @@ class TestEmitGameStateChanged:
         mod._sio_loop = None
         try:
             mod._emit_game_state_changed({"state": "idle"})
-            assert mod._data_store.live_run_name is None
-            assert mod._data_store.live_buffer is None
+            # Buffer is retained after idle for historical queries
+            assert mod._data_store.live_run_name == "emit-stop-run"
+            assert mod._data_store.live_buffer is buf
         finally:
             mod._sio_loop = orig_loop
 
@@ -1017,14 +1018,15 @@ class TestStartStopLiveSession:
         finally:
             mod._data_store.clear_live_session()
 
-    def test_stop_clears_session(self) -> None:
+    def test_stop_retains_session(self) -> None:
         import roc.reporting.api_server as mod
 
         assert mod._data_store is not None
         mod._start_live_session("session-stop-run")
         mod._stop_live_session()
-        assert mod._data_store.live_run_name is None
-        assert mod._data_store.live_buffer is None
+        # Buffer is retained for historical queries
+        assert mod._data_store.live_run_name == "session-stop-run"
+        assert mod._data_store.live_buffer is not None
 
     def test_start_does_nothing_when_no_data_store(self) -> None:
         import roc.reporting.api_server as mod
@@ -1652,7 +1654,7 @@ class TestStopDashboard:
     """Test stop_dashboard function."""
 
     def test_clears_buffer_and_session(self) -> None:
-        """stop_dashboard clears step buffer and live session."""
+        """stop_dashboard clears step buffer and pauses live session."""
         import roc.reporting.api_server as mod
 
         assert mod._data_store is not None
@@ -1661,7 +1663,8 @@ class TestStopDashboard:
         with patch("roc.reporting.step_buffer.clear_step_buffer") as mock_clear:
             mod.stop_dashboard()
             mock_clear.assert_called_once()
-        assert mod._data_store.live_run_name is None
+        # Buffer is retained (step_buffer itself is cleared separately above)
+        assert mod._data_store.live_run_name == "stop-test"
 
     def test_handles_no_data_store(self) -> None:
         """stop_dashboard does not crash when _data_store is None."""

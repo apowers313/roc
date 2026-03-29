@@ -707,8 +707,9 @@ class TestBuildTransformSummary:
     def test_with_changes(self):
         """Returns summary with change count and details."""
         from roc.gymnasium import _build_transform_summary
+        from roc.intrinsic import IntrinsicNode
 
-        dst1 = MagicMock(name="hp", normalized_change=0.5)
+        dst1 = MagicMock(spec=IntrinsicNode)
         dst1.configure_mock(name="hp")
         dst1.normalized_change = 0.5
 
@@ -783,7 +784,7 @@ class TestInjectAttentionSpread:
         att = states.attenuation_data.val
         assert att["spread_attended"] == 1  # only player glyph
         assert att["spread_total"] == 3  # 333, 2360, 2371
-        assert att["spread_pct"] == 33.3
+        assert att["spread_pct"] == pytest.approx(33.3)
 
     def test_two_steps_same_glyph_no_growth(self):
         """Attending the same glyph twice does not increase numerator."""
@@ -869,7 +870,7 @@ class TestInjectAttentionSpread:
         att = states.attenuation_data.val
         assert att["spread_attended"] == 0
         assert att["spread_total"] == 0
-        assert att["spread_pct"] == 0.0
+        assert att["spread_pct"] == pytest.approx(0.0)
 
 
 class TestPushStepToServer:

@@ -35,6 +35,13 @@ def clear_cache() -> Generator[None, None, None]:
     Edge.get_cache().clear()
     _feature_to_objects.clear()
 
+    # Reset per-step cycle accumulators to prevent cross-test pollution
+    from roc.reporting.state import states
+
+    states.saliency_cycles.reset()
+    states.resolution_cycles.reset()
+    states.attenuation_cycles.reset()
+
 
 @pytest.fixture(autouse=True)
 def restore_registries() -> Generator[None, None, None]:
