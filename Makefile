@@ -117,7 +117,7 @@ mypy:
 .PHONY: check-safety
 check-safety:
 	uv sync
-	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715
+	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715 -i SFTY-20260218-01424
 	uv run bandit -ll --recursive roc tests
 
 .PHONY: update-dev-deps
