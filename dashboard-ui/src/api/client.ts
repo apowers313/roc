@@ -249,6 +249,55 @@ export async function fetchSchema(run: string): Promise<GraphSchema> {
     );
 }
 
+export interface ObjectHistoryState {
+    tick: number;
+    x: number;
+    y: number;
+    glyph_type: number | null;
+    color_type: number | null;
+    shape_type: number | null;
+    flood_size: number | null;
+    line_size: number | null;
+    distance: number | null;
+    motion_direction: string | null;
+    delta_old: number | null;
+    delta_new: number | null;
+}
+
+export interface ObjectHistoryChange {
+    property: string;
+    type: string | null;
+    delta: number | null;
+    old_value: unknown;
+    new_value: unknown;
+}
+
+export interface ObjectHistoryTransform {
+    num_discrete_changes: number;
+    num_continuous_changes: number;
+    changes: ObjectHistoryChange[];
+}
+
+export interface ObjectHistoryInfo {
+    uuid: number;
+    resolve_count: number;
+}
+
+export interface ObjectHistoryData {
+    states: ObjectHistoryState[];
+    transforms: ObjectHistoryTransform[];
+    info: ObjectHistoryInfo;
+}
+
+export async function fetchObjectHistory(
+    run: string,
+    objectId: number,
+): Promise<ObjectHistoryData> {
+    return fetchJson<ObjectHistoryData>(
+        `${BASE}/runs/${encodeURIComponent(run)}/object/${objectId}/history`,
+    );
+}
+
 export async function fetchBookmarks(run: string): Promise<Bookmark[]> {
     return fetchJson<Bookmark[]>(
         `${BASE}/runs/${encodeURIComponent(run)}/bookmarks`,

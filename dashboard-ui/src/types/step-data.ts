@@ -24,6 +24,10 @@ export interface StepData {
     message: string | null;
     phonemes: PhonemeEntry[] | null;
     inventory: InventoryItem[] | null;
+    /** Per-cycle saliency data (multi-cycle attention). */
+    saliency_cycles?: SaliencyCycleData[];
+    /** Per-cycle resolution data (multi-cycle attention). */
+    resolution_cycles?: ResolutionCycleData[];
 }
 
 export interface IntrinsicsData {
@@ -43,6 +47,11 @@ export interface SequenceObjectData {
     x?: number;
     y?: number;
     resolve_count?: number;
+    glyph?: string;
+    color?: number;
+    shape?: number;
+    matched_previous?: boolean;
+    cycle_number?: number;
 }
 
 export interface SequenceData {
@@ -61,10 +70,28 @@ export interface TransformChangeData {
     normalized_change?: number;
 }
 
+export interface ObjectTransformChangeData {
+    property: string;
+    type?: "continuous" | "discrete";
+    delta: number | null;
+    old_value?: unknown;
+    new_value?: unknown;
+}
+
+export interface ObjectTransformData {
+    uuid: number;
+    glyph?: string;
+    color?: string;
+    node_id?: number;
+    status?: "matched" | "new" | "gone";
+    changes: ObjectTransformChangeData[];
+}
+
 export interface TransformData {
     count: number;
     /** Structured objects (new format) or plain strings (old format). */
     changes: (TransformChangeData | string)[];
+    object_transforms?: ObjectTransformData[];
 }
 
 export interface PredictionData {
@@ -99,5 +126,26 @@ export interface LogEntry {
     body?: string;
     severity_text?: string;
     timestamp?: number;
+    [key: string]: unknown;
+}
+
+export interface CyclePeakData {
+    x: number;
+    y: number;
+    strength: number;
+}
+
+export interface SaliencyCycleData {
+    saliency: GridData;
+    attenuation: Record<string, unknown>;
+    focused_point?: CyclePeakData;
+    pre_ior_peak?: CyclePeakData;
+    post_ior_peak?: CyclePeakData;
+}
+
+export interface ResolutionCycleData {
+    outcome?: string;
+    features?: unknown[];
+    candidate_details?: unknown[];
     [key: string]: unknown;
 }

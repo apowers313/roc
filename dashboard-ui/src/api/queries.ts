@@ -11,6 +11,7 @@ import {
     fetchIntrinsicsHistory,
     fetchMetricsHistory,
     fetchAllObjects,
+    fetchObjectHistory,
     fetchResolutionHistory,
     fetchRuns,
     fetchSchema,
@@ -161,6 +162,15 @@ export function useSchema(run: string) {
         enabled: run !== "",
         staleTime: Infinity, // schema is immutable per run
         retry: false,
+    });
+}
+
+export function useObjectHistory(run: string, objectId: number | null) {
+    return useQuery({
+        queryKey: ["object-history", run, objectId],
+        queryFn: () => fetchObjectHistory(run, objectId!),
+        enabled: run !== "" && objectId != null,
+        staleTime: HISTORY_STALE_MS,
     });
 }
 
