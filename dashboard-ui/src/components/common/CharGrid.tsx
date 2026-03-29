@@ -32,17 +32,17 @@ function normalizeColor(raw: string): string {
 }
 
 /** Build an HTML span for a single cell. */
-function buildCellSpan(ch: string, fgColor: string, bgColor: string, highlighted: boolean): string {
-    if (highlighted) {
-        return `<span style="color:${fgColor};background:${bgColor};outline:2px solid #ff0;outline-offset:-1px;position:relative;z-index:1">${ch}</span>`;
+function buildCellSpan(ch: string, fgColor: string, bgColor: string, highlightColor?: string): string {
+    if (highlightColor) {
+        return `<span style="color:${fgColor};background:${bgColor};outline:2px solid ${highlightColor};outline-offset:-1px;position:relative;z-index:1">${ch}</span>`;
     }
     return `<span style="color:${fgColor};background:${bgColor}">${ch}</span>`;
 }
 
 /** Build the HTML string for a character grid.
- *  If highlights is provided, matching cells get a bright outline.
+ *  If highlights is provided, matching cells get a colored outline.
  */
-function buildGridHtml(data: GridData, highlights?: Set<string>): string {
+function buildGridHtml(data: GridData, highlights?: Map<string, string>): string {
     const { chars, fg, bg } = data;
     const rows: string[] = [];
     for (let r = 0; r < chars.length; r++) {
@@ -58,8 +58,8 @@ function buildGridHtml(data: GridData, highlights?: Set<string>): string {
             const ch = escapeChar(String.fromCodePoint(charCode));
             const fgColor = normalizeColor(fgRow[c] ?? "ffffff");
             const bgColor = normalizeColor(bgRow[c] ?? "000000");
-            const isHighlighted = highlights?.has(`${c},${r}`) ?? false;
-            spans.push(buildCellSpan(ch, fgColor, bgColor, isHighlighted));
+            const highlightColor = highlights?.get(`${c},${r}`);
+            spans.push(buildCellSpan(ch, fgColor, bgColor, highlightColor));
         }
         rows.push(spans.join(""));
     }
@@ -79,11 +79,11 @@ function buildGridHtml(data: GridData, highlights?: Set<string>): string {
 export function CharGrid({ data, highlightRowOffset = 0 }: Readonly<CharGridProps>) {
     const { points } = useHighlight();
 
-    const highlightSet = points.length > 0
-        ? new Set(points.map((p) => `${p.x},${p.y + highlightRowOffset}`))
+    const highlightMap = points.length > 0
+        ? new Map(points.map((p) => [`${p.x},${p.y + highlightRowOffset}`, p.color]))
         : undefined;
 
-    const html = buildGridHtml(data, highlightSet);
+    const html = buildGridHtml(data, highlightMap);
 
     return (
         <pre

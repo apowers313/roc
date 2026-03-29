@@ -17,7 +17,7 @@ describe("AttenuationPanel", () => {
         expect(screen.getByText("No attenuation data")).toBeInTheDocument();
     });
 
-    it("renders flavor badge", () => {
+    it("renders peak_count when attenuation data is present", () => {
         renderWithProviders(
             <AttenuationPanel
                 data={makeStepData({
@@ -25,7 +25,9 @@ describe("AttenuationPanel", () => {
                 })}
             />,
         );
-        expect(screen.getByText("linear-decline")).toBeInTheDocument();
+        // flavor is shown at Section level (expmod prop), not inside AttenuationPanel
+        expect(screen.getByText("peak_count")).toBeInTheDocument();
+        expect(screen.getByText("5")).toBeInTheDocument();
     });
 
     // Regression: field names must match actual Python emission keys

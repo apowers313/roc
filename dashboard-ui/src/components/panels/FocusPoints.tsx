@@ -52,7 +52,7 @@ export function FocusPoints({ data }: Readonly<FocusPointsProps>) {
         );
     }
 
-    const highlightSet = new Set(points.map((p) => `${p.x},${p.y}`));
+    const highlightMap = new Map(points.map((p) => [`${p.x},${p.y}`, p.color]));
 
     return (
         <Card padding={6} radius="sm" withBorder>
@@ -85,14 +85,14 @@ export function FocusPoints({ data }: Readonly<FocusPointsProps>) {
                             // Backend x = col, y = row (matches CharGrid convention)
                             const x = Number(row.x);
                             const y = Number(row.y);
-                            const isHighlighted = highlightSet.has(`${x},${y}`);
+                            const hlColor = highlightMap.get(`${x},${y}`);
                             return (
                                 <Table.Tr
                                     key={`${row.x}-${row.y}`}
                                     onClick={() => togglePoint({ x, y, label: `focus #${idx}` })}
                                     style={{
                                         cursor: "pointer",
-                                        background: isHighlighted ? "rgba(255, 255, 0, 0.15)" : undefined,
+                                        background: hlColor ? `${hlColor}26` : undefined,
                                     }}
                                 >
                                     <Table.Td style={{ padding: 0 }}>

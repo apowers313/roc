@@ -100,7 +100,7 @@ interface DashboardState {
     setLiveGameActive: (active: boolean) => void;
 }
 
-const DashboardContext = createContext<DashboardState | null>(null);
+export const DashboardContext = createContext<DashboardState | null>(null);
 
 export function DashboardProvider({ children }: Readonly<{ children: ReactNode }>) {
     // Read URL params once on mount for initial state

@@ -1,6 +1,6 @@
 /** Attenuation deep dive -- structured display of attenuation data. */
 
-import { Badge, Grid, Group, Stack, Table, Text } from "@mantine/core";
+import { Grid, Group, Stack, Table, Text } from "@mantine/core";
 
 import { InfoCard } from "../common/InfoCard";
 import { useHighlight } from "../../state/highlight";
@@ -26,12 +26,12 @@ function KVSection({
     title,
     entries,
     onPointClick,
-    highlightSet,
+    highlightMap,
 }: Readonly<{
     title: string;
     entries: [string, unknown][];
     onPointClick?: (x: number, y: number, label: string) => void;
-    highlightSet?: Set<string>;
+    highlightMap?: Map<string, string>;
 }>) {
     if (entries.length === 0) return null;
     return (
@@ -44,7 +44,7 @@ function KVSection({
                     v[0] !== null && v[1] !== null && v[0] !== "" && v[1] !== "";
                 const ptX = isPoint ? Number(v[0]) : 0;
                 const ptY = isPoint ? Number(v[1]) : 0;
-                const isHl = isPoint && highlightSet?.has(`${ptX},${ptY}`);
+                const hlColor = isPoint ? highlightMap?.get(`${ptX},${ptY}`) : undefined;
                 return (
                     <Group
                         key={k}
@@ -53,7 +53,7 @@ function KVSection({
                         onClick={isPoint && onPointClick ? () => onPointClick(ptX, ptY, k) : undefined}
                         style={{
                             cursor: isPoint && onPointClick ? "pointer" : undefined,
-                            background: isHl ? "rgba(255, 255, 0, 0.15)" : undefined,
+                            background: hlColor ? `${hlColor}26` : undefined,
                             borderRadius: 2,
                         }}
                     >
@@ -78,7 +78,7 @@ interface HistoryEntry {
 
 export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
     const { togglePoint, points } = useHighlight();
-    const highlightSet = new Set(points.map((p) => `${p.x},${p.y}`));
+    const highlightMap = new Map(points.map((p) => [`${p.x},${p.y}`, p.color]));
     const att = data?.attenuation;
 
     if (!att) {
@@ -106,7 +106,8 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
 
     // Derive the winning focus point from focus_points[0]
     const fpList = att[focusKey] as Array<{ x: number; y: number }> | undefined;
-    const focusPoint = fpList && fpList.length > 0 ? [fpList[0].x, fpList[0].y] : null;
+    const firstFp = fpList && fpList.length > 0 ? fpList[0] : undefined;
+    const focusPoint = firstFp ? [firstFp.x, firstFp.y] : null;
 
     const peakEntries: [string, unknown][] = peakKeys
         .filter((k) => k in att)
@@ -140,7 +141,7 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
                         title="Peaks"
                         entries={peakEntries}
                         onPointClick={(x, y, label) => togglePoint({ x, y, label: `peak: ${label}` })}
-                        highlightSet={highlightSet}
+                        highlightMap={highlightMap}
                     />
                 </Grid.Col>
                 <Grid.Col span={4}>
@@ -164,14 +165,14 @@ export function AttenuationPanel({ data }: Readonly<AttenuationPanelProps>) {
                             {history.slice(-10).map((h) => {
                                 const hlX = h.x;
                                 const hlY = h.y;
-                                const isHl = highlightSet.has(`${hlX},${hlY}`);
+                                const hlC = highlightMap.get(`${hlX},${hlY}`);
                                 return (
                                 <Table.Tr
                                     key={`${h.x}-${h.y}-${h.tick}`}
                                     onClick={() => togglePoint({ x: hlX, y: hlY, label: `attn tick ${h.tick}` })}
                                     style={{
                                         cursor: "pointer",
-                                        background: isHl ? "rgba(255, 255, 0, 0.15)" : undefined,
+                                        background: hlC ? `${hlC}26` : undefined,
                                     }}
                                 >
                                     <Table.Td>{h.x}</Table.Td>
