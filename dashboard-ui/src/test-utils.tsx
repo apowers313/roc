@@ -4,6 +4,7 @@ import { MantineProvider } from "@mantine/core";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, type RenderOptions } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
+import { vi } from "vitest";
 
 import { DashboardProvider } from "./state/context";
 import { HighlightProvider } from "./state/highlight";
@@ -81,4 +82,23 @@ export function makeLog(overrides: Partial<LogEntry> = {}): LogEntry {
         timestamp: 1000,
         ...overrides,
     };
+}
+
+/** Default inactive live-status response for vi.stubGlobal("fetch", ...). */
+export const defaultFetchMockResponse = {
+    active: false,
+    run_name: null,
+    step: 0,
+    game_number: 0,
+    step_min: 0,
+    step_max: 0,
+    game_numbers: [],
+} as const;
+
+/** Stubs global fetch to return the default inactive live-status response. */
+export function stubDefaultFetch() {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ ...defaultFetchMockResponse }),
+    }));
 }
