@@ -358,6 +358,109 @@ def get_action_map(run_name: str) -> JSONResponse:
     return JSONResponse(content=action_map)
 
 
+def _collect_object_states(obj: Any) -> list[dict[str, Any]]:
+    """Collect per-tick observation dicts from ObjectInstance nodes attached to an Object."""
+    from roc.object_instance import ObjectInstance, ObservedAs
+
+    states: list[dict[str, Any]] = []
+    for e in obj.dst_edges:
+        if isinstance(e, ObservedAs) and isinstance(e.src, ObjectInstance):
+            oi = e.src
+            states.append(
+                {
+                    "tick": oi.tick,
+                    "x": oi.x,
+                    "y": oi.y,
+                    "glyph_type": oi.glyph_type,
+                    "color_type": oi.color_type,
+                    "shape_type": oi.shape_type,
+                    "flood_size": oi.flood_size,
+                    "line_size": oi.line_size,
+                    "distance": oi.distance,
+                    "motion_direction": oi.motion_direction,
+                    "delta_old": oi.delta_old,
+                    "delta_new": oi.delta_new,
+                }
+            )
+    states.sort(key=lambda s: s["tick"])
+    return states
+
+
+def _prop_node_to_change_dict(prop_node: Any) -> dict[str, Any] | None:
+    """Convert a property transform node to a change dict, or None if unnamed."""
+    prop_name = getattr(prop_node, "property_name", None)
+    if prop_name is None:
+        return None
+    return {
+        "property": prop_name,
+        "type": getattr(prop_node, "change_type", None),
+        "delta": getattr(prop_node, "delta", None),
+        "old_value": getattr(prop_node, "old_value", None),
+        "new_value": getattr(prop_node, "new_value", None),
+    }
+
+
+def _collect_object_transforms(obj: Any) -> list[dict[str, Any]]:
+    """Collect transform dicts from ObjectTransform nodes attached to an Object."""
+    from roc.object_transform import ObjectHistory, ObjectTransform
+
+    transforms: list[dict[str, Any]] = []
+    for e in obj.src_edges:
+        if not (isinstance(e, ObjectHistory) and isinstance(e.dst, ObjectTransform)):
+            continue
+        ot = e.dst
+        t_dict: dict[str, Any] = {
+            "num_discrete_changes": ot.num_discrete_changes,
+            "num_continuous_changes": ot.num_continuous_changes,
+            "changes": [],
+        }
+        for de in ot.src_edges:
+            change = _prop_node_to_change_dict(de.dst)
+            if change is not None:
+                t_dict["changes"].append(change)
+        transforms.append(t_dict)
+    return transforms
+
+
+@app.get(
+    "/api/runs/{run_name}/object/{object_id}/history",
+    responses={503: {"description": _NOT_INITIALIZED}, 404: {"description": "Object not found"}},
+)
+def get_object_history(run_name: str, object_id: int) -> JSONResponse:
+    """Get the full observation history and transforms for an object.
+
+    Returns states (per-tick observations) and transforms (property changes between
+    consecutive observations).
+    """
+    if _data_store is None:
+        raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
+
+    try:
+        from roc.graphdb import NodeId
+        from roc.object import Object
+
+        obj = Object.load(NodeId(object_id))
+    except Exception:
+        raise HTTPException(status_code=404, detail="Object not found")
+
+    states = _collect_object_states(obj)
+    transforms = _collect_object_transforms(obj)
+    info: dict[str, Any] = {
+        "uuid": obj.uuid,
+        "resolve_count": obj.resolve_count,
+    }
+
+    return JSONResponse(
+        content=_convert_numpy(
+            {
+                "states": states,
+                "transforms": transforms,
+                "info": info,
+            }
+        )
+    )
+
+
 @app.get("/api/runs/{run_name}/bookmarks")
 def get_bookmarks(run_name: str) -> list[Bookmark]:
     """Get bookmarks for a run."""

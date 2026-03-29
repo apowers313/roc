@@ -109,6 +109,20 @@ class _GameIndex:
     resolution_events: list[dict[str, Any]] = field(default_factory=list)
 
 
+def _wrap_legacy_cycles(data: StepData) -> None:
+    """Wrap old single-field data into multi-cycle list format for backward compat.
+
+    Historical runs have saliency/resolution_metrics as single values.
+    New runs have saliency_cycles/resolution_cycles as lists.
+    This wraps old format into new format at read time so the frontend always
+    sees the list format.
+    """
+    if data.saliency_cycles is None and data.saliency is not None:
+        data.saliency_cycles = [{"saliency": data.saliency, "attenuation": {}}]
+    if data.resolution_cycles is None and data.resolution_metrics is not None:
+        data.resolution_cycles = [data.resolution_metrics]
+
+
 class DataStore:
     """Single point of access for all dashboard data.
 
@@ -173,19 +187,15 @@ class DataStore:
         logger.info("DataStore: live session for run {}", run_name)
 
     def clear_live_session(self) -> None:
-        """Clear the live session state and indices."""
+        """Stop listening for new live data but keep the buffer readable.
+
+        The buffer data stays accessible for historical queries until a
+        new game starts (which calls ``set_live_session`` to replace it).
+        This prevents cycle data from being lost when the game ends.
+        """
         if self._live_buffer is not None:
             self._live_buffer.remove_listener(self._on_step_pushed)
-        old_name = self._live_run_name
-        self._live_run_name = None
-        self._live_buffer = None
-        self._live_store = None
-        with self._lock:
-            self._indices.clear()
-        if old_name is not None:
-            with self._store_lock:
-                self._run_stores.pop(old_name, None)
-        logger.debug("DataStore: live session cleared")
+        logger.debug("DataStore: live session paused (buffer retained)")
 
     # -------------------------------------------------------------------
     # Live step push and indexing
@@ -397,7 +407,14 @@ class DataStore:
                 self._supplement_logs(buf_data, run_name, step)
                 return buf_data
         store = self._get_run_store(run_name)
-        return store.get_step_data(step)
+        data = store.get_step_data(step)
+        _wrap_legacy_cycles(data)
+        return data
+
+    @staticmethod
+    def _wrap_legacy_step(data: StepData) -> None:
+        """Wrap old single-field data into multi-cycle list format for backward compat."""
+        _wrap_legacy_cycles(data)
 
     def _supplement_logs(self, buf_data: StepData, run_name: str, step: int) -> None:
         """Fill in missing logs from DuckLake when the buffer has no log data."""

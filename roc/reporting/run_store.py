@@ -41,6 +41,8 @@ class StepData:
     message: str | None = None
     phonemes: list[dict[str, Any]] | None = None
     inventory: list[dict[str, Any]] | None = None
+    saliency_cycles: list[dict[str, Any]] | None = None
+    resolution_cycles: list[dict[str, Any]] | None = None
 
 
 class RunStore:
@@ -394,6 +396,8 @@ class RunStore:
             message=parsed_events.message,
             phonemes=parsed_events.phonemes,
             inventory=parsed_events.inventory,
+            saliency_cycles=parsed_events.saliency_cycles,
+            resolution_cycles=parsed_events.resolution_cycles,
         )
 
 
@@ -417,6 +421,8 @@ class _ParsedEvents:
     message: str | None = None
     phonemes: list[dict[str, Any]] | None = None
     inventory: list[dict[str, Any]] | None = None
+    saliency_cycles: list[dict[str, Any]] | None = None
+    resolution_cycles: list[dict[str, Any]] | None = None
 
 
 def _extract_screen(
@@ -537,6 +543,27 @@ def _handle_simple_body(attr: str) -> Any:
     return handler
 
 
+def _handle_json_list_body(attr: str) -> Any:
+    """Create a handler that parses body as a JSON list and assigns to a _ParsedEvents attribute."""
+
+    def handler(
+        result: _ParsedEvents, row_dict: dict[str, Any], body: dict[str, Any] | None
+    ) -> None:
+        # body may have been parsed as a dict by _parse_body, but we need the raw JSON list
+        raw = row_dict.get("body", "")
+        if raw:
+            import json
+
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    setattr(result, attr, parsed)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+    return handler
+
+
 def _handle_significance(
     result: _ParsedEvents, row_dict: dict[str, Any], body: dict[str, Any] | None
 ) -> None:
@@ -591,6 +618,8 @@ _EVENT_HANDLERS: dict[str, _EventHandler] = {
     "roc.message": _handle_message,
     "roc.phonemes": _handle_phonemes,
     "roc.inventory": _handle_inventory,
+    "roc.saliency_cycles": _handle_json_list_body("saliency_cycles"),
+    "roc.resolution_cycles": _handle_json_list_body("resolution_cycles"),
 }
 
 

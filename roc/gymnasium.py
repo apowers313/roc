@@ -208,6 +208,12 @@ class Gym(Component, ABC):
             obs, loop_num, game_num, loop_ctx.callback_url, loop_ctx.callback_ctx
         )
 
+        # Reset per-step cycle accumulators AFTER dashboard data has been read
+        cycle_states = State.get_states()
+        cycle_states.saliency_cycles.reset()
+        cycle_states.resolution_cycles.reset()
+        cycle_states.attenuation_cycles.reset()
+
         return obs, done, truncated, loop_num
 
 
@@ -228,7 +234,7 @@ def _setup_callback_context(callback_url: str | None, settings: Config) -> Any:
             ctx.load_verify_locations(settings.ssl_certfile)
         # The callback URL uses localhost but the cert is for the external domain.
         # Skip hostname check for this internal loopback connection.
-        ctx.check_hostname = False
+        ctx.check_hostname = False  # NOSONAR
         ctx.verify_mode = ssl.CERT_REQUIRED
     else:
         ctx = None
@@ -388,22 +394,158 @@ def _build_action_taken_dict(states: Any) -> dict[str, Any] | None:
     return result
 
 
+def _shape_type_to_glyph(shape_type: int) -> str:
+    """Convert a numeric shape_type to a printable glyph character."""
+    return chr(shape_type) if 32 <= shape_type < 127 else str(shape_type)
+
+
+def _build_oi_lookup(frame: Any) -> tuple[dict[int, Any], dict[int, str]]:
+    """Build ObjectInstance lookup dicts from a frame's edges.
+
+    Returns (oi_by_uuid, glyph_by_uuid) maps keyed by object_uuid.
+    """
+    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+
+    oi_by_uuid: dict[int, Any] = {}
+    glyph_by_uuid: dict[int, str] = {}
+    for e in frame.src_edges:
+        if not (isinstance(e, SituatedObjectInstance) and isinstance(e.dst, ObjectInstance)):
+            continue
+        oi = e.dst
+        oi_by_uuid[oi.object_uuid] = oi
+        if oi.shape_type is not None:
+            glyph_by_uuid[oi.object_uuid] = _shape_type_to_glyph(oi.shape_type)
+    return oi_by_uuid, glyph_by_uuid
+
+
+def _reconstruct_coord_from_delta(
+    change_entry: dict[str, Any], prop_name: str, prop_node: Any, matched_oi: Any
+) -> None:
+    """Infer old/new coordinate values from current position and delta."""
+    cur_val = getattr(matched_oi, prop_name, None)
+    delta = getattr(prop_node, "delta", None)
+    if cur_val is not None:
+        change_entry["new_value"] = cur_val
+        if delta is not None:
+            change_entry["old_value"] = int(cur_val - delta)
+
+
+def _apply_coord_values(
+    change_entry: dict[str, Any], prop_name: str, prop_node: Any, matched_oi: Any
+) -> None:
+    """Fill old_value/new_value in change_entry for a property transform node.
+
+    For x/y props where old_value is absent, reconstructs values from the
+    current position and delta. Uses raw old/new values otherwise.
+    """
+    ov = getattr(prop_node, "old_value", None)
+    nv = getattr(prop_node, "new_value", None)
+    if prop_name in ("x", "y") and ov is None and matched_oi is not None:
+        _reconstruct_coord_from_delta(change_entry, prop_name, prop_node, matched_oi)
+    else:
+        if ov is not None:
+            change_entry["old_value"] = ov
+        if nv is not None:
+            change_entry["new_value"] = nv
+
+
+def _process_property_node(prop_node: Any, matched_oi: Any) -> dict[str, Any] | None:
+    """Build a change entry dict for a single property transform node.
+
+    Returns None if the node has no property_name attribute.
+    """
+    prop_name = getattr(prop_node, "property_name", None)
+    if prop_name is None:
+        return None
+    change_entry: dict[str, Any] = {
+        "property": prop_name,
+        "delta": getattr(prop_node, "delta", None),
+    }
+    ct = getattr(prop_node, "change_type", None)
+    if ct is not None:
+        change_entry["type"] = ct
+    _apply_coord_values(change_entry, prop_name, prop_node, matched_oi)
+    return change_entry
+
+
+def _process_object_transform(
+    dst: Any,
+    oi_by_uuid: dict[int, Any],
+    glyph_by_uuid: dict[int, str],
+) -> dict[str, Any]:
+    """Build a summary dict for a single ObjectTransform node."""
+    matched_oi = oi_by_uuid.get(dst.object_uuid)
+    ot_dict: dict[str, Any] = {"uuid": dst.object_uuid}
+    glyph = glyph_by_uuid.get(dst.object_uuid)
+    if glyph is not None:
+        ot_dict["glyph"] = glyph
+    if matched_oi is not None:
+        ot_dict["node_id"] = matched_oi.id
+        if matched_oi.color_type is not None:
+            ot_dict["color"] = str(matched_oi.color_type)
+    ot_changes: list[dict[str, Any]] = []
+    for detail_edge in dst.src_edges:
+        entry = _process_property_node(detail_edge.dst, matched_oi)
+        if entry is not None:
+            ot_changes.append(entry)
+    ot_dict["changes"] = ot_changes
+    return ot_dict
+
+
+def _process_intrinsic_change(dst: Any) -> dict[str, Any] | None:
+    """Build a change dict for an intrinsic node, or None if not applicable."""
+    if not hasattr(dst, "name") or not hasattr(dst, "normalized_change"):
+        return None
+    return {
+        "description": str(dst),
+        "type": type(dst).__name__,
+        "name": dst.name,
+        "normalized_change": dst.normalized_change,
+    }
+
+
 def _build_transform_summary(states: Any) -> dict[str, Any] | None:
     """Build transform summary from the current transform state."""
     if states.transform.val is None:
         return None
+
+    frame = _get_last_frame()
+    if frame is not None:
+        oi_by_uuid, glyph_by_uuid = _build_oi_lookup(frame)
+    else:
+        oi_by_uuid, glyph_by_uuid = {}, {}
+
+    from roc.object_transform import ObjectTransform as _OT
+
     t = states.transform.val.transform
     changes_list: list[dict[str, Any]] = []
+    object_transforms: list[dict[str, Any]] = []
     for edge in t.src_edges:
         dst = edge.dst
-        ch: dict[str, Any] = {"description": str(dst)}
-        if hasattr(dst, "name"):
-            ch["type"] = type(dst).__name__
-            ch["name"] = dst.name
-        if hasattr(dst, "normalized_change"):
-            ch["normalized_change"] = dst.normalized_change
-        changes_list.append(ch)
-    return {"count": len(changes_list), "changes": changes_list}
+        if isinstance(dst, _OT):
+            object_transforms.append(_process_object_transform(dst, oi_by_uuid, glyph_by_uuid))
+            continue
+        ch = _process_intrinsic_change(dst)
+        if ch is not None:
+            changes_list.append(ch)
+    summary: dict[str, Any] = {"count": len(changes_list) + len(object_transforms)}
+    summary["changes"] = changes_list
+    if object_transforms:
+        summary["object_transforms"] = object_transforms
+    return summary
+
+
+def _update_attended_glyphs(att: dict[str, Any], glyphs: Any, bg_glyph: int) -> None:
+    """Update the cumulative attended glyphs set from the top focus point."""
+    focus_points = att.get("focus_points", [])
+    if not focus_points:
+        return
+    top = focus_points[0]
+    fx, fy = int(top["x"]), int(top["y"])
+    if 0 <= fy < glyphs.shape[0] and 0 <= fx < glyphs.shape[1]:
+        g_id = int(glyphs[fy, fx])
+        if g_id != bg_glyph:
+            _attended_glyphs.add(g_id)
 
 
 def _inject_attention_spread(states: Any, obs: Any) -> None:
@@ -418,7 +560,7 @@ def _inject_attention_spread(states: Any, obs: Any) -> None:
     if att is None or not isinstance(att, dict):
         return
 
-    bg_glyph = nle.nethack.GLYPH_CMAP_OFF  # 2359 = S_stone
+    bg_glyph = nle.nethack.GLYPH_CMAP_OFF
     glyphs = obs["glyphs"]
 
     # Update cumulative seen glyphs (all non-background glyphs on screen)
@@ -428,14 +570,7 @@ def _inject_attention_spread(states: Any, obs: Any) -> None:
             _seen_glyphs.add(g_int)
 
     # Update cumulative attended glyphs (glyph at top focus point)
-    focus_points = att.get("focus_points", [])
-    if focus_points:
-        top = focus_points[0]
-        fx, fy = int(top["x"]), int(top["y"])
-        if 0 <= fy < glyphs.shape[0] and 0 <= fx < glyphs.shape[1]:
-            g_id = int(glyphs[fy, fx])
-            if g_id != bg_glyph:
-                _attended_glyphs.add(g_id)
+    _update_attended_glyphs(att, glyphs, bg_glyph)
 
     attended = len(_attended_glyphs)
     total = len(_seen_glyphs)
@@ -470,10 +605,29 @@ def _get_last_frame() -> Any:
     return seq_comp.last_frame
 
 
-def _obj_to_dict(obj: Any) -> dict[str, Any]:
+def _apply_oi_fields(od: dict[str, Any], obj: Any, oi: Any, matched_uuids: set[int] | None) -> None:
+    """Populate fields from ObjectInstance when available."""
+    od["x"] = oi.x
+    od["y"] = oi.y
+    if oi.shape_type is not None:
+        od["glyph"] = _shape_type_to_glyph(oi.shape_type)
+        od["shape"] = oi.shape_type
+    if oi.color_type is not None:
+        od["color"] = oi.color_type
+    obj_uuid = getattr(obj, "uuid", None)
+    od["matched_previous"] = bool(matched_uuids and obj_uuid in matched_uuids)
+
+
+def _obj_to_dict(
+    obj: Any,
+    oi: Any | None = None,
+    matched_uuids: set[int] | None = None,
+) -> dict[str, Any]:
     """Convert a single object to a summary dict."""
     od: dict[str, Any] = {"id": str(obj.id)[:8]}
-    if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
+    if oi is not None:
+        _apply_oi_fields(od, obj, oi, matched_uuids)
+    elif hasattr(obj, "last_x") and hasattr(obj, "last_y"):
         od["x"] = obj.last_x
         od["y"] = obj.last_y
     if hasattr(obj, "resolve_count"):
@@ -481,12 +635,30 @@ def _obj_to_dict(obj: Any) -> dict[str, Any]:
     return od
 
 
+def _collect_matched_uuids(states: Any) -> set[int]:
+    """Collect the set of object uuids that appear in the current transform."""
+    matched_uuids: set[int] = set()
+    if states.transform.val is None:
+        return matched_uuids
+    for edge in states.transform.val.transform.src_edges:
+        if hasattr(edge.dst, "object_uuid"):
+            matched_uuids.add(edge.dst.object_uuid)
+    return matched_uuids
+
+
 def _frame_to_summary(frame: Any, states: Any) -> dict[str, Any]:
     """Build the summary dict from a frame and current states."""
     from roc.intrinsic import IntrinsicNode
 
     objs = frame.objects
-    obj_dicts = [_obj_to_dict(obj) for obj in objs]
+    oi_by_uuid, _ = _build_oi_lookup(frame)
+    matched_uuids = _collect_matched_uuids(states)
+
+    obj_dicts = []
+    for obj in objs:
+        obj_uuid: int | None = getattr(obj, "uuid", None)
+        oi = oi_by_uuid.get(obj_uuid) if obj_uuid is not None else None
+        obj_dicts.append(_obj_to_dict(obj, oi, matched_uuids))
     intr_snap = {
         tn.name: round(tn.normalized_value, 4)
         for tn in frame.transformable
@@ -626,6 +798,23 @@ def _push_step_to_server(
         return False  # best-effort, don't break the game loop
 
 
+def _build_intrinsics_dict(states: Any) -> dict[str, Any] | None:
+    """Build intrinsics payload dict from state, or None if unavailable."""
+    if states.intrinsic.val is None:
+        return None
+    return {
+        "raw": states.intrinsic.val.intrinsics,
+        "normalized": states.intrinsic.val.normalized_intrinsics,
+    }
+
+
+def _build_significance_val(states: Any) -> Any:
+    """Return the significance value from state, or None if unavailable."""
+    if states.significance.val is None:
+        return None
+    return states.significance.val.significance
+
+
 def _push_dashboard_data(
     obs: Any,
     loop_num: int,
@@ -689,17 +878,8 @@ def _push_dashboard_data(
         event_summary=_collect_event_summary(),
         game_metrics=game_metrics,
         logs=drain_step_logs(loop_num),
-        intrinsics=(
-            {
-                "raw": states.intrinsic.val.intrinsics,
-                "normalized": states.intrinsic.val.normalized_intrinsics,
-            }
-            if states.intrinsic.val is not None
-            else None
-        ),
-        significance=(
-            states.significance.val.significance if states.significance.val is not None else None
-        ),
+        intrinsics=_build_intrinsics_dict(states),
+        significance=_build_significance_val(states),
         action_taken=_build_action_taken_dict(states),
         sequence_summary=_build_sequence_summary(states),
         transform_summary=_build_transform_summary(states),
@@ -707,6 +887,8 @@ def _push_dashboard_data(
         message=_collect_message(states),
         phonemes=_collect_phonemes(states),
         inventory=inventory,
+        saliency_cycles=states.saliency_cycles.val or None,
+        resolution_cycles=states.resolution_cycles.val or None,
     )
     if buf is not None:
         buf.push(step_data)
@@ -717,13 +899,14 @@ def _push_dashboard_data(
     return server_stop
 
 
+def _tty_chars_to_screen(tty_chars: Any) -> str:
+    """Convert a 2D array of ASCII char codes to a printable screen string."""
+    return "".join("".join(chr(ch) for ch in row) + "\n" for row in tty_chars)
+
+
 def _handle_game_over(obs: Any, game_num: int, done: bool, settings: Config) -> None:
     """Log game over info and optionally flush the graph database."""
-    screen = ""
-    for row in obs["tty_chars"]:
-        for ch in row:
-            screen += chr(ch)
-        screen += "\n"
+    screen = _tty_chars_to_screen(obs["tty_chars"])
     logger.info(screen, death=True, game_num=game_num)
     logger.info(f"Game {game_num} completed, starting next game")
     if settings.graphdb_flush:

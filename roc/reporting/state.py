@@ -17,7 +17,7 @@ from opentelemetry._logs import SeverityNumber
 from opentelemetry._logs import LogRecord
 
 from roc.action import Action, ActionData, TakeAction
-from roc.attention import Attention, SaliencyMap, VisionAttentionData
+from roc.attention import Attention, AttentionSettled, SaliencyMap, VisionAttentionData
 from roc.component import Component
 from roc.config import Config
 from roc.event import Event
@@ -94,10 +94,11 @@ class State[StateType](ABC):
         Attention.bus.connect(state_component)
 
         def att_evt_handler(e: Any) -> None:
-            if not isinstance(e.data, VisionAttentionData):
+            if isinstance(e.data, AttentionSettled):
+                _merge_attention_settled_metadata(e.data)
                 return
-            states.salency.set(deepcopy(e.data.saliency_map))
-            states.attention.set(deepcopy(e.data))
+            if isinstance(e.data, VisionAttentionData):
+                _accumulate_saliency_cycle(e.data)
 
         Attention.bus.subject.subscribe(att_evt_handler)
 
@@ -255,6 +256,7 @@ class State[StateType](ABC):
         _emit_phonemes_log(current_states)
         _emit_graphdb_summary_log()
         _emit_event_summary_log()
+        _emit_cycle_logs(current_states)
 
     @staticmethod
     def maybe_emit_snapshot(tick: int) -> None:
@@ -578,6 +580,60 @@ class CurrentAttenuationState(State[dict[str, Any]]):
             return "Current Attenuation: None"
 
 
+class SaliencyCyclesState(State[list[dict[str, Any]]]):
+    """Accumulates per-cycle saliency maps within a single step."""
+
+    def __init__(self) -> None:
+        super().__init__("saliency-cycles", display_name="Saliency Cycles")
+        self.val = []
+
+    def append(self, data: dict[str, Any]) -> None:
+        """Append a cycle's saliency data."""
+        if self.val is None:
+            self.val = []
+        self.val.append(data)
+
+    def reset(self) -> None:
+        """Reset for a new step."""
+        self.val = []
+
+
+class ResolutionCyclesState(State[list[dict[str, Any]]]):
+    """Accumulates resolution data across attention cycles within a single step."""
+
+    def __init__(self) -> None:
+        super().__init__("resolution-cycles", display_name="Resolution Cycles")
+        self.val = []
+
+    def append(self, data: dict[str, Any]) -> None:
+        """Append a cycle's resolution data."""
+        if self.val is None:
+            self.val = []
+        self.val.append(data)
+
+    def reset(self) -> None:
+        """Reset for a new step."""
+        self.val = []
+
+
+class AttenuationCyclesState(State[list[dict[str, Any]]]):
+    """Accumulates attenuation data across attention cycles within a single step."""
+
+    def __init__(self) -> None:
+        super().__init__("attenuation-cycles", display_name="Attenuation Cycles")
+        self.val = []
+
+    def append(self, data: dict[str, Any]) -> None:
+        """Append a cycle's attenuation data."""
+        if self.val is None:
+            self.val = []
+        self.val.append(data)
+
+    def reset(self) -> None:
+        """Reset for a new step."""
+        self.val = []
+
+
 class ComponentsState(State[list[str]]):
     """Tracks the list of loaded components."""
 
@@ -619,10 +675,45 @@ class StateList:
     phonemes: CurrentPhonemeState = CurrentPhonemeState()
     resolution: CurrentResolutionState = CurrentResolutionState()
     attenuation_data: CurrentAttenuationState = CurrentAttenuationState()
+    saliency_cycles: SaliencyCyclesState = SaliencyCyclesState()
+    resolution_cycles: ResolutionCyclesState = ResolutionCyclesState()
+    attenuation_cycles: AttenuationCyclesState = AttenuationCyclesState()
     components: ComponentsState = ComponentsState()
 
 
 states = StateList()
+
+
+def _merge_attention_settled_metadata(data: AttentionSettled) -> None:
+    """Merge cycle_metadata fields (focused_point, pre/post IOR peaks) into saliency_cycles.
+
+    Args:
+        data: The AttentionSettled event payload containing per-cycle metadata.
+    """
+    for i, meta in enumerate(data.cycle_metadata):
+        cycle_list = states.saliency_cycles.val
+        if cycle_list is not None and i < len(cycle_list):
+            cycle_list[i]["focused_point"] = meta.get("focused_point")
+            cycle_list[i]["pre_ior_peak"] = meta.get("pre_ior_peak")
+            cycle_list[i]["post_ior_peak"] = meta.get("post_ior_peak")
+
+
+def _accumulate_saliency_cycle(data: VisionAttentionData) -> None:
+    """Update salency/attention states and append a saliency-cycle snapshot.
+
+    Args:
+        data: The VisionAttentionData event payload.
+    """
+    sm_copy = deepcopy(data.saliency_map)
+    states.salency.set(sm_copy)
+    states.attention.set(deepcopy(data))
+    attenuation_snapshot = deepcopy(states.attenuation_data.val) or {}
+    states.saliency_cycles.append(
+        {
+            "saliency": sm_copy.to_html_vals(),
+            "attenuation": attenuation_snapshot,
+        }
+    )
 
 
 def bytes2human(n: int) -> str:
@@ -770,25 +861,188 @@ def _enrich_action_expmod(action_dict: dict[str, Any]) -> None:
         pass
 
 
+def _shape_to_glyph(shape_type: int) -> str:
+    """Convert a numeric shape_type to a display character or numeric string."""
+    return chr(shape_type) if 32 <= shape_type < 127 else str(shape_type)
+
+
+def _build_oi_lookup(last_frame: Any) -> tuple[dict[int, Any], dict[int, str]]:
+    """Build ObjectInstance and glyph lookup dicts from a frame's situated edges.
+
+    Args:
+        last_frame: The frame whose src_edges are scanned for SituatedObjectInstance edges.
+
+    Returns:
+        A tuple of (oi_by_uuid, glyph_by_uuid) dicts.
+    """
+    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+
+    oi_by_uuid: dict[int, Any] = {}
+    glyph_by_uuid: dict[int, str] = {}
+    for e in last_frame.src_edges:
+        if not (isinstance(e, SituatedObjectInstance) and isinstance(e.dst, ObjectInstance)):
+            continue
+        oi = e.dst
+        oi_by_uuid[oi.object_uuid] = oi
+        if oi.shape_type is not None:
+            glyph_by_uuid[oi.object_uuid] = _shape_to_glyph(oi.shape_type)
+    return oi_by_uuid, glyph_by_uuid
+
+
+def _fill_position_values(
+    ch_dict: dict[str, Any], prop_name: str, prop_node: Any, matched_oi: Any
+) -> None:
+    """Derive old/new position values from ObjectInstance when not stored on the node.
+
+    Args:
+        ch_dict: The change dict to populate in-place.
+        prop_name: The property name ('x' or 'y').
+        prop_node: The property transform node (provides delta).
+        matched_oi: The matched ObjectInstance (provides current coordinate).
+    """
+    cur_val = getattr(matched_oi, prop_name, None)
+    delta = getattr(prop_node, "delta", None)
+    if cur_val is not None:
+        ch_dict["new_value"] = cur_val
+        if delta is not None:
+            ch_dict["old_value"] = int(cur_val - delta)
+
+
+def _process_prop_node(prop_node: Any, matched_oi: Any) -> dict[str, Any] | None:
+    """Build a change dict for one property transform node.
+
+    Args:
+        prop_node: The property transform node (has property_name, change_type, delta, etc.).
+        matched_oi: The matched ObjectInstance, or None.
+
+    Returns:
+        A dict describing the property change, or None if property_name is absent.
+    """
+    prop_name = getattr(prop_node, "property_name", None)
+    if prop_name is None:
+        return None
+    ch_dict: dict[str, Any] = {
+        "property": prop_name,
+        "type": getattr(prop_node, "change_type", None),
+        "delta": getattr(prop_node, "delta", None),
+    }
+    old_v = getattr(prop_node, "old_value", None)
+    new_v = getattr(prop_node, "new_value", None)
+    # For position changes, derive old/new from ObjectInstance
+    if prop_name in ("x", "y") and old_v is None and matched_oi is not None:
+        _fill_position_values(ch_dict, prop_name, prop_node, matched_oi)
+    else:
+        if old_v is not None:
+            ch_dict["old_value"] = old_v
+        if new_v is not None:
+            ch_dict["new_value"] = new_v
+    return ch_dict
+
+
+def _process_object_transform(
+    dst: Any, oi_by_uuid: dict[int, Any], glyph_by_uuid: dict[int, str]
+) -> dict[str, Any]:
+    """Build a dict describing one ObjectTransform node and its property changes.
+
+    Args:
+        dst: The ObjectTransform node.
+        oi_by_uuid: Mapping from object_uuid to ObjectInstance.
+        glyph_by_uuid: Mapping from object_uuid to glyph string.
+
+    Returns:
+        A dict with uuid, optional glyph/node_id/color, and a list of property changes.
+    """
+    matched_oi = oi_by_uuid.get(dst.object_uuid)
+    ot_dict: dict[str, Any] = {"uuid": dst.object_uuid}
+    glyph = glyph_by_uuid.get(dst.object_uuid)
+    if glyph is not None:
+        ot_dict["glyph"] = glyph
+    if matched_oi is not None:
+        ot_dict["node_id"] = matched_oi.id
+        if matched_oi.color_type is not None:
+            ot_dict["color"] = str(matched_oi.color_type)
+    ot_changes: list[dict[str, Any]] = []
+    for detail_edge in dst.src_edges:
+        ch_dict = _process_prop_node(detail_edge.dst, matched_oi)
+        if ch_dict is not None:
+            ot_changes.append(ch_dict)
+    ot_dict["changes"] = ot_changes
+    return ot_dict
+
+
+def _process_intrinsic_dst(dst: Any) -> dict[str, Any] | None:
+    """Build a change dict for a non-ObjectTransform transform destination node.
+
+    Args:
+        dst: A node connected to the transform via a Change edge (not an ObjectTransform).
+
+    Returns:
+        A dict describing the intrinsic change, or None if the node has no 'name' attribute.
+    """
+    if not hasattr(dst, "name"):
+        return None
+    change_dict: dict[str, Any] = {
+        "description": str(dst),
+        "type": type(dst).__name__,
+        "name": getattr(dst, "name", None),
+    }
+    if hasattr(dst, "normalized_change"):
+        change_dict["normalized_change"] = dst.normalized_change
+    return change_dict
+
+
+def _get_oi_lookup_from_sequencer() -> tuple[dict[int, Any], dict[int, str]]:
+    """Attempt to build the ObjectInstance lookup by reading the sequencer's last frame.
+
+    Returns:
+        A tuple of (oi_by_uuid, glyph_by_uuid) dicts. Both are empty if the sequencer
+        is unavailable or has no last_frame.
+    """
+    try:
+        from roc.component import (
+            ComponentName as _CN,
+            ComponentType as _CT,
+            loaded_components as _lc,
+        )
+        from roc.sequencer import Sequencer as _Seq
+
+        seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
+        if isinstance(seq_comp, _Seq) and seq_comp.last_frame is not None:
+            return _build_oi_lookup(seq_comp.last_frame)
+    except Exception:
+        pass
+    return {}, {}
+
+
 def _emit_transform_log(current_states: "StateList") -> None:
     """Emit transform summary as an OTel log record."""
     if current_states.transform.val is None:
         return
+
+    oi_by_uuid, glyph_by_uuid = _get_oi_lookup_from_sequencer()
+
     t = current_states.transform.val.transform
     changes: list[dict[str, Any]] = []
+    object_transforms: list[dict[str, Any]] = []
+    from roc.object_transform import ObjectTransform as _OT
+
     for edge in t.src_edges:
         dst = edge.dst
-        change_dict: dict[str, Any] = {"description": str(dst)}
-        if hasattr(dst, "name"):
-            change_dict["type"] = type(dst).__name__
-            change_dict["name"] = dst.name
-        if hasattr(dst, "normalized_change"):
-            change_dict["normalized_change"] = dst.normalized_change
-        changes.append(change_dict)
+        # Only include IntrinsicTransform entries in the changes list
+        # (filter out ObjectTransform, Frame, and other non-intrinsic nodes)
+        if isinstance(dst, _OT):
+            object_transforms.append(_process_object_transform(dst, oi_by_uuid, glyph_by_uuid))
+            continue
+        change_dict = _process_intrinsic_dst(dst)
+        if change_dict is not None:
+            changes.append(change_dict)
+    summary: dict[str, Any] = {"count": len(changes), "changes": changes}
+    if object_transforms:
+        summary["object_transforms"] = object_transforms
     _emit_state_record(
         "roc.transform_summary",
         json.dumps(
-            {"count": len(changes), "changes": changes},
+            summary,
             separators=(",", ":"),
             default=str,
         ),
@@ -818,20 +1072,113 @@ def _emit_sequence_log(current_states: "StateList") -> None:
         pass
 
 
+def _build_oi_cycle_lookup(frame: Any) -> tuple[dict[int, Any], dict[int, int]]:
+    """Build ObjectInstance and cycle-number lookup dicts from a frame's situated edges.
+
+    Args:
+        frame: The frame whose src_edges are scanned for SituatedObjectInstance edges.
+
+    Returns:
+        A tuple of (oi_by_uuid, oi_cycle_number) dicts.
+    """
+    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+
+    oi_by_uuid: dict[int, Any] = {}
+    oi_cycle_number: dict[int, int] = {}
+    cycle_counter = 0
+    for e in frame.src_edges:
+        if isinstance(e, SituatedObjectInstance) and isinstance(e.dst, ObjectInstance):
+            cycle_counter += 1
+            oi_by_uuid[e.dst.object_uuid] = e.dst
+            oi_cycle_number[e.dst.object_uuid] = cycle_counter
+    return oi_by_uuid, oi_cycle_number
+
+
+def _collect_matched_uuids(current_states: "StateList") -> set[int]:
+    """Return the set of object UUIDs that appear in the current transform result.
+
+    Args:
+        current_states: The current StateList.
+
+    Returns:
+        A set of object UUIDs with a matching transform entry.
+    """
+    matched_uuids: set[int] = set()
+    if current_states.transform.val is not None:
+        t = current_states.transform.val.transform
+        for edge in t.src_edges:
+            if hasattr(edge.dst, "object_uuid"):
+                matched_uuids.add(edge.dst.object_uuid)
+    return matched_uuids
+
+
+def _enrich_obj_dict_from_oi(
+    obj_dict: dict[str, Any],
+    oi: Any,
+    obj_uuid: int | None,
+    oi_cycle_number: dict[int, int],
+    matched_uuids: set[int],
+) -> None:
+    """Populate obj_dict with position and appearance data from an ObjectInstance.
+
+    Args:
+        obj_dict: The dict to populate in-place.
+        oi: The matched ObjectInstance.
+        obj_uuid: The object UUID (used for matched_previous and cycle_number lookup).
+        oi_cycle_number: Mapping from object_uuid to attention-cycle order.
+        matched_uuids: Set of UUIDs that have a corresponding transform entry.
+    """
+    obj_dict["x"] = oi.x
+    obj_dict["y"] = oi.y
+    if oi.shape_type is not None:
+        obj_dict["glyph"] = chr(oi.shape_type) if 32 <= oi.shape_type < 127 else str(oi.shape_type)
+        obj_dict["shape"] = oi.shape_type
+    if oi.color_type is not None:
+        obj_dict["color"] = oi.color_type
+    obj_dict["matched_previous"] = obj_uuid in matched_uuids
+    if obj_uuid in oi_cycle_number:
+        obj_dict["cycle_number"] = oi_cycle_number[obj_uuid]
+
+
+def _build_obj_dict(
+    obj: Any,
+    oi_by_uuid: dict[int, Any],
+    oi_cycle_number: dict[int, int],
+    matched_uuids: set[int],
+) -> dict[str, Any]:
+    """Build a summary dict for one object in a sequence frame.
+
+    Args:
+        obj: The Object node.
+        oi_by_uuid: Mapping from object_uuid to ObjectInstance.
+        oi_cycle_number: Mapping from object_uuid to attention-cycle order.
+        matched_uuids: Set of UUIDs that have a corresponding transform entry.
+
+    Returns:
+        A dict with position, glyph, color, shape, cycle number, and resolve count.
+    """
+    obj_dict: dict[str, Any] = {"id": str(obj.id)[:8]}
+    obj_uuid = getattr(obj, "uuid", None)
+    oi = oi_by_uuid.get(obj_uuid) if obj_uuid is not None else None
+    if oi is not None:
+        _enrich_obj_dict_from_oi(obj_dict, oi, obj_uuid, oi_cycle_number, matched_uuids)
+    elif hasattr(obj, "last_x") and hasattr(obj, "last_y"):
+        obj_dict["x"] = obj.last_x
+        obj_dict["y"] = obj.last_y
+    if hasattr(obj, "resolve_count"):
+        obj_dict["resolve_count"] = obj.resolve_count
+    return obj_dict
+
+
 def _build_sequence_dict(frame: Any, current_states: "StateList") -> dict[str, Any]:
     """Build the sequence summary dict from a frame."""
     from roc.intrinsic import IntrinsicNode
 
     objs = frame.objects
-    obj_dicts: list[dict[str, Any]] = []
-    for obj in objs:
-        obj_dict: dict[str, Any] = {"id": str(obj.id)[:8]}
-        if hasattr(obj, "last_x") and hasattr(obj, "last_y"):
-            obj_dict["x"] = obj.last_x
-            obj_dict["y"] = obj.last_y
-        if hasattr(obj, "resolve_count"):
-            obj_dict["resolve_count"] = obj.resolve_count
-        obj_dicts.append(obj_dict)
+    oi_by_uuid, oi_cycle_number = _build_oi_cycle_lookup(frame)
+    matched_uuids = _collect_matched_uuids(current_states)
+
+    obj_dicts = [_build_obj_dict(obj, oi_by_uuid, oi_cycle_number, matched_uuids) for obj in objs]
 
     intrinsic_snapshot: dict[str, float] = {}
     for t_node in frame.transformable:
@@ -940,6 +1287,22 @@ def _emit_event_summary_log() -> None:
         _emit_state_record(
             "roc.event.summary",
             json.dumps(step_counts, separators=(",", ":")),
+        )
+
+
+def _emit_cycle_logs(current_states: "StateList") -> None:
+    """Emit per-cycle saliency and resolution data as OTel log records."""
+    sc = current_states.saliency_cycles.val
+    if sc:
+        _emit_state_record(
+            "roc.saliency_cycles",
+            json.dumps(sc, separators=(",", ":"), default=str),
+        )
+    rc = current_states.resolution_cycles.val
+    if rc:
+        _emit_state_record(
+            "roc.resolution_cycles",
+            json.dumps(rc, separators=(",", ":"), default=str),
         )
 
 
