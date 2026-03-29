@@ -11,7 +11,23 @@ from roc.component import Component
 from roc.event import Event, EventBus
 from roc.graphdb import Edge, EdgeConnectionsList, Node
 from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.object import FeatureGroup, Object, ObjectResolver, ResolvedObject
+from roc.object import (
+    FeatureGroup,
+    Features,
+    Object,
+    ObjectResolver,
+    ResolvedObject,
+    ResolutionContext,
+)
+from roc.object_instance import (
+    FrameFeatures,
+    ObjectInstance,
+    ObservedAs,
+    RelationshipGroup,
+    Relationships,
+    SituatedObjectInstance,
+)
+from roc.perception import FeatureKind
 from roc.transformable import Transform, Transformable
 
 tick = 0
@@ -25,6 +41,28 @@ def get_next_tick() -> int:
     tick += 1
 
     return tick
+
+
+def _collect_legacy_objects(frame: Frame, ret: list[Object], seen: set[int]) -> None:
+    """Collect Objects via legacy Frame -> FeatureGroup -> Object path."""
+    for e in frame.src_edges:
+        if not isinstance(e.dst, FeatureGroup):
+            continue
+        for fg_edge in e.dst.src_edges:
+            if isinstance(fg_edge.dst, Object) and fg_edge.dst.id not in seen:
+                seen.add(fg_edge.dst.id)
+                ret.append(fg_edge.dst)
+
+
+def _collect_instance_objects(frame: Frame, ret: list[Object], seen: set[int]) -> None:
+    """Collect Objects via new Frame -> ObjectInstance -> Object path."""
+    for e in frame.src_edges:
+        if not isinstance(e, SituatedObjectInstance):
+            continue
+        for oi_edge in e.dst.src_edges:
+            if isinstance(oi_edge, ObservedAs) and oi_edge.dst.id not in seen:
+                seen.add(oi_edge.dst.id)
+                ret.append(oi_edge.dst)  # type: ignore[arg-type]
 
 
 class Frame(Node):
@@ -68,16 +106,16 @@ class Frame(Node):
 
     @property
     def objects(self) -> list[Object]:
-        """All Objects referenced by this frame's feature groups."""
+        """All Objects referenced by this frame.
+
+        Traverses two paths:
+        - Legacy: Frame -> FeatureGroup (any edge) -> Object (via Features)
+        - New: Frame -> ObjectInstance (via SituatedObjectInstance) -> Object (via ObservedAs)
+        """
         ret: list[Object] = []
-
-        for e in self.src_edges:
-            if isinstance(e.dst, FeatureGroup):
-                feature_group = e.dst
-                for fg_edge in feature_group.src_edges:
-                    if isinstance(fg_edge.dst, Object):
-                        ret.append(fg_edge.dst)
-
+        seen: set[int] = set()
+        _collect_legacy_objects(self, ret, seen)
+        _collect_instance_objects(self, ret, seen)
         return ret
 
 
@@ -85,7 +123,6 @@ class FrameAttribute(Edge):
     """An edge connecting a Frame to its constituent data (features, actions, intrinsics)."""
 
     allowed_connections: EdgeConnectionsList = [
-        ("Frame", "FeatureGroup"),
         ("Frame", "TakeAction"),
         ("TakeAction", "Frame"),
         ("Frame", "IntrinsicNode"),
@@ -127,8 +164,47 @@ class Sequencer(Component):
         )
 
     def handle_object_resolution_event(self, e: Event[ResolvedObject]) -> None:
-        """Attaches a resolved object's feature group to the current frame."""
-        FrameAttribute.connect(self.current_frame, e.data.feature_group)
+        """Creates an ObjectInstance and attaches it to the current frame.
+
+        Splits features by FeatureKind: PHYSICAL features stay in a FeatureGroup,
+        RELATIONAL features go into a RelationshipGroup. Both are linked to the
+        ObjectInstance.
+
+        Graph connections created:
+        - Frame -[FrameFeatures]-> FeatureGroup (physical features)
+        - Frame -[SituatedObjectInstance]-> ObjectInstance
+        - ObjectInstance -[ObservedAs]-> Object
+        - ObjectInstance -[Features]-> FeatureGroup (physical)
+        - ObjectInstance -[Relationships]-> RelationshipGroup (relational)
+        """
+        rd = e.data
+
+        # Split features by kind
+        physical_nodes = [
+            fn for fn in rd.feature_group.feature_nodes if fn.kind == FeatureKind.PHYSICAL
+        ]
+        relational_nodes = [
+            fn for fn in rd.feature_group.feature_nodes if fn.kind == FeatureKind.RELATIONAL
+        ]
+
+        # Create split groups
+        phys_fg = FeatureGroup.from_nodes(physical_nodes)
+        rg = RelationshipGroup.from_nodes(relational_nodes) if relational_nodes else None
+
+        ctx = ResolutionContext(x=rd.x, y=rd.y, tick=tick)
+        oi = ObjectInstance.from_resolution(rd.object, phys_fg, ctx, rg=rg)
+
+        # Attach FeatureGroup to frame
+        FrameFeatures.connect(self.current_frame, phys_fg)
+        # Link ObjectInstance into frame
+        SituatedObjectInstance.connect(self.current_frame, oi)
+        # Link ObjectInstance to persistent Object
+        ObservedAs.connect(oi, rd.object)
+        # Link ObjectInstance to its physical FeatureGroup
+        Features.connect(oi, phys_fg)
+        # Link ObjectInstance to relational features
+        if rg is not None:
+            Relationships.connect(oi, rg)
 
     def handle_intrinsic_event(self, e: Event[IntrinsicData]) -> None:
         """Attaches intrinsic nodes to the current frame."""

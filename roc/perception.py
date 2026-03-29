@@ -121,7 +121,10 @@ class Direction(str, Enum):
 class Detail(Edge):
     """An edge connecting a FeatureGroup to one of its FeatureNodes."""
 
-    allowed_connections: EdgeConnectionsList = [("FeatureGroup", "FeatureNode")]
+    allowed_connections: EdgeConnectionsList = [
+        ("FeatureGroup", "FeatureNode"),
+        ("RelationshipGroup", "FeatureNode"),
+    ]
 
 
 class FeatureKind(Enum):

@@ -60,7 +60,14 @@ class VisionAttentionData:
         return f"{str(dg)}\n\nFocus Points:\n{self.focus_points}"
 
 
-AttentionData = VisionAttentionData
+@dataclass
+class AttentionSettled:
+    """Sentinel: all attention cycles for this frame are complete."""
+
+    cycle_metadata: list[dict[str, Any]]
+
+
+AttentionData = VisionAttentionData | AttentionSettled
 AttentionEvent = Event[AttentionData]
 
 
@@ -94,21 +101,43 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         return str(self.to_debug_grid())
 
     def to_debug_grid(self) -> DebugGrid:
-        """Converts the saliency map to a color-coded debug grid for visualization."""
+        """Converts the saliency map to a color-coded debug grid for visualization.
+
+        If IOR attenuation has been applied (via get_focus()), uses the attenuated
+        strengths so each cycle's map visually shows the IOR suppression effect.
+        """
         assert self.grid is not None
         dg = DebugGrid(self.grid)
-        max_str = self.get_max_strength()
+        att = getattr(self, "_attenuated_strengths", None)
 
-        # prevent divide by zero
+        if att is not None:
+            self._apply_attenuated_colors(dg, att)
+        else:
+            self._apply_raw_colors(dg)
+
+        return dg
+
+    def _apply_attenuated_colors(self, dg: DebugGrid, att: npt.NDArray[Any]) -> None:
+        """Apply IOR-attenuated strength colors to the debug grid."""
+        assert self.grid is not None
+        max_val = float(att.max()) if att.size > 0 else 1.0
+        if max_val == 0:
+            max_val = 1.0
+        for p in self.grid.points():
+            rel_strength = float(att[p.x, p.y]) / max_val
+            color = DebugGrid.blue_to_red_hue(rel_strength)
+            dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
+
+    def _apply_raw_colors(self, dg: DebugGrid) -> None:
+        """Apply raw saliency strength colors to the debug grid."""
+        assert self.grid is not None
+        max_str = self.get_max_strength()
         if max_str == 0:
             max_str = 1
-
         for p in self.grid.points():
             rel_strength = self.get_strength(p.x, p.y) / max_str
             color = DebugGrid.blue_to_red_hue(rel_strength)
             dg.set_style(p.x, p.y, back_brightness=1, back_hue=color)
-
-        return dg
 
     def to_html_vals(self) -> dict[str, list[list[str | int]]]:
         """Returns the saliency map as HTML-friendly character, foreground, and background values."""
@@ -124,6 +153,9 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         sm = SaliencyMap(deepcopy(self.grid))
         for row, col in np.ndindex(self.shape):
             sm[row, col] = self[row, col].copy()
+        att = getattr(self, "_attenuated_strengths", None)
+        if att is not None:
+            sm._attenuated_strengths = att.copy()
         return sm
 
     def clear(self) -> None:
@@ -220,6 +252,9 @@ class SaliencyMap(Grid[list[VisualFeature[Any]]]):
         pre_peak = np.unravel_index(np.argmax(fkimg), fkimg.shape)
         fkimg = attenuation.attenuate(fkimg, self)
         post_peak = np.unravel_index(np.argmax(fkimg), fkimg.shape)
+
+        # Store attenuated strengths so to_debug_grid() can visualize IOR
+        self._attenuated_strengths = fkimg
 
         # Find isolated peaks via morphological reconstruction. Floods inward
         # from image borders; only cells higher than the flood survive as peaks.
@@ -360,9 +395,9 @@ def _emit_attenuation_log(
 
     from roc.reporting.state import State
 
-    State.get_states().attenuation_data.set(
-        {k: v for k, v in log_record.items() if k != "saliency_grid"}
-    )
+    attenuation_record = {k: v for k, v in log_record.items() if k != "saliency_grid"}
+    State.get_states().attenuation_data.set(attenuation_record)
+    State.get_states().attenuation_cycles.append(attenuation_record)
 
 
 def _add_flavor_fields(log_record: dict[str, Any], attenuation: Any) -> None:
@@ -412,40 +447,84 @@ class VisionAttention(Attention):
     @Observability.tracer.start_as_current_span("do_attention")
     def do_attention(self, e: PerceptionEvent) -> None:
         """Accumulates features into the saliency map and emits focus when all extractors settle."""
-        # create right-sized SaliencyMap based on VisionData
         if isinstance(e.data, VisionData):
             self.saliency_map.grid = IntGrid(e.data.chars)
             return
 
-        # check to see if all feature extractors have settled
         if isinstance(e.data, Settled):
-            self.settled.add(str(e.src_id))
-
-            unsettled = set(FeatureExtractor.list()) - self.settled
-            if len(unsettled) == 0:
-                assert self.saliency_map is not None
-                focus_points = self.saliency_map.get_focus()
-
-                self.att_conn.send(
-                    VisionAttentionData(
-                        focus_points=focus_points,
-                        saliency_map=self.saliency_map,
-                    )
-                )
-
-                # reset
-                self.settled.clear()
-                self.saliency_map = SaliencyMap()
-
+            self._handle_settled(e.src_id)
             return
 
         # register each location in the saliency map
         assert isinstance(e.data, VisualFeature)
         f = e.data
-
-        # create saliency map
         for p in f.get_points():
             self.saliency_map.add_val(p[0], p[1], f)
+
+    def _handle_settled(self, src_id: Any) -> None:
+        """Track settled extractors and trigger attention cycles once all have settled."""
+        self.settled.add(str(src_id))
+        unsettled = set(FeatureExtractor.list()) - self.settled
+        if len(unsettled) > 0:
+            return
+
+        assert self.saliency_map is not None
+        cycle_metadata = self._run_attention_cycles()
+        self.att_conn.send(AttentionSettled(cycle_metadata=cycle_metadata))
+
+        # reset
+        self.settled.clear()
+        self.saliency_map = SaliencyMap()
+
+    def _run_attention_cycles(self) -> list[dict[str, Any]]:
+        """Run all attention cycles, emitting focus data for each, and return cycle metadata."""
+        cycles = Config.get().attention_cycles
+        cycle_metadata: list[dict[str, Any]] = []
+
+        for _cycle in range(cycles):
+            focus_points = self.saliency_map.get_focus()
+            if len(focus_points) == 0:
+                break
+
+            cycle_metadata.append(self._build_cycle_metadata(focus_points))
+            self.att_conn.send(
+                VisionAttentionData(
+                    focus_points=focus_points,
+                    saliency_map=deepcopy(self.saliency_map),
+                )
+            )
+
+        return cycle_metadata
+
+    def _build_cycle_metadata(self, focus_points: DataSet[VisionAttentionSchema]) -> dict[str, Any]:
+        """Build the metadata dict for one attention cycle using IOR peak data."""
+        from roc.reporting.state import State
+
+        top = focus_points.iloc[0]
+        att_data = State.get_states().attenuation_data.val
+        pre_peak = att_data.get("pre_peak") if att_data else None
+        post_peak = att_data.get("post_peak") if att_data else None
+        top_x = int(top["x"])
+        top_y = int(top["y"])
+        top_strength = float(top["strength"])
+
+        return {
+            "pre_ior_peak": {
+                "x": int(pre_peak[0]) if pre_peak else top_x,
+                "y": int(pre_peak[1]) if pre_peak else top_y,
+                "strength": top_strength,
+            },
+            "post_ior_peak": {
+                "x": int(post_peak[0]) if post_peak else top_x,
+                "y": int(post_peak[1]) if post_peak else top_y,
+                "strength": top_strength,
+            },
+            "focused_point": {
+                "x": top_x,
+                "y": top_y,
+                "strength": top_strength,
+            },
+        }
 
 
 # TODO: other attention classes

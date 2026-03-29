@@ -147,6 +147,8 @@ class Config(BaseSettings):
     expmod_dirs: list[str] = ["experiments/modules"]
     expmods: list[str] = []
     expmods_use: list[tuple[str, str]] = [("action", "weighted")]
+    # attention config
+    attention_cycles: int = 4
     # saliency-attenuation/linear-decline config
     saliency_attenuation_capacity: int = 5
     saliency_attenuation_radius: int = 3

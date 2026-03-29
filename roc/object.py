@@ -21,7 +21,7 @@ from opentelemetry._logs import SeverityNumber
 from opentelemetry._logs import LogRecord
 from pydantic import Field
 
-from .attention import Attention, AttentionEvent
+from .attention import Attention, AttentionEvent, VisionAttentionData
 from .component import Component
 from .event import EventBus
 from .expmod import ExpMod
@@ -50,7 +50,10 @@ _feature_to_objects: dict[NodeId, set[NodeId]] = defaultdict(set)
 class Features(Edge):
     """An edge connecting an Object to its FeatureGroups."""
 
-    allowed_connections: EdgeConnectionsList = [("Object", "FeatureGroup")]
+    allowed_connections: EdgeConnectionsList = [
+        ("Object", "FeatureGroup"),
+        ("ObjectInstance", "FeatureGroup"),
+    ]
 
 
 class Object(Node):
@@ -113,10 +116,12 @@ class Object(Node):
     @property
     def frames(self) -> list[Frame]:
         """All frames that reference this object."""
+        from .sequencer import Frame as _Frame
+
         ret: list[Frame] = []
 
         for e in self.dst_edges:
-            if isinstance(e.src, Frame):
+            if isinstance(e.src, _Frame):
                 ret.append(e.src)
 
         return ret
@@ -394,6 +399,7 @@ class SymmetricDifferenceResolution(ObjectResolutionExpMod):
         from roc.reporting.state import State
 
         State.get_states().resolution.set(record)
+        State.get_states().resolution_cycles.append(record)
 
     @Observability.tracer.start_as_current_span("find_candidate_objects")
     def _find_candidates(
@@ -576,6 +582,32 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         log_posteriors = self._compute_posteriors(log_priors, log_likelihoods)
 
         # Log detailed posterior breakdown
+        self._log_posterior_breakdown(log_posteriors, log_likelihoods, log_priors)
+
+        # Step 5: Decision
+        result = self._decide(candidates, log_posteriors)
+
+        # Step 6: Update alphas if matched
+        self._log_resolution_outcome(result, candidates, feature_strs, log_posteriors, context)
+
+        # Log the decision
+        log_data.log_posteriors = log_posteriors
+        self._log_decision(
+            "match" if result is not None else "new_object",
+            result,
+            candidates,
+            log_data,
+        )
+
+        return result
+
+    def _log_posterior_breakdown(
+        self,
+        log_posteriors: dict[NodeId | str, float],
+        log_likelihoods: dict[NodeId | str, float],
+        log_priors: dict[NodeId | str, float],
+    ) -> None:
+        """Log per-candidate posterior probability breakdown at DEBUG level."""
         for k in sorted(log_posteriors, key=lambda k: log_posteriors[k], reverse=True):
             label = "new" if k == "new" else f"obj:{k}"
             lp = log_posteriors[k]
@@ -594,10 +626,15 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
                 alpha_sum,
             )
 
-        # Step 5: Decision
-        result = self._decide(candidates, log_posteriors)
-
-        # Step 6: Update alphas if matched
+    def _log_resolution_outcome(
+        self,
+        result: Object | None,
+        candidates: list[Object],
+        feature_strs: list[str],
+        log_posteriors: dict[NodeId | str, float],
+        context: ResolutionContext,
+    ) -> None:
+        """Update alphas and log the resolution outcome (match or new object)."""
         if result is not None:
             self._update_alphas(result.id, feature_strs)
             logger.info(
@@ -621,17 +658,6 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
                 feature_strs,
             )
 
-        # Log the decision
-        log_data.log_posteriors = log_posteriors
-        self._log_decision(
-            "match" if result is not None else "new_object",
-            result,
-            candidates,
-            log_data,
-        )
-
-        return result
-
     def _find_candidates(self, feature_nodes: Collection[FeatureNode]) -> list[Object]:
         """Find candidate Objects using reverse index (PHYSICAL features only).
 
@@ -647,21 +673,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
             if fn.kind != FeatureKind.PHYSICAL:
                 continue
             obj_ids = _feature_to_objects.get(fn.id, ())
-            if obj_ids:
-                logger.debug(
-                    "[dirichlet] reverse-index HIT: fn.id={} ({}) -> {} objects",
-                    fn.id,
-                    str(fn),
-                    len(obj_ids),
-                )
-            else:
-                logger.debug(
-                    "[dirichlet] reverse-index MISS: fn.id={} ({}) not in index "
-                    "(index has {} feature entries)",
-                    fn.id,
-                    str(fn),
-                    len(_feature_to_objects),
-                )
+            self._log_index_lookup(fn, obj_ids)
             for obj_id in obj_ids:
                 if obj_id not in seen:
                     seen.add(obj_id)
@@ -670,6 +682,24 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
                     candidates.append(obj)
 
         return candidates
+
+    def _log_index_lookup(self, fn: FeatureNode, obj_ids: set[NodeId] | tuple[()]) -> None:
+        """Log whether a feature node hit or missed the reverse index."""
+        if obj_ids:
+            logger.debug(
+                "[dirichlet] reverse-index HIT: fn.id={} ({}) -> {} objects",
+                fn.id,
+                str(fn),
+                len(obj_ids),
+            )
+        else:
+            logger.debug(
+                "[dirichlet] reverse-index MISS: fn.id={} ({}) not in index "
+                "(index has {} feature entries)",
+                fn.id,
+                str(fn),
+                len(_feature_to_objects),
+            )
 
     def _filter_features(self, feature_nodes: Collection[FeatureNode]) -> list[FeatureNode]:
         """Keep only PHYSICAL features, then remove any in excluded_feature_labels."""
@@ -929,6 +959,7 @@ class DirichletCategoricalResolution(ObjectResolutionExpMod):
         from roc.reporting.state import State
 
         State.get_states().resolution.set(record)
+        State.get_states().resolution_cycles.append(record)
 
 
 @dataclass
@@ -974,7 +1005,11 @@ class ObjectResolver(Component):
         )
 
     def event_filter(self, e: AttentionEvent) -> bool:
-        """Only process events from the vision attention component."""
+        """Only process events from the vision attention component. Skip AttentionSettled."""
+        from .attention import AttentionSettled
+
+        if isinstance(e.data, AttentionSettled):
+            return False
         return e.src_id.name == "vision" and e.src_id.type == "attention"
 
     def _record_existing_match(self, o: Object, x: XLoc, y: YLoc, current_tick: int) -> None:
@@ -1040,6 +1075,7 @@ class ObjectResolver(Component):
     @Observability.tracer.start_as_current_span("do_object_resolution")
     def do_object_resolution(self, e: AttentionEvent) -> None:
         """Resolves the highest-saliency focus point to an existing or new object."""
+        assert isinstance(e.data, VisionAttentionData)
         # TODO: instead of just taking the first focus_point (highest saliency
         # strength) we probably want to adjust the strength for known objects /
         # novel objects
@@ -1057,6 +1093,7 @@ class ObjectResolver(Component):
 
         if o is not None:
             self._record_existing_match(o, x, y, current_tick)
+            Features.connect(o, fg)
         else:
             o = self._handle_new_object(fg, x, y, resolution)
 
