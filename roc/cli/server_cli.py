@@ -27,8 +27,8 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     import socketio
     import uvicorn
 
-    from roc.config import Config
-    from roc.dashboard_cli import _mount_static_files, _resolve_ssl_certs
+    from roc.framework.config import Config
+    from roc.cli.dashboard_cli import _mount_static_files, _resolve_ssl_certs
     from roc.reporting.api_server import app, sio
 
     cfg = Config.get()
@@ -49,7 +49,7 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     proto = "https" if ssl_certfile else "http"
 
     # Initialize game manager for /api/game/* endpoints
-    from roc.game_manager import GameManager
+    from roc.game.game_manager import GameManager
 
     game_mgr = GameManager(
         data_dir=data_dir,

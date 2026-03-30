@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import Field
 
-from .graphdb import Edge, EdgeConnectionsList, Node
+from ...db.graphdb import Edge, EdgeConnectionsList, Node
 from .object import ObjectId
-from .transformable import Transform
+from ..temporal.transformable import Transform
 
 if TYPE_CHECKING:
     from .object_instance import ObjectInstance

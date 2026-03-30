@@ -4,7 +4,7 @@
 
 import pytest
 
-from roc.config import (
+from roc.framework.config import (
     Config,
     ConfigBoolIntrinsic,
     ConfigInitWarning,

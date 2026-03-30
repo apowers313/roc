@@ -5,7 +5,7 @@ the actual IDs may be offset if the internal counter has been incremented by pri
 data loads. These helpers detect the offset and translate IDs.
 """
 
-from roc.graphdb import GraphDB
+from roc.db.graphdb import GraphDB
 
 
 def _detect_got_id_offset() -> tuple[int, int]:

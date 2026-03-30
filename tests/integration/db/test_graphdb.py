@@ -14,7 +14,7 @@ from pydantic import Field, ValidationError
 
 from helpers.got_ids import got_edge_id, got_edge_ids, got_node_id, got_node_ids
 
-from roc.graphdb import (
+from roc.db.graphdb import (
     Edge,
     EdgeConnectionsList,
     EdgeId,

@@ -6,9 +6,9 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, cast
 
-from .component import Component
-from .event import Event, EventBus
-from .graphdb import Edge, EdgeConnectionsList
+from ...framework.component import Component
+from ...framework.event import Event, EventBus
+from ...db.graphdb import Edge, EdgeConnectionsList
 from .sequencer import Frame, Sequencer
 from .transformable import Transform, Transformable
 
@@ -88,7 +88,7 @@ def _select_transformable_edges(frame: Frame) -> list[Any]:
 
 def _get_ambiguous_uuids(frame: Frame) -> set[int]:
     """Return Object uuids that have multiple ObjectInstances in a frame."""
-    from .object_instance import ObjectInstance
+    from ..object.object_instance import ObjectInstance
 
     edges = _select_transformable_edges(frame)
     uuid_counts: Counter[int] = Counter()
@@ -100,8 +100,8 @@ def _get_ambiguous_uuids(frame: Frame) -> set[int]:
 
 def _connect_transform_result(transform_node: Any, ret: Transform) -> None:
     """Connect a created transform to the result and link ObjectTransforms to their parent Object."""
-    from .object import Object
-    from .object_transform import ObjectHistory, ObjectTransform
+    from ..object.object import Object
+    from ..object.object_transform import ObjectHistory, ObjectTransform
 
     Change.connect(ret, transform_node)
     if isinstance(transform_node, ObjectTransform):
@@ -121,7 +121,7 @@ def _compute_node_transforms(cn: Transformable, previous_edges: list[Any], ret: 
 
 def _compute_transforms(current_frame: Frame, previous_frame: Frame) -> Transform:
     """Compute all transforms between two consecutive frames."""
-    from .object_instance import ObjectInstance
+    from ..object.object_instance import ObjectInstance
 
     current_edges = _select_transformable_edges(current_frame)
     previous_edges = _select_transformable_edges(previous_frame)

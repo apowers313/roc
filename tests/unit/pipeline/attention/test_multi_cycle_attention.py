@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.attention import AttentionSettled, VisionAttentionData
-from roc.config import Config
-from roc.location import XLoc, YLoc
-from roc.object import ObjectId
-from roc.object_instance import ObjectInstance, SituatedObjectInstance
-from roc.transformer import _compute_transforms, _get_ambiguous_uuids
+from roc.pipeline.attention.attention import AttentionSettled, VisionAttentionData
+from roc.framework.config import Config
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import ObjectId
+from roc.pipeline.object.object_instance import ObjectInstance, SituatedObjectInstance
+from roc.pipeline.temporal.transformer import _compute_transforms, _get_ambiguous_uuids
 
 
 @pytest.fixture(autouse=True)
@@ -20,7 +20,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -53,7 +53,7 @@ class TestAttentionCyclesConfig:
 class TestObjectResolverSkipsSettled:
     def test_event_filter_behavior(self):
         """ObjectResolver filters out AttentionSettled but accepts VisionAttentionData."""
-        from roc.object import ObjectResolver
+        from roc.pipeline.object.object import ObjectResolver
 
         resolver = ObjectResolver()
         try:
@@ -78,7 +78,7 @@ class TestObjectResolverSkipsSettled:
 class TestTransformerAmbiguity:
     @pytest.fixture(autouse=True)
     def reset_tick(self):
-        import roc.sequencer as seq
+        import roc.pipeline.temporal.sequencer as seq
 
         original = seq.tick
         seq.tick = 0
@@ -87,7 +87,7 @@ class TestTransformerAmbiguity:
 
     def test_get_ambiguous_uuids_detects_duplicates(self):
         """Two ObjectInstances with the same uuid in a frame -> ambiguous."""
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         frame = Frame()
         oi1 = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(1), y=YLoc(1), tick=1)
@@ -100,7 +100,7 @@ class TestTransformerAmbiguity:
 
     def test_get_ambiguous_uuids_unique_not_flagged(self):
         """Single ObjectInstance per uuid -> not ambiguous."""
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         frame = Frame()
         oi1 = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(1), y=YLoc(1), tick=1)
@@ -113,7 +113,7 @@ class TestTransformerAmbiguity:
 
     def test_skips_multi_instance_same_uuid(self):
         """2 ObjectInstance(uuid=X) in frame1 -> no transform for X."""
-        from roc.sequencer import Frame, NextFrame
+        from roc.pipeline.temporal.sequencer import Frame, NextFrame
 
         frame1 = Frame()
         frame2 = Frame()
@@ -136,7 +136,7 @@ class TestTransformerAmbiguity:
 
     def test_unique_instance_still_gets_transform(self):
         """uuid=X unique in both frames -> ObjectTransform computed."""
-        from roc.sequencer import Frame, NextFrame
+        from roc.pipeline.temporal.sequencer import Frame, NextFrame
 
         frame1 = Frame()
         frame2 = Frame()
@@ -159,7 +159,7 @@ class TestTransformerAmbiguity:
         transform = _compute_transforms(frame2, frame1)
         # Should have a transform for uuid 42 (moved from (1,1) to (3,3))
         # but NOT for uuid 99 (ambiguous in frame1)
-        from roc.object_transform import ObjectTransform
+        from roc.pipeline.object.object_transform import ObjectTransform
 
         child_edges = transform.src_edges.select(type="Change")
         object_transforms = [e.dst for e in child_edges if isinstance(e.dst, ObjectTransform)]

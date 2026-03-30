@@ -4,7 +4,7 @@
 
 import pytest
 
-from roc.significance import SignificanceData
+from roc.pipeline.significance import SignificanceData
 
 
 class TestSignificanceData:

@@ -9,7 +9,7 @@ from typing import Dict, Optional
 
 from tabulate import tabulate
 
-from .logger import logger
+from ..framework.logger import logger
 
 type ConditionFn = Callable[[], bool]
 

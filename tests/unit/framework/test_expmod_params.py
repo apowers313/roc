@@ -4,7 +4,7 @@
 
 import pytest
 
-from roc.expmod import ExpMod, expmod_registry
+from roc.framework.expmod import ExpMod, expmod_registry
 
 
 class TestParamsDict:

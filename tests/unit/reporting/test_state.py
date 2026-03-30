@@ -16,7 +16,7 @@ def mock_db():
     mock.strict_schema_warns = False
     mock.node_counter = MagicMock()
     mock.edge_counter = MagicMock()
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -356,7 +356,7 @@ class TestStatePrintStartupInfo:
 
 class TestEmitStateLogs:
     def test_emit_state_logs_all_none(self):
-        from roc.event import Event
+        from roc.framework.event import Event
         from roc.reporting.state import State, states
 
         Event._step_counts.clear()
@@ -375,8 +375,8 @@ class TestEmitStateLogs:
     def test_emit_state_logs_with_screen(self):
         import json
 
-        from roc.config import Config
-        from roc.event import Event
+        from roc.framework.config import Config
+        from roc.framework.event import Event
         from roc.reporting.state import State, states
 
         cfg = Config.get()
@@ -420,14 +420,14 @@ class TestSaliencySync:
         import pandas as pd
         from strictly_typed_pandas import DataSet
 
-        from roc.attention import (
+        from roc.pipeline.attention.attention import (
             Attention,
             AttentionSettled,
             SaliencyMap,
             VisionAttentionData,
             VisionAttentionSchema,
         )
-        from roc.event import Event
+        from roc.framework.event import Event
         from roc.reporting.state import states
 
         # Set a known saliency value

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from roc.component import (
+from roc.framework.component import (
     Component,
     ComponentId,
     ComponentKey,
@@ -17,7 +17,7 @@ from roc.component import (
     component_set,
     loaded_components,
 )
-from roc.event import EventBus, eventbus_names
+from roc.framework.event import EventBus, eventbus_names
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,4 @@
-from roc.graphdb import Node
+from roc.db.graphdb import Node
 
 
 class GotCharacter(Node, extra="ignore"):

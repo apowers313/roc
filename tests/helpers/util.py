@@ -4,8 +4,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from roc.component import Component
-from roc.event import BusConnection, Event, EventBus, EventFilter
+from roc.framework.component import Component
+from roc.framework.event import BusConnection, Event, EventBus, EventFilter
 
 
 def normalize_whitespace(s: str) -> str:

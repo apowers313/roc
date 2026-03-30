@@ -6,7 +6,7 @@ from typing import Any
 
 from IPython.core.magic import Magics, line_magic, magics_class
 
-from roc.logger import logger
+from roc.framework.logger import logger
 
 from .brk import brk_cli
 from .cont import cont_cli

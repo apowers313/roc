@@ -3,9 +3,9 @@
 
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.feature_extractors.phoneme import Phoneme, PhonemeFeature, PhonemeWord
-from roc.perception import AuditoryData, Settled
+from roc.framework.component import Component
+from roc.perception.feature_extractors.phoneme import Phoneme, PhonemeFeature, PhonemeWord
+from roc.perception.base import AuditoryData, Settled
 
 
 class TestSingle:

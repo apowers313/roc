@@ -39,8 +39,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import Tracer
 
-import roc.logger as roc_logger
-from roc.config import Config
+import roc.framework.logger as roc_logger
+from roc.framework.config import Config
 from roc.reporting.parquet_exporter import ParquetExporter
 
 __all__ = [
@@ -312,7 +312,7 @@ class Observability(metaclass=ObservabilityBase):
         """
         from pathlib import Path
 
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.ducklake_store import DuckLakeStore
 
         instance = ObservabilityBase._instances.get(cls)

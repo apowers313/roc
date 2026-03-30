@@ -77,7 +77,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Self, cast
 
-from roc.config import Config
+from roc.framework.config import Config
 
 expmod_registry: dict[str, dict[str, ExpMod]] = defaultdict(dict)
 expmod_modtype_current: dict[str, str | None] = defaultdict(lambda: None)

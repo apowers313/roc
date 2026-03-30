@@ -2,8 +2,8 @@ import functools
 from collections import Counter
 from random import randrange
 
-from roc.action import DefaultActionExpMod
-from roc.config import Config
+from roc.pipeline.action import DefaultActionExpMod
+from roc.framework.config import Config
 
 # LEGEND:
 # settings.gym_actions (

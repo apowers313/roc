@@ -27,7 +27,7 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     import socketio
     import uvicorn
 
-    from roc.config import Config
+    from roc.framework.config import Config
     from roc.reporting.api_server import app, sio
 
     cfg = Config.get()

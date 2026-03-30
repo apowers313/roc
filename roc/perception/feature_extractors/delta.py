@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..graphdb import FindQueryOpts
+from ...db.graphdb import FindQueryOpts
 from ..location import IntGrid, XLoc, YLoc
-from ..perception import (
+from ..base import (
     FeatureExtractor,
     FeatureNode,
     PerceptionEvent,

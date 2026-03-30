@@ -4,7 +4,7 @@
 
 import pytest
 
-from roc.breakpoint import Breakpoint, BreakpointInfo, _breakpoints_dict
+from roc.game.breakpoint import Breakpoint, BreakpointInfo, _breakpoints_dict
 
 
 @pytest.fixture(autouse=True)

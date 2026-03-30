@@ -6,10 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.location import XLoc, YLoc
-from roc.object import ObjectId
-from roc.object_instance import ObjectInstance
-from roc.object_transform import (
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import ObjectId
+from roc.pipeline.object.object_instance import ObjectInstance
+from roc.pipeline.object.object_transform import (
     DeltaChange,
     DiscreteChange,
     DistanceChange,
@@ -23,7 +23,7 @@ from roc.object_transform import (
     TransformDetail,
     _compute_property_changes,
 )
-from roc.transformable import Transform
+from roc.pipeline.temporal.transformable import Transform
 
 
 @pytest.fixture(autouse=True)
@@ -31,7 +31,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -158,7 +158,7 @@ class TestPropertyTransformNode:
             new_value=None,
             delta=1.0,
         )
-        from roc.graphdb import Node
+        from roc.db.graphdb import Node
 
         assert isinstance(ptn, Node)
 
@@ -508,7 +508,7 @@ class TestFromChangesAllTypes:
 
 class TestObjectHistory:
     def test_object_history_edge(self):
-        from roc.object import Object
+        from roc.pipeline.object.object import Object
 
         obj = Object(uuid=ObjectId(42))
         ot = ObjectTransform(

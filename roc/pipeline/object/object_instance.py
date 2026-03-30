@@ -6,11 +6,11 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import Field
 
-from .graphdb import Edge, EdgeConnectionsList, Node
-from .location import XLoc, YLoc
+from ...db.graphdb import Edge, EdgeConnectionsList, Node
+from ...perception.location import XLoc, YLoc
 from .object import FeatureGroup, Object, ObjectId, ResolutionContext
-from .perception import Detail, FeatureNode
-from .transformable import Transform, Transformable
+from ...perception.base import Detail, FeatureNode
+from ..temporal.transformable import Transform, Transformable
 
 if TYPE_CHECKING:
     from .object_transform import ObjectTransform
@@ -24,11 +24,11 @@ def _extract_physical_features(
     Returns:
         Tuple of (glyph_type, color_type, shape_type, flood_size, line_size).
     """
-    from .feature_extractors.color import ColorNode
-    from .feature_extractors.flood import FloodNode
-    from .feature_extractors.line import LineNode
-    from .feature_extractors.shape import ShapeNode
-    from .feature_extractors.single import SingleNode
+    from ...perception.feature_extractors.color import ColorNode
+    from ...perception.feature_extractors.flood import FloodNode
+    from ...perception.feature_extractors.line import LineNode
+    from ...perception.feature_extractors.shape import ShapeNode
+    from ...perception.feature_extractors.single import SingleNode
 
     glyph_type: int | None = None
     color_type: int | None = None
@@ -59,9 +59,9 @@ def _extract_relational_features(
     Returns:
         Tuple of (delta_old, delta_new, motion_direction, distance).
     """
-    from .feature_extractors.delta import DeltaNode
-    from .feature_extractors.distance import DistanceNode
-    from .feature_extractors.motion import MotionNode
+    from ...perception.feature_extractors.delta import DeltaNode
+    from ...perception.feature_extractors.distance import DistanceNode
+    from ...perception.feature_extractors.motion import MotionNode
 
     delta_old: int | None = None
     delta_new: int | None = None

@@ -8,11 +8,11 @@ import time
 
 from helpers.util import StubComponent
 
-from roc.action import Action, ActionRequest
-from roc.event import Event
-from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.sequencer import Frame, Sequencer
-from roc.transformer import TransformResult, Transformer
+from roc.pipeline.action import Action, ActionRequest
+from roc.framework.event import Event
+from roc.pipeline.intrinsic import Intrinsic, IntrinsicData
+from roc.pipeline.temporal.sequencer import Frame, Sequencer
+from roc.pipeline.temporal.transformer import TransformResult, Transformer
 
 
 class TestFullPipeline:

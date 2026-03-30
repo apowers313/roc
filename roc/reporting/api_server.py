@@ -23,7 +23,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from roc.logger import logger
+from roc.framework.logger import logger
 from roc.reporting.data_store import DataStore, RunSummary
 from roc.reporting.run_store import StepData
 from roc.reporting.step_buffer import StepBuffer, register_step_buffer
@@ -360,7 +360,7 @@ def get_action_map(run_name: str) -> JSONResponse:
 
 def _collect_object_states(obj: Any) -> list[dict[str, Any]]:
     """Collect per-tick observation dicts from ObjectInstance nodes attached to an Object."""
-    from roc.object_instance import ObjectInstance, ObservedAs
+    from roc.pipeline.object.object_instance import ObjectInstance, ObservedAs
 
     states: list[dict[str, Any]] = []
     for e in obj.dst_edges:
@@ -402,7 +402,7 @@ def _prop_node_to_change_dict(prop_node: Any) -> dict[str, Any] | None:
 
 def _collect_object_transforms(obj: Any) -> list[dict[str, Any]]:
     """Collect transform dicts from ObjectTransform nodes attached to an Object."""
-    from roc.object_transform import ObjectHistory, ObjectTransform
+    from roc.pipeline.object.object_transform import ObjectHistory, ObjectTransform
 
     transforms: list[dict[str, Any]] = []
     for e in obj.src_edges:
@@ -436,8 +436,8 @@ def get_object_history(run_name: str, object_id: int) -> JSONResponse:
         raise HTTPException(status_code=503, detail=_NOT_INITIALIZED)
 
     try:
-        from roc.graphdb import NodeId
-        from roc.object import Object
+        from roc.db.graphdb import NodeId
+        from roc.pipeline.object.object import Object
 
         obj = Object.load(NodeId(object_id))
     except Exception:
@@ -753,7 +753,7 @@ def start_dashboard() -> None:
     if _started:
         return
 
-    from roc.config import Config
+    from roc.framework.config import Config
     from roc.reporting.observability import Observability
 
     cfg = Config.get()

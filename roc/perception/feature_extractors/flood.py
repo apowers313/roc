@@ -5,11 +5,11 @@ from typing import Any
 
 import numpy as np
 
-from ..graphdb import FindQueryOpts
+from ...db.graphdb import FindQueryOpts
 from scipy.ndimage import label
 
 from ..location import IntGrid, TypedPointCollection
-from ..perception import (
+from ..base import (
     AreaFeature,
     FeatureExtractor,
     FeatureKind,

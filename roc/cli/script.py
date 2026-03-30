@@ -10,7 +10,7 @@ from typing import Any, get_args, get_origin
 import click
 
 import roc
-from roc.config import Config
+from roc.framework.config import Config
 
 pp = pprint.PrettyPrinter(width=41, compact=True)
 

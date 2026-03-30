@@ -16,11 +16,11 @@ from scipy.ndimage import label
 from skimage.morphology import reconstruction
 from strictly_typed_pandas import DataSet
 
-from .component import Component
-from .config import Config
-from .event import Event, EventBus
-from .location import DebugGrid, Grid, IntGrid
-from .perception import (
+from ...framework.component import Component
+from ...framework.config import Config
+from ...framework.event import Event, EventBus
+from ...perception.location import DebugGrid, Grid, IntGrid
+from ...perception.base import (
     FeatureExtractor,
     Perception,
     PerceptionEvent,
@@ -28,8 +28,8 @@ from .perception import (
     VisionData,
     VisualFeature,
 )
-from .reporting.metrics import RocMetrics
-from .reporting.observability import Observability
+from ...reporting.metrics import RocMetrics
+from ...reporting.observability import Observability
 
 
 class VisionAttentionSchema:

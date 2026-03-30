@@ -6,15 +6,15 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from roc.location import XLoc, YLoc
-from roc.object import (
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import (
     Object,
     ObjectResolver,
     ResolutionContext,
     SymmetricDifferenceResolution,
     _feature_to_objects,
 )
-from roc.perception import FeatureKind
+from roc.perception.base import FeatureKind
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -116,7 +116,7 @@ def _make_attention_event(x: int, y: int):
     """Build a minimal mock AttentionEvent for do_object_resolution."""
     import pandas as pd
 
-    from roc.attention import VisionAttentionData
+    from roc.pipeline.attention.attention import VisionAttentionData
 
     focus_points = pd.DataFrame([{"x": x, "y": y, "strength": 1.0, "label": 0}])
     mock_feature = MagicMock()
@@ -155,10 +155,13 @@ class TestResolutionTelemetry:
         mock_resolution.resolve.return_value = matched_obj
 
         with (
-            patch("roc.object.FeatureGroup.with_features"),
-            patch("roc.object.Features.connect"),
-            patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
-            patch("roc.sequencer.tick", 11),
+            patch("roc.pipeline.object.object.FeatureGroup.with_features"),
+            patch("roc.pipeline.object.object.Features.connect"),
+            patch(
+                "roc.pipeline.object.object.ObjectResolutionExpMod.get",
+                return_value=mock_resolution,
+            ),
+            patch("roc.pipeline.temporal.sequencer.tick", 11),
             patch.object(ObjectResolver, "spatial_distance_histogram") as mock_spatial,
             patch.object(ObjectResolver, "temporal_gap_histogram"),
         ):
@@ -180,10 +183,13 @@ class TestResolutionTelemetry:
         mock_resolution.resolve.return_value = matched_obj
 
         with (
-            patch("roc.object.FeatureGroup.with_features"),
-            patch("roc.object.Features.connect"),
-            patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
-            patch("roc.sequencer.tick", 42),
+            patch("roc.pipeline.object.object.FeatureGroup.with_features"),
+            patch("roc.pipeline.object.object.Features.connect"),
+            patch(
+                "roc.pipeline.object.object.ObjectResolutionExpMod.get",
+                return_value=mock_resolution,
+            ),
+            patch("roc.pipeline.temporal.sequencer.tick", 42),
             patch.object(ObjectResolver, "spatial_distance_histogram"),
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):
@@ -200,11 +206,14 @@ class TestResolutionTelemetry:
         mock_resolution.resolve.return_value = None  # No match -> new object
 
         with (
-            patch("roc.object.FeatureGroup.with_features"),
-            patch("roc.object.Features.connect"),
-            patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
-            patch("roc.object.Object.with_features", return_value=Object()),
-            patch("roc.sequencer.tick", 1),
+            patch("roc.pipeline.object.object.FeatureGroup.with_features"),
+            patch("roc.pipeline.object.object.Features.connect"),
+            patch(
+                "roc.pipeline.object.object.ObjectResolutionExpMod.get",
+                return_value=mock_resolution,
+            ),
+            patch("roc.pipeline.object.object.Object.with_features", return_value=Object()),
+            patch("roc.pipeline.temporal.sequencer.tick", 1),
             patch.object(ObjectResolver, "spatial_distance_histogram") as mock_spatial,
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):
@@ -226,10 +235,13 @@ class TestResolutionTelemetry:
         mock_resolution.resolve.return_value = matched_obj
 
         with (
-            patch("roc.object.FeatureGroup.with_features"),
-            patch("roc.object.Features.connect"),
-            patch("roc.object.ObjectResolutionExpMod.get", return_value=mock_resolution),
-            patch("roc.sequencer.tick", 10),
+            patch("roc.pipeline.object.object.FeatureGroup.with_features"),
+            patch("roc.pipeline.object.object.Features.connect"),
+            patch(
+                "roc.pipeline.object.object.ObjectResolutionExpMod.get",
+                return_value=mock_resolution,
+            ),
+            patch("roc.pipeline.temporal.sequencer.tick", 10),
             patch.object(ObjectResolver, "spatial_distance_histogram"),
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):

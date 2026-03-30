@@ -4,9 +4,9 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any
 
-from .component import Component
-from .event import Event, EventBus
-from .expmod import ExpMod
+from ...framework.component import Component
+from ...framework.event import Event, EventBus
+from ...framework.expmod import ExpMod
 from .sequencer import Frame
 from .transformer import Transformer, TransformResult
 
@@ -52,7 +52,7 @@ class Predict(Component):
 
     def do_predict(self, e: Event[TransformResult]) -> None:
         """Finds candidate frames, applies transforms, scores predictions, and emits the best one."""
-        from .intrinsic import IntrinsicNode
+        from ..intrinsic import IntrinsicNode
 
         # get current frame
         transform_edges = e.data.transform.dst_edges

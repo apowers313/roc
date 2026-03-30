@@ -1,6 +1,6 @@
 import click
 
-from roc.graphdb import GraphDB
+from roc.db.graphdb import GraphDB
 
 
 @click.command()

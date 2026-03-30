@@ -7,21 +7,21 @@ import pytest
 from helpers.nethack_screens2 import screens
 from helpers.util import StubComponent
 
-from roc.attention import VisionAttention
-from roc.component import Component
-from roc.config import Config
-from roc.event import Event
-from roc.feature_extractors.color import Color, ColorFeature
-from roc.feature_extractors.delta import Delta
-from roc.feature_extractors.distance import Distance
-from roc.feature_extractors.flood import Flood
-from roc.feature_extractors.line import Line
-from roc.feature_extractors.motion import Motion
-from roc.feature_extractors.shape import Shape, ShapeFeature
-from roc.feature_extractors.single import Single, SingleFeature
-from roc.graphdb import Node
-from roc.location import XLoc, YLoc
-from roc.object import (
+from roc.pipeline.attention.attention import VisionAttention
+from roc.framework.component import Component
+from roc.framework.config import Config
+from roc.framework.event import Event
+from roc.perception.feature_extractors.color import Color, ColorFeature
+from roc.perception.feature_extractors.delta import Delta
+from roc.perception.feature_extractors.distance import Distance
+from roc.perception.feature_extractors.flood import Flood
+from roc.perception.feature_extractors.line import Line
+from roc.perception.feature_extractors.motion import Motion
+from roc.perception.feature_extractors.shape import Shape, ShapeFeature
+from roc.perception.feature_extractors.single import Single, SingleFeature
+from roc.db.graphdb import Node
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import (
     FeatureGroup,
     Object,
     ObjectResolver,
@@ -29,7 +29,7 @@ from roc.object import (
     ResolvedObject,
     SymmetricDifferenceResolution,
 )
-from roc.perception import FeatureNode, VisionData
+from roc.perception.base import FeatureNode, VisionData
 
 
 @pytest.fixture
@@ -427,7 +427,7 @@ class TestSymmetricDifferenceRegression:
         This causes completely different events to match because the distance
         check only considers SingleNode/ColorNode/ShapeNode.
         """
-        from roc.feature_extractors.delta import DeltaFeature
+        from roc.perception.feature_extractors.delta import DeltaFeature
 
         # Create a shared DeltaNode (same old_val/new_val = same hash = same node)
         shared_delta = DeltaFeature(

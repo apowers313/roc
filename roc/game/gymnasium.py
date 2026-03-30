@@ -37,18 +37,18 @@ def action_value_to_key(val: int) -> str | None:
     return None
 
 
-from .action import Action, ActionRequest, TakeAction
+from ..pipeline.action import Action, ActionRequest, TakeAction
 from .breakpoint import breakpoints
-from .component import Component
-from .config import Config
-from .graphdb import GraphDB
-from .intrinsic import Intrinsic, IntrinsicData
-from .logger import logger
-from .perception import AuditoryData, Perception, ProprioceptiveData, VisionData
-from .reporting.metrics import RocMetrics
-from .reporting.observability import Observability
-from .reporting.screen_renderer import screen_to_html_vals
-from .reporting.state import State, _emit_state_record
+from ..framework.component import Component
+from ..framework.config import Config
+from ..db.graphdb import GraphDB
+from ..pipeline.intrinsic import Intrinsic, IntrinsicData
+from ..framework.logger import logger
+from ..perception.base import AuditoryData, Perception, ProprioceptiveData, VisionData
+from ..reporting.metrics import RocMetrics
+from ..reporting.observability import Observability
+from ..reporting.screen_renderer import screen_to_html_vals
+from ..reporting.state import State, _emit_state_record
 
 # Cumulative glyph sets for attention spread tracking.
 _attended_glyphs: set[int] = set()
@@ -353,7 +353,7 @@ def _collect_object_data(states: Any) -> tuple[Any, Any]:
 
 def _collect_graph_summary() -> dict[str, Any]:
     """Collect graph database cache summary."""
-    from roc.graphdb import Edge, Node
+    from roc.db.graphdb import Edge, Node
 
     node_cache = Node.get_cache()
     edge_cache = Edge.get_cache()
@@ -367,7 +367,7 @@ def _collect_graph_summary() -> dict[str, Any]:
 
 def _collect_event_summary() -> list[dict[str, Any]] | None:
     """Collect event bus step counts."""
-    from roc.event import Event
+    from roc.framework.event import Event
 
     step_counts = Event.get_step_counts()
     return [step_counts] if step_counts else None
@@ -404,7 +404,7 @@ def _build_oi_lookup(frame: Any) -> tuple[dict[int, Any], dict[int, str]]:
 
     Returns (oi_by_uuid, glyph_by_uuid) maps keyed by object_uuid.
     """
-    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+    from roc.pipeline.object.object_instance import ObjectInstance, SituatedObjectInstance
 
     oi_by_uuid: dict[int, Any] = {}
     glyph_by_uuid: dict[int, str] = {}
@@ -515,7 +515,7 @@ def _build_transform_summary(states: Any) -> dict[str, Any] | None:
     else:
         oi_by_uuid, glyph_by_uuid = {}, {}
 
-    from roc.object_transform import ObjectTransform as _OT
+    from roc.pipeline.object.object_transform import ObjectTransform as _OT
 
     t = states.transform.val.transform
     changes_list: list[dict[str, Any]] = []
@@ -596,8 +596,8 @@ def _build_sequence_summary(states: Any) -> dict[str, Any] | None:
 
 def _get_last_frame() -> Any:
     """Get the sequencer's last frame, or None if unavailable."""
-    from roc.component import ComponentName, ComponentType, loaded_components
-    from roc.sequencer import Sequencer
+    from roc.framework.component import ComponentName, ComponentType, loaded_components
+    from roc.pipeline.temporal.sequencer import Sequencer
 
     seq_comp = loaded_components.get((ComponentName("sequencer"), ComponentType("sequencer")))
     if not isinstance(seq_comp, Sequencer) or seq_comp.last_frame is None:
@@ -648,7 +648,7 @@ def _collect_matched_uuids(states: Any) -> set[int]:
 
 def _frame_to_summary(frame: Any, states: Any) -> dict[str, Any]:
     """Build the summary dict from a frame and current states."""
-    from roc.intrinsic import IntrinsicNode
+    from roc.pipeline.intrinsic import IntrinsicNode
 
     objs = frame.objects
     oi_by_uuid, _ = _build_oi_lookup(frame)
@@ -680,16 +680,16 @@ def _build_prediction_data(states: Any) -> dict[str, Any] | None:
     """Build prediction data from the current predict state."""
     if states.predict.val is None:
         return None
-    from roc.predict import NoPrediction
+    from roc.pipeline.temporal.predict import NoPrediction
 
     prediction: dict[str, Any] = {"made": not isinstance(states.predict.val, NoPrediction)}
     try:
-        from roc.component import (
+        from roc.framework.component import (
             ComponentName,
             ComponentType,
             loaded_components,
         )
-        from roc.predict import Predict
+        from roc.pipeline.temporal.predict import Predict
 
         pred_comp = loaded_components.get((ComponentName("predict"), ComponentType("predict")))
         if isinstance(pred_comp, Predict):

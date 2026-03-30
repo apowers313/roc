@@ -7,15 +7,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.graphdb import NodeId
-from roc.location import XLoc, YLoc
-from roc.object import (
+from roc.db.graphdb import NodeId
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import (
     DirichletCategoricalResolution,
     Object,
     ResolutionContext,
     _feature_to_objects,
 )
-from roc.perception import FeatureKind
+from roc.perception.base import FeatureKind
 
 
 @pytest.fixture(autouse=True)
@@ -23,7 +23,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 

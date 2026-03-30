@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from roc.expmod import ExpMod, expmod_modtype_current, expmod_registry
+from roc.framework.expmod import ExpMod, expmod_modtype_current, expmod_registry
 
 
 class TestExpModInitSubclass:
@@ -105,7 +105,7 @@ class TestExpModImportFile:
 
 class TestExpModInit:
     def test_loads_modules_from_config(self):
-        from roc.config import Config
+        from roc.framework.config import Config
 
         settings = Config.get()
         settings.expmods = []
@@ -115,7 +115,7 @@ class TestExpModInit:
         ExpMod.init()
 
     def test_handles_missing_files(self):
-        from roc.config import Config
+        from roc.framework.config import Config
 
         settings = Config.get()
         settings.expmods = ["nonexistent_module_xyz"]
@@ -125,7 +125,7 @@ class TestExpModInit:
             ExpMod.init()
 
     def test_detects_duplicate_mod_use(self):
-        from roc.config import Config
+        from roc.framework.config import Config
 
         settings = Config.get()
         settings.expmods = []

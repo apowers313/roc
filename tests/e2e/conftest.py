@@ -9,7 +9,7 @@ from typing import Generator
 
 import pytest
 
-from roc.component import Component
+from roc.framework.component import Component
 
 
 @pytest.fixture

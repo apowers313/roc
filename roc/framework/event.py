@@ -16,7 +16,7 @@ from reactivex.scheduler import ThreadPoolScheduler
 from rich.pretty import pretty_repr
 
 from .component import Component, ComponentId
-from .reporting.observability import Observability
+from ..reporting.observability import Observability
 
 event_counter = Observability.meter.create_counter(
     "roc.event", unit="event", description="total number of events"

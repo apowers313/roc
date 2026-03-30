@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from roc.logger import DebugModuleLevel, LogFilter, init, module_names
+from roc.framework.logger import DebugModuleLevel, LogFilter, init, module_names
 
 
 class TestDebugModuleLevel:
@@ -137,7 +137,7 @@ class TestLogFilterParseModuleStr:
 
 class TestInit:
     def test_sets_initialized(self):
-        import roc.logger as logger_mod
+        import roc.framework.logger as logger_mod
 
         # Reset state
         orig = logger_mod._initialized
@@ -149,7 +149,7 @@ class TestInit:
             logger_mod._initialized = orig
 
     def test_doesnt_reinitialize(self):
-        import roc.logger as logger_mod
+        import roc.framework.logger as logger_mod
 
         logger_mod._initialized = True
         # Should return early without error

@@ -126,10 +126,10 @@ homepage = "https://github.com/apowers313/roc"
 repository = "https://github.com/apowers313/roc"
 
 [project.scripts]
-play = "roc.script:cli"
-dashboard = "roc.dashboard_cli:main"
-server = "roc.server_cli:main"
-cleanup = "roc.cleanup_cli:main"
+play = "roc.cli.script:cli"
+dashboard = "roc.cli.dashboard_cli:main"
+server = "roc.cli.server_cli:main"
+cleanup = "roc.cli.cleanup_cli:main"
 
 [tool.uv]
 default-groups = ["dev"]
@@ -289,7 +289,7 @@ doctest_optionflags = [
 filterwarnings = [
   "error",
   "ignore::DeprecationWarning",
-  "ignore::roc.graphdb.ErrorSavingDuringDelWarning",
+  "ignore::roc.db.graphdb.ErrorSavingDuringDelWarning",
   "ignore::ResourceWarning",
 ]
 

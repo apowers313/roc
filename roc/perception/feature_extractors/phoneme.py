@@ -4,10 +4,10 @@ from dataclasses import dataclass
 
 from gruut import sentences
 
-from ..graphdb import FindQueryOpts
+from ...db.graphdb import FindQueryOpts
 
 from ..location import Point
-from ..perception import (
+from ..base import (
     AuditoryData,
     Feature,
     FeatureExtractor,

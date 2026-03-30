@@ -10,9 +10,9 @@ import pytest
 from strictly_typed_pandas import DataSet
 from unittest.mock import MagicMock
 
-from roc.attention import SaliencyMap, VisionAttentionSchema
-from roc.expmod import expmod_registry
-from roc.saliency_attenuation import (
+from roc.pipeline.attention.attention import SaliencyMap, VisionAttentionSchema
+from roc.framework.expmod import expmod_registry
+from roc.pipeline.attention.saliency_attenuation import (
     ActiveInferenceAttenuation,
     LocationBelief,
     StateVocabulary,

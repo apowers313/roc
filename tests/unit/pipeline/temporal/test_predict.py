@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.predict import (
+from roc.pipeline.temporal.predict import (
     NoPrediction,
     ObjectBasedPrediction,
     PredictionCandidateFramesExpMod,
@@ -19,7 +19,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -53,7 +53,7 @@ class TestPredictionConfidenceExpMod:
 
 class TestObjectBasedPrediction:
     def test_get_candidates(self):
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         obp = ObjectBasedPrediction()
 
@@ -72,7 +72,7 @@ class TestObjectBasedPrediction:
         assert mock_frame2 in result
 
     def test_get_candidates_empty(self):
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         obp = ObjectBasedPrediction()
 

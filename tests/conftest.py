@@ -9,14 +9,14 @@ import psutil
 import pytest
 from helpers.util import FakeData
 
-from roc.action import Action, ActionData
-from roc.component import Component, component_set
-from roc.config import Config
-from roc.event import BusConnection, EventBus
-from roc.graphdb import Edge, GraphDB, Node
-from roc.logger import init as logger_init
-from roc.object import _feature_to_objects
-from roc.perception import Perception, PerceptionData
+from roc.pipeline.action import Action, ActionData
+from roc.framework.component import Component, component_set
+from roc.framework.config import Config
+from roc.framework.event import BusConnection, EventBus
+from roc.db.graphdb import Edge, GraphDB, Node
+from roc.framework.logger import init as logger_init
+from roc.pipeline.object.object import _feature_to_objects
+from roc.perception.base import Perception, PerceptionData
 from roc.reporting.observability import Observability
 
 
@@ -45,7 +45,7 @@ def clear_cache() -> Generator[None, None, None]:
 
 @pytest.fixture(autouse=True)
 def restore_registries() -> Generator[None, None, None]:
-    from roc.graphdb import edge_registry, node_label_registry, node_registry
+    from roc.db.graphdb import edge_registry, node_label_registry, node_registry
 
     orig_node_registry = node_registry.copy()
     orig_node_label_registry = node_label_registry.copy()
@@ -68,7 +68,7 @@ def restore_registries() -> Generator[None, None, None]:
 
 @pytest.fixture
 def clear_registries(restore_registries) -> None:
-    from roc.graphdb import edge_registry, node_label_registry, node_registry
+    from roc.db.graphdb import edge_registry, node_label_registry, node_registry
 
     edge_registry.clear()
     node_registry.clear()

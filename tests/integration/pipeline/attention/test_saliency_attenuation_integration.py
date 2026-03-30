@@ -8,8 +8,8 @@ import numpy.typing as npt
 import pandas as pd
 from strictly_typed_pandas import DataSet
 
-from roc.attention import SaliencyMap, VisionAttentionSchema
-from roc.saliency_attenuation import (
+from roc.pipeline.attention.attention import SaliencyMap, VisionAttentionSchema
+from roc.pipeline.attention.saliency_attenuation import (
     ActiveInferenceAttenuation,
     LinearDeclineAttenuation,
 )

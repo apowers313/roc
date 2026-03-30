@@ -6,12 +6,12 @@ from typing import Any
 
 from pydantic import Field
 
-from roc.action import Action, TakeAction
-from roc.component import Component
-from roc.event import Event, EventBus
-from roc.graphdb import Edge, EdgeConnectionsList, Node
-from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.object import (
+from roc.pipeline.action import Action, TakeAction
+from roc.framework.component import Component
+from roc.framework.event import Event, EventBus
+from roc.db.graphdb import Edge, EdgeConnectionsList, Node
+from roc.pipeline.intrinsic import Intrinsic, IntrinsicData
+from roc.pipeline.object.object import (
     FeatureGroup,
     Features,
     Object,
@@ -19,7 +19,7 @@ from roc.object import (
     ResolvedObject,
     ResolutionContext,
 )
-from roc.object_instance import (
+from roc.pipeline.object.object_instance import (
     FrameFeatures,
     ObjectInstance,
     ObservedAs,
@@ -27,8 +27,8 @@ from roc.object_instance import (
     Relationships,
     SituatedObjectInstance,
 )
-from roc.perception import FeatureKind
-from roc.transformable import Transform, Transformable
+from roc.perception.base import FeatureKind
+from roc.pipeline.temporal.transformable import Transform, Transformable
 
 tick = 0
 PREDICTED_FRAME_TICK = -1

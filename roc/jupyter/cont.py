@@ -1,6 +1,6 @@
 import click
 
-from roc.breakpoint import breakpoints
+from roc.game.breakpoint import breakpoints
 
 
 @click.command()

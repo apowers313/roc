@@ -4,7 +4,7 @@
 
 import re
 
-from roc.utils import _timestamp_str
+from roc.framework.utils import _timestamp_str
 
 
 class TestTimestampStr:

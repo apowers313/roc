@@ -14,7 +14,7 @@ from unittest.mock import MagicMock
 import pytest
 from pydantic import Field
 
-from roc.graphdb import (
+from roc.db.graphdb import (
     Edge,
     EdgeConnectionsList,
     EdgeId,

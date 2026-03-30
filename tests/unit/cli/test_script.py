@@ -6,14 +6,14 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from roc.script import JsonParam, cli
+from roc.cli.script import JsonParam, cli
 
 
 class TestCliOptionGeneration:
     def test_bool_flag_true(self):
         """--graphdb-export should pass graphdb_export=True to roc.init()."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--graphdb-export"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -22,7 +22,7 @@ class TestCliOptionGeneration:
     def test_bool_flag_false(self):
         """--no-graphdb-export should pass graphdb_export=False to roc.init()."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--no-graphdb-export"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -31,7 +31,7 @@ class TestCliOptionGeneration:
     def test_int_option(self):
         """--num-games 3 should pass num_games=3."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--num-games", "3"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -40,7 +40,7 @@ class TestCliOptionGeneration:
     def test_str_option(self):
         """--db-host should pass a string value."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--db-host", "10.0.0.1"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -49,7 +49,7 @@ class TestCliOptionGeneration:
     def test_json_option(self):
         """--nethack-extra-options should accept a JSON list."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--nethack-extra-options", '["autoopen", "color"]'])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -58,7 +58,7 @@ class TestCliOptionGeneration:
     def test_json_dict_option(self):
         """--significance-weights should accept a JSON dict."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--significance-weights", '{"hp": 5.0}'])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -67,7 +67,7 @@ class TestCliOptionGeneration:
     def test_no_options_passes_none(self):
         """No CLI args should call roc.init(config=None)."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, [])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             mock_roc.init.assert_called_once_with(config=None)
@@ -75,7 +75,7 @@ class TestCliOptionGeneration:
     def test_only_provided_options_are_passed(self):
         """Only explicitly-set options should appear in the config dict."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, ["--num-games", "1"])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             config = mock_roc.init.call_args[1]["config"]
@@ -85,7 +85,7 @@ class TestCliOptionGeneration:
     def test_multiple_options_combined(self):
         """Multiple options should all appear in the config dict."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(
                 cli, ["--num-games", "2", "--no-graphdb-export", "--db-host", "myhost"]
             )
@@ -98,7 +98,7 @@ class TestCliOptionGeneration:
     def test_start_is_called(self):
         """roc.start() should be called after roc.init()."""
         runner = CliRunner()
-        with patch("roc.script.roc") as mock_roc:
+        with patch("roc.cli.script.roc") as mock_roc:
             result = runner.invoke(cli, [])
             assert result.exit_code == 0, f"{result.output}\n{result.exception}"
             mock_roc.start.assert_called_once()

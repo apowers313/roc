@@ -3,12 +3,12 @@
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.color import Color, ColorFeature, ColorNode
-from roc.feature_extractors.single import Single
-from roc.location import XLoc, YLoc
-from roc.perception import Settled, VisionData
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.color import Color, ColorFeature, ColorNode
+from roc.perception.feature_extractors.single import Single
+from roc.perception.location import XLoc, YLoc
+from roc.perception.base import Settled, VisionData
 
 
 class TestColor:

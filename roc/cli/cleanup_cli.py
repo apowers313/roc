@@ -62,7 +62,7 @@ def _get_step_count_from_api(run_name: str, api_url: str) -> int | None:
 )
 def main(data_dir: Path | None, min_steps: int, delete: bool) -> None:
     """Clean up empty and short game runs."""
-    from roc.config import Config
+    from roc.framework.config import Config
 
     cfg = Config.get()
     if data_dir is None:

@@ -6,11 +6,11 @@ import math
 from abc import ABC, abstractmethod
 from typing import Any
 
-from .component import Component
-from .config import Config, ConfigIntrinsicType
-from .event import Event, EventBus
-from .graphdb import Node
-from .transformable import Transform, Transformable
+from ..framework.component import Component
+from ..framework.config import Config, ConfigIntrinsicType
+from ..framework.event import Event, EventBus
+from ..db.graphdb import Node
+from .temporal.transformable import Transform, Transformable
 
 # intrinsic_op_list
 

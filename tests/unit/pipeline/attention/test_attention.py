@@ -5,8 +5,8 @@
 from copy import deepcopy
 from unittest.mock import MagicMock
 
-from roc.attention import SaliencyMap
-from roc.location import IntGrid
+from roc.pipeline.attention.attention import SaliencyMap
+from roc.perception.location import IntGrid
 
 
 def _make_grid():

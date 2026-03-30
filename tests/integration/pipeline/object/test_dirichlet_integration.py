@@ -13,14 +13,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.location import XLoc, YLoc
-from roc.object import (
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import (
     DirichletCategoricalResolution,
     Object,
     ResolutionContext,
     _feature_to_objects,
 )
-from roc.perception import FeatureKind
+from roc.perception.base import FeatureKind
 
 
 def make_feature_node(label: str, str_repr: str) -> MagicMock:
@@ -61,7 +61,7 @@ REALISTIC_VOCAB = {f"Feat({i})" for i in range(30)}
 class TestDirichletIntegrationFlow:
     """End-to-end tests exercising multi-observation resolution sequences."""
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_full_resolution_cycle(self, mock_db_cls):
         """End-to-end: create objects, resolve matches, verify alphas grow."""
         mock_db = MagicMock()
@@ -121,7 +121,7 @@ class TestDirichletIntegrationFlow:
         assert resolution._alphas[obj_a.id]["SingleNode(a)"] == pytest.approx(4.0)
         assert resolution._alphas[obj_a.id]["ColorNode(red)"] == pytest.approx(4.0)
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_warmup_then_stable(self, mock_db_cls):
         """Simulate 50+ observations and verify match rate stabilizes."""
         mock_db = MagicMock()
@@ -182,7 +182,7 @@ class TestDirichletIntegrationFlow:
         setup_candidate_return(fns, [obj])
         return resolution.resolve(fns, fg, ctx)
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_object_count_does_not_explode(self, mock_db_cls):
         """Verify object count stays bounded for repeated observations."""
         mock_db = MagicMock()
@@ -235,7 +235,7 @@ class TestDirichletIntegrationFlow:
         # Should produce approximately 3 objects, not 150
         assert len(objects_created) <= 6, f"Created {len(objects_created)} objects, expected ~3"
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_alpha_strength_disambiguates_similar_objects(self, mock_db_cls):
         """Object with stronger alphas wins when both are candidates."""
         mock_db = MagicMock()
@@ -278,7 +278,7 @@ class TestDirichletIntegrationFlow:
 class TestDirichletTelemetry:
     """Verify all Dirichlet-specific metrics are recorded during resolution."""
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_all_metrics_emitted(self, mock_db_cls):
         """Verify all Dirichlet-specific metrics are recorded."""
         mock_db = MagicMock()
@@ -320,7 +320,7 @@ class TestDirichletTelemetry:
             assert 0.0 <= max_val <= 1.0
             assert not math.isnan(max_val)
 
-    @patch("roc.graphdb.GraphDB.singleton")
+    @patch("roc.db.graphdb.GraphDB.singleton")
     def test_decision_counter_outcomes(self, mock_db_cls):
         """Verify decision counter tracks match, new_object, low_confidence."""
         mock_db = MagicMock()

@@ -2,8 +2,8 @@
 
 import sys
 
-from roc.config import Config
-from roc.logger import logger
+from roc.framework.config import Config
+from roc.framework.logger import logger
 
 
 def maybe_start_debugpy() -> None:

@@ -6,8 +6,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from roc.component import ComponentId
-from roc.event import BusConnection, Event, EventBus, eventbus_names
+from roc.framework.component import ComponentId
+from roc.framework.event import BusConnection, Event, EventBus, eventbus_names
 
 
 @pytest.fixture(autouse=True)

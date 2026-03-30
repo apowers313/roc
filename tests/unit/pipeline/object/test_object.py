@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from roc.location import XLoc, YLoc
-from roc.object import (
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import (
     FeatureGroup,
     Object,
     ObjectCache,
@@ -22,7 +22,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -60,7 +60,7 @@ class TestObject:
 
     def test_with_features(self):
         fg = FeatureGroup()
-        with patch("roc.object.Features.connect") as mock_connect:
+        with patch("roc.pipeline.object.object.Features.connect") as mock_connect:
             o = Object.with_features(fg)
             assert isinstance(o, Object)
             mock_connect.assert_called_once_with(o, fg)
@@ -91,7 +91,7 @@ class TestFeatureGroup:
     def test_from_nodes(self):
         fn1 = MagicMock()
         fn2 = MagicMock()
-        with patch("roc.object.Detail.connect") as mock_connect:
+        with patch("roc.pipeline.object.object.Detail.connect") as mock_connect:
             fg = FeatureGroup.from_nodes([fn1, fn2])
             assert isinstance(fg, FeatureGroup)
             assert mock_connect.call_count == 2

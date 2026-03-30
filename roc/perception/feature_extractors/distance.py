@@ -6,9 +6,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ..graphdb import FindQueryOpts
+from ...db.graphdb import FindQueryOpts
 from ..location import XLoc, YLoc
-from ..perception import FeatureExtractor, FeatureNode, PerceptionEvent, Settled, VisualFeature
+from ..base import FeatureExtractor, FeatureNode, PerceptionEvent, Settled, VisualFeature
 from .single import SingleFeature
 
 

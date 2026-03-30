@@ -6,10 +6,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.graphdb import Node
-from roc.location import XLoc, YLoc
-from roc.object import FeatureGroup, Features, Object, ObjectId, ResolutionContext
-from roc.object_instance import (
+from roc.db.graphdb import Node
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import FeatureGroup, Features, Object, ObjectId, ResolutionContext
+from roc.pipeline.object.object_instance import (
     FrameFeatures,
     ObjectInstance,
     ObservedAs,
@@ -17,7 +17,7 @@ from roc.object_instance import (
     Relationships,
     SituatedObjectInstance,
 )
-from roc.sequencer import Frame
+from roc.pipeline.temporal.sequencer import Frame
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +25,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -57,9 +57,9 @@ class TestObjectInstance:
 
     def test_from_resolution_extracts_physical_features(self):
         """Factory extracts glyph, color, shape from FeatureGroup."""
-        from roc.feature_extractors.color import ColorNode
-        from roc.feature_extractors.shape import ShapeNode
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.color import ColorNode
+        from roc.perception.feature_extractors.shape import ShapeNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111), ColorNode(type=7), ShapeNode(type=64)])
@@ -75,7 +75,7 @@ class TestObjectInstance:
 
     def test_from_resolution_handles_missing_features(self):
         """Missing features produce None, not errors."""
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111)])
@@ -108,14 +108,14 @@ class TestObjectInstance:
         assert not oi1.same_transform_type(oi2)
 
     def test_same_transform_type_rejects_intrinsic(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         oi = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(0), y=YLoc(0), tick=1)
         intrinsic = IntrinsicNode(name="hp", raw_value=15, normalized_value=0.8)
         assert not oi.same_transform_type(intrinsic)
 
     def test_compatible_transform(self):
-        from roc.object_transform import ObjectTransform
+        from roc.pipeline.object.object_transform import ObjectTransform
 
         oi = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(0), y=YLoc(0), tick=1)
         ot = ObjectTransform(
@@ -126,14 +126,14 @@ class TestObjectInstance:
         assert oi.compatible_transform(ot)
 
     def test_compatible_transform_rejects_intrinsic_transform(self):
-        from roc.intrinsic import IntrinsicTransform
+        from roc.pipeline.intrinsic import IntrinsicTransform
 
         oi = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(0), y=YLoc(0), tick=1)
         it = IntrinsicTransform(name="hp", normalized_change=0.1)
         assert not oi.compatible_transform(it)
 
     def test_create_transform_returns_object_transform(self):
-        from roc.object_transform import ObjectTransform
+        from roc.pipeline.object.object_transform import ObjectTransform
 
         prev = ObjectInstance(object_uuid=ObjectId(1), x=XLoc(5), y=YLoc(3), tick=1)
         curr = ObjectInstance(object_uuid=ObjectId(1), x=XLoc(7), y=YLoc(3), tick=2)
@@ -149,7 +149,7 @@ class TestObjectInstance:
 
     def test_apply_transform_raises_not_implemented(self):
         """Stub for this phase."""
-        from roc.object_transform import ObjectTransform
+        from roc.pipeline.object.object_transform import ObjectTransform
 
         oi = ObjectInstance(object_uuid=ObjectId(42), x=XLoc(0), y=YLoc(0), tick=1)
         ot = ObjectTransform(
@@ -215,7 +215,7 @@ class TestEdgeSchemas:
 class TestFeaturesConnectExistingMatch:
     def test_existing_object_gets_feature_group_linked(self):
         """Prerequisite fix: Features.connect works for ObjectInstance -> FeatureGroup."""
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         fg1 = FeatureGroup.from_nodes([SingleNode(type=111)])
         obj = Object.with_features(fg1)
@@ -258,9 +258,9 @@ class TestRelationalFields:
 
 class TestRelationshipGroup:
     def test_from_nodes_connects_detail_edges(self):
-        from roc.feature_extractors.distance import DistanceNode
-        from roc.feature_extractors.motion import MotionNode
-        from roc.perception import Direction
+        from roc.perception.feature_extractors.distance import DistanceNode
+        from roc.perception.feature_extractors.motion import MotionNode
+        from roc.perception.base import Direction
 
         dn = DistanceNode(size=5)
         mn = MotionNode(type=1, direction=Direction.left)
@@ -289,8 +289,8 @@ class TestRelationshipGroup:
 
 class TestFromResolutionWithRelationshipGroup:
     def test_extracts_distance_from_relationship_group(self):
-        from roc.feature_extractors.distance import DistanceNode
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.distance import DistanceNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111)])
@@ -301,9 +301,9 @@ class TestFromResolutionWithRelationshipGroup:
         assert oi.distance == 5
 
     def test_extracts_motion_from_relationship_group(self):
-        from roc.feature_extractors.motion import MotionNode
-        from roc.feature_extractors.single import SingleNode
-        from roc.perception import Direction
+        from roc.perception.feature_extractors.motion import MotionNode
+        from roc.perception.feature_extractors.single import SingleNode
+        from roc.perception.base import Direction
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111)])
@@ -314,8 +314,8 @@ class TestFromResolutionWithRelationshipGroup:
         assert oi.motion_direction == "LEFT"
 
     def test_extracts_delta_from_relationship_group(self):
-        from roc.feature_extractors.delta import DeltaNode
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.delta import DeltaNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111)])
@@ -327,8 +327,8 @@ class TestFromResolutionWithRelationshipGroup:
         assert oi.delta_new == 111
 
     def test_extracts_flood_size_from_feature_group(self):
-        from roc.feature_extractors.flood import FloodNode
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.flood import FloodNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes(
@@ -343,8 +343,8 @@ class TestFromResolutionWithRelationshipGroup:
         assert oi.flood_size == 8
 
     def test_extracts_line_size_from_feature_group(self):
-        from roc.feature_extractors.line import LineNode
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.line import LineNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes(
@@ -360,7 +360,7 @@ class TestFromResolutionWithRelationshipGroup:
 
     def test_from_resolution_without_rg_still_works(self):
         """Backward compatible: no rg parameter means no relational features."""
-        from roc.feature_extractors.single import SingleNode
+        from roc.perception.feature_extractors.single import SingleNode
 
         obj = Object(uuid=ObjectId(1))
         fg = FeatureGroup.from_nodes([SingleNode(type=111)])

@@ -2,14 +2,14 @@
 
 from helpers.util import StubComponent
 
-from roc.action import Action, TakeAction
-from roc.component import Component
-from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicTransform
-from roc.location import XLoc, YLoc
-from roc.object import FeatureGroup, Object, ObjectResolver, ResolvedObject
-from roc.sequencer import Frame, Sequencer
-from roc.transformable import Transform
-from roc.transformer import Change, Transformer, TransformResult
+from roc.pipeline.action import Action, TakeAction
+from roc.framework.component import Component
+from roc.pipeline.intrinsic import Intrinsic, IntrinsicData, IntrinsicTransform
+from roc.perception.location import XLoc, YLoc
+from roc.pipeline.object.object import FeatureGroup, Object, ObjectResolver, ResolvedObject
+from roc.pipeline.temporal.sequencer import Frame, Sequencer
+from roc.pipeline.temporal.transformable import Transform
+from roc.pipeline.temporal.transformer import Change, Transformer, TransformResult
 
 
 class TestTransform:

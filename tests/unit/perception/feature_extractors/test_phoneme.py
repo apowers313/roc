@@ -7,8 +7,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from gruut import sentences
 
-from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeNode, PhonemeWord
-from roc.graphdb import FindQueryOpts
+from roc.perception.feature_extractors.phoneme import PhonemeFeature, PhonemeNode, PhonemeWord
+from roc.db.graphdb import FindQueryOpts
 
 
 @pytest.fixture(autouse=True)
@@ -16,7 +16,7 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.game_manager import GameManager, _GRACEFUL_TIMEOUT, _SIGKILL_TIMEOUT
+from roc.game.game_manager import GameManager, _GRACEFUL_TIMEOUT, _SIGKILL_TIMEOUT
 
 
 class TestInitialState:
@@ -108,8 +108,8 @@ class TestStartGame:
         with pytest.raises(RuntimeError, match="Cannot start game"):
             gm.start_game()
 
-    @patch("roc.game_manager.threading.Thread")
-    @patch("roc.game_manager.subprocess.Popen")
+    @patch("roc.game.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.subprocess.Popen")
     def test_succeeds_with_mocked_subprocess(
         self, mock_popen_cls: MagicMock, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -127,8 +127,8 @@ class TestStartGame:
         assert mock_thread_cls.call_count == 2
         assert mock_thread.start.call_count == 2
 
-    @patch("roc.game_manager.threading.Thread")
-    @patch("roc.game_manager.subprocess.Popen")
+    @patch("roc.game.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.subprocess.Popen")
     def test_sets_state_to_initializing(
         self, mock_popen_cls: MagicMock, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -143,7 +143,7 @@ class TestStartGame:
         first_call_arg = callback.call_args_list[0][0][0]
         assert first_call_arg["state"] == "initializing"
 
-    @patch("roc.game_manager.subprocess.Popen", side_effect=FileNotFoundError("uv not found"))
+    @patch("roc.game.game_manager.subprocess.Popen", side_effect=FileNotFoundError("uv not found"))
     def test_failed_popen_raises_runtime_error(
         self, mock_popen_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -154,8 +154,8 @@ class TestStartGame:
         assert gm.state == "idle"
         assert gm._error_message is not None
 
-    @patch("roc.game_manager.threading.Thread")
-    @patch("roc.game_manager.subprocess.Popen")
+    @patch("roc.game.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.subprocess.Popen")
     def test_passes_server_url_in_command(
         self, mock_popen_cls: MagicMock, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -182,7 +182,7 @@ class TestStopGame:
         with pytest.raises(RuntimeError, match="Cannot stop game"):
             gm.stop_game()
 
-    @patch("roc.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.threading.Thread")
     def test_sets_stop_requested_flag(self, mock_thread_cls: MagicMock, tmp_path: Path) -> None:
         mock_thread_cls.return_value = MagicMock()
         mock_proc = MagicMock(spec=subprocess.Popen)
@@ -197,7 +197,7 @@ class TestStopGame:
         assert gm.is_stop_requested()
         assert gm.state == "stopping"
 
-    @patch("roc.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.threading.Thread")
     def test_does_not_send_sigterm_immediately(
         self, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -212,7 +212,7 @@ class TestStopGame:
         gm.stop_game()
         mock_proc.send_signal.assert_not_called()
 
-    @patch("roc.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.threading.Thread")
     def test_starts_shutdown_watchdog_thread(
         self, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -250,7 +250,7 @@ class TestMonitorProcess:
         run_dir = tmp_path / "2026-03-22_run001"
         run_dir.mkdir()
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(existing_runs)
 
         assert gm._current_run_name == "2026-03-22_run001"
@@ -268,7 +268,7 @@ class TestMonitorProcess:
         gm._state = "initializing"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._current_run_name is None
@@ -284,7 +284,7 @@ class TestMonitorProcess:
         gm._state = "running"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._exit_code == 0
@@ -300,7 +300,7 @@ class TestMonitorProcess:
         gm._state = "running"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._exit_code == 42
@@ -316,7 +316,7 @@ class TestMonitorProcess:
         gm._state = "running"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._exit_code == -signal.SIGTERM
@@ -333,7 +333,7 @@ class TestMonitorProcess:
         gm._state = "running"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._process is None
@@ -458,12 +458,12 @@ class TestIsStopRequested:
         gm._process = MagicMock(spec=subprocess.Popen)
         gm._process.pid = 1
 
-        with patch("roc.game_manager.threading.Thread"):
+        with patch("roc.game.game_manager.threading.Thread"):
             gm.stop_game()
         assert gm.is_stop_requested()
 
-    @patch("roc.game_manager.threading.Thread")
-    @patch("roc.game_manager.subprocess.Popen")
+    @patch("roc.game.game_manager.threading.Thread")
+    @patch("roc.game.game_manager.subprocess.Popen")
     def test_cleared_on_start_game(
         self, mock_popen_cls: MagicMock, mock_thread_cls: MagicMock, tmp_path: Path
     ) -> None:
@@ -489,7 +489,7 @@ class TestMonitorProcessStopRequested:
         gm._state = "stopping"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._exit_code == 0
@@ -505,7 +505,7 @@ class TestMonitorProcessStopRequested:
         gm._state = "stopping"
         gm._process = mock_proc
 
-        with patch("roc.game_manager.time.sleep"):
+        with patch("roc.game.game_manager.time.sleep"):
             gm._monitor_process(set())
 
         assert gm._exit_code == 1

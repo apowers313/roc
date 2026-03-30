@@ -18,7 +18,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from roc.logger import logger
+from roc.framework.logger import logger
 from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.run_store import (
     RunStore,

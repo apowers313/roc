@@ -15,12 +15,12 @@ from helpers.nethack_screens import screens
 from helpers.nethack_screens2 import screens as screens2
 from helpers.util import StubComponent
 
-from roc.attention import AttentionSettled, VisionAttention, VisionAttentionData
-from roc.config import Config
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.delta import Delta
-from roc.perception import VisionData
+from roc.pipeline.attention.attention import AttentionSettled, VisionAttention, VisionAttentionData
+from roc.framework.config import Config
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.delta import Delta
+from roc.perception.base import VisionData
 
 
 def _make_attention_stub(empty_components: None) -> StubComponent[Any, Any]:

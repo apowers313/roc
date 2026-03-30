@@ -8,8 +8,8 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from roc.location import XLoc, YLoc
-from roc.perception import (
+from roc.perception.location import XLoc, YLoc
+from roc.perception.base import (
     AuditoryData,
     Direction,
     Feature,
@@ -159,7 +159,7 @@ class TestAreaFeatureAbstract:
     """Test AreaFeature's concrete methods via a concrete subclass."""
 
     def _make_concrete_area_feature(self, type_val=65, points=None, size=3):
-        from roc.perception import AreaFeature
+        from roc.perception.base import AreaFeature
 
         if points is None:
             points = {(XLoc(0), YLoc(0)), (XLoc(1), YLoc(0)), (XLoc(2), YLoc(0))}

@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
 
-from .graphdb import Node
+from ...db.graphdb import Node
 
 if TYPE_CHECKING:
     from .sequencer import Frame

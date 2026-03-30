@@ -14,7 +14,7 @@ def mock_db():
     mock.strict_schema_warns = False
     mock.node_counter = MagicMock()
     mock.edge_counter = MagicMock()
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
@@ -128,7 +128,7 @@ class TestEdgeCacheGauge:
 
 def _clear_all_states():
     """Reset all states to None and clear step counts for emit_state_logs tests."""
-    from roc.event import Event
+    from roc.framework.event import Event
     from roc.reporting.state import states
 
     Event._step_counts.clear()
@@ -167,7 +167,7 @@ def _emit_and_check(expected_count, expected_event_name=None):
 
 class TestEmitStateLogsExtra:
     def test_emit_state_logs_with_saliency(self):
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.state import states
 
         cfg = Config.get()
@@ -274,7 +274,7 @@ class TestEmitStateLogsExtra:
         states.message.val = None
 
     def test_emit_state_logs_with_event_bus_counts(self):
-        from roc.event import Event
+        from roc.framework.event import Event
 
         _clear_all_states()
         Event._step_counts["TestBus"] = 5
@@ -564,7 +564,7 @@ class TestCurrentPhonemeState:
         from roc.reporting.state import CurrentPhonemeState
 
         s = CurrentPhonemeState()
-        from roc.feature_extractors.phoneme import PhonemeWord
+        from roc.perception.feature_extractors.phoneme import PhonemeWord
 
         phonemes = [PhonemeWord(word="hello", phonemes=["h", "e"], is_break=False)]
         s.set(phonemes)
@@ -704,7 +704,7 @@ class TestEnrichActionExpmod:
         action_dict: dict[str, object] = {"action_id": 0}
         mock_expmod = MagicMock()
         mock_expmod.name = "random-action"
-        with patch("roc.action.DefaultActionExpMod.get", return_value=mock_expmod):
+        with patch("roc.pipeline.action.DefaultActionExpMod.get", return_value=mock_expmod):
             _enrich_action_expmod(action_dict)
         assert action_dict["expmod_name"] == "random-action"
 
@@ -714,7 +714,7 @@ class TestEnrichActionExpmod:
 
         action_dict: dict[str, object] = {"action_id": 0}
         with patch(
-            "roc.action.DefaultActionExpMod.get",
+            "roc.pipeline.action.DefaultActionExpMod.get",
             side_effect=RuntimeError("no expmod"),
         ):
             _enrich_action_expmod(action_dict)
@@ -784,10 +784,10 @@ class TestEmitSequenceLog:
 
     def test_emit_sequence_log_with_frame(self):
         """Sequence log is emitted when a sequencer with a last_frame is loaded."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
         from roc.reporting.state import StateList, _emit_sequence_log
-        from roc.sequencer import Sequencer
+        from roc.pipeline.temporal.sequencer import Sequencer
 
         mock_seq = MagicMock(spec=Sequencer)
         mock_seq.last_frame = MagicMock()
@@ -814,8 +814,8 @@ class TestEmitSequenceLog:
 
     def test_emit_sequence_log_no_sequencer(self):
         """Sequence log not emitted when sequencer not loaded."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
         from roc.reporting.state import StateList, _emit_sequence_log
 
         key = (ComponentName("sequencer"), ComponentType("sequencer"))
@@ -829,10 +829,10 @@ class TestEmitSequenceLog:
 
     def test_emit_sequence_log_exception_swallowed(self):
         """Exceptions in sequence log do not propagate."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
         from roc.reporting.state import StateList, _emit_sequence_log
-        from roc.sequencer import Sequencer
+        from roc.pipeline.temporal.sequencer import Sequencer
 
         # Insert a mock sequencer with a last_frame that will cause
         # _build_sequence_dict to raise.
@@ -864,7 +864,7 @@ class TestBuildSequenceDict:
 
     def test_builds_dict_with_objects_and_intrinsics(self):
         """Builds a full sequence dict from a frame."""
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
         from roc.reporting.state import StateList, _build_sequence_dict
 
         mock_frame = MagicMock()
@@ -963,9 +963,9 @@ class TestEnrichPredictionMeta:
 
     def test_adds_prediction_metadata(self):
         """Enriches prediction dict with expmod and component metadata."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
-        from roc.predict import Predict
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
+        from roc.pipeline.temporal.predict import Predict
         from roc.reporting.state import _enrich_prediction_meta
 
         pred_dict: dict[str, object] = {"made": True}
@@ -989,11 +989,11 @@ class TestEnrichPredictionMeta:
         try:
             with (
                 patch(
-                    "roc.predict.PredictionCandidateFramesExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionCandidateFramesExpMod.get",
                     return_value=mock_candidate_expmod,
                 ),
                 patch(
-                    "roc.predict.PredictionConfidenceExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionConfidenceExpMod.get",
                     return_value=mock_confidence_expmod,
                 ),
             ):
@@ -1010,9 +1010,9 @@ class TestEnrichPredictionMeta:
 
     def test_empty_predicted_intrinsics_not_added(self):
         """When predicted_intrinsics is empty, it is not added to dict."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
-        from roc.predict import Predict
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
+        from roc.pipeline.temporal.predict import Predict
         from roc.reporting.state import _enrich_prediction_meta
 
         pred_dict: dict[str, object] = {"made": True}
@@ -1031,11 +1031,11 @@ class TestEnrichPredictionMeta:
         try:
             with (
                 patch(
-                    "roc.predict.PredictionCandidateFramesExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionCandidateFramesExpMod.get",
                     return_value=MagicMock(name="object-based"),
                 ),
                 patch(
-                    "roc.predict.PredictionConfidenceExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionConfidenceExpMod.get",
                     return_value=MagicMock(name="naive"),
                 ),
             ):
@@ -1051,7 +1051,7 @@ class TestEnrichPredictionMeta:
 
         pred_dict: dict[str, object] = {"made": True}
         with patch(
-            "roc.predict.PredictionCandidateFramesExpMod.get",
+            "roc.pipeline.temporal.predict.PredictionCandidateFramesExpMod.get",
             side_effect=RuntimeError("no expmod"),
         ):
             _enrich_prediction_meta(pred_dict)
@@ -1059,8 +1059,8 @@ class TestEnrichPredictionMeta:
 
     def test_non_predict_component_skips_meta(self):
         """When loaded component is not a Predict instance, meta is not added."""
-        from roc.component import ComponentName, ComponentType
-        from roc.component import loaded_components as lc
+        from roc.framework.component import ComponentName, ComponentType
+        from roc.framework.component import loaded_components as lc
         from roc.reporting.state import _enrich_prediction_meta
 
         pred_dict: dict[str, object] = {"made": True}
@@ -1072,11 +1072,11 @@ class TestEnrichPredictionMeta:
         try:
             with (
                 patch(
-                    "roc.predict.PredictionCandidateFramesExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionCandidateFramesExpMod.get",
                     return_value=MagicMock(name="object-based"),
                 ),
                 patch(
-                    "roc.predict.PredictionConfidenceExpMod.get",
+                    "roc.pipeline.temporal.predict.PredictionConfidenceExpMod.get",
                     return_value=MagicMock(name="naive"),
                 ),
             ):

@@ -11,14 +11,14 @@ from unittest.mock import patch
 from helpers.nethack_screens2 import screens
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.config import Config
-from roc.object import Object
-from roc.object_instance import ObjectInstance, SituatedObjectInstance
-from roc.object_transform import ObjectTransform
-from roc.perception import VisionData
-from roc.sequencer import Frame, NextFrame
-from roc.transformer import _compute_transforms, _get_ambiguous_uuids
+from roc.framework.component import Component
+from roc.framework.config import Config
+from roc.pipeline.object.object import Object
+from roc.pipeline.object.object_instance import ObjectInstance, SituatedObjectInstance
+from roc.pipeline.object.object_transform import ObjectTransform
+from roc.perception.base import VisionData
+from roc.pipeline.temporal.sequencer import Frame, NextFrame
+from roc.pipeline.temporal.transformer import _compute_transforms, _get_ambiguous_uuids
 
 
 def _load_perception_and_resolution():
@@ -110,7 +110,7 @@ class TestAmbiguityIntegration:
         SituatedObjectInstance.connect(frame1, ObjectInstance(object_uuid=o.uuid, x=5, y=5, tick=1))
         SituatedObjectInstance.connect(frame2, ObjectInstance(object_uuid=o.uuid, x=3, y=3, tick=2))
 
-        with patch("roc.object.Object.find_one", return_value=None):
+        with patch("roc.pipeline.object.object.Object.find_one", return_value=None):
             transform = _compute_transforms(frame2, frame1)
 
         ot = [
@@ -129,7 +129,7 @@ class TestAmbiguityIntegration:
         SituatedObjectInstance.connect(frame1, ObjectInstance(object_uuid=o.uuid, x=1, y=1, tick=1))
         SituatedObjectInstance.connect(frame2, ObjectInstance(object_uuid=o.uuid, x=3, y=3, tick=2))
 
-        with patch("roc.object.Object.find_one", return_value=o):
+        with patch("roc.pipeline.object.object.Object.find_one", return_value=o):
             transform = _compute_transforms(frame2, frame1)
 
         ot = [
@@ -163,7 +163,7 @@ class TestAmbiguityIntegration:
             frame2, ObjectInstance(object_uuid=ambig_obj.uuid, x=6, y=6, tick=2)
         )
 
-        with patch("roc.object.Object.find_one", return_value=unique_obj):
+        with patch("roc.pipeline.object.object.Object.find_one", return_value=unique_obj):
             transform = _compute_transforms(frame2, frame1)
 
         ot = [

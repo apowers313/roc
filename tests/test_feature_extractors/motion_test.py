@@ -7,18 +7,18 @@ from helpers.util import (
     StubComponent,
 )
 
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.delta import Delta, DeltaFeature
-from roc.feature_extractors.motion import (
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.delta import Delta, DeltaFeature
+from roc.perception.feature_extractors.motion import (
     Motion,
     MotionFeature,
     MotionNode,
     adjacent_direction,
 )
-from roc.graphdb import GraphDB, Node
-from roc.location import XLoc, YLoc
-from roc.perception import Direction, Settled, VisionData, cache_registry
+from roc.db.graphdb import GraphDB, Node
+from roc.perception.location import XLoc, YLoc
+from roc.perception.base import Direction, Settled, VisionData, cache_registry
 
 screen0 = VisionData.from_dict(screens[0])
 screen1 = VisionData.from_dict(screens[1])

@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.config import (
+from roc.framework.config import (
     ConfigBoolIntrinsic,
     ConfigIntIntrinsic,
     ConfigIntrinsicType,
@@ -22,13 +22,13 @@ def mock_db():
     mock.strict_schema_warns = False
     mock.node_counter = MagicMock()
     mock.edge_counter = MagicMock()
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
 class TestIntrinsicIntOp:
     def test_constructor(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test_hp", config=(0, 100))
         assert op.name == "test_hp"
@@ -37,7 +37,7 @@ class TestIntrinsicIntOp:
         assert op.range == 100
 
     def test_constructor_negative_range(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(-50, 50))
         assert op.min == -50
@@ -45,7 +45,7 @@ class TestIntrinsicIntOp:
         assert op.range == 100
 
     def test_validate_in_range(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(0, 100))
         assert op.validate(50) is True
@@ -53,14 +53,14 @@ class TestIntrinsicIntOp:
         assert op.validate(100) is True
 
     def test_validate_out_of_range(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(0, 100))
         assert op.validate(-1) is False
         assert op.validate(101) is False
 
     def test_normalize(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(0, 100))
         assert op.normalize(0) == pytest.approx(0.0)
@@ -68,7 +68,7 @@ class TestIntrinsicIntOp:
         assert op.normalize(50) == pytest.approx(0.5)
 
     def test_normalize_negative_range(self):
-        from roc.intrinsic import IntrinsicIntOp
+        from roc.pipeline.intrinsic import IntrinsicIntOp
 
         op = IntrinsicIntOp("test", config=(-50, 50))
         assert op.normalize(0) == pytest.approx(0.5)
@@ -78,39 +78,39 @@ class TestIntrinsicIntOp:
 
 class TestIntrinsicPercentOp:
     def test_constructor(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         assert op.name == "hp"
         assert op.base == "maxhp"
 
     def test_validate_positive_int(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         assert op.validate(10) is True
 
     def test_validate_zero(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         assert op.validate(0) is False
 
     def test_validate_negative(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         assert op.validate(-1) is False
 
     def test_normalize(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         result = op.normalize(50, raw_intrinsics={"maxhp": 100})
         assert result == pytest.approx(0.5)
 
     def test_normalize_full(self):
-        from roc.intrinsic import IntrinsicPercentOp
+        from roc.pipeline.intrinsic import IntrinsicPercentOp
 
         op = IntrinsicPercentOp("hp", config="maxhp")
         result = op.normalize(100, raw_intrinsics={"maxhp": 100})
@@ -119,7 +119,7 @@ class TestIntrinsicPercentOp:
 
 class TestIntrinsicMapOp:
     def test_constructor(self):
-        from roc.intrinsic import IntrinsicMapOp
+        from roc.pipeline.intrinsic import IntrinsicMapOp
 
         mapping = {0: 0.0, 1: 0.5, 2: 1.0}
         op = IntrinsicMapOp("hunger", config=mapping)
@@ -127,20 +127,20 @@ class TestIntrinsicMapOp:
         assert op.map == mapping
 
     def test_validate_in_map(self):
-        from roc.intrinsic import IntrinsicMapOp
+        from roc.pipeline.intrinsic import IntrinsicMapOp
 
         op = IntrinsicMapOp("hunger", config={0: 0.0, 1: 0.5})
         assert op.validate(0) is True
         assert op.validate(1) is True
 
     def test_validate_not_in_map(self):
-        from roc.intrinsic import IntrinsicMapOp
+        from roc.pipeline.intrinsic import IntrinsicMapOp
 
         op = IntrinsicMapOp("hunger", config={0: 0.0, 1: 0.5})
         assert op.validate(99) is False
 
     def test_normalize(self):
-        from roc.intrinsic import IntrinsicMapOp
+        from roc.pipeline.intrinsic import IntrinsicMapOp
 
         op = IntrinsicMapOp("hunger", config={0: 0.0, 1: 0.5, 2: 1.0})
         assert op.normalize(0) == pytest.approx(0.0)
@@ -150,20 +150,20 @@ class TestIntrinsicMapOp:
 
 class TestIntrinsicBoolOp:
     def test_validate_always_true(self):
-        from roc.intrinsic import IntrinsicBoolOp
+        from roc.pipeline.intrinsic import IntrinsicBoolOp
 
         op = IntrinsicBoolOp("blind")
         assert op.validate(True) is True
         assert op.validate(False) is True
 
     def test_normalize_true(self):
-        from roc.intrinsic import IntrinsicBoolOp
+        from roc.pipeline.intrinsic import IntrinsicBoolOp
 
         op = IntrinsicBoolOp("blind")
         assert op.normalize(True) == pytest.approx(1.0)
 
     def test_normalize_false(self):
-        from roc.intrinsic import IntrinsicBoolOp
+        from roc.pipeline.intrinsic import IntrinsicBoolOp
 
         op = IntrinsicBoolOp("blind")
         assert op.normalize(False) == pytest.approx(0.0)
@@ -171,7 +171,7 @@ class TestIntrinsicBoolOp:
 
 class TestIntrinsicOpInitSubclass:
     def test_raises_if_intrinsic_type_not_set(self):
-        from roc.intrinsic import IntrinsicOp
+        from roc.pipeline.intrinsic import IntrinsicOp
 
         with pytest.raises(TypeError, match="must set intrinsic_type"):
 
@@ -183,7 +183,7 @@ class TestIntrinsicOpInitSubclass:
                     return 0.0
 
     def test_raises_on_duplicate_type(self):
-        from roc.intrinsic import IntrinsicOp
+        from roc.pipeline.intrinsic import IntrinsicOp
 
         with pytest.raises(TypeError, match="already registered"):
 
@@ -199,55 +199,55 @@ class TestIntrinsicOpInitSubclass:
 
 class TestIntrinsicNode:
     def test_str(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         assert str(node) == "IntrinsicNode('hp', 50(0.5))"
 
     def test_same_transform_type_true(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node1 = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         node2 = IntrinsicNode(name="hp", raw_value=40, normalized_value=0.4)
         assert node1.same_transform_type(node2) is True
 
     def test_same_transform_type_false_different_name(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node1 = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         node2 = IntrinsicNode(name="energy", raw_value=40, normalized_value=0.4)
         assert node1.same_transform_type(node2) is False
 
     def test_same_transform_type_false_different_type(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node1 = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         other = MagicMock()
         assert node1.same_transform_type(other) is False
 
     def test_compatible_transform(self):
-        from roc.intrinsic import IntrinsicNode, IntrinsicTransform
+        from roc.pipeline.intrinsic import IntrinsicNode, IntrinsicTransform
 
         node = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         t = IntrinsicTransform(name="hp", normalized_change=-0.1)
         assert node.compatible_transform(t) is True
 
     def test_compatible_transform_false(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         other = MagicMock()
         assert node.compatible_transform(other) is False
 
     def test_create_transform_same_value_returns_none(self):
-        from roc.intrinsic import IntrinsicNode
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         node1 = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         node2 = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         assert node2.create_transform(node1) is None
 
     def test_create_transform_different_value(self):
-        from roc.intrinsic import IntrinsicNode, IntrinsicTransform
+        from roc.pipeline.intrinsic import IntrinsicNode, IntrinsicTransform
 
         prev = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         curr = IntrinsicNode(name="hp", raw_value=40, normalized_value=0.4)
@@ -258,7 +258,7 @@ class TestIntrinsicNode:
         assert pytest.approx(t.normalized_change) == -0.1
 
     def test_apply_transform(self):
-        from roc.intrinsic import IntrinsicNode, IntrinsicTransform
+        from roc.pipeline.intrinsic import IntrinsicNode, IntrinsicTransform
 
         node = IntrinsicNode(name="hp", raw_value=50, normalized_value=0.5)
         t = IntrinsicTransform(name="hp", normalized_change=-0.1)
@@ -271,7 +271,7 @@ class TestIntrinsicNode:
 
 class TestIntrinsicTransform:
     def test_str(self):
-        from roc.intrinsic import IntrinsicTransform
+        from roc.pipeline.intrinsic import IntrinsicTransform
 
         t = IntrinsicTransform(name="hp", normalized_change=-0.1)
         assert str(t) == "IntrinsicTransform('hp', -0.1)"
@@ -279,7 +279,7 @@ class TestIntrinsicTransform:
 
 class TestIntrinsicData:
     def test_constructor_normalizes(self):
-        from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp
+        from roc.pipeline.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp
 
         # Set up intrinsic spec manually
         Intrinsic.intrinsic_spec = {"hp": IntrinsicIntOp("hp", config=(0, 100))}
@@ -288,7 +288,7 @@ class TestIntrinsicData:
         assert data.normalized_intrinsics["hp"] == pytest.approx(0.5)
 
     def test_repr(self):
-        from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp
+        from roc.pipeline.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp
 
         Intrinsic.intrinsic_spec = {"hp": IntrinsicIntOp("hp", config=(0, 100))}
         data = IntrinsicData({"hp": 50})
@@ -296,7 +296,7 @@ class TestIntrinsicData:
         assert "hp: 50" in r
 
     def test_to_nodes(self):
-        from roc.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp, IntrinsicNode
+        from roc.pipeline.intrinsic import Intrinsic, IntrinsicData, IntrinsicIntOp, IntrinsicNode
 
         Intrinsic.intrinsic_spec = {"hp": IntrinsicIntOp("hp", config=(0, 100))}
         data = IntrinsicData({"hp": 50})
@@ -310,7 +310,7 @@ class TestIntrinsicData:
 
 class TestConfigIntrinsics:
     def test_creates_int_op(self):
-        from roc.intrinsic import _config_intrinsics
+        from roc.pipeline.intrinsic import _config_intrinsics
 
         specs: list[ConfigIntrinsicType] = [ConfigIntIntrinsic(name="hp", config=(0, 100))]
         result = _config_intrinsics(specs)
@@ -318,14 +318,14 @@ class TestConfigIntrinsics:
         assert result["hp"].name == "hp"
 
     def test_creates_percent_op(self):
-        from roc.intrinsic import _config_intrinsics
+        from roc.pipeline.intrinsic import _config_intrinsics
 
         specs: list[ConfigIntrinsicType] = [ConfigPercentIntrinsic(name="hp_pct", config="maxhp")]
         result = _config_intrinsics(specs)
         assert "hp_pct" in result
 
     def test_creates_map_op(self):
-        from roc.intrinsic import _config_intrinsics
+        from roc.pipeline.intrinsic import _config_intrinsics
 
         specs: list[ConfigIntrinsicType] = [
             ConfigMapIntrinsic(name="hunger", config={0: 0.0, 1: 0.5})
@@ -334,14 +334,14 @@ class TestConfigIntrinsics:
         assert "hunger" in result
 
     def test_creates_bool_op(self):
-        from roc.intrinsic import _config_intrinsics
+        from roc.pipeline.intrinsic import _config_intrinsics
 
         specs: list[ConfigIntrinsicType] = [ConfigBoolIntrinsic(name="blind")]
         result = _config_intrinsics(specs)
         assert "blind" in result
 
     def test_creates_multiple(self):
-        from roc.intrinsic import _config_intrinsics
+        from roc.pipeline.intrinsic import _config_intrinsics
 
         specs: list[ConfigIntrinsicType] = [
             ConfigIntIntrinsic(name="hp", config=(0, 100)),

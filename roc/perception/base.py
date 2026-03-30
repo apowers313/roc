@@ -14,9 +14,9 @@ from weakref import ReferenceType, WeakValueDictionary, ref
 import numpy as np
 import numpy.typing as npt
 
-from .component import Component
-from .event import Event, EventBus
-from .graphdb import Edge, EdgeConnectionsList, Node
+from ..framework.component import Component
+from ..framework.event import Event, EventBus
+from ..db.graphdb import Edge, EdgeConnectionsList, Node
 from .location import XLoc, YLoc
 
 

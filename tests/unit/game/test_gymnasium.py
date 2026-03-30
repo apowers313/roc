@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from roc.config import Config
+from roc.framework.config import Config
 
 
 def _make_fake_obs() -> dict[str, Any]:
@@ -46,12 +46,12 @@ class TestGraphDBControls:
 
         obs = _make_fake_obs()
 
-        mock_flush = mocker.patch("roc.gymnasium.GraphDB.flush")
-        mock_export = mocker.patch("roc.gymnasium.GraphDB.export")
+        mock_flush = mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mock_export = mocker.patch("roc.game.gymnasium.GraphDB.export")
 
         # Patch Gym.__init__ to bypass real gym setup, then call start() directly
-        with patch("roc.gymnasium.Gym.__init__", return_value=None):
-            from roc.gymnasium import Gym
+        with patch("roc.game.gymnasium.Gym.__init__", return_value=None):
+            from roc.game.gymnasium import Gym
 
             # Create a concrete subclass for testing
             class FakeGym(Gym):
@@ -74,11 +74,11 @@ class TestGraphDBControls:
             gym_instance.env.step.return_value = (obs, 0, True, False, {})
 
             # Patch _dump_env_start/_dump_env_record/_dump_env_end and State/breakpoints
-            mocker.patch("roc.gymnasium._dump_env_start")
-            mocker.patch("roc.gymnasium._dump_env_record")
-            mocker.patch("roc.gymnasium._dump_env_end")
-            mocker.patch("roc.gymnasium.breakpoints")
-            mocker.patch("roc.gymnasium.State")
+            mocker.patch("roc.game.gymnasium._dump_env_start")
+            mocker.patch("roc.game.gymnasium._dump_env_record")
+            mocker.patch("roc.game.gymnasium._dump_env_end")
+            mocker.patch("roc.game.gymnasium.breakpoints")
+            mocker.patch("roc.game.gymnasium.State")
 
             gym_instance.start()
 
@@ -94,11 +94,11 @@ class TestGraphDBControls:
 
         obs = _make_fake_obs()
 
-        mock_flush = mocker.patch("roc.gymnasium.GraphDB.flush")
-        mock_export = mocker.patch("roc.gymnasium.GraphDB.export")
+        mock_flush = mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mock_export = mocker.patch("roc.game.gymnasium.GraphDB.export")
 
-        with patch("roc.gymnasium.Gym.__init__", return_value=None):
-            from roc.gymnasium import Gym
+        with patch("roc.game.gymnasium.Gym.__init__", return_value=None):
+            from roc.game.gymnasium import Gym
 
             class FakeGym(Gym):
                 name: str = "fakegym2"
@@ -118,11 +118,11 @@ class TestGraphDBControls:
             gym_instance.env.reset.return_value = (obs, {})
             gym_instance.env.step.return_value = (obs, 0, True, False, {})
 
-            mocker.patch("roc.gymnasium._dump_env_start")
-            mocker.patch("roc.gymnasium._dump_env_record")
-            mocker.patch("roc.gymnasium._dump_env_end")
-            mocker.patch("roc.gymnasium.breakpoints")
-            mocker.patch("roc.gymnasium.State")
+            mocker.patch("roc.game.gymnasium._dump_env_start")
+            mocker.patch("roc.game.gymnasium._dump_env_record")
+            mocker.patch("roc.game.gymnasium._dump_env_end")
+            mocker.patch("roc.game.gymnasium.breakpoints")
+            mocker.patch("roc.game.gymnasium.State")
 
             gym_instance.start()
 
@@ -138,11 +138,11 @@ class TestGraphDBControls:
 
         obs = _make_fake_obs()
 
-        mock_flush = mocker.patch("roc.gymnasium.GraphDB.flush")
-        mock_export = mocker.patch("roc.gymnasium.GraphDB.export")
+        mock_flush = mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mock_export = mocker.patch("roc.game.gymnasium.GraphDB.export")
 
-        with patch("roc.gymnasium.Gym.__init__", return_value=None):
-            from roc.gymnasium import Gym
+        with patch("roc.game.gymnasium.Gym.__init__", return_value=None):
+            from roc.game.gymnasium import Gym
 
             class FakeGym(Gym):
                 name: str = "fakegym3"
@@ -162,11 +162,11 @@ class TestGraphDBControls:
             gym_instance.env.reset.return_value = (obs, {})
             gym_instance.env.step.return_value = (obs, 0, True, False, {})
 
-            mocker.patch("roc.gymnasium._dump_env_start")
-            mocker.patch("roc.gymnasium._dump_env_record")
-            mocker.patch("roc.gymnasium._dump_env_end")
-            mocker.patch("roc.gymnasium.breakpoints")
-            mocker.patch("roc.gymnasium.State")
+            mocker.patch("roc.game.gymnasium._dump_env_start")
+            mocker.patch("roc.game.gymnasium._dump_env_record")
+            mocker.patch("roc.game.gymnasium._dump_env_end")
+            mocker.patch("roc.game.gymnasium.breakpoints")
+            mocker.patch("roc.game.gymnasium.State")
 
             gym_instance.start()
 
@@ -179,7 +179,7 @@ class TestActionValueToKey:
 
     def test_printable_ascii(self):
         """Printable ASCII range (32-126) returns the character."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         assert action_value_to_key(ord("a")) == "a"
         assert action_value_to_key(ord("Z")) == "Z"
@@ -188,7 +188,7 @@ class TestActionValueToKey:
 
     def test_control_chars(self):
         """Control character range (1-31) returns ^X notation."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         # C("d") = 4 -> "^D"
         assert action_value_to_key(4) == "^D"
@@ -198,7 +198,7 @@ class TestActionValueToKey:
 
     def test_meta_extended(self):
         """Meta/extended range (128+) returns M-x notation."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         # M("f") = 0x80 | ord("f") = 128 + 102 = 230 -> "M-f"
         assert action_value_to_key(230) == "M-f"
@@ -207,7 +207,7 @@ class TestActionValueToKey:
 
     def test_meta_non_printable_base(self):
         """Meta values where the base is not printable return None."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         # 128 + 0 = 128, base=0 which is not in 32-126
         assert action_value_to_key(128) is None
@@ -216,13 +216,13 @@ class TestActionValueToKey:
 
     def test_zero_returns_none(self):
         """Value 0 does not map to any key."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         assert action_value_to_key(0) is None
 
     def test_del_returns_none(self):
         """Value 127 (DEL) does not map to any key."""
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         assert action_value_to_key(127) is None
 
@@ -232,7 +232,7 @@ class TestBuildActionMap:
 
     def test_basic_enum_actions(self):
         """Builds action map from enum-like actions with name and value."""
-        from roc.gymnasium import _build_action_map
+        from roc.game.gymnasium import _build_action_map
 
         class FakeAction:
             def __init__(self, name, value):
@@ -252,7 +252,7 @@ class TestBuildActionMap:
 
     def test_non_int_value_no_key(self):
         """Actions with non-int values do not get an action_key."""
-        from roc.gymnasium import _build_action_map
+        from roc.game.gymnasium import _build_action_map
 
         class FakeAction:
             def __init__(self, name, value):
@@ -268,7 +268,7 @@ class TestBuildActionMap:
 
     def test_plain_values_without_name_attr(self):
         """Plain values (no .name) use str() for the name."""
-        from roc.gymnasium import _build_action_map
+        from roc.game.gymnasium import _build_action_map
 
         actions = (42, 99)
         result = _build_action_map(actions)
@@ -278,7 +278,7 @@ class TestBuildActionMap:
 
     def test_empty_actions(self):
         """Empty action tuple returns empty list."""
-        from roc.gymnasium import _build_action_map
+        from roc.game.gymnasium import _build_action_map
 
         assert _build_action_map(()) == []
 
@@ -288,33 +288,33 @@ class TestPublishActionMap:
 
     def test_no_gym_actions_returns_early(self):
         """When gym_actions is None, nothing happens."""
-        from roc.gymnasium import _publish_action_map
+        from roc.game.gymnasium import _publish_action_map
 
         # Should not raise
         _publish_action_map(None, "http://example.com", None)
 
     def test_empty_gym_actions_returns_early(self):
         """When gym_actions is an empty tuple, nothing happens."""
-        from roc.gymnasium import _publish_action_map
+        from roc.game.gymnasium import _publish_action_map
 
         _publish_action_map((), "http://example.com", None)
 
     def test_no_callback_saves_to_file(self, mocker):
         """Without callback URL, saves action map to file."""
-        from roc.gymnasium import _publish_action_map
+        from roc.game.gymnasium import _publish_action_map
 
-        mock_save = mocker.patch("roc.gymnasium._save_action_map_to_file")
-        mocker.patch("roc.gymnasium._post_action_map_to_server")
+        mock_save = mocker.patch("roc.game.gymnasium._save_action_map_to_file")
+        mocker.patch("roc.game.gymnasium._post_action_map_to_server")
 
         _publish_action_map((42,), None, None)
         mock_save.assert_called_once()
 
     def test_with_callback_posts_to_server(self, mocker):
         """With callback URL, posts action map to server."""
-        from roc.gymnasium import _publish_action_map
+        from roc.game.gymnasium import _publish_action_map
 
-        mock_post = mocker.patch("roc.gymnasium._post_action_map_to_server")
-        mocker.patch("roc.gymnasium._save_action_map_to_file")
+        mock_post = mocker.patch("roc.game.gymnasium._post_action_map_to_server")
+        mocker.patch("roc.game.gymnasium._save_action_map_to_file")
 
         _publish_action_map((42,), "http://example.com/api/internal/step", "ctx")
         mock_post.assert_called_once()
@@ -325,14 +325,14 @@ class TestSetupCallbackContext:
 
     def test_no_callback_url_returns_none(self):
         """When callback_url is None, returns None."""
-        from roc.gymnasium import _setup_callback_context
+        from roc.game.gymnasium import _setup_callback_context
 
         result = _setup_callback_context(None, Config.get())
         assert result is None
 
     def test_http_url_returns_none_context(self):
         """When callback_url is http, returns None SSL context."""
-        from roc.gymnasium import _setup_callback_context
+        from roc.game.gymnasium import _setup_callback_context
 
         result = _setup_callback_context("http://localhost:8000/step", Config.get())
         assert result is None
@@ -341,7 +341,7 @@ class TestSetupCallbackContext:
         """When callback_url is https, returns an SSL context."""
         import ssl
 
-        from roc.gymnasium import _setup_callback_context
+        from roc.game.gymnasium import _setup_callback_context
 
         result = _setup_callback_context("https://localhost:8000/step", Config.get())
         assert isinstance(result, ssl.SSLContext)
@@ -369,7 +369,7 @@ class TestSetupCallbackContext:
         """
         import ssl
 
-        from roc.gymnasium import _setup_callback_context
+        from roc.game.gymnasium import _setup_callback_context
 
         result = _setup_callback_context("https://localhost:8000/step", Config.get())
         assert isinstance(result, ssl.SSLContext)
@@ -382,7 +382,7 @@ class TestExtractGameMetrics:
 
     def test_extracts_all_metrics(self):
         """Extracts known blstats into a dict."""
-        from roc.gymnasium import _extract_game_metrics
+        from roc.game.gymnasium import _extract_game_metrics
 
         obs = _make_fake_obs()
         # Set some known values
@@ -409,7 +409,7 @@ class TestParseInventory:
 
     def test_valid_inventory(self):
         """Parses inventory items from observation."""
-        from roc.gymnasium import _parse_inventory
+        from roc.game.gymnasium import _parse_inventory
 
         obs = _make_fake_obs_with_inventory()
         result = _parse_inventory(obs)
@@ -423,7 +423,7 @@ class TestParseInventory:
 
     def test_empty_inventory_returns_none(self):
         """All-empty glyph 5976 items are skipped, returning None."""
-        from roc.gymnasium import _parse_inventory
+        from roc.game.gymnasium import _parse_inventory
 
         obs = _make_fake_obs()
         obs["inv_strs"] = np.array([[0] * 55], dtype=np.uint8)
@@ -435,7 +435,7 @@ class TestParseInventory:
 
     def test_missing_inventory_keys_returns_none(self):
         """Returns None when obs doesn't have inventory keys."""
-        from roc.gymnasium import _parse_inventory
+        from roc.game.gymnasium import _parse_inventory
 
         obs = _make_fake_obs()
         result = _parse_inventory(obs)
@@ -447,7 +447,7 @@ class TestCollectScreenData:
 
     def test_none_screen_state(self):
         """When screen state is None, returns None values."""
-        from roc.gymnasium import _collect_screen_data
+        from roc.game.gymnasium import _collect_screen_data
 
         states = MagicMock()
         states.screen.val = None
@@ -460,7 +460,7 @@ class TestCollectScreenData:
 
     def test_with_saliency_no_features(self):
         """When saliency is present but feature_report is empty."""
-        from roc.gymnasium import _collect_screen_data
+        from roc.game.gymnasium import _collect_screen_data
 
         states = MagicMock()
         states.screen.val = None
@@ -480,7 +480,7 @@ class TestCollectObjectData:
 
     def test_both_none(self):
         """When object and attention states are both None."""
-        from roc.gymnasium import _collect_object_data
+        from roc.game.gymnasium import _collect_object_data
 
         states = MagicMock()
         states.object.val = None
@@ -492,7 +492,7 @@ class TestCollectObjectData:
 
     def test_with_object(self):
         """When object state is present."""
-        from roc.gymnasium import _collect_object_data
+        from roc.game.gymnasium import _collect_object_data
 
         states = MagicMock()
         states.object.val = "some_object"
@@ -510,7 +510,7 @@ class TestCollectGraphSummary:
 
     def test_returns_cache_stats(self, mocker):
         """Returns node/edge cache size info."""
-        from roc.gymnasium import _collect_graph_summary
+        from roc.game.gymnasium import _collect_graph_summary
 
         mock_node_cache = MagicMock()
         mock_node_cache.currsize = 10
@@ -519,8 +519,8 @@ class TestCollectGraphSummary:
         mock_edge_cache.currsize = 5
         mock_edge_cache.maxsize = 500
 
-        mocker.patch("roc.graphdb.Node.get_cache", return_value=mock_node_cache)
-        mocker.patch("roc.graphdb.Edge.get_cache", return_value=mock_edge_cache)
+        mocker.patch("roc.db.graphdb.Node.get_cache", return_value=mock_node_cache)
+        mocker.patch("roc.db.graphdb.Edge.get_cache", return_value=mock_edge_cache)
 
         result = _collect_graph_summary()
         assert result["node_count"] == 10
@@ -534,18 +534,18 @@ class TestCollectEventSummary:
 
     def test_returns_step_counts(self, mocker):
         """Returns event step counts when present."""
-        from roc.gymnasium import _collect_event_summary
+        from roc.game.gymnasium import _collect_event_summary
 
-        mocker.patch("roc.event.Event.get_step_counts", return_value={"bus1": 5})
+        mocker.patch("roc.framework.event.Event.get_step_counts", return_value={"bus1": 5})
         result = _collect_event_summary()
         assert result is not None
         assert result == [{"bus1": 5}]
 
     def test_empty_step_counts(self, mocker):
         """Returns None when step counts are empty."""
-        from roc.gymnasium import _collect_event_summary
+        from roc.game.gymnasium import _collect_event_summary
 
-        mocker.patch("roc.event.Event.get_step_counts", return_value={})
+        mocker.patch("roc.framework.event.Event.get_step_counts", return_value={})
         result = _collect_event_summary()
         assert result is None
 
@@ -555,7 +555,7 @@ class TestBuildActionTakenDict:
 
     def test_none_action(self):
         """Returns None when action state is None."""
-        from roc.gymnasium import _build_action_taken_dict
+        from roc.game.gymnasium import _build_action_taken_dict
 
         states = MagicMock()
         states.action.val = None
@@ -565,7 +565,7 @@ class TestBuildActionTakenDict:
 
     def test_valid_action_with_gym_actions(self):
         """Returns action dict with name and key when gym_actions are configured."""
-        from roc.gymnasium import _build_action_taken_dict
+        from roc.game.gymnasium import _build_action_taken_dict
 
         class FakeEnum:
             def __init__(self, name, value):
@@ -586,7 +586,7 @@ class TestBuildActionTakenDict:
 
     def test_action_without_gym_actions(self):
         """Returns action dict with only action_id when no gym_actions."""
-        from roc.gymnasium import _build_action_taken_dict
+        from roc.game.gymnasium import _build_action_taken_dict
 
         settings = Config.get()
         settings.gym_actions = None
@@ -605,7 +605,7 @@ class TestCollectMessage:
 
     def test_none_message(self):
         """Returns None when message is None."""
-        from roc.gymnasium import _collect_message
+        from roc.game.gymnasium import _collect_message
 
         states = MagicMock()
         states.message.val = None
@@ -613,7 +613,7 @@ class TestCollectMessage:
 
     def test_empty_message(self):
         """Returns None when message is empty/whitespace."""
-        from roc.gymnasium import _collect_message
+        from roc.game.gymnasium import _collect_message
 
         states = MagicMock()
         states.message.val = "   "
@@ -621,7 +621,7 @@ class TestCollectMessage:
 
     def test_valid_message(self):
         """Returns stripped message string."""
-        from roc.gymnasium import _collect_message
+        from roc.game.gymnasium import _collect_message
 
         states = MagicMock()
         states.message.val = "  You hit the goblin.  "
@@ -633,7 +633,7 @@ class TestCollectPhonemes:
 
     def test_none_phonemes(self):
         """Returns None when phonemes state is None."""
-        from roc.gymnasium import _collect_phonemes
+        from roc.game.gymnasium import _collect_phonemes
 
         states = MagicMock()
         states.phonemes.val = None
@@ -641,7 +641,7 @@ class TestCollectPhonemes:
 
     def test_valid_phonemes(self):
         """Returns list of phoneme dicts."""
-        from roc.gymnasium import _collect_phonemes
+        from roc.game.gymnasium import _collect_phonemes
 
         pw1 = MagicMock()
         pw1.word = "hello"
@@ -669,7 +669,7 @@ class TestObjToDict:
 
     def test_basic_object(self):
         """Converts object with id to dict."""
-        from roc.gymnasium import _obj_to_dict
+        from roc.game.gymnasium import _obj_to_dict
 
         obj = MagicMock()
         obj.id = "12345678abcdef"
@@ -679,7 +679,7 @@ class TestObjToDict:
 
     def test_object_with_position(self):
         """Includes x,y when object has last_x and last_y."""
-        from roc.gymnasium import _obj_to_dict
+        from roc.game.gymnasium import _obj_to_dict
 
         obj = MagicMock()
         obj.id = "abcdefgh"
@@ -698,7 +698,7 @@ class TestBuildTransformSummary:
 
     def test_none_transform(self):
         """Returns None when transform state is None."""
-        from roc.gymnasium import _build_transform_summary
+        from roc.game.gymnasium import _build_transform_summary
 
         states = MagicMock()
         states.transform.val = None
@@ -706,8 +706,8 @@ class TestBuildTransformSummary:
 
     def test_with_changes(self):
         """Returns summary with change count and details."""
-        from roc.gymnasium import _build_transform_summary
-        from roc.intrinsic import IntrinsicNode
+        from roc.game.gymnasium import _build_transform_summary
+        from roc.pipeline.intrinsic import IntrinsicNode
 
         dst1 = MagicMock(spec=IntrinsicNode)
         dst1.configure_mock(name="hp")
@@ -735,7 +735,7 @@ class TestBuildPredictionData:
 
     def test_none_prediction(self):
         """Returns None when predict state is None."""
-        from roc.gymnasium import _build_prediction_data
+        from roc.game.gymnasium import _build_prediction_data
 
         states = MagicMock()
         states.predict.val = None
@@ -747,7 +747,7 @@ class TestInjectAttentionSpread:
 
     def setup_method(self):
         """Reset cumulative glyph sets before each test."""
-        import roc.gymnasium as gym_mod
+        import roc.game.gymnasium as gym_mod
 
         gym_mod._attended_glyphs.clear()
         gym_mod._seen_glyphs.clear()
@@ -765,7 +765,7 @@ class TestInjectAttentionSpread:
 
     def test_single_step_one_attended_glyph(self):
         """After one step, numerator is 1 (one glyph attended)."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         # 3x3 map: background=2359, floor=2371, player=333
         bg = 2359
@@ -788,7 +788,7 @@ class TestInjectAttentionSpread:
 
     def test_two_steps_same_glyph_no_growth(self):
         """Attending the same glyph twice does not increase numerator."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         bg = 2359
         obs = self._make_obs(
@@ -810,7 +810,7 @@ class TestInjectAttentionSpread:
 
     def test_two_steps_different_glyphs_grows(self):
         """Attending different glyphs across steps increases numerator."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         bg = 2359
         obs = self._make_obs(
@@ -834,7 +834,7 @@ class TestInjectAttentionSpread:
 
     def test_new_glyph_on_screen_grows_denominator(self):
         """A new glyph appearing on screen increases the denominator."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         bg = 2359
         obs1 = self._make_obs([[bg, 2360, 2371]])
@@ -850,7 +850,7 @@ class TestInjectAttentionSpread:
 
     def test_no_attenuation_data_is_noop(self):
         """When attenuation data is None, nothing happens."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         states = MagicMock()
         states.attenuation_data.val = None
@@ -859,7 +859,7 @@ class TestInjectAttentionSpread:
 
     def test_background_glyph_excluded(self):
         """Background glyph (S_stone) is excluded from both sets."""
-        from roc.gymnasium import _inject_attention_spread
+        from roc.game.gymnasium import _inject_attention_spread
 
         bg = 2359
         # Only background glyphs -- focus point lands on background
@@ -878,7 +878,7 @@ class TestPushStepToServer:
 
     def test_returns_false_on_exception(self):
         """Returns False when the HTTP request fails."""
-        from roc.gymnasium import _push_step_to_server
+        from roc.game.gymnasium import _push_step_to_server
 
         step_data = MagicMock()
         result = _push_step_to_server(step_data, "http://invalid:0/step", None)
@@ -889,7 +889,7 @@ class TestPushStepToServer:
         import dataclasses
         import json
 
-        from roc.gymnasium import _push_step_to_server
+        from roc.game.gymnasium import _push_step_to_server
 
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps({"stop": True}).encode()
@@ -908,7 +908,7 @@ class TestPushStepToServer:
         import dataclasses
         import json
 
-        from roc.gymnasium import _push_step_to_server
+        from roc.game.gymnasium import _push_step_to_server
 
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps({"status": "ok"}).encode()
@@ -928,14 +928,14 @@ class TestHandleGameOver:
 
     def test_flushes_when_enabled(self, mocker):
         """Calls GraphDB.flush() when graphdb_flush is True."""
-        from roc.gymnasium import _handle_game_over
+        from roc.game.gymnasium import _handle_game_over
 
         settings = Config.get()
         settings.graphdb_flush = True
         settings.graphdb_export = False
 
-        mock_flush = mocker.patch("roc.gymnasium.GraphDB.flush")
-        mock_export = mocker.patch("roc.gymnasium.GraphDB.export")
+        mock_flush = mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mock_export = mocker.patch("roc.game.gymnasium.GraphDB.export")
 
         obs = _make_fake_obs()
         _handle_game_over(obs, 1, True, settings)
@@ -945,14 +945,14 @@ class TestHandleGameOver:
 
     def test_exports_when_enabled(self, mocker):
         """Calls GraphDB.export() when graphdb_export is True."""
-        from roc.gymnasium import _handle_game_over
+        from roc.game.gymnasium import _handle_game_over
 
         settings = Config.get()
         settings.graphdb_flush = False
         settings.graphdb_export = True
 
-        mock_flush = mocker.patch("roc.gymnasium.GraphDB.flush")
-        mock_export = mocker.patch("roc.gymnasium.GraphDB.export")
+        mock_flush = mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mock_export = mocker.patch("roc.game.gymnasium.GraphDB.export")
 
         obs = _make_fake_obs()
         _handle_game_over(obs, 1, False, settings)
@@ -969,8 +969,8 @@ class TestDashboardCliMountStaticFiles:
 
     def test_no_dist_dir(self, tmp_path):
         """When dist dir does not exist, mount is not called."""
-        import roc.dashboard_cli as dcli
-        from roc.dashboard_cli import _mount_static_files
+        import roc.cli.dashboard_cli as dcli
+        from roc.cli.dashboard_cli import _mount_static_files
 
         mock_app = MagicMock()
         orig_file = dcli.__file__
@@ -984,8 +984,8 @@ class TestDashboardCliMountStaticFiles:
 
     def test_with_dist_dir(self, tmp_path):
         """When dist dir exists, mount is called."""
-        import roc.dashboard_cli as dcli
-        from roc.dashboard_cli import _mount_static_files
+        import roc.cli.dashboard_cli as dcli
+        from roc.cli.dashboard_cli import _mount_static_files
 
         mock_app = MagicMock()
         orig_file = dcli.__file__
@@ -1003,20 +1003,20 @@ class TestDashboardCliResolveSSLCerts:
 
     def test_no_ssl_config(self):
         """When config has no SSL certs, falls back to .env."""
-        from roc.dashboard_cli import _resolve_ssl_certs
+        from roc.cli.dashboard_cli import _resolve_ssl_certs
 
         cfg = MagicMock()
         cfg.ssl_certfile = ""
         cfg.ssl_keyfile = ""
 
-        with patch("roc.dashboard_cli._read_ssl_from_env", return_value=(None, None)):
+        with patch("roc.cli.dashboard_cli._read_ssl_from_env", return_value=(None, None)):
             cert, key = _resolve_ssl_certs(cfg)
             assert cert is None
             assert key is None
 
     def test_with_ssl_config(self):
         """When config has SSL certs, returns them directly."""
-        from roc.dashboard_cli import _resolve_ssl_certs
+        from roc.cli.dashboard_cli import _resolve_ssl_certs
 
         cfg = MagicMock()
         cfg.ssl_certfile = "/path/to/cert.pem"
@@ -1032,7 +1032,7 @@ class TestDashboardCliParseSSLEnvLine:
 
     def test_certfile_line_existing(self, tmp_path):
         """Parses a valid roc_ssl_certfile line with existing file."""
-        from roc.dashboard_cli import _parse_ssl_env_line
+        from roc.cli.dashboard_cli import _parse_ssl_env_line
 
         cert_file = tmp_path / "cert.pem"
         cert_file.touch()
@@ -1043,7 +1043,7 @@ class TestDashboardCliParseSSLEnvLine:
 
     def test_certfile_line_nonexistent(self):
         """Non-existent cert path returns None."""
-        from roc.dashboard_cli import _parse_ssl_env_line
+        from roc.cli.dashboard_cli import _parse_ssl_env_line
 
         cert, key = _parse_ssl_env_line("roc_ssl_certfile=/nonexistent/cert.pem", None)
         assert cert is None
@@ -1051,7 +1051,7 @@ class TestDashboardCliParseSSLEnvLine:
 
     def test_keyfile_line_existing(self, tmp_path):
         """Parses a valid roc_ssl_keyfile line with existing file."""
-        from roc.dashboard_cli import _parse_ssl_env_line
+        from roc.cli.dashboard_cli import _parse_ssl_env_line
 
         key_file = tmp_path / "key.pem"
         key_file.touch()
@@ -1062,7 +1062,7 @@ class TestDashboardCliParseSSLEnvLine:
 
     def test_unrelated_line(self):
         """Non-SSL lines return (None, None)."""
-        from roc.dashboard_cli import _parse_ssl_env_line
+        from roc.cli.dashboard_cli import _parse_ssl_env_line
 
         cert, key = _parse_ssl_env_line("roc_db_host=localhost", None)
         assert cert is None
@@ -1070,7 +1070,7 @@ class TestDashboardCliParseSSLEnvLine:
 
     def test_quoted_value(self, tmp_path):
         """Strips quotes from values."""
-        from roc.dashboard_cli import _parse_ssl_env_line
+        from roc.cli.dashboard_cli import _parse_ssl_env_line
 
         cert_file = tmp_path / "cert.pem"
         cert_file.touch()
@@ -1084,7 +1084,7 @@ class TestDashboardCliFindEnvFile:
 
     def test_cwd_env_file(self, tmp_path, monkeypatch):
         """Finds .env in current working directory."""
-        from roc.dashboard_cli import _find_env_file
+        from roc.cli.dashboard_cli import _find_env_file
 
         env_file = tmp_path / ".env"
         env_file.write_text("roc_db_host=localhost\n")
@@ -1096,11 +1096,11 @@ class TestDashboardCliFindEnvFile:
 
     def test_no_env_file(self, tmp_path, monkeypatch):
         """Returns None when no .env file exists."""
-        from roc.dashboard_cli import _find_env_file
+        from roc.cli.dashboard_cli import _find_env_file
 
         monkeypatch.chdir(tmp_path)
         # Also patch project root to tmp_path so neither location has .env
-        import roc.dashboard_cli as dcli
+        import roc.cli.dashboard_cli as dcli
 
         orig_file = dcli.__file__
         try:
@@ -1117,16 +1117,16 @@ class TestDashboardCliReadSSLFromEnv:
 
     def test_no_env_file(self, monkeypatch, tmp_path):
         """Returns (None, keyfile) when no .env exists."""
-        from roc.dashboard_cli import _read_ssl_from_env
+        from roc.cli.dashboard_cli import _read_ssl_from_env
 
-        with patch("roc.dashboard_cli._find_env_file", return_value=None):
+        with patch("roc.cli.dashboard_cli._find_env_file", return_value=None):
             cert, key = _read_ssl_from_env("/path/to/key.pem")
             assert cert is None
             assert key == "/path/to/key.pem"
 
     def test_with_env_file(self, tmp_path):
         """Reads SSL paths from .env file."""
-        from roc.dashboard_cli import _read_ssl_from_env
+        from roc.cli.dashboard_cli import _read_ssl_from_env
 
         cert_path = tmp_path / "cert.pem"
         cert_path.touch()
@@ -1136,7 +1136,7 @@ class TestDashboardCliReadSSLFromEnv:
         env_file = tmp_path / ".env"
         env_file.write_text(f"roc_ssl_certfile={cert_path}\nroc_ssl_keyfile={key_path}\n")
 
-        with patch("roc.dashboard_cli._find_env_file", return_value=env_file):
+        with patch("roc.cli.dashboard_cli._find_env_file", return_value=env_file):
             cert, key = _read_ssl_from_env(None)
             assert cert == str(cert_path)
             assert key == str(key_path)
@@ -1150,7 +1150,7 @@ class TestCleanupCliClassifyRuns:
 
     def test_empty_runs(self):
         """Empty list returns empty results."""
-        from roc.cleanup_cli import _classify_runs
+        from roc.cli.cleanup_cli import _classify_runs
 
         to_delete, to_keep = _classify_runs([])
         assert to_delete == []
@@ -1158,7 +1158,7 @@ class TestCleanupCliClassifyRuns:
 
     def test_runs_with_parquet(self, tmp_path):
         """Runs with parquet files are kept."""
-        from roc.cleanup_cli import _classify_runs
+        from roc.cli.cleanup_cli import _classify_runs
 
         run_dir = tmp_path / "run1"
         data_dir = run_dir / "data"
@@ -1171,7 +1171,7 @@ class TestCleanupCliClassifyRuns:
 
     def test_runs_without_parquet(self, tmp_path):
         """Runs without parquet files are marked for deletion."""
-        from roc.cleanup_cli import _classify_runs
+        from roc.cli.cleanup_cli import _classify_runs
 
         run_dir = tmp_path / "run1"
         run_dir.mkdir(parents=True)
@@ -1183,7 +1183,7 @@ class TestCleanupCliClassifyRuns:
 
     def test_mixed_runs(self, tmp_path):
         """Correctly classifies a mix of runs."""
-        from roc.cleanup_cli import _classify_runs
+        from roc.cli.cleanup_cli import _classify_runs
 
         # Run with data
         good_run = tmp_path / "good_run"
@@ -1206,7 +1206,7 @@ class TestCleanupCliReportDeletions:
 
     def test_reports_sizes(self, tmp_path, capsys):
         """Reports deletion candidates with their sizes."""
-        from roc.cleanup_cli import _report_deletions
+        from roc.cli.cleanup_cli import _report_deletions
 
         run_dir = tmp_path / "run_to_delete"
         run_dir.mkdir()
@@ -1226,7 +1226,7 @@ class TestCleanupCliExecuteDeletions:
 
     def test_deletes_directories(self, tmp_path, capsys):
         """Actually deletes directories."""
-        from roc.cleanup_cli import _execute_deletions
+        from roc.cli.cleanup_cli import _execute_deletions
 
         run1 = tmp_path / "run1"
         run1.mkdir()
@@ -1249,7 +1249,7 @@ class TestCleanupCliCountParquetFiles:
 
     def test_no_data_dir(self, tmp_path):
         """Returns 0 when data/ directory does not exist."""
-        from roc.cleanup_cli import _count_parquet_files
+        from roc.cli.cleanup_cli import _count_parquet_files
 
         run_dir = tmp_path / "run1"
         run_dir.mkdir()
@@ -1257,7 +1257,7 @@ class TestCleanupCliCountParquetFiles:
 
     def test_with_parquet_files(self, tmp_path):
         """Counts parquet files correctly."""
-        from roc.cleanup_cli import _count_parquet_files
+        from roc.cli.cleanup_cli import _count_parquet_files
 
         run_dir = tmp_path / "run1"
         data_dir = run_dir / "data"
@@ -1270,7 +1270,7 @@ class TestCleanupCliCountParquetFiles:
 
     def test_nested_parquet_files(self, tmp_path):
         """Counts parquet files in nested directories."""
-        from roc.cleanup_cli import _count_parquet_files
+        from roc.cli.cleanup_cli import _count_parquet_files
 
         run_dir = tmp_path / "run1"
         nested = run_dir / "data" / "sub"

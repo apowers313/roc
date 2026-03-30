@@ -4,11 +4,11 @@ from helpers.util import (
     StubComponent,
 )
 
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.line import Line, LineFeature, LineNode
-from roc.location import XLoc, YLoc
-from roc.perception import Settled, VisionData
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.line import Line, LineFeature, LineNode
+from roc.perception.location import XLoc, YLoc
+from roc.perception.base import Settled, VisionData
 
 
 class TestLine:

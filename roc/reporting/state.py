@@ -16,22 +16,27 @@ from opentelemetry import trace as otel_trace
 from opentelemetry._logs import SeverityNumber
 from opentelemetry._logs import LogRecord
 
-from roc.action import Action, ActionData, TakeAction
-from roc.attention import Attention, AttentionSettled, SaliencyMap, VisionAttentionData
-from roc.component import Component
-from roc.config import Config
-from roc.event import Event
-from roc.graphdb import Edge, Node, Schema
-from roc.intrinsic import Intrinsic, IntrinsicData
-from roc.logger import logger
-from roc.object import Object, ObjectResolver, ResolvedObject
-from roc.feature_extractors.phoneme import PhonemeFeature, PhonemeWord
-from roc.perception import AuditoryData, Perception, PerceptionData
-from roc.predict import NoPrediction, Predict, PredictData
+from roc.pipeline.action import Action, ActionData, TakeAction
+from roc.pipeline.attention.attention import (
+    Attention,
+    AttentionSettled,
+    SaliencyMap,
+    VisionAttentionData,
+)
+from roc.framework.component import Component
+from roc.framework.config import Config
+from roc.framework.event import Event
+from roc.db.graphdb import Edge, Node, Schema
+from roc.pipeline.intrinsic import Intrinsic, IntrinsicData
+from roc.framework.logger import logger
+from roc.pipeline.object.object import Object, ObjectResolver, ResolvedObject
+from roc.perception.feature_extractors.phoneme import PhonemeFeature, PhonemeWord
+from roc.perception.base import AuditoryData, Perception, PerceptionData
+from roc.pipeline.temporal.predict import NoPrediction, Predict, PredictData
 from roc.reporting.observability import Observability, Observation, instance_id
-from roc.sequencer import Sequencer  # noqa: F401
-from roc.significance import Significance, SignificanceData
-from roc.transformer import TransformResult, Transformer
+from roc.pipeline.temporal.sequencer import Sequencer  # noqa: F401
+from roc.pipeline.significance import Significance, SignificanceData
+from roc.pipeline.temporal.transformer import TransformResult, Transformer
 
 _state_init_done = False
 
@@ -238,7 +243,7 @@ class State[StateType](ABC):
     @staticmethod
     def emit_state_logs() -> None:
         """Emits current state values as OTel log records."""
-        from roc.config import Config
+        from roc.framework.config import Config
 
         cfg = Config.get()
         current_states = State.get_states()
@@ -842,7 +847,7 @@ def _enrich_action_from_gym(cfg: Any, action_val: Any, action_dict: dict[str, An
         _val = getattr(act_enum, "value", None)
         if not isinstance(_val, int):
             return
-        from roc.gymnasium import action_value_to_key
+        from roc.game.gymnasium import action_value_to_key
 
         _key = action_value_to_key(_val)
         if _key is not None:
@@ -854,7 +859,7 @@ def _enrich_action_from_gym(cfg: Any, action_val: Any, action_dict: dict[str, An
 def _enrich_action_expmod(action_dict: dict[str, Any]) -> None:
     """Add expmod name to the action dict if available."""
     try:
-        from roc.action import DefaultActionExpMod
+        from roc.pipeline.action import DefaultActionExpMod
 
         action_dict["expmod_name"] = DefaultActionExpMod.get(default="pass").name
     except Exception:
@@ -875,7 +880,7 @@ def _build_oi_lookup(last_frame: Any) -> tuple[dict[int, Any], dict[int, str]]:
     Returns:
         A tuple of (oi_by_uuid, glyph_by_uuid) dicts.
     """
-    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+    from roc.pipeline.object.object_instance import ObjectInstance, SituatedObjectInstance
 
     oi_by_uuid: dict[int, Any] = {}
     glyph_by_uuid: dict[int, str] = {}
@@ -999,12 +1004,12 @@ def _get_oi_lookup_from_sequencer() -> tuple[dict[int, Any], dict[int, str]]:
         is unavailable or has no last_frame.
     """
     try:
-        from roc.component import (
+        from roc.framework.component import (
             ComponentName as _CN,
             ComponentType as _CT,
             loaded_components as _lc,
         )
-        from roc.sequencer import Sequencer as _Seq
+        from roc.pipeline.temporal.sequencer import Sequencer as _Seq
 
         seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
         if isinstance(seq_comp, _Seq) and seq_comp.last_frame is not None:
@@ -1024,7 +1029,7 @@ def _emit_transform_log(current_states: "StateList") -> None:
     t = current_states.transform.val.transform
     changes: list[dict[str, Any]] = []
     object_transforms: list[dict[str, Any]] = []
-    from roc.object_transform import ObjectTransform as _OT
+    from roc.pipeline.object.object_transform import ObjectTransform as _OT
 
     for edge in t.src_edges:
         dst = edge.dst
@@ -1052,12 +1057,12 @@ def _emit_transform_log(current_states: "StateList") -> None:
 def _emit_sequence_log(current_states: "StateList") -> None:
     """Emit sequence summary as an OTel log record."""
     try:
-        from roc.component import (
+        from roc.framework.component import (
             ComponentName as _CN,
             ComponentType as _CT,
             loaded_components as _lc,
         )
-        from roc.sequencer import Sequencer as _Seq
+        from roc.pipeline.temporal.sequencer import Sequencer as _Seq
 
         seq_comp = _lc.get((_CN("sequencer"), _CT("sequencer")))
         if not isinstance(seq_comp, _Seq) or seq_comp.last_frame is None:
@@ -1081,7 +1086,7 @@ def _build_oi_cycle_lookup(frame: Any) -> tuple[dict[int, Any], dict[int, int]]:
     Returns:
         A tuple of (oi_by_uuid, oi_cycle_number) dicts.
     """
-    from roc.object_instance import ObjectInstance, SituatedObjectInstance
+    from roc.pipeline.object.object_instance import ObjectInstance, SituatedObjectInstance
 
     oi_by_uuid: dict[int, Any] = {}
     oi_cycle_number: dict[int, int] = {}
@@ -1172,7 +1177,7 @@ def _build_obj_dict(
 
 def _build_sequence_dict(frame: Any, current_states: "StateList") -> dict[str, Any]:
     """Build the sequence summary dict from a frame."""
-    from roc.intrinsic import IntrinsicNode
+    from roc.pipeline.intrinsic import IntrinsicNode
 
     objs = frame.objects
     oi_by_uuid, oi_cycle_number = _build_oi_cycle_lookup(frame)
@@ -1213,7 +1218,7 @@ def _emit_prediction_log(current_states: "StateList") -> None:
 def _enrich_prediction_meta(pred_dict: dict[str, Any]) -> None:
     """Add prediction metadata from expmod and component state."""
     try:
-        from roc.predict import (
+        from roc.pipeline.temporal.predict import (
             Predict,
             PredictionCandidateFramesExpMod,
             PredictionConfidenceExpMod,
@@ -1224,7 +1229,7 @@ def _enrich_prediction_meta(pred_dict: dict[str, Any]) -> None:
         ).name
         pred_dict["confidence_expmod"] = PredictionConfidenceExpMod.get(default="naive").name
 
-        from roc.component import ComponentName, ComponentType, loaded_components
+        from roc.framework.component import ComponentName, ComponentType, loaded_components
 
         predict_comp = loaded_components.get((ComponentName("predict"), ComponentType("predict")))
         if not isinstance(predict_comp, Predict):

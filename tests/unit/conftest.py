@@ -6,8 +6,8 @@ from typing import Generator
 
 import pytest
 
-from roc.config import Config
-from roc.expmod import ExpMod, expmod_loaded, expmod_modtype_current, expmod_registry
+from roc.framework.config import Config
+from roc.framework.expmod import ExpMod, expmod_loaded, expmod_modtype_current, expmod_registry
 
 
 @pytest.fixture(autouse=True)

@@ -1709,7 +1709,7 @@ class TestStartDashboard:
         try:
             mock_cfg = MagicMock()
             mock_cfg.dashboard_enabled = False
-            with patch("roc.config.Config.get", return_value=mock_cfg):
+            with patch("roc.framework.config.Config.get", return_value=mock_cfg):
                 mod.start_dashboard()
             assert mod._started is False
         finally:
@@ -1725,7 +1725,7 @@ class TestStartDashboard:
             mock_cfg = MagicMock()
             mock_cfg.dashboard_enabled = True
             with (
-                patch("roc.config.Config.get", return_value=mock_cfg),
+                patch("roc.framework.config.Config.get", return_value=mock_cfg),
                 patch(
                     "roc.reporting.observability.Observability.get_ducklake_store",
                     return_value=None,

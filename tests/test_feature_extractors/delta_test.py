@@ -5,11 +5,11 @@ from helpers.nethack_screens import screens
 from helpers.nethack_screens2 import screens as screens2
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.delta import Delta, DeltaFeature, DeltaNode
-from roc.location import XLoc, YLoc
-from roc.perception import Settled, VisionData
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.delta import Delta, DeltaFeature, DeltaNode
+from roc.perception.location import XLoc, YLoc
+from roc.perception.base import Settled, VisionData
 
 
 class TestDelta:

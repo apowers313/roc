@@ -50,13 +50,13 @@ class TestScreenDataEmittedViaOtelLogger:
 
         import numpy as np
 
-        from roc.config import Config
+        from roc.framework.config import Config
 
         cfg = Config.get()
         cfg.emit_state_screen = True
 
         with patch("roc.reporting.state._get_otel_logger") as mock_logger:
-            from roc.event import Event
+            from roc.framework.event import Event
             from roc.reporting.state import State, states
 
             Event._step_counts.clear()
@@ -163,7 +163,7 @@ class TestInitOtlpLogging:
 
     def test_creates_logger_provider_with_processors(self, reset_observability):
         """_init_otlp_logging should create a LoggerProvider and add batch processor."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability, ObservabilityBase
 
         ObservabilityBase._instances.clear()
@@ -195,7 +195,7 @@ class TestInitFallbackLogging:
     def test_fallback_logging_not_pytest(self, reset_observability):
         """When not in pytest scanning mode, fallback creates LoggerProvider."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -223,7 +223,7 @@ class TestInitFallbackLogging:
 
     def test_fallback_logging_sets_noop_event_logger(self, reset_observability):
         """Fallback logging always sets a NoOpEventLogger."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -243,7 +243,7 @@ class TestAttachRemoteLogExporter:
 
     def test_skips_when_debug_remote_log_false(self, reset_observability):
         """Should return early when debug_remote_log is False."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -257,7 +257,7 @@ class TestAttachRemoteLogExporter:
 
     def test_attaches_when_debug_remote_log_true(self, reset_observability):
         """Should create RemoteLoggerExporter and add processor when enabled."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -295,7 +295,7 @@ class TestAttachParquetExporter:
 
     def test_skips_when_allow_parquet_false(self, reset_observability):
         """Should return early when _allow_parquet is False."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -309,7 +309,7 @@ class TestAttachParquetExporter:
 
     def test_attaches_when_allow_parquet_true(self, reset_observability):
         """Should create DuckLakeStore and ParquetExporter when _allow_parquet is True."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -345,7 +345,7 @@ class TestAddLoguruSinks:
 
     def test_adds_loguru_sink(self, reset_observability):
         """Should add loguru_to_otel sink."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -361,7 +361,7 @@ class TestAddLoguruSinks:
 
     def test_adds_dashboard_sink_when_enabled(self, reset_observability):
         """Should add step_log_sink when dashboard_enabled is True."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -383,7 +383,7 @@ class TestAddLoguruSinks:
 
     def test_adds_dashboard_sink_when_callback_url_set(self, reset_observability):
         """Should add step_log_sink when dashboard_callback_url is set."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -437,7 +437,7 @@ class TestInitMetrics:
     def test_initializes_metrics_when_enabled(self, reset_observability):
         """Should create MeterProvider and set it when observability_metrics is True."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -474,7 +474,7 @@ class TestInitMetrics:
 
     def test_skips_metrics_when_disabled(self, reset_observability):
         """Should use NoOp meter when observability_metrics is False."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -501,7 +501,7 @@ class TestInitTracing:
     def test_initializes_tracing_when_enabled(self, reset_observability):
         """Should create TracerProvider and set it when observability_tracing is True."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -540,7 +540,7 @@ class TestInitProfiling:
     def test_initializes_profiling_when_enabled(self, reset_observability):
         """Should call pyroscope.configure when profiling is enabled."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -564,7 +564,7 @@ class TestInitProfiling:
 
     def test_skips_profiling_when_disabled(self, reset_observability):
         """Should not call pyroscope.configure when profiling is disabled."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -606,7 +606,7 @@ class TestInitLogging:
     def test_init_logging_otlp_path(self, reset_observability):
         """When observability_logging is True and not pytest, should use OTLP path."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -637,7 +637,7 @@ class TestInitLogging:
 
     def test_init_logging_fallback_path(self, reset_observability):
         """When observability_logging is False, should use fallback path."""
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -895,7 +895,7 @@ class TestConfigureDebugExporters:
     def test_skips_when_nothing_needed(self, reset_observability):
         """Should return early when neither remote log nor parquet is needed."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -917,7 +917,7 @@ class TestConfigureDebugExporters:
     def test_creates_logger_provider_if_missing(self, reset_observability):
         """Should create a LoggerProvider if the current one is not an SDK provider."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -959,7 +959,7 @@ class TestConfigureDebugExporters:
     def test_adds_remote_log_exporter(self, reset_observability):
         """Should add RemoteLoggerExporter when debug_remote_log is True."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()
@@ -1001,7 +1001,7 @@ class TestConfigureDebugExporters:
     def test_adds_parquet_exporter(self, reset_observability):
         """Should add ParquetExporter when _allow_parquet is True."""
         import roc.reporting.observability as obs_mod
-        from roc.config import Config
+        from roc.framework.config import Config
         from roc.reporting.observability import Observability
 
         settings = Config.get()

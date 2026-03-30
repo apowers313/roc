@@ -1,7 +1,7 @@
 import click
 
-from roc.breakpoint import breakpoints
-from roc.logger import logger
+from roc.game.breakpoint import breakpoints
+from roc.framework.logger import logger
 
 step_cnt = 0
 

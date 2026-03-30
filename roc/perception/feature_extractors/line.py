@@ -2,9 +2,9 @@
 
 from dataclasses import dataclass
 
-from ..graphdb import FindQueryOpts
+from ...db.graphdb import FindQueryOpts
 from ..location import IntGrid, Point, PointList, TypedPointCollection, XLoc, YLoc
-from ..perception import (
+from ..base import (
     AreaFeature,
     FeatureExtractor,
     FeatureKind,

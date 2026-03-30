@@ -2,9 +2,9 @@
 
 from typing import Any
 
-from .component import Component
-from .config import Config
-from .event import Event, EventBus
+from ..framework.component import Component
+from ..framework.config import Config
+from ..framework.event import Event, EventBus
 from .intrinsic import Intrinsic, IntrinsicData, IntrinsicEvent
 
 

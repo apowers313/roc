@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from roc.config import Config
+from roc.framework.config import Config
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def mock_db():
     mock.strict_schema_warns = False
     mock.node_counter = MagicMock()
     mock.edge_counter = MagicMock()
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 

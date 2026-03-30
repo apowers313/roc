@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
-from roc.sequencer import (
+from roc.pipeline.temporal.sequencer import (
     PREDICTED_FRAME_TICK,
     Frame,
     FrameAttribute,
@@ -20,14 +20,14 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
 @pytest.fixture(autouse=True)
 def reset_tick():
     """Reset global tick counter before each test."""
-    import roc.sequencer as seq
+    import roc.pipeline.temporal.sequencer as seq
 
     original = seq.tick
     seq.tick = 0
@@ -105,7 +105,7 @@ class TestFrame:
             assert f.objects == []
 
     def test_objects_with_feature_groups(self):
-        from roc.object import FeatureGroup, Object
+        from roc.pipeline.object.object import FeatureGroup, Object
 
         f = Frame()
 
@@ -140,7 +140,7 @@ class TestFrame:
         mock_transformable.compatible_transform.return_value = True
         mock_transformable.apply_transform.return_value = mock_new_node
 
-        with patch("roc.sequencer.FrameAttribute.connect"):
+        with patch("roc.pipeline.temporal.sequencer.FrameAttribute.connect"):
             result = Frame.merge_transforms(src_frame, mod_frame)
             assert isinstance(result, Frame)
             assert result.tick == PREDICTED_FRAME_TICK

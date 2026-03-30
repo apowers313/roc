@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.predict import (
+from roc.pipeline.temporal.predict import (
     NoPrediction,
     Predict,
     PredictionCandidateFramesExpMod,
@@ -19,14 +19,14 @@ def mock_db():
     mock = MagicMock()
     mock.strict_schema = False
     mock.strict_schema_warns = False
-    with patch("roc.graphdb.GraphDB.singleton", return_value=mock):
+    with patch("roc.db.graphdb.GraphDB.singleton", return_value=mock):
         yield mock
 
 
 @pytest.fixture
 def fresh_predict():
     """Create a Predict instance, clearing component_set to avoid duplicates."""
-    import roc.component as comp_mod
+    import roc.framework.component as comp_mod
 
     saved = comp_mod.component_set.copy()
     # Remove any existing predict component
@@ -73,7 +73,7 @@ class TestDoPredict:
         mock_edge_list = MagicMock()
         mock_change_edge = MagicMock()
 
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         mock_frame = MagicMock(spec=Frame)
         mock_change_edge.src = mock_frame
@@ -102,7 +102,7 @@ class TestDoPredict:
         mock_edge_list = MagicMock()
         mock_change_edge = MagicMock()
 
-        from roc.sequencer import Frame
+        from roc.pipeline.temporal.sequencer import Frame
 
         mock_current = MagicMock(spec=Frame)
         mock_change_edge.src = mock_current

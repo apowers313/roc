@@ -4,10 +4,10 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
-from roc.component import Component
-from roc.event import Event, EventBus
-from roc.expmod import ExpMod
-from roc.graphdb import Node
+from roc.framework.component import Component
+from roc.framework.event import Event, EventBus
+from roc.framework.expmod import ExpMod
+from roc.db.graphdb import Node
 
 
 @dataclass

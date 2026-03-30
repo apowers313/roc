@@ -6,18 +6,18 @@ from typing import Any
 
 # not used here, but the files have to be loaded in order for the components to
 # be registered
-import roc.feature_extractors
-import roc.logger as roc_logger
-import roc.saliency_attenuation
+import roc.perception.feature_extractors
+import roc.framework.logger as roc_logger
+import roc.pipeline.attention.saliency_attenuation
 
-from .action import Action, ActionData
-from .component import Component
-from .config import Config
-from .expmod import ExpMod
-from .gymnasium import NethackGym
+from .pipeline.action import Action, ActionData
+from .framework.component import Component
+from .framework.config import Config
+from .framework.expmod import ExpMod
+from .game.gymnasium import NethackGym
 from .jupyter import RocJupyterMagics, is_jupyter
-from .perception import Perception, PerceptionData
-from .predict import Predict
+from .perception.base import Perception, PerceptionData
+from .pipeline.temporal.predict import Predict
 from .reporting.observability import Observability
 from .reporting.state import State
 

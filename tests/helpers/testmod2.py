@@ -1,4 +1,4 @@
-from roc.expmod import ExpMod
+from roc.framework.expmod import ExpMod
 
 
 class MyTestExpModClass(ExpMod):

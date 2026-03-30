@@ -5,7 +5,7 @@
 import numpy as np
 import pytest
 
-from roc.location import (
+from roc.perception.location import (
     ChangedPoint,
     DebugGrid,
     Grid,

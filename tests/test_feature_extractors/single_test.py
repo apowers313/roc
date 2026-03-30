@@ -5,17 +5,17 @@ from unittest.mock import MagicMock
 from helpers.nethack_screens import screens
 from helpers.util import StubComponent
 
-from roc.component import Component
-from roc.event import Event
-from roc.feature_extractors.single import (
+from roc.framework.component import Component
+from roc.framework.event import Event
+from roc.perception.feature_extractors.single import (
     Single,
     SingleFeature,
     SingleNode,
     is_unique_from_neighbors,
 )
-from roc.graphdb import GraphDB, Node
-from roc.location import IntGrid, Point, XLoc, YLoc
-from roc.perception import Settled, VisionData, cache_registry
+from roc.db.graphdb import GraphDB, Node
+from roc.perception.location import IntGrid, Point, XLoc, YLoc
+from roc.perception.base import Settled, VisionData, cache_registry
 
 
 class TestSingle:

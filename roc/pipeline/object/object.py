@@ -21,15 +21,15 @@ from opentelemetry._logs import SeverityNumber
 from opentelemetry._logs import LogRecord
 from pydantic import Field
 
-from .attention import Attention, AttentionEvent, VisionAttentionData
-from .component import Component
-from .event import EventBus
-from .expmod import ExpMod
-from .graphdb import Edge, EdgeConnectionsList, Node, NodeId
-from .location import XLoc, YLoc
-from .perception import Detail, FeatureKind, FeatureNode
-from .perception import VisualFeature as PerceptionFeature
-from .reporting.observability import Observability
+from ..attention.attention import Attention, AttentionEvent, VisionAttentionData
+from ...framework.component import Component
+from ...framework.event import EventBus
+from ...framework.expmod import ExpMod
+from ...db.graphdb import Edge, EdgeConnectionsList, Node, NodeId
+from ...perception.location import XLoc, YLoc
+from ...perception.base import Detail, FeatureKind, FeatureNode
+from ...perception.base import VisualFeature as PerceptionFeature
+from ...reporting.observability import Observability
 
 _otel_logger = Observability.get_logger("roc.resolution")
 
@@ -38,7 +38,7 @@ _METRIC_RESOLUTION_DECISION = "roc.resolution.decision"
 _OTEL_ATTR_EVENT_NAME = "event.name"
 
 if TYPE_CHECKING:
-    from .sequencer import Frame
+    from ..temporal.sequencer import Frame
 
 ObjectId = NewType("ObjectId", int)
 
@@ -116,7 +116,7 @@ class Object(Node):
     @property
     def frames(self) -> list[Frame]:
         """All frames that reference this object."""
-        from .sequencer import Frame as _Frame
+        from ..temporal.sequencer import Frame as _Frame
 
         ret: list[Frame] = []
 
@@ -212,11 +212,11 @@ def _extract_visual_attrs_from_nodes(
     nodes: Iterable[FeatureNode],
 ) -> dict[str, Any]:
     """Extract visual attributes (char, color, glyph, type) from feature nodes."""
-    from .feature_extractors.color import ColorNode
-    from .feature_extractors.flood import FloodNode
-    from .feature_extractors.line import LineNode
-    from .feature_extractors.shape import ShapeNode
-    from .feature_extractors.single import SingleNode
+    from ...perception.feature_extractors.color import ColorNode
+    from ...perception.feature_extractors.flood import FloodNode
+    from ...perception.feature_extractors.line import LineNode
+    from ...perception.feature_extractors.shape import ShapeNode
+    from ...perception.feature_extractors.single import SingleNode
 
     result: dict[str, Any] = {}
     for f in nodes:
@@ -1006,7 +1006,7 @@ class ObjectResolver(Component):
 
     def event_filter(self, e: AttentionEvent) -> bool:
         """Only process events from the vision attention component. Skip AttentionSettled."""
-        from .attention import AttentionSettled
+        from ..attention.attention import AttentionSettled
 
         if isinstance(e.data, AttentionSettled):
             return False
@@ -1085,7 +1085,7 @@ class ObjectResolver(Component):
         features = e.data.saliency_map.get_val(x, y)
         fg = FeatureGroup.with_features(features)
 
-        from .sequencer import tick as current_tick
+        from ..temporal.sequencer import tick as current_tick
 
         ctx = ResolutionContext(x=x, y=y, tick=current_tick)
         resolution = ObjectResolutionExpMod.get(default="symmetric-difference")

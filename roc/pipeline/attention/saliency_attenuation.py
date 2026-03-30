@@ -17,9 +17,9 @@ import numpy as np
 import numpy.typing as npt
 from loguru import logger
 
-from .expmod import ExpMod
-from .reporting.metrics import RocMetrics
-from .reporting.observability import Observability
+from ...framework.expmod import ExpMod
+from ...reporting.metrics import RocMetrics
+from ...reporting.observability import Observability
 
 if TYPE_CHECKING:
     from strictly_typed_pandas import DataSet
@@ -140,7 +140,7 @@ class LinearDeclineAttenuation(SaliencyAttenuationExpMod):
 
     def _load_config(self) -> None:
         """Load parameters from Config if available."""
-        from .config import Config
+        from ...framework.config import Config
 
         try:
             settings = Config.get()
@@ -209,7 +209,7 @@ class LinearDeclineAttenuation(SaliencyAttenuationExpMod):
         focus_points: DataSet[VisionAttentionSchema],
     ) -> None:
         """Record the top-ranked peak in history."""
-        from .sequencer import tick as current_tick
+        from ..temporal.sequencer import tick as current_tick
 
         if len(focus_points) == 0:
             return
@@ -432,7 +432,7 @@ class ActiveInferenceAttenuation(SaliencyAttenuationExpMod):
 
     def _load_config(self) -> None:
         """Load parameters from Config if available."""
-        from .config import Config
+        from ...framework.config import Config
 
         try:
             settings = Config.get()
@@ -514,7 +514,7 @@ class ActiveInferenceAttenuation(SaliencyAttenuationExpMod):
         focus_points: DataSet[VisionAttentionSchema],
     ) -> None:
         """Observe features at the top-ranked peak and update beliefs."""
-        from .sequencer import tick as current_tick
+        from ..temporal.sequencer import tick as current_tick
 
         if len(focus_points) == 0 or self._last_saliency_map is None:
             return

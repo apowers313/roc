@@ -3,24 +3,24 @@
 from helpers.nethack_screens3 import screens as screens3
 from helpers.util import StubComponent
 
-from roc.action import Action, TakeAction
-from roc.attention import VisionAttention
-from roc.component import Component
-from roc.config import Config
-from roc.feature_extractors.color import Color
-from roc.feature_extractors.delta import Delta
-from roc.feature_extractors.distance import Distance
-from roc.feature_extractors.flood import Flood
-from roc.feature_extractors.line import Line
-from roc.feature_extractors.motion import Motion
-from roc.feature_extractors.shape import Shape
-from roc.feature_extractors.single import Single
-from roc.intrinsic import Intrinsic
-from roc.object import ObjectResolver
-from roc.perception import VisionData
-from roc.predict import Predict
-from roc.sequencer import Sequencer
-from roc.transformer import Transformer
+from roc.pipeline.action import Action, TakeAction
+from roc.pipeline.attention.attention import VisionAttention
+from roc.framework.component import Component
+from roc.framework.config import Config
+from roc.perception.feature_extractors.color import Color
+from roc.perception.feature_extractors.delta import Delta
+from roc.perception.feature_extractors.distance import Distance
+from roc.perception.feature_extractors.flood import Flood
+from roc.perception.feature_extractors.line import Line
+from roc.perception.feature_extractors.motion import Motion
+from roc.perception.feature_extractors.shape import Shape
+from roc.perception.feature_extractors.single import Single
+from roc.pipeline.intrinsic import Intrinsic
+from roc.pipeline.object.object import ObjectResolver
+from roc.perception.base import VisionData
+from roc.pipeline.temporal.predict import Predict
+from roc.pipeline.temporal.sequencer import Sequencer
+from roc.pipeline.temporal.transformer import Transformer
 
 
 class TestPredict:

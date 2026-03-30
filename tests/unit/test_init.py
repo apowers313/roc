@@ -2,7 +2,7 @@
 
 """Unit tests for debugpy setup in roc/__init__.py."""
 
-from roc.config import Config
+from roc.framework.config import Config
 
 
 class TestDebugPortConfig:
