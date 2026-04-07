@@ -6,12 +6,12 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
+from roc.framework.clock import Clock
 from roc.pipeline.temporal.sequencer import (
     PREDICTED_FRAME_TICK,
     Frame,
     FrameAttribute,
     NextFrame,
-    get_next_tick,
 )
 
 
@@ -24,40 +24,30 @@ def mock_db():
         yield mock
 
 
-@pytest.fixture(autouse=True)
-def reset_tick():
-    """Reset global tick counter before each test."""
-    import roc.pipeline.temporal.sequencer as seq
-
-    original = seq.tick
-    seq.tick = 0
-    yield
-    seq.tick = original
-
-
-class TestGetNextTick:
-    def test_increments(self):
-        t1 = get_next_tick()
-        t2 = get_next_tick()
-        assert t2 == t1 + 1
-
-    def test_starts_from_zero(self):
-        assert get_next_tick() == 1
-        assert get_next_tick() == 2
-
-
 class TestPredictedFrameTick:
     def test_value(self):
         assert PREDICTED_FRAME_TICK == -1
 
 
 class TestFrame:
-    def test_tick_auto_increments(self):
-        f1 = Frame()
+    def test_tick_reads_clock(self):
+        """Frame() without an explicit tick reads the current Clock value."""
+        Clock.set(5)
+        f = Frame()
+        assert f.tick == 5
+        Clock.set(7)
         f2 = Frame()
-        assert f2.tick == f1.tick + 1
+        assert f2.tick == 7
 
-    def test_tick_explicit(self):
+    def test_tick_default_when_clock_unset(self):
+        """Clock starts at 0; Frame() reflects that until the game loop sets it."""
+        Clock.reset()
+        f = Frame()
+        assert f.tick == 0
+
+    def test_tick_explicit_bypasses_clock(self):
+        """Explicit tick value takes precedence over the clock."""
+        Clock.set(100)
         f = Frame(tick=42)
         assert f.tick == 42
 

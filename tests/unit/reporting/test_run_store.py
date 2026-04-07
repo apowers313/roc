@@ -7,31 +7,53 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Generator
 
 import pytest
 from helpers.otel import make_log_record
 
+from roc.framework.clock import Clock
 from roc.reporting.ducklake_store import DuckLakeStore
 from roc.reporting.parquet_exporter import ParquetExporter
 from roc.reporting.run_store import RunStore, StepData, parse_feature_attrs
 
 
+@pytest.fixture(autouse=True)
+def _default_clock_tick() -> Generator[None, None, None]:
+    """Most tests in this module emit a single step's worth of records
+    and then query ``get_step_data(1)``. Set ``Clock`` to 1 by default so
+    ``make_log_record`` stamps ``tick=1`` on those records without each
+    test having to manage the clock explicitly. Multi-step tests must
+    call ``Clock.set(N)`` between emits.
+    """
+    Clock.set(1)
+    yield
+    Clock.reset()
+
+
 @pytest.fixture()
 def populated_store(tmp_path: Path) -> DuckLakeStore:
-    """Create a DuckLakeStore with known test data using ParquetExporter."""
+    """Create a DuckLakeStore with known test data using ParquetExporter.
+
+    Records carry an explicit ``tick`` attribute (the same way
+    ``_emit_state_record`` stamps them in production), so that
+    ``ParquetExporter`` writes deterministic step numbers into DuckLake.
+    """
     store = DuckLakeStore(tmp_path)
     exporter = ParquetExporter(store=store, background=False)
 
     # Game 1: steps 1-10
-    exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+    exporter.export([make_log_record(event_name="roc.game_start", body="game 1", tick=1)])
     for i in range(10):
+        step = i + 1
         screen_body = json.dumps({"chars": [[65 + i]], "fg": [["#fff"]], "bg": [["#000"]]})
-        exporter.export([make_log_record(event_name="roc.screen", body=screen_body)])
+        exporter.export([make_log_record(event_name="roc.screen", body=screen_body, tick=step)])
         exporter.export(
             [
                 make_log_record(
                     event_name="roc.attention.saliency",
                     body=json.dumps({"chars": [[0]], "fg": [["#f00"]], "bg": [["#000"]]}),
+                    tick=step,
                 )
             ]
         )
@@ -41,16 +63,18 @@ def populated_store(tmp_path: Path) -> DuckLakeStore:
                     event_name="roc.attention.features",
                     body=f"Delta: {i}",
                     attributes={"feature.count": i + 1},
+                    tick=step,
                 )
             ]
         )
-        exporter.export([make_log_record(body=f"loguru message {i}")])
+        exporter.export([make_log_record(body=f"loguru message {i}", tick=step)])
 
     # Game 2: steps 11-15
-    exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+    exporter.export([make_log_record(event_name="roc.game_start", body="game 2", tick=11)])
     for i in range(5):
+        step = 11 + i
         screen_body = json.dumps({"chars": [[75 + i]], "fg": [["#fff"]], "bg": [["#000"]]})
-        exporter.export([make_log_record(event_name="roc.screen", body=screen_body)])
+        exporter.export([make_log_record(event_name="roc.screen", body=screen_body, tick=step)])
 
     exporter.shutdown()
     return store
@@ -139,9 +163,12 @@ class TestGetStepData:
         assert sd.logs is not None
 
     def test_get_step_data_handles_missing_tables(self, tmp_path: Path):
+        from roc.framework.clock import Clock
+
         # Create a run with only screens
         dl_store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=dl_store, background=False)
+        Clock.set(1)
         exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
         exporter.shutdown()
 
@@ -1551,6 +1578,7 @@ class TestGetAllObjects:
         dl_store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=dl_store, background=False)
         # Step 1: new object A
+        Clock.set(1)
         exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
         exporter.export(
             [
@@ -1569,6 +1597,7 @@ class TestGetAllObjects:
             ]
         )
         # Step 2: new object B
+        Clock.set(2)
         exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
         exporter.export(
             [
@@ -1587,6 +1616,7 @@ class TestGetAllObjects:
             ]
         )
         # Step 3: match to object A
+        Clock.set(3)
         exporter.export([make_log_record(event_name="roc.screen", body='{"chars":[]}')])
         exporter.export(
             [

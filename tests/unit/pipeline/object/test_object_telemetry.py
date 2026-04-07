@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 
+from roc.framework.clock import Clock
 from roc.perception.location import XLoc, YLoc
 from roc.pipeline.object.object import (
     Object,
@@ -161,7 +162,7 @@ class TestResolutionTelemetry:
                 "roc.pipeline.object.object.ObjectResolutionExpMod.get",
                 return_value=mock_resolution,
             ),
-            patch("roc.pipeline.temporal.sequencer.tick", 11),
+            patch.object(Clock, "_tick", 11),
             patch.object(ObjectResolver, "spatial_distance_histogram") as mock_spatial,
             patch.object(ObjectResolver, "temporal_gap_histogram"),
         ):
@@ -189,7 +190,7 @@ class TestResolutionTelemetry:
                 "roc.pipeline.object.object.ObjectResolutionExpMod.get",
                 return_value=mock_resolution,
             ),
-            patch("roc.pipeline.temporal.sequencer.tick", 42),
+            patch.object(Clock, "_tick", 42),
             patch.object(ObjectResolver, "spatial_distance_histogram"),
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):
@@ -213,7 +214,7 @@ class TestResolutionTelemetry:
                 return_value=mock_resolution,
             ),
             patch("roc.pipeline.object.object.Object.with_features", return_value=Object()),
-            patch("roc.pipeline.temporal.sequencer.tick", 1),
+            patch.object(Clock, "_tick", 1),
             patch.object(ObjectResolver, "spatial_distance_histogram") as mock_spatial,
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):
@@ -241,7 +242,7 @@ class TestResolutionTelemetry:
                 "roc.pipeline.object.object.ObjectResolutionExpMod.get",
                 return_value=mock_resolution,
             ),
-            patch("roc.pipeline.temporal.sequencer.tick", 10),
+            patch.object(Clock, "_tick", 10),
             patch.object(ObjectResolver, "spatial_distance_histogram"),
             patch.object(ObjectResolver, "temporal_gap_histogram") as mock_temporal,
         ):

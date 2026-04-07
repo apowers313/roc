@@ -209,7 +209,7 @@ class LinearDeclineAttenuation(SaliencyAttenuationExpMod):
         focus_points: DataSet[VisionAttentionSchema],
     ) -> None:
         """Record the top-ranked peak in history."""
-        from ..temporal.sequencer import tick as current_tick
+        from roc.framework.clock import Clock
 
         if len(focus_points) == 0:
             return
@@ -218,7 +218,7 @@ class LinearDeclineAttenuation(SaliencyAttenuationExpMod):
             AttendedLocation(
                 x=int(top["x"]),
                 y=int(top["y"]),
-                tick=current_tick,
+                tick=Clock.get(),
             )
         )
 
@@ -514,7 +514,7 @@ class ActiveInferenceAttenuation(SaliencyAttenuationExpMod):
         focus_points: DataSet[VisionAttentionSchema],
     ) -> None:
         """Observe features at the top-ranked peak and update beliefs."""
-        from ..temporal.sequencer import tick as current_tick
+        from roc.framework.clock import Clock
 
         if len(focus_points) == 0 or self._last_saliency_map is None:
             return
@@ -523,7 +523,7 @@ class ActiveInferenceAttenuation(SaliencyAttenuationExpMod):
         features = self._last_saliency_map.get_val(sx, sy)
         feature_strs = [str(f) for f in features]
         state_id = self._vocab.encode(feature_strs)
-        self._update_belief(sx, sy, state_id, current_tick)
+        self._update_belief(sx, sy, state_id, Clock.get())
 
         # Record telemetry (dual OTel + W&B)
         if (sx, sy) in self._beliefs:

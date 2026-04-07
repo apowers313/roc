@@ -10,6 +10,7 @@ import pytest
 from helpers.util import FakeData
 
 from roc.pipeline.action import Action, ActionData
+from roc.framework.clock import Clock
 from roc.framework.component import Component, component_set
 from roc.framework.config import Config
 from roc.framework.event import BusConnection, EventBus
@@ -129,6 +130,7 @@ def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
     Observability.init()
+    Clock.reset()
     settings = Config.get()
     settings.observation_shape = (21, 79)
     settings.gym_actions = (
@@ -150,6 +152,7 @@ def do_init() -> Generator[None, None, None]:
     # cleanup for clear_db fixture
     Config.reset()
     Config.init()
+    Clock.reset()
 
 
 @pytest.fixture(scope="session", autouse=True)

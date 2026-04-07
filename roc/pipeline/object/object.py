@@ -1085,8 +1085,9 @@ class ObjectResolver(Component):
         features = e.data.saliency_map.get_val(x, y)
         fg = FeatureGroup.with_features(features)
 
-        from ..temporal.sequencer import tick as current_tick
+        from roc.framework.clock import Clock
 
+        current_tick = Clock.get()
         ctx = ResolutionContext(x=x, y=y, tick=current_tick)
         resolution = ObjectResolutionExpMod.get(default="symmetric-difference")
         o = resolution.resolve(fg.feature_nodes, fg, ctx)

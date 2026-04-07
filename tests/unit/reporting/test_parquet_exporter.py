@@ -38,7 +38,9 @@ class TestParquetExporterRouting:
     def test_export_routes_screen_to_screens(self, tmp_path: Path):
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
-        record = make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')
+        record = make_log_record(
+            event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}', tick=1
+        )
         exporter.export([record])
         exporter.force_flush()
         assert _has_table(store, "screens")
@@ -83,12 +85,19 @@ class TestParquetExporterRouting:
 
 
 class TestStepAndGameCounters:
-    def test_step_counter_increments_on_screen_event(self, tmp_path: Path):
+    def test_step_matches_tick_attribute(self, tmp_path: Path):
+        """Step column should echo the ``tick`` attribute stamped at emit time."""
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
-        for _ in range(3):
+        for t in (1, 2, 3):
             exporter.export(
-                [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+                [
+                    make_log_record(
+                        event_name="roc.screen",
+                        body='{"chars":[],"fg":[],"bg":[]}',
+                        tick=t,
+                    )
+                ]
             )
         exporter.shutdown()
         df = _read_table(store, "screens")
@@ -97,13 +106,25 @@ class TestStepAndGameCounters:
     def test_game_counter_increments_on_game_start(self, tmp_path: Path):
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
-        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1", tick=1)])
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=1,
+                )
+            ]
         )
-        exporter.export([make_log_record(event_name="roc.game_start", body="game 2")])
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 2", tick=2)])
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=2,
+                )
+            ]
         )
         exporter.shutdown()
         df = _read_table(store, "screens")
@@ -113,12 +134,36 @@ class TestStepAndGameCounters:
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=1,
+                )
+            ]
         )
         exporter.force_flush()
         df = _read_table(store, "screens")
         assert "step" in df.columns
         assert "game_number" in df.columns
+
+    def test_step_falls_back_to_clock_when_no_tick_attribute(self, tmp_path: Path):
+        """Records without a tick attribute (e.g. loguru passthroughs) use Clock.get()."""
+        from roc.framework.clock import Clock
+
+        store = DuckLakeStore(tmp_path)
+        exporter = ParquetExporter(store=store, background=False)
+        Clock.set(7)
+        try:
+            # tick=None produces a record without a tick attribute, so the
+            # exporter falls back to reading the clock.
+            exporter.export([make_log_record(body="a loguru-style log line", tick=None)])
+        finally:
+            Clock.reset()
+        exporter.force_flush()
+        df = _read_table(store, "logs")
+        assert len(df) == 1
+        assert df.iloc[0]["step"] == 7
 
 
 class TestFlushBehavior:
@@ -164,11 +209,23 @@ class TestFlushBehavior:
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=1,
+                )
+            ]
         )
         exporter.force_flush()
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=2,
+                )
+            ]
         )
         exporter.force_flush()
         df = _read_table(store, "screens")
@@ -290,16 +347,34 @@ class TestThreadSafety:
     def test_flush_during_game_preserves_game_number(self, tmp_path: Path):
         store = DuckLakeStore(tmp_path)
         exporter = ParquetExporter(store=store, background=False)
-        exporter.export([make_log_record(event_name="roc.game_start", body="game 1")])
+        exporter.export([make_log_record(event_name="roc.game_start", body="game 1", tick=1)])
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=1,
+                )
+            ]
         )
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=2,
+                )
+            ]
         )
         exporter.force_flush()
         exporter.export(
-            [make_log_record(event_name="roc.screen", body='{"chars":[],"fg":[],"bg":[]}')]
+            [
+                make_log_record(
+                    event_name="roc.screen",
+                    body='{"chars":[],"fg":[],"bg":[]}',
+                    tick=3,
+                )
+            ]
         )
         exporter.shutdown()
         df = _read_table(store, "screens")

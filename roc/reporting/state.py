@@ -33,7 +33,8 @@ from roc.pipeline.object.object import Object, ObjectResolver, ResolvedObject
 from roc.perception.feature_extractors.phoneme import PhonemeFeature, PhonemeWord
 from roc.perception.base import AuditoryData, Perception, PerceptionData
 from roc.pipeline.temporal.predict import NoPrediction, Predict, PredictData
-from roc.reporting.observability import Observability, Observation, instance_id
+from roc.reporting import observability as _obs_mod
+from roc.reporting.observability import Observability, Observation
 from roc.pipeline.temporal.sequencer import Sequencer  # noqa: F401
 from roc.pipeline.significance import Significance, SignificanceData
 from roc.pipeline.temporal.transformer import TransformResult, Transformer
@@ -84,6 +85,12 @@ class State[StateType](ABC):
     def get_state_names() -> list[str]:
         """Returns the names of all tracked states."""
         return [field.name for field in dataclasses.fields(StateList)]
+
+    @staticmethod
+    def reset_init() -> None:
+        """Reset state tracking so init() can be called again on the next game run."""
+        global _state_init_done
+        _state_init_done = False
 
     @staticmethod
     def init() -> None:
@@ -187,7 +194,7 @@ class State[StateType](ABC):
     @staticmethod
     def print_startup_info() -> None:
         """Logs system info, git status, and loaded components at startup."""
-        logger.info(f"Starting ROC, instance id: {instance_id}")
+        logger.info(f"Starting ROC, instance id: {_obs_mod.instance_id}")
 
         def log_cmd(
             msg: str,
@@ -736,14 +743,21 @@ def bytes2human(n: int) -> str:
 
 
 def _emit_state_record(event_name: str, body: str) -> None:
-    """Emit a state value as an OTel log record."""
+    """Emit a state value as an OTel log record.
+
+    The ``tick`` attribute is stamped here -- at emission time -- rather
+    than in the exporter, because OTel batches records asynchronously and
+    the clock may have advanced by the time ``export()`` runs.
+    """
+    from roc.framework.clock import Clock
+
     span_context = otel_trace.get_current_span().get_span_context()
     log_record = LogRecord(
         timestamp=time_ns(),
         severity_number=SeverityNumber.INFO,
         severity_text="INFO",
         body=body,
-        attributes={"event.name": event_name},
+        attributes={"event.name": event_name, "tick": Clock.get()},
         trace_id=span_context.trace_id,
         span_id=span_context.span_id,
         trace_flags=span_context.trace_flags,

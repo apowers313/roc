@@ -76,15 +76,6 @@ class TestObjectResolverSkipsSettled:
 
 
 class TestTransformerAmbiguity:
-    @pytest.fixture(autouse=True)
-    def reset_tick(self):
-        import roc.pipeline.temporal.sequencer as seq
-
-        original = seq.tick
-        seq.tick = 0
-        yield
-        seq.tick = original
-
     def test_get_ambiguous_uuids_detects_duplicates(self):
         """Two ObjectInstances with the same uuid in a frame -> ambiguous."""
         from roc.pipeline.temporal.sequencer import Frame

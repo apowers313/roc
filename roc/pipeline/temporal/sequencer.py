@@ -7,6 +7,7 @@ from typing import Any
 from pydantic import Field
 
 from roc.pipeline.action import Action, TakeAction
+from roc.framework.clock import Clock
 from roc.framework.component import Component
 from roc.framework.event import Event, EventBus
 from roc.db.graphdb import Edge, EdgeConnectionsList, Node
@@ -30,17 +31,7 @@ from roc.pipeline.object.object_instance import (
 from roc.perception.base import FeatureKind
 from roc.pipeline.temporal.transformable import Transform, Transformable
 
-tick = 0
 PREDICTED_FRAME_TICK = -1
-
-
-def get_next_tick() -> int:
-    """Returns the next sequential tick number for frame ordering."""
-    global tick
-
-    tick += 1
-
-    return tick
 
 
 def _collect_legacy_objects(frame: Frame, ret: list[Object], seen: set[int]) -> None:
@@ -68,7 +59,7 @@ def _collect_instance_objects(frame: Frame, ret: list[Object], seen: set[int]) -
 class Frame(Node):
     """A snapshot of the game state at one timestep, containing objects, intrinsics, and actions."""
 
-    tick: int = Field(default_factory=get_next_tick)
+    tick: int = Field(default_factory=Clock.get)
 
     @property
     def transforms(self) -> list[Transform]:
@@ -152,8 +143,32 @@ class Sequencer(Component):
         self.action_conn.listen(self.handle_action_event)
         self.intrinsic_conn = self.connect_bus(Intrinsic.bus)
         self.intrinsic_conn.listen(self.handle_intrinsic_event)
+        # Frames are created lazily on the first data event of each cycle,
+        # so their tick matches Clock.get() at the moment data arrives rather
+        # than leading the clock by one. See _ensure_current_frame below.
         self.last_frame: Frame | None = None
-        self.current_frame: Frame = Frame()
+        self.current_frame: Frame | None = None
+        # TakeAction from the previous cycle; FrameAttribute.connect is
+        # deferred until the next Frame is lazily created so that
+        # TakeAction -> Frame still points at the frame the action led into.
+        self._pending_action: TakeAction | None = None
+
+    def _ensure_current_frame(self) -> Frame:
+        """Return the current Frame, creating one on first use of a new cycle.
+
+        Lazy creation ties Frame.tick to Clock.get() at the moment the
+        first data event arrives, and lets the Sequencer avoid eagerly
+        creating a Frame during ``__init__`` (which used to cause an
+        off-by-one drift between step numbers and Frame ticks).
+        """
+        if self.current_frame is None:
+            self.current_frame = Frame()
+            if self.last_frame is not None:
+                NextFrame.connect(self.last_frame, self.current_frame)
+            if self._pending_action is not None:
+                FrameAttribute.connect(self._pending_action, self.current_frame)
+                self._pending_action = None
+        return self.current_frame
 
     def event_filter(self, e: Event[Any]) -> bool:
         """Accept ResolvedObject, TakeAction, and IntrinsicData events."""
@@ -191,13 +206,14 @@ class Sequencer(Component):
         phys_fg = FeatureGroup.from_nodes(physical_nodes)
         rg = RelationshipGroup.from_nodes(relational_nodes) if relational_nodes else None
 
-        ctx = ResolutionContext(x=rd.x, y=rd.y, tick=tick)
+        frame = self._ensure_current_frame()
+        ctx = ResolutionContext(x=rd.x, y=rd.y, tick=Clock.get())
         oi = ObjectInstance.from_resolution(rd.object, phys_fg, ctx, rg=rg)
 
         # Attach FeatureGroup to frame
-        FrameFeatures.connect(self.current_frame, phys_fg)
+        FrameFeatures.connect(frame, phys_fg)
         # Link ObjectInstance into frame
-        SituatedObjectInstance.connect(self.current_frame, oi)
+        SituatedObjectInstance.connect(frame, oi)
         # Link ObjectInstance to persistent Object
         ObservedAs.connect(oi, rd.object)
         # Link ObjectInstance to its physical FeatureGroup
@@ -208,23 +224,30 @@ class Sequencer(Component):
 
     def handle_intrinsic_event(self, e: Event[IntrinsicData]) -> None:
         """Attaches intrinsic nodes to the current frame."""
+        frame = self._ensure_current_frame()
         for intrinsic_node in e.data.to_nodes():
-            FrameAttribute.connect(self.current_frame, intrinsic_node)
+            FrameAttribute.connect(frame, intrinsic_node)
 
     def handle_action_event(self, e: Event[Any]) -> None:
-        """On TakeAction, closes the current frame and starts a new one."""
-        # start new frame on action
-        if isinstance(e.data, TakeAction):
-            # connect action data to the old frame
-            FrameAttribute.connect(self.current_frame, e.data)
+        """On TakeAction, closes the current frame and defers the next one.
 
-            # create a new frame and connect the previous frame to the current frame
-            self.last_frame = self.current_frame
-            self.current_frame = Frame()
-            NextFrame.connect(self.last_frame, self.current_frame)
+        The new current_frame is NOT created here -- it will be created
+        lazily by the next incoming data event, at which point Clock will
+        have already advanced to the next observation cycle. This keeps
+        Frame.tick in lockstep with the game loop step counter.
+        """
+        if not isinstance(e.data, TakeAction):
+            return
 
-            # connect action data to the new frame
-            FrameAttribute.connect(e.data, self.current_frame)
+        # Guarantee there is a frame to close, even for the (unexpected)
+        # case where an action fires before any perception data arrives.
+        frame = self._ensure_current_frame()
+        FrameAttribute.connect(frame, e.data)
 
-            # emit the frame on the bus
-            self.sequencer_conn.send(self.last_frame)
+        self.last_frame = frame
+        self.current_frame = None
+        # The next frame, whenever it is created, will receive this action
+        # as its incoming-action FrameAttribute edge.
+        self._pending_action = e.data
+
+        self.sequencer_conn.send(frame)

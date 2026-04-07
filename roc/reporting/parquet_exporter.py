@@ -9,6 +9,7 @@ from typing import Any
 
 from opentelemetry.sdk._logs.export import LogExporter, LogRecordExportResult
 
+from roc.framework.clock import Clock
 from roc.reporting.ducklake_store import DuckLakeStore
 
 _GAME_METRICS_EVENT = "roc.game_metrics"
@@ -30,6 +31,12 @@ class ParquetExporter(LogExporter):
         - ``roc.game_metrics`` -> ``metrics``
         - other named events -> ``events``
         - unnamed (loguru) -> ``logs``
+
+    The step number stamped on each record comes from the record's
+    ``tick`` attribute if present (state events, stamped by
+    ``_emit_state_record``), else falls back to ``Clock.get()``
+    (loguru passthroughs). This ensures there is a single source of
+    truth for "which observation cycle does this row belong to."
     """
 
     def __init__(
@@ -41,9 +48,9 @@ class ParquetExporter(LogExporter):
     ) -> None:
         self._store = store
         self.run_dir = store.run_dir
-        self._step_counter = 0
-        self._step_incremented = False
         self._game_counter = 0
+        # Highest step seen so far; only used to throttle checkpoints.
+        self._max_step_seen = 0
 
         # Queue: list of (table_name, record_dict) tuples
         self._queue: list[tuple[str, dict[str, Any]]] = []
@@ -73,8 +80,8 @@ class ParquetExporter(LogExporter):
             self._drain()
             # Periodically run CHECKPOINT to flush inlined data to
             # parquet and merge small files for faster historical reads.
-            if self._step_counter - self._last_checkpoint_step >= self._checkpoint_interval:
-                self._last_checkpoint_step = self._step_counter
+            if self._max_step_seen - self._last_checkpoint_step >= self._checkpoint_interval:
+                self._last_checkpoint_step = self._max_step_seen
                 try:
                     self._store.checkpoint()
                 except Exception:
@@ -118,25 +125,23 @@ class ParquetExporter(LogExporter):
         attrs = dict(record.attributes) if record.attributes else {}
         event_name = attrs.get("event.name")
 
-        self._update_counters(event_name)
+        if event_name == "roc.game_start":
+            self._game_counter += 1
+
+        # State events carry their tick stamped at emission time;
+        # loguru-style records fall back to whatever the clock reads now.
+        step = attrs.get("tick")
+        if step is None:
+            step = Clock.get()
+        step = int(step)
+        if step > self._max_step_seen:
+            self._max_step_seen = step
 
         entry = self._record_to_dict(record, attrs)
-        entry["step"] = self._step_counter
+        entry["step"] = step
         entry["game_number"] = self._game_counter
         table = self._route(event_name)
         self._queue.append((table, entry))
-
-    def _update_counters(self, event_name: str | None) -> None:
-        """Update game and step counters based on event type."""
-        if event_name == "roc.game_start":
-            self._game_counter += 1
-        if event_name == "roc.screen":
-            self._step_counter += 1
-            self._step_incremented = True
-        elif event_name == _GAME_METRICS_EVENT and not self._step_incremented:
-            self._step_counter += 1
-        elif event_name == _GAME_METRICS_EVENT:
-            self._step_incremented = False
 
     def shutdown(self) -> None:
         """Stop background thread and write any remaining queued records."""
