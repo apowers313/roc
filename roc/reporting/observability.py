@@ -79,9 +79,21 @@ system_metrics_config = {
 }
 
 roc_version = importlib.metadata.version("roc")
-t = datetime.now().strftime("%Y%m%d%H%M%S")
-format_str = t + "-{{adj|lower}}-{{firstname|lower}}-{{lastname|lower}}"
-instance_id = str(FlexiHumanHash(format_str).rand())
+
+
+def _generate_instance_id() -> str:
+    """Create a new timestamped, human-readable run identifier.
+
+    The format is ``YYYYMMDDHHMMSS-<adj>-<firstname>-<lastname>``. Called
+    once at module import and again from ``Observability.reset()`` between
+    game runs so each run gets a distinct directory and dashboard entry.
+    """
+    t = datetime.now().strftime("%Y%m%d%H%M%S")
+    fmt = t + "-{{adj|lower}}-{{firstname|lower}}-{{lastname|lower}}"
+    return str(FlexiHumanHash(fmt).rand())
+
+
+instance_id = _generate_instance_id()
 
 resource = Resource.create(
     {
@@ -349,6 +361,65 @@ class Observability(metaclass=ObservabilityBase):
             pyroscope.shutdown()
         except Exception:
             pass
+
+    @classmethod
+    def reset(cls) -> None:
+        """Reset the Observability singleton for the next game run.
+
+        Called at the end of a game in thread mode (unified server). Shuts
+        down the current parquet exporter and DuckLake store, clears the
+        singleton, resets the per-game config flags, and regenerates
+        ``instance_id``/``resource``/``roc_common_attributes`` so the next
+        call to ``Observability.init()`` creates fresh providers pointing
+        at a new run directory. Without this, the second game reuses the
+        first game's already-closed DuckLake connection and crashes with
+        ``ConnectionException: Connection already closed``.
+        """
+        instance = ObservabilityBase._instances.get(cls)
+        if instance is not None:
+            if hasattr(instance, "_parquet_exporter"):
+                try:
+                    instance._parquet_exporter.shutdown()
+                except Exception:
+                    pass
+            if hasattr(instance, "_ducklake_store"):
+                try:
+                    instance._ducklake_store.close()
+                except Exception:
+                    pass
+
+        # Shut down the global logger provider so its BatchLogRecordProcessor
+        # stops forwarding records into the closed exporters above. A fresh
+        # provider is installed by the next Observability.__init__().
+        provider = otel_logs.get_logger_provider()
+        if hasattr(provider, "shutdown"):
+            try:
+                provider.shutdown()
+            except Exception:
+                pass
+
+        # Drop the singleton and per-game configuration flags so the next
+        # init() rebuilds everything from scratch.
+        ObservabilityBase._instances.pop(cls, None)
+        cls._parquet_configured = False
+        cls._remote_log_configured = False
+        cls._allow_parquet = False
+
+        # Regenerate the module-level run identity. New imports of
+        # ``instance_id`` will see the fresh value; existing callers must
+        # access it via the module attribute (``observability.instance_id``)
+        # rather than a snapshot from ``from ... import instance_id``.
+        global instance_id, resource, roc_common_attributes
+        instance_id = _generate_instance_id()
+        resource = Resource.create(
+            {
+                "service.name": "roc",
+                "service.instance.id": instance_id,
+            }
+        )
+        roc_common_attributes = {
+            "roc.instance.id": instance_id,
+        }
 
     @classmethod
     def _configure_debug_exporters(cls) -> None:

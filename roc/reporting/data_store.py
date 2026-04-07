@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from roc.framework.logger import logger
 from roc.reporting.ducklake_store import DuckLakeStore
+from roc.reporting.graph_service import GraphService
 from roc.reporting.run_store import (
     RunStore,
     StepData,
@@ -192,9 +193,24 @@ class DataStore:
         The buffer data stays accessible for historical queries until a
         new game starts (which calls ``set_live_session`` to replace it).
         This prevents cycle data from being lost when the game ends.
+
+        IMPORTANT: this method is called around the same time that
+        ``Observability.reset()`` closes the in-process ``DuckLakeStore``
+        that was registered here via ``set_live_session(store=...)``. Any
+        cached ``RunStore`` wrapping that store is about to point at a
+        dead connection, so we evict the cache entry and drop our own
+        reference. Future queries for this run will create a fresh
+        read-only ``DuckLakeStore`` from the run directory on disk.
+        Without this eviction, later queries for any run (not just the
+        ended one) can hit a stale closed-connection error during
+        iteration in list_runs / populate_run_summaries.
         """
         if self._live_buffer is not None:
             self._live_buffer.remove_listener(self._on_step_pushed)
+        with self._store_lock:
+            if self._live_run_name is not None:
+                self._run_stores.pop(self._live_run_name, None)
+        self._live_store = None
         logger.debug("DataStore: live session paused (buffer retained)")
 
     # -------------------------------------------------------------------
@@ -202,7 +218,7 @@ class DataStore:
     # -------------------------------------------------------------------
 
     def push_live_step(self, step_data: StepData) -> None:
-        """Push a step received from a subprocess to the live buffer."""
+        """Push a step to the live buffer."""
         if self._live_buffer is not None:
             self._live_buffer.push(step_data)
 
@@ -255,8 +271,12 @@ class DataStore:
     # Internal helpers
     # -------------------------------------------------------------------
 
-    def _is_live(self, run_name: str) -> bool:
+    def is_live(self, run_name: str) -> bool:
+        """Check if the given run is the currently active live session."""
         return run_name == self._live_run_name and self._live_buffer is not None
+
+    def _is_live(self, run_name: str) -> bool:
+        return self.is_live(run_name)
 
     def _get_live_history(self, game: int | None, field_name: str) -> list[dict[str, Any]]:
         """Get accumulated history from live indices."""
@@ -569,6 +589,18 @@ class DataStore:
             except Exception:
                 return None
         return None
+
+    # -------------------------------------------------------------------
+    # Graph service
+    # -------------------------------------------------------------------
+
+    def get_graph_service(self) -> GraphService:
+        """Return a GraphService backed by this DataStore's data directory."""
+        return GraphService(self._data_dir)
+
+    def get_run_dir(self, run_name: str) -> Path:
+        """Return the directory path for a run."""
+        return self._data_dir / run_name
 
     # -------------------------------------------------------------------
     # Live resolution/objects computation

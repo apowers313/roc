@@ -4,14 +4,17 @@
 the interactions between the agent and the system, including the main event loop.
 """
 
+import json
+import threading
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Any
+from typing import Any, Callable
 
 # TODO: try to import 'gym' and 'gymnasium' for proper typing
 # TODO: optional dependency: pip install roc[gym] or roc[gymnasium]
 import gymnasium as gym
+import networkx as nx
 import nle
 from pydantic import BaseModel, Field
 
@@ -43,12 +46,14 @@ from ..framework.component import Component
 from ..framework.config import Config
 from ..db.graphdb import GraphDB
 from ..pipeline.intrinsic import Intrinsic, IntrinsicData
+from ..framework import logger as roc_logger
 from ..framework.logger import logger
 from ..perception.base import AuditoryData, Perception, ProprioceptiveData, VisionData
 from ..reporting.metrics import RocMetrics
 from ..reporting.observability import Observability
 from ..reporting.screen_renderer import screen_to_html_vals
 from ..reporting.state import State, _emit_state_record
+from ..reporting.step_buffer import StepBuffer
 
 # Cumulative glyph sets for attention spread tracking.
 _attended_glyphs: set[int] = set()
@@ -59,8 +64,6 @@ _seen_glyphs: set[int] = set()
 class GameLoopContext:
     """Invariant state for the game observation loop."""
 
-    callback_url: str | None
-    callback_ctx: Any
     observation_counter: Any
 
 
@@ -83,7 +86,6 @@ class Gym(Component, ABC):
         self.env_bus_conn = Perception.bus.connect(self)
         self.action_bus_conn = Action.bus.connect(self)
         self.intrinsic_bus_conn = Intrinsic.bus.connect(self)
-        self._server_stop = False
 
         # config
         self.config(self.env)
@@ -102,15 +104,21 @@ class Gym(Component, ABC):
 
     @logger.catch
     @Observability.tracer.start_as_current_span("start")
-    def start(self) -> None:
+    def start(
+        self,
+        stop_event: threading.Event | None = None,
+        step_buffer: StepBuffer | None = None,
+    ) -> None:
+        from roc.framework.clock import Clock
+
         logger.debug("Starting NLE loop...")
+        # Reset the tick clock so each run begins at 0 regardless of
+        # whatever state prior tests / server lifetimes may have left.
+        Clock.reset()
         obs, _reset_info = self.env.reset()
         settings = Config.get()
 
-        callback_url = settings.dashboard_callback_url
-        callback_ctx = _setup_callback_context(callback_url, settings)
-
-        _publish_action_map(settings.gym_actions, callback_url, callback_ctx)
+        _publish_action_map(settings.gym_actions)
 
         done = False
         truncated = False
@@ -126,34 +134,50 @@ class Gym(Component, ABC):
         )
         game_counter.add(1)
         _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
-        loop_ctx = GameLoopContext(callback_url, callback_ctx, observation_counter)
+        loop_ctx = GameLoopContext(observation_counter)
 
-        # main environment loop
-        while game_num <= settings.num_games:
-            with Observability.tracer.start_as_current_span("observation"):
-                obs, done, truncated, loop_num = self._run_observation_step(
-                    obs, loop_num, game_num, loop_ctx
-                )
-
-                if done or truncated:
-                    _handle_game_over(obs, game_num, done, settings)
-
-                if done or truncated:
-                    self.env.reset()
-                    game_counter.add(1)
-                    game_num += 1
-                    _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
-
-                if self._server_stop:
-                    logger.info("Server requested stop, exiting game loop.")
+        try:
+            # main environment loop
+            while game_num <= settings.num_games:
+                if stop_event is not None and stop_event.is_set():
+                    logger.info("Stop event set, exiting game loop.")
                     break
 
-        logger.info("NLE loop done, exiting.")
-        from roc.reporting.api_server import stop_dashboard
+                with Observability.tracer.start_as_current_span("observation"):
+                    obs, done, truncated, loop_num = self._run_observation_step(
+                        obs, loop_num, game_num, loop_ctx, step_buffer
+                    )
 
-        stop_dashboard()
-        Observability.shutdown()
-        _dump_env_end()
+                    if done or truncated:
+                        _handle_game_over(obs, game_num, done, settings)
+
+                    if done or truncated:
+                        self.env.reset()
+                        game_counter.add(1)
+                        game_num += 1
+                        _emit_state_record("roc.game_start", f'{{"game_number": {game_num}}}')
+
+                    if stop_event is not None and stop_event.is_set():
+                        logger.info("Stop event set, exiting game loop.")
+                        break
+        finally:
+            # Always write the graph archive on exit, even when the user
+            # stops mid-game or an exception breaks the loop. Without this,
+            # `_handle_game_over` is the only caller, which runs only on
+            # natural game-end (done/truncated), and historical runs stopped
+            # via the REST API would have no graph.json -- making the
+            # dashboard's Graph Visualization panel show "No graph data".
+            try:
+                _export_graph_archive()
+            except Exception:
+                logger.exception("Failed to export graph archive during cleanup")
+
+            logger.info("NLE loop done, exiting.")
+            from roc.reporting.api_server import stop_dashboard
+
+            stop_dashboard()
+            Observability.shutdown()
+            _dump_env_end()
 
     def _run_observation_step(
         self,
@@ -161,13 +185,21 @@ class Gym(Component, ABC):
         loop_num: int,
         game_num: int,
         loop_ctx: GameLoopContext,
+        step_buffer: StepBuffer | None = None,
     ) -> tuple[Any, bool, bool, int]:
         """Execute a single observation-action-step cycle.
 
         Returns the new (obs, done, truncated, loop_num) tuple.
         """
+        from roc.framework.clock import Clock
         from roc.reporting.step_log_sink import set_current_step
 
+        # Clock advances at the top of each observation cycle. Everything
+        # downstream -- Sequencer Frame.tick, ObjectInstance.tick,
+        # ResolutionContext.tick, ParquetExporter step stamp, log records
+        # -- reads from Clock.get(), so this is the single source of truth
+        # for "which observation cycle is this?".
+        Clock.set(loop_num + 1)
         set_current_step(loop_num + 1)
 
         logger.trace(f"Sending observation: {obs}")
@@ -204,9 +236,7 @@ class Gym(Component, ABC):
         if Config.get().emit_state:
             State.emit_state_logs()
 
-        self._server_stop = _push_dashboard_data(
-            obs, loop_num, game_num, loop_ctx.callback_url, loop_ctx.callback_ctx
-        )
+        _push_dashboard_data(obs, loop_num, game_num, step_buffer)
 
         # Reset per-step cycle accumulators AFTER dashboard data has been read
         cycle_states = State.get_states()
@@ -215,31 +245,6 @@ class Gym(Component, ABC):
         cycle_states.attenuation_cycles.reset()
 
         return obs, done, truncated, loop_num
-
-
-def _setup_callback_context(callback_url: str | None, settings: Config) -> Any:
-    """Build an SSL context for the HTTP callback URL, if needed.
-
-    The callback URL targets localhost (internal server-to-subprocess communication),
-    but the SSL cert may be issued for an external domain (e.g. *.ato.ms). Hostname
-    verification is disabled since both processes run on the same machine.
-    """
-    if not callback_url:
-        return None
-    import ssl
-
-    if callback_url.startswith("https://"):
-        ctx = ssl.create_default_context()
-        if settings.ssl_certfile:
-            ctx.load_verify_locations(settings.ssl_certfile)
-        # The callback URL uses localhost but the cert is for the external domain.
-        # Skip hostname check for this internal loopback connection.
-        ctx.check_hostname = False  # NOSONAR
-        ctx.verify_mode = ssl.CERT_REQUIRED
-    else:
-        ctx = None
-    logger.info("Step callback URL: {}", callback_url)
-    return ctx
 
 
 def _build_action_map(
@@ -261,53 +266,13 @@ def _build_action_map(
 
 def _publish_action_map(
     gym_actions: tuple[Any, ...] | None,
-    callback_url: str | None,
-    callback_ctx: Any,
 ) -> None:
-    """Build and publish the action map to the server or to disk."""
+    """Build and save the action map to disk."""
     if not gym_actions:
         return
 
     action_map = _build_action_map(gym_actions)
-
-    if callback_url:
-        _post_action_map_to_server(action_map, callback_url, callback_ctx)
-    else:
-        _save_action_map_to_file(action_map)
-
-
-def _post_action_map_to_server(
-    action_map: list[dict[str, Any]],
-    callback_url: str,
-    callback_ctx: Any,
-) -> None:
-    """POST the action map to the dashboard server."""
-    from roc.reporting.observability import Observability
-
-    dl_store = Observability.get_ducklake_store()
-    if dl_store is None:
-        return
-    try:
-        import json
-        import urllib.request
-
-        run_name = dl_store.run_dir.name
-        base = callback_url.rsplit("/api/internal/step", 1)[0]
-        map_url = f"{base}/api/internal/action-map"
-        payload = json.dumps(
-            {"run_name": run_name, "action_map": action_map},
-            separators=(",", ":"),
-        ).encode()
-        req = urllib.request.Request(
-            map_url,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        urllib.request.urlopen(req, timeout=5, context=callback_ctx)  # nosec B310
-        logger.debug("Sent action map ({} entries) to server", len(action_map))
-    except Exception:
-        logger.opt(exception=True).debug("Failed to send action map")
+    _save_action_map_to_file(action_map)
 
 
 def _save_action_map_to_file(action_map: list[dict[str, Any]]) -> None:
@@ -766,38 +731,6 @@ def _extract_game_metrics(obs: Any) -> dict[str, int]:
     }
 
 
-def _push_step_to_server(
-    step_data: Any,
-    callback_url: str,
-    callback_ctx: Any,
-) -> bool:
-    """POST step data to the dashboard server. Returns True if server requested stop."""
-    try:
-        import dataclasses
-        import json
-        import urllib.request
-
-        payload = json.dumps(
-            dataclasses.asdict(step_data), separators=(",", ":"), default=str
-        ).encode()
-        req = urllib.request.Request(
-            callback_url,
-            data=payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        resp = urllib.request.urlopen(req, timeout=2, context=callback_ctx)  # nosec B310
-        resp_body = json.loads(resp.read())
-        return bool(resp_body.get("stop"))
-    except Exception:
-        logger.warning(
-            "Step callback POST to {} failed: {}",
-            callback_url,
-            __import__("traceback").format_exc(),
-        )
-        return False  # best-effort, don't break the game loop
-
-
 def _build_intrinsics_dict(states: Any) -> dict[str, Any] | None:
     """Build intrinsics payload dict from state, or None if unavailable."""
     if states.intrinsic.val is None:
@@ -819,12 +752,12 @@ def _push_dashboard_data(
     obs: Any,
     loop_num: int,
     game_num: int,
-    callback_url: str | None,
-    callback_ctx: Any,
-) -> bool:
-    """Collect step data and push to the dashboard buffer and/or server.
+    step_buffer: StepBuffer | None = None,
+) -> None:
+    """Collect step data and push directly to the StepBuffer.
 
-    Returns True if the server requested a stop.
+    If step_buffer is provided (thread mode), pushes to it directly.
+    Otherwise falls back to the globally registered StepBuffer (standalone mode).
     """
     import json as _json
 
@@ -837,19 +770,17 @@ def _push_dashboard_data(
 
     from roc.reporting.step_buffer import get_step_buffer
 
-    buf = get_step_buffer()
-    dashboard_active = buf is not None or bool(callback_url)
+    buf = step_buffer or get_step_buffer()
+    if buf is None:
+        return
 
-    inventory = _parse_inventory(obs) if dashboard_active else None
+    inventory = _parse_inventory(obs)
 
-    if dashboard_active and inventory is not None:
+    if inventory is not None:
         _emit_state_record(
             "roc.inventory",
             _json.dumps(inventory, separators=(",", ":")),
         )
-
-    if not dashboard_active:
-        return False
 
     from time import time_ns
 
@@ -890,18 +821,31 @@ def _push_dashboard_data(
         saliency_cycles=states.saliency_cycles.val or None,
         resolution_cycles=states.resolution_cycles.val or None,
     )
-    if buf is not None:
-        buf.push(step_data)
-
-    server_stop = False
-    if callback_url:
-        server_stop = _push_step_to_server(step_data, callback_url, callback_ctx)
-    return server_stop
+    buf.push(step_data)
 
 
 def _tty_chars_to_screen(tty_chars: Any) -> str:
     """Convert a 2D array of ASCII char codes to a printable screen string."""
     return "".join("".join(chr(ch) for ch in row) + "\n" for row in tty_chars)
+
+
+def _export_graph_archive() -> None:
+    """Export the full graph as node-link JSON to the run directory.
+
+    Uses GraphDB.to_networkx() to get the full graph, then writes
+    nx.node_link_data() to run_dir/graph.json. Skips silently if no
+    DuckLakeStore is configured (no run directory available).
+    """
+    store = Observability.get_ducklake_store()
+    if store is None:
+        return
+
+    G = GraphDB.to_networkx()
+    data = nx.node_link_data(G, edges="links")
+    graph_path = store.run_dir / "graph.json"
+    with open(graph_path, "w") as f:
+        json.dump(data, f, default=str)
+    logger.info(f"Graph archive written to {graph_path}")
 
 
 def _handle_game_over(obs: Any, game_num: int, done: bool, settings: Config) -> None:
@@ -913,6 +857,7 @@ def _handle_game_over(obs: Any, game_num: int, done: bool, settings: Config) -> 
         GraphDB.flush()
     if settings.graphdb_export:
         GraphDB.export()
+    _export_graph_archive()
     blstats = obs["blstats"]
     score = int(blstats[blstat_offsets.SCORE])
     outcome = "done" if done else "truncated"
@@ -1163,3 +1108,66 @@ def _dump_env_end() -> None:
     dump_env_file.write("]\n")
     dump_env_file.flush()
     dump_env_file.close()
+
+
+def _game_main(
+    *,
+    num_games: int,
+    stop_event: threading.Event,
+    on_run_name: Callable[[str], None],
+) -> None:
+    """Game loop entry point for thread-based execution.
+
+    Called by GameManager on the game worker thread. Initializes all game-specific
+    components, runs the game loop, and cleans up afterward. All Python objects
+    (GraphCache, StepBuffer, etc.) are shared with the server thread via the
+    process heap.
+
+    Args:
+        num_games: Number of games to play.
+        stop_event: Set by the server to request cooperative shutdown.
+        on_run_name: Callback to report the run name to GameManager.
+    """
+    from roc.framework.config import Config
+    from roc.framework.component import Component
+    from roc.framework.event import EventBus
+    from roc.framework.expmod import ExpMod
+    from roc.reporting import observability as obs_mod
+    from roc.reporting.observability import Observability
+    from roc.reporting.state import State
+
+    # Reuse existing Config singleton (already initialized by the server process).
+    Config.init(force=False)
+    roc_logger.init()
+    Observability.init(enable_parquet=True)
+
+    # Report the run name so the server can set up the live session. Access
+    # instance_id via the module attribute so we see the fresh value that
+    # Observability.reset() writes between runs -- a bare `from ... import
+    # instance_id` would snapshot the previous run's ID.
+    on_run_name(obs_mod.instance_id)
+
+    gym = NethackGym()
+    Component.init()
+    ExpMod.init()
+    State.init()
+
+    # Start in-process dashboard for standalone mode (no-op if already started).
+    from roc.reporting.api_server import start_dashboard
+
+    start_dashboard()
+
+    try:
+        gym.start(stop_event=stop_event)
+    finally:
+        # Clean up game-specific state so the next game run starts fresh.
+        # Order matters: shut down components first (disposes bus subscriptions),
+        # then clear bus names so new buses can be created on the next run,
+        # then tear down the Observability singleton (which closes the
+        # DuckLake store and regenerates instance_id for the next run).
+        Component.reset()
+        EventBus.clear_names()
+        State.reset_init()
+        Observability.reset()
+        # GraphCache nodes/edges persist intentionally -- the server can still
+        # query them after the game thread exits.

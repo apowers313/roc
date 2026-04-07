@@ -197,6 +197,8 @@ class Config(BaseSettings):
             ),
         ],
     )
+    # game threading controls
+    use_game_threads: bool = Field(default=False)
     # graphdb controls
     graphdb_export: bool = Field(default=False)
     graphdb_flush: bool = Field(default=False)

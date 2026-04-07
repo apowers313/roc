@@ -291,90 +291,22 @@ class TestPublishActionMap:
         from roc.game.gymnasium import _publish_action_map
 
         # Should not raise
-        _publish_action_map(None, "http://example.com", None)
+        _publish_action_map(None)
 
     def test_empty_gym_actions_returns_early(self):
         """When gym_actions is an empty tuple, nothing happens."""
         from roc.game.gymnasium import _publish_action_map
 
-        _publish_action_map((), "http://example.com", None)
+        _publish_action_map(())
 
-    def test_no_callback_saves_to_file(self, mocker):
-        """Without callback URL, saves action map to file."""
+    def test_saves_to_file(self, mocker):
+        """Always saves action map to file."""
         from roc.game.gymnasium import _publish_action_map
 
         mock_save = mocker.patch("roc.game.gymnasium._save_action_map_to_file")
-        mocker.patch("roc.game.gymnasium._post_action_map_to_server")
 
-        _publish_action_map((42,), None, None)
+        _publish_action_map((42,))
         mock_save.assert_called_once()
-
-    def test_with_callback_posts_to_server(self, mocker):
-        """With callback URL, posts action map to server."""
-        from roc.game.gymnasium import _publish_action_map
-
-        mock_post = mocker.patch("roc.game.gymnasium._post_action_map_to_server")
-        mocker.patch("roc.game.gymnasium._save_action_map_to_file")
-
-        _publish_action_map((42,), "http://example.com/api/internal/step", "ctx")
-        mock_post.assert_called_once()
-
-
-class TestSetupCallbackContext:
-    """Tests for _setup_callback_context."""
-
-    def test_no_callback_url_returns_none(self):
-        """When callback_url is None, returns None."""
-        from roc.game.gymnasium import _setup_callback_context
-
-        result = _setup_callback_context(None, Config.get())
-        assert result is None
-
-    def test_http_url_returns_none_context(self):
-        """When callback_url is http, returns None SSL context."""
-        from roc.game.gymnasium import _setup_callback_context
-
-        result = _setup_callback_context("http://localhost:8000/step", Config.get())
-        assert result is None
-
-    def test_https_url_returns_ssl_context(self):
-        """When callback_url is https, returns an SSL context."""
-        import ssl
-
-        from roc.game.gymnasium import _setup_callback_context
-
-        result = _setup_callback_context("https://localhost:8000/step", Config.get())
-        assert isinstance(result, ssl.SSLContext)
-
-    def test_https_context_disables_hostname_check(self):
-        """SSL context must skip hostname verification for localhost callbacks.
-
-        Root cause: server_cli.py builds the callback URL as
-        ``https://localhost:<port>/api/internal/step`` because the game subprocess
-        runs on the same machine. However, the SSL certificate is issued for the
-        external domain (*.ato.ms), not for ``localhost``. Python's default SSL
-        context enforces hostname verification, so every POST from the game
-        subprocess to the dashboard server silently fails with:
-
-            ssl.SSLCertVerificationError: Hostname mismatch,
-            certificate is not valid for 'localhost'.
-
-        The exception was swallowed by a bare ``except Exception`` in
-        ``_push_step_to_server``, making live mode appear broken with zero steps
-        received despite the game running normally.
-
-        This test ensures the SSL context disables hostname checking (since the
-        connection is internal loopback) while still requiring certificate
-        verification against the loaded CA bundle.
-        """
-        import ssl
-
-        from roc.game.gymnasium import _setup_callback_context
-
-        result = _setup_callback_context("https://localhost:8000/step", Config.get())
-        assert isinstance(result, ssl.SSLContext)
-        assert result.check_hostname is False
-        assert result.verify_mode == ssl.CERT_REQUIRED
 
 
 class TestExtractGameMetrics:
@@ -873,56 +805,6 @@ class TestInjectAttentionSpread:
         assert att["spread_pct"] == pytest.approx(0.0)
 
 
-class TestPushStepToServer:
-    """Tests for _push_step_to_server helper."""
-
-    def test_returns_false_on_exception(self):
-        """Returns False when the HTTP request fails."""
-        from roc.game.gymnasium import _push_step_to_server
-
-        step_data = MagicMock()
-        result = _push_step_to_server(step_data, "http://invalid:0/step", None)
-        assert result is False
-
-    def test_returns_stop_from_response(self, mocker):
-        """Returns True when server response includes stop=True."""
-        import dataclasses
-        import json
-
-        from roc.game.gymnasium import _push_step_to_server
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"stop": True}).encode()
-
-        mocker.patch("urllib.request.urlopen", return_value=mock_resp)
-
-        @dataclasses.dataclass
-        class FakeStep:
-            step: int = 1
-
-        result = _push_step_to_server(FakeStep(), "http://localhost/step", None)
-        assert result is True
-
-    def test_returns_false_from_response(self, mocker):
-        """Returns False when server response has no stop."""
-        import dataclasses
-        import json
-
-        from roc.game.gymnasium import _push_step_to_server
-
-        mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"status": "ok"}).encode()
-
-        mocker.patch("urllib.request.urlopen", return_value=mock_resp)
-
-        @dataclasses.dataclass
-        class FakeStep:
-            step: int = 1
-
-        result = _push_step_to_server(FakeStep(), "http://localhost/step", None)
-        assert result is False
-
-
 class TestHandleGameOver:
     """Tests for _handle_game_over helper."""
 
@@ -959,6 +841,124 @@ class TestHandleGameOver:
 
         mock_flush.assert_not_called()
         mock_export.assert_called_once()
+
+
+class TestGraphArchiveOnStop:
+    """Regression: _export_graph_archive must run when the game loop exits
+    via stop_event, not only when _handle_game_over fires on natural game-end.
+
+    Without this, any run stopped via the REST API (the common dashboard
+    workflow) has no graph.json and the dashboard's Graph Visualization
+    panel shows 'No graph data' for that historical run.
+    """
+
+    def test_graph_archive_exported_when_stopped_mid_game(self, mocker):
+        """Setting stop_event mid-run still writes graph.json via finally."""
+        import threading
+
+        settings = Config.get()
+        settings.graphdb_flush = False
+        settings.graphdb_export = False
+        settings.num_games = 5  # large enough that the game can't finish naturally
+
+        obs = _make_fake_obs()
+
+        # Pre-set the stop event so the loop exits on the first check.
+        stop_event = threading.Event()
+        stop_event.set()
+
+        mock_export_archive = mocker.patch("roc.game.gymnasium._export_graph_archive")
+
+        with patch("roc.game.gymnasium.Gym.__init__", return_value=None):
+            from roc.game.gymnasium import Gym
+
+            class StoppedGym(Gym):
+                name: str = "stopgym"
+                type: str = "game"
+
+                def send_obs(self, obs: Any) -> None:
+                    """No-op; required by abstract base class."""
+
+                def config(self, env: Any) -> None:
+                    """No-op; required by abstract base class."""
+
+                def get_action(self) -> Any:
+                    return 0
+
+            gym_instance = StoppedGym.__new__(StoppedGym)
+            gym_instance.env = MagicMock()
+            gym_instance.env.reset.return_value = (obs, {})
+            gym_instance.env.step.return_value = (obs, 0, False, False, {})
+
+            mocker.patch("roc.game.gymnasium._dump_env_start")
+            mocker.patch("roc.game.gymnasium._dump_env_record")
+            mocker.patch("roc.game.gymnasium._dump_env_end")
+            mocker.patch("roc.game.gymnasium.breakpoints")
+            mocker.patch("roc.game.gymnasium.State")
+
+            gym_instance.start(stop_event=stop_event)
+
+        # The key assertion: even though no game completed naturally (no
+        # _handle_game_over call), the finally block still exported the
+        # graph archive so the dashboard has data to show.
+        mock_export_archive.assert_called()
+
+    def test_graph_archive_export_exceptions_are_swallowed(self, mocker):
+        """A broken exporter must not prevent dashboard shutdown, obs
+        shutdown, and env cleanup from running in the finally block.
+        """
+        import threading
+
+        settings = Config.get()
+        settings.graphdb_flush = False
+        settings.graphdb_export = False
+        settings.num_games = 5
+
+        obs = _make_fake_obs()
+        stop_event = threading.Event()
+        stop_event.set()
+
+        mocker.patch(
+            "roc.game.gymnasium._export_graph_archive",
+            side_effect=RuntimeError("boom"),
+        )
+        mock_stop_dashboard = mocker.patch("roc.reporting.api_server.stop_dashboard")
+        mock_obs_shutdown = mocker.patch("roc.game.gymnasium.Observability.shutdown")
+        mock_dump_end = mocker.patch("roc.game.gymnasium._dump_env_end")
+
+        with patch("roc.game.gymnasium.Gym.__init__", return_value=None):
+            from roc.game.gymnasium import Gym
+
+            class BrokenExportGym(Gym):
+                name: str = "brokenexportgym"
+                type: str = "game"
+
+                def send_obs(self, obs: Any) -> None:
+                    """No-op; required by abstract base class."""
+
+                def config(self, env: Any) -> None:
+                    """No-op; required by abstract base class."""
+
+                def get_action(self) -> Any:
+                    return 0
+
+            gym_instance = BrokenExportGym.__new__(BrokenExportGym)
+            gym_instance.env = MagicMock()
+            gym_instance.env.reset.return_value = (obs, {})
+            gym_instance.env.step.return_value = (obs, 0, False, False, {})
+
+            mocker.patch("roc.game.gymnasium._dump_env_start")
+            mocker.patch("roc.game.gymnasium._dump_env_record")
+            mocker.patch("roc.game.gymnasium.breakpoints")
+            mocker.patch("roc.game.gymnasium.State")
+
+            # Must not raise even though the exporter raises
+            gym_instance.start(stop_event=stop_event)
+
+        # Downstream cleanup still ran despite the exporter exception.
+        mock_stop_dashboard.assert_called()
+        mock_obs_shutdown.assert_called()
+        mock_dump_end.assert_called()
 
 
 # ========================================================================

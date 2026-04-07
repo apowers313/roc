@@ -913,41 +913,6 @@ class TestGameStop:
             mod._game_manager = orig
 
 
-class TestReceiveStep:
-    """Test POST /api/internal/step endpoint."""
-
-    def test_receives_and_stores_step(self, client: TestClient) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("recv-test-run", buf)
-        resp = client.post(
-            "/api/internal/step",
-            json={"step": 1, "game_number": 1, "game_metrics": {"score": 10}},
-        )
-        assert resp.status_code == 200
-        assert resp.json() == {"status": "ok"}
-        assert len(buf) == 1
-        stored = buf.get_step(1)
-        assert stored is not None
-        assert stored.step == 1
-        assert stored.game_number == 1
-
-    def test_ignores_unknown_fields(self, client: TestClient) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("recv-test-run2", buf)
-        resp = client.post(
-            "/api/internal/step",
-            json={"step": 1, "game_number": 1, "unknown_field": "whatever"},
-        )
-        assert resp.status_code == 200
-        assert len(buf) == 1
-
-
 @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
 class TestEmitGameStateChanged:
     """Test _emit_game_state_changed function."""
@@ -1047,6 +1012,133 @@ class TestStartStopLiveSession:
             mod._stop_live_session()
         finally:
             mod._data_store = orig
+
+
+class TestStartLiveSessionRegistersGlobalBuffer:
+    """Regression: _start_live_session must register the buffer globally.
+
+    Without global registration, the game thread's _push_dashboard_data()
+    cannot find the buffer via get_step_buffer() and silently drops all data.
+    """
+
+    def test_start_registers_global_buffer(self) -> None:
+        import roc.reporting.api_server as mod
+        from roc.reporting.step_buffer import clear_step_buffer, get_step_buffer
+
+        assert mod._data_store is not None
+        # Ensure clean state
+        clear_step_buffer()
+        assert get_step_buffer() is None
+
+        try:
+            mod._start_live_session("global-buf-test")
+            buf = get_step_buffer()
+            assert buf is not None, "Buffer should be globally registered"
+            assert mod._data_store.live_buffer is buf
+        finally:
+            mod._data_store.clear_live_session()
+            clear_step_buffer()
+
+    def test_start_adds_socket_listener(self) -> None:
+        import roc.reporting.api_server as mod
+        from roc.reporting.step_buffer import clear_step_buffer
+
+        assert mod._data_store is not None
+        try:
+            mod._start_live_session("listener-test")
+            buf = mod._data_store.live_buffer
+            assert buf is not None
+            assert len(buf._listeners) > 0, "Buffer should have a socket.io listener"
+        finally:
+            mod._data_store.clear_live_session()
+            clear_step_buffer()
+
+    def test_start_passes_ducklake_store_to_data_store(self) -> None:
+        """Regression: _start_live_session must pass the in-process
+        DuckLakeStore to DataStore.set_live_session.
+
+        Without this, DataStore._get_run_store() opens a second, read-only
+        DuckLakeStore on the same catalog directory as the game writer's
+        store -- the exact reader/writer contention that prompted the
+        migration to DuckLake in the first place (see roc/reporting/CLAUDE.md).
+        """
+        import roc.reporting.api_server as mod
+        from roc.reporting.step_buffer import clear_step_buffer
+
+        assert mod._data_store is not None
+        mock_store = MagicMock(name="ducklake-store")
+        try:
+            with (
+                patch(
+                    "roc.reporting.observability.Observability.get_ducklake_store",
+                    return_value=mock_store,
+                ),
+                patch.object(mod._data_store, "set_live_session") as mock_set,
+            ):
+                mod._start_live_session("store-passthrough-test")
+            assert mock_set.call_count == 1
+            kwargs = mock_set.call_args.kwargs
+            assert kwargs.get("store") is mock_store
+            assert kwargs.get("run_name") == "store-passthrough-test"
+        finally:
+            mod._data_store.clear_live_session()
+            clear_step_buffer()
+
+
+class TestStopLiveSessionClearsGlobalBuffer:
+    """Regression: _stop_live_session must clear the global step buffer.
+
+    Without clearing, a stale buffer from the previous game remains globally
+    registered, causing the next game's data to go to the wrong buffer.
+    """
+
+    def test_stop_clears_global_buffer(self) -> None:
+        import roc.reporting.api_server as mod
+        from roc.reporting.step_buffer import clear_step_buffer, get_step_buffer
+
+        assert mod._data_store is not None
+        clear_step_buffer()
+        try:
+            mod._start_live_session("stop-clear-test")
+            assert get_step_buffer() is not None
+            mod._stop_live_session()
+            assert get_step_buffer() is None, "Global buffer should be cleared on stop"
+        finally:
+            mod._data_store.clear_live_session()
+            clear_step_buffer()
+
+
+class TestEmitGameStateChangedIdempotency:
+    """Regression: _emit_game_state_changed must not create duplicate sessions.
+
+    When _set_run_name re-triggers the state change callback, the same
+    (state=running, run_name=X) notification fires twice. Without an
+    idempotency guard, two StepBuffers would be created and the first
+    (with the socket.io listener) would be orphaned.
+    """
+
+    def test_duplicate_running_notification_does_not_create_second_session(self) -> None:
+        import roc.reporting.api_server as mod
+        from roc.reporting.step_buffer import clear_step_buffer
+
+        assert mod._data_store is not None
+        orig_loop = mod._sio_loop
+        mod._sio_loop = None
+        try:
+            # First notification creates the session
+            mod._emit_game_state_changed({"state": "running", "run_name": "idem-test"})
+            first_buf = mod._data_store.live_buffer
+            assert first_buf is not None
+
+            # Second notification with same run_name should NOT replace it
+            mod._emit_game_state_changed({"state": "running", "run_name": "idem-test"})
+            assert mod._data_store.live_buffer is first_buf, (
+                "Second notification should not create a new buffer"
+            )
+        finally:
+            mod._data_store.clear_live_session()
+            clear_step_buffer()
+            mod._sio_loop = orig_loop
 
 
 class TestLiveStatusInitializing:
@@ -1307,129 +1399,6 @@ class TestGetStepsBatchExceptionPath:
             resp = client.get("/api/runs/test-run/steps?steps=1,2,3")
             assert resp.status_code == 200
             assert resp.json() == {}
-
-
-# ---------------------------------------------------------------------------
-# receive_step stop response
-# ---------------------------------------------------------------------------
-
-
-class TestReceiveStepStopResponse:
-    """Test POST /api/internal/step returns stop flag when requested."""
-
-    def test_returns_stop_when_manager_requests_stop(self, client: TestClient) -> None:
-        """receive_step includes stop:true when game_manager requests stop."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("stop-test-run", buf)
-
-        mock_mgr = MagicMock()
-        mock_mgr.is_stop_requested.return_value = True
-        orig_mgr = mod._game_manager
-        mod._game_manager = mock_mgr
-        try:
-            resp = client.post(
-                "/api/internal/step",
-                json={"step": 1, "game_number": 1},
-            )
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["status"] == "ok"
-            assert data["stop"] is True
-        finally:
-            mod._game_manager = orig_mgr
-
-    def test_no_stop_when_manager_does_not_request_stop(self, client: TestClient) -> None:
-        """receive_step omits stop key when game_manager does not request stop."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("no-stop-test-run", buf)
-
-        mock_mgr = MagicMock()
-        mock_mgr.is_stop_requested.return_value = False
-        orig_mgr = mod._game_manager
-        mod._game_manager = mock_mgr
-        try:
-            resp = client.post(
-                "/api/internal/step",
-                json={"step": 1, "game_number": 1},
-            )
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["status"] == "ok"
-            assert "stop" not in data
-        finally:
-            mod._game_manager = orig_mgr
-
-
-# ---------------------------------------------------------------------------
-# receive_action_map endpoint
-# ---------------------------------------------------------------------------
-
-
-class TestReceiveActionMap:
-    """Test POST /api/internal/action-map endpoint."""
-
-    def test_stores_action_map(self, client: TestClient) -> None:
-        """receive_action_map stores the action map in data_store."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "set_action_map") as mock_method:
-            action_map = [{"id": 0, "name": "wait"}, {"id": 1, "name": "north"}]
-            resp = client.post(
-                "/api/internal/action-map",
-                json={"run_name": "map-test-run", "action_map": action_map},
-            )
-            assert resp.status_code == 200
-            assert resp.json() == {"status": "ok"}
-            mock_method.assert_called_once_with("map-test-run", action_map)
-
-    def test_ignores_missing_run_name(self, client: TestClient) -> None:
-        """receive_action_map does not store when run_name is empty."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "set_action_map") as mock_method:
-            resp = client.post(
-                "/api/internal/action-map",
-                json={"run_name": "", "action_map": [{"id": 0, "name": "wait"}]},
-            )
-            assert resp.status_code == 200
-            mock_method.assert_not_called()
-
-    def test_ignores_non_list_action_map(self, client: TestClient) -> None:
-        """receive_action_map does not store when action_map is not a list."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "set_action_map") as mock_method:
-            resp = client.post(
-                "/api/internal/action-map",
-                json={"run_name": "test-run", "action_map": "not-a-list"},
-            )
-            assert resp.status_code == 200
-            mock_method.assert_not_called()
-
-    def test_handles_no_data_store(self, client: TestClient) -> None:
-        """receive_action_map returns ok even when _data_store is None."""
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
-        try:
-            resp = client.post(
-                "/api/internal/action-map",
-                json={"run_name": "test-run", "action_map": [{"id": 0}]},
-            )
-            assert resp.status_code == 200
-            assert resp.json() == {"status": "ok"}
-        finally:
-            mod._data_store = orig
 
 
 # ---------------------------------------------------------------------------
@@ -1736,3 +1705,34 @@ class TestStartDashboard:
             assert mod._started is False
         finally:
             mod._started = orig_started
+
+    def test_does_not_add_middleware_in_server_mode(self) -> None:
+        """Regression: start_dashboard must not touch the running FastAPI app
+        when invoked from the game thread under server_cli.py.
+
+        The game thread calls start_dashboard() from _game_main() for
+        standalone-mode compatibility. Under server_cli.py, uvicorn is
+        already serving `app`, so app.add_middleware() would raise
+        `RuntimeError: Cannot add middleware after an application has started`
+        and crash the game thread before gym.start() runs -- meaning no
+        frames ever flow into the StepBuffer.
+        """
+        import roc.reporting.api_server as mod
+
+        orig_started = mod._started
+        orig_mgr = mod._game_manager
+        mod._started = False
+        mod._game_manager = MagicMock()
+        try:
+            mock_cfg = MagicMock()
+            mock_cfg.dashboard_enabled = True
+            with (
+                patch("roc.framework.config.Config.get", return_value=mock_cfg),
+                patch.object(mod.app, "add_middleware") as mock_add_mw,
+            ):
+                mod.start_dashboard()
+            assert mock_add_mw.call_count == 0
+            assert mod._started is True
+        finally:
+            mod._started = orig_started
+            mod._game_manager = orig_mgr

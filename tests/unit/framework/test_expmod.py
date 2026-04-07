@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from roc.framework.expmod import ExpMod, expmod_modtype_current, expmod_registry
+from roc.framework.expmod import (
+    ExpMod,
+    _load_expmod_files,
+    expmod_loaded,
+    expmod_modtype_current,
+    expmod_registry,
+)
 
 
 class TestExpModInitSubclass:
@@ -133,3 +139,48 @@ class TestExpModInit:
 
         with pytest.raises(Exception, match="multiple attempts to set the same modules"):
             ExpMod.init()
+
+    def test_load_expmod_files_is_idempotent(self):
+        """Regression: _load_expmod_files() must skip already-loaded modules.
+
+        Re-executing an ExpMod file triggers __init_subclass__ on each
+        concrete subclass, which raises 'duplicate name' because the class
+        is already in expmod_registry. This bug blocked back-to-back game
+        runs under the unified server: each game would call ExpMod.init(),
+        which re-imported experiments/modules/actions.py and crashed on the
+        WeightedAction class's re-registration as name='random'.
+        """
+        from roc.framework.config import Config
+
+        with tempfile.NamedTemporaryFile(
+            suffix=".py", mode="w", delete=False, dir=tempfile.gettempdir()
+        ) as f:
+            f.write(
+                "from roc.framework.expmod import ExpMod\n"
+                "class IdempotentTestMod(ExpMod):\n"
+                "    modtype = 'test-idempotent'\n"
+                "    name = 'test-idempotent-name'\n"
+            )
+            f.flush()
+            filepath = Path(f.name)
+
+        settings = Config.get()
+        orig_expmods = settings.expmods
+        orig_expmod_dirs = settings.expmod_dirs
+        try:
+            settings.expmods = [filepath.stem]
+            settings.expmod_dirs = [str(filepath.parent)]
+
+            # First load: succeeds
+            _load_expmod_files(settings)
+            assert filepath.stem in expmod_loaded
+            assert "test-idempotent-name" in expmod_registry["test-idempotent"]
+
+            # Second load: must be a no-op, not raise "duplicate name"
+            _load_expmod_files(settings)
+            # And still registered exactly once
+            assert "test-idempotent-name" in expmod_registry["test-idempotent"]
+        finally:
+            settings.expmods = orig_expmods
+            settings.expmod_dirs = orig_expmod_dirs
+            filepath.unlink(missing_ok=True)

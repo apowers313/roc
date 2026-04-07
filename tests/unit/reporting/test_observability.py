@@ -873,6 +873,141 @@ class TestShutdown:
             Observability.shutdown()
 
 
+class TestReset:
+    """Tests for Observability.reset() per-game cleanup.
+
+    Regression coverage for the unified server's back-to-back game flow:
+    without reset(), the second game hits `ConnectionException: Connection
+    already closed` when the old parquet exporter tries to write to the
+    first game's closed DuckLakeStore, and the second game also reuses
+    the first game's instance_id as its run directory name.
+    """
+
+    @pytest.fixture
+    def full_state_reset(self):
+        """Save/restore all state that Observability.reset() touches."""
+        import roc.reporting.observability as obs_mod
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        orig_instances = ObservabilityBase._instances.copy()
+        orig_parquet = Observability._parquet_configured
+        orig_remote = Observability._remote_log_configured
+        orig_allow = Observability._allow_parquet
+        orig_instance_id = obs_mod.instance_id
+        orig_resource = obs_mod.resource
+        orig_common = obs_mod.roc_common_attributes
+        yield
+        ObservabilityBase._instances = orig_instances
+        Observability._parquet_configured = orig_parquet
+        Observability._remote_log_configured = orig_remote
+        Observability._allow_parquet = orig_allow
+        obs_mod.instance_id = orig_instance_id
+        obs_mod.resource = orig_resource
+        obs_mod.roc_common_attributes = orig_common
+
+    def test_reset_regenerates_instance_id(self, full_state_reset):
+        """reset() must produce a fresh instance_id so the next game has
+        its own run directory.
+        """
+        import roc.reporting.observability as obs_mod
+        from roc.reporting.observability import Observability
+
+        before = obs_mod.instance_id
+        Observability.reset()
+        after = obs_mod.instance_id
+        assert after != before
+        assert isinstance(after, str)
+        assert len(after) > 0
+
+    def test_reset_rebuilds_resource_and_common_attributes(self, full_state_reset):
+        """The OTel resource and roc_common_attributes must reflect the
+        new instance_id -- stale values would tag future logs with the
+        previous run's ID.
+        """
+        import roc.reporting.observability as obs_mod
+        from roc.reporting.observability import Observability
+
+        Observability.reset()
+        resource_attrs = dict(obs_mod.resource.attributes)
+        assert resource_attrs["service.instance.id"] == obs_mod.instance_id
+        assert obs_mod.roc_common_attributes["roc.instance.id"] == obs_mod.instance_id
+
+    def test_reset_clears_singleton_and_flags(self, full_state_reset):
+        """After reset(), the singleton is gone and per-game flags are cleared
+        so the next init() rebuilds providers from scratch.
+        """
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        # Seed a fake singleton and flip the flags
+        mock_instance = MagicMock()
+        mock_instance._parquet_exporter = MagicMock()
+        mock_instance._ducklake_store = MagicMock()
+        ObservabilityBase._instances[Observability] = mock_instance
+        Observability._parquet_configured = True
+        Observability._remote_log_configured = True
+        Observability._allow_parquet = True
+
+        Observability.reset()
+
+        assert Observability not in ObservabilityBase._instances
+        assert Observability._parquet_configured is False
+        assert Observability._remote_log_configured is False
+        assert Observability._allow_parquet is False
+
+    def test_reset_closes_parquet_exporter_and_store(self, full_state_reset):
+        """reset() must shut down the parquet exporter and close the
+        DuckLakeStore so the next game opens a fresh connection.
+        """
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        mock_instance = MagicMock()
+        mock_instance._parquet_exporter = MagicMock()
+        mock_instance._ducklake_store = MagicMock()
+        ObservabilityBase._instances[Observability] = mock_instance
+
+        Observability.reset()
+
+        mock_instance._parquet_exporter.shutdown.assert_called_once()
+        mock_instance._ducklake_store.close.assert_called_once()
+
+    def test_reset_shuts_down_logger_provider(self, full_state_reset):
+        """reset() must shut down the active logger provider so its
+        batch processors stop forwarding records into the (now closed)
+        downstream exporters.
+        """
+        from roc.reporting.observability import Observability
+
+        mock_provider = MagicMock()
+        with patch("roc.reporting.observability.otel_logs") as mock_logs:
+            mock_logs.get_logger_provider.return_value = mock_provider
+            Observability.reset()
+            mock_provider.shutdown.assert_called_once()
+
+    def test_reset_swallows_exporter_shutdown_errors(self, full_state_reset):
+        """A broken exporter must not prevent reset() from completing."""
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        mock_instance = MagicMock()
+        mock_instance._parquet_exporter = MagicMock()
+        mock_instance._parquet_exporter.shutdown.side_effect = RuntimeError("boom")
+        mock_instance._ducklake_store = MagicMock()
+        mock_instance._ducklake_store.close.side_effect = RuntimeError("boom2")
+        ObservabilityBase._instances[Observability] = mock_instance
+
+        # Must not raise
+        Observability.reset()
+        # Singleton still cleared despite errors
+        assert Observability not in ObservabilityBase._instances
+
+    def test_reset_handles_missing_instance(self, full_state_reset):
+        """reset() with no singleton present is a valid no-op path."""
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        ObservabilityBase._instances.clear()
+        # Must not raise
+        Observability.reset()
+
+
 class TestConfigureDebugExporters:
     """Tests for Observability._configure_debug_exporters (lines 355-401)."""
 

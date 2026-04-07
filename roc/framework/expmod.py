@@ -221,8 +221,18 @@ class ExpMod:
 
 
 def _load_expmod_files(settings: Config) -> None:
-    """Load module files from configured search paths."""
-    mods = settings.expmods.copy()
+    """Load module files from configured search paths.
+
+    Idempotent: files already present in ``expmod_loaded`` are skipped. This
+    makes ``ExpMod.init()`` safe to call multiple times in the same process
+    (e.g. back-to-back game runs under the unified server), which would
+    otherwise re-execute the file and trigger duplicate ``__init_subclass__``
+    registrations.
+    """
+    mods = [m for m in settings.expmods if m not in expmod_loaded]
+    if not mods:
+        return
+
     basepaths = settings.expmod_dirs.copy()
     basepaths.insert(0, "")
 

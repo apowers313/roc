@@ -247,3 +247,39 @@ class TestComponentShutdownAndReset:
 
         component_set.discard(comp)
         Component.deregister("reset_comp", "unit_test_reset")
+
+    def test_reset_allows_reregistration_even_with_lingering_strong_refs(self):
+        """Regression: Component.reset() must clear component_set so a new
+        instance with the same name+type can be created on the next game run.
+
+        Scenario (reproduced by the unified server's back-to-back game flow):
+        The first game instantiates a component, then ends. Component.reset()
+        shuts the component down but a lingering strong reference (e.g. a
+        subscription closure, a local variable in a generator, an RxPY
+        observer) keeps the object alive. Without component_set.clear(),
+        the next game's instantiation sees the old instance in the WeakSet
+        and raises 'component already exists'. With the clear, the old
+        object is ignored and a fresh instance succeeds.
+        """
+
+        class _DualRunComp(Component):
+            name = "dual_run_comp"
+            type = "unit_test_dual_run"
+
+        # First "game": create an instance and pretend RxPY holds a strong ref
+        first = _DualRunComp()
+        lingering_ref = first  # simulates a subscription closure
+        assert lingering_ref is first  # strong ref prevents WeakSet cleanup
+
+        # First "game" ends
+        Component.reset()
+
+        # Second "game": creating the same component must not raise
+        second = _DualRunComp()
+        assert second is not first
+
+        # Cleanup
+        second.shutdown()
+        component_set.discard(second)
+        component_set.discard(first)
+        Component.deregister("dual_run_comp", "unit_test_dual_run")

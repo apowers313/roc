@@ -50,11 +50,13 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
 
     # Initialize game manager for /api/game/* endpoints
     from roc.game.game_manager import GameManager
+    from roc.game.gymnasium import _game_main
 
     game_mgr = GameManager(
         data_dir=data_dir,
         on_state_change=srv._emit_game_state_changed,
         server_url=f"{proto}://localhost:{port}",
+        game_entry=_game_main,
     )
     srv._game_manager = game_mgr
 

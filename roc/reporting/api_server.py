@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from roc.framework.logger import logger
 from roc.reporting.data_store import DataStore, RunSummary
+from roc.reporting.graph_api import graph_router
 from roc.reporting.run_store import StepData
 from roc.reporting.step_buffer import StepBuffer, register_step_buffer
 
@@ -39,6 +40,7 @@ sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="ROC Debug Dashboard API")
+app.include_router(graph_router)
 
 _NOT_INITIALIZED = "Dashboard not initialized"
 _NOT_INITIALIZED_RESPONSE: dict[int | str, dict[str, Any]] = {
@@ -584,7 +586,7 @@ def game_status() -> GameStatus:
     },
 )
 def game_start(num_games: Annotated[int, Query()] = 5) -> dict[str, str]:
-    """Start a new game subprocess."""
+    """Start a new game."""
     if _game_manager is None:
         raise HTTPException(status_code=503, detail="Game manager not initialized")
     try:
@@ -652,57 +654,38 @@ def _notify_new_step(step_data: StepData) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Subprocess-based game lifecycle
+# Game lifecycle
 # ---------------------------------------------------------------------------
 
 
 def _start_live_session(run_name: str) -> None:
-    """Start a live session for a subprocess-based game run."""
+    """Start a live session for a game run.
+
+    Creates a StepBuffer, registers it globally so the game thread can find
+    it via get_step_buffer(), and adds a Socket.io listener for live push.
+    Shares the in-process DuckLakeStore with the DataStore so reads don't
+    open a separate read-only store on the same catalog.
+    """
     if _data_store is None:
         return
+    from roc.reporting.observability import Observability
+
+    store = Observability.get_ducklake_store()
     buf = StepBuffer(capacity=100_000)
-    _data_store.set_live_session(run_name=run_name, buffer=buf)
-    # Socket.io notifications come from receive_step(), not a listener
+    register_step_buffer(buf)
+    _data_store.set_live_session(run_name=run_name, buffer=buf, store=store)
+    buf.add_listener(lambda: _notify_new_step(buf.get_latest()))  # type: ignore[arg-type]
     logger.info("Started live session for run {}", run_name)
 
 
 def _stop_live_session() -> None:
-    """Clear the live session state."""
+    """Clear the live session state and the global step buffer."""
+    from roc.reporting.step_buffer import clear_step_buffer
+
     if _data_store is not None:
         _data_store.clear_live_session()
+    clear_step_buffer()
     logger.debug("Stopped live session")
-
-
-@app.post("/api/internal/step")
-def receive_step(request: dict[str, Any]) -> dict[str, Any]:
-    """Receive a step from the game subprocess and broadcast via Socket.io.
-
-    This is an internal endpoint used by the game subprocess to push
-    live step data to the dashboard server. The response may include
-    ``{"stop": true}`` to request cooperative shutdown.
-    """
-    step_data = StepData(**{k: v for k, v in request.items() if k in StepData.__dataclass_fields__})
-    if _data_store is not None:
-        _data_store.push_live_step(step_data)
-    _notify_new_step(step_data)
-    response: dict[str, Any] = {"status": "ok"}
-    if _game_manager is not None and _game_manager.is_stop_requested():
-        response["stop"] = True
-    return response
-
-
-@app.post("/api/internal/action-map")
-def receive_action_map(request: dict[str, Any]) -> dict[str, str]:
-    """Receive the full action map from the game subprocess.
-
-    Called once at game start so the dashboard knows all action names
-    without waiting for them to appear in step data.
-    """
-    run_name = request.get("run_name", "")
-    action_map = request.get("action_map", [])
-    if _data_store is not None and run_name and isinstance(action_map, list):
-        _data_store.set_action_map(run_name, action_map)
-    return {"status": "ok"}
 
 
 def _emit_game_state_changed(status: dict[str, Any]) -> None:
@@ -712,9 +695,12 @@ def _emit_game_state_changed(status: dict[str, Any]) -> None:
     state = status.get("state", "idle")
     run_name = status.get("run_name")
 
-    # Start/stop live session based on game state
+    # Start/stop live session based on game state.
+    # The run_name guard ensures we don't start before the game reports its name.
+    # The is_live guard prevents duplicate sessions on repeated state notifications.
     if state == "running" and run_name:
-        _start_live_session(run_name)
+        if _data_store is None or not _data_store.is_live(run_name):
+            _start_live_session(run_name)
     elif state == "idle":
         _stop_live_session()
 
@@ -758,6 +744,14 @@ def start_dashboard() -> None:
 
     cfg = Config.get()
     if not cfg.dashboard_enabled:
+        return
+
+    # When running under server_cli.py, the dashboard server is already
+    # running (uvicorn was started by the CLI) and the live session is
+    # managed by _emit_game_state_changed via _start_live_session. Nothing
+    # more for this function to do.
+    if _game_manager is not None:
+        _started = True
         return
 
     store = Observability.get_ducklake_store()
