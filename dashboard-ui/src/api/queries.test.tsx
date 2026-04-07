@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 
-import { useEventHistory, useGames, useGraphHistory, useMetricsHistory, useRuns, useStepData, useStepRange } from "./queries";
+import { useEventHistory, useFrameGraph, useGames, useGraphHistory, useMetricsHistory, useObjectHistoryGraph, useRuns, useStepData, useStepRange } from "./queries";
 
 // Mock the client module
 vi.mock("./client", () => ({
@@ -14,9 +14,11 @@ vi.mock("./client", () => ({
     fetchMetricsHistory: vi.fn(),
     fetchGraphHistory: vi.fn(),
     fetchEventHistory: vi.fn(),
+    fetchFrameGraph: vi.fn(),
+    fetchObjectHistoryGraph: vi.fn(),
 }));
 
-import { fetchRuns, fetchGames, fetchStep, fetchStepRange, fetchMetricsHistory, fetchGraphHistory, fetchEventHistory } from "./client";
+import { fetchRuns, fetchGames, fetchStep, fetchStepRange, fetchMetricsHistory, fetchGraphHistory, fetchEventHistory, fetchFrameGraph, fetchObjectHistoryGraph } from "./client";
 
 const mockFetchRuns = vi.mocked(fetchRuns);
 const mockFetchGames = vi.mocked(fetchGames);
@@ -25,6 +27,8 @@ const mockFetchStepRange = vi.mocked(fetchStepRange);
 const mockFetchMetricsHistory = vi.mocked(fetchMetricsHistory);
 const mockFetchGraphHistory = vi.mocked(fetchGraphHistory);
 const mockFetchEventHistory = vi.mocked(fetchEventHistory);
+const mockFetchFrameGraph = vi.mocked(fetchFrameGraph);
+const mockFetchObjectHistoryGraph = vi.mocked(fetchObjectHistoryGraph);
 
 function createWrapper() {
     const queryClient = new QueryClient({
@@ -202,6 +206,93 @@ describe("TanStack Query hooks", () => {
             });
 
             expect(result.current.fetchStatus).toBe("idle");
+        });
+    });
+
+    describe("useFrameGraph", () => {
+        it("fetches frame graph when run and tick are provided", async () => {
+            const data = {
+                elements: { nodes: [], edges: [] },
+                meta: { root_id: null, node_count: 0, edge_count: 0 },
+            };
+            mockFetchFrameGraph.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useFrameGraph("run1", 42), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data).toEqual(data);
+            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 42, undefined, undefined);
+        });
+
+        it("passes game and depth parameters to fetchFrameGraph", async () => {
+            const data = {
+                elements: { nodes: [], edges: [] },
+                meta: { root_id: null, node_count: 0, edge_count: 0 },
+            };
+            mockFetchFrameGraph.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useFrameGraph("run1", 5, 2, 3), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 5, 2, 3);
+        });
+
+        it("does not fetch when run is empty", () => {
+            const { result } = renderHook(() => useFrameGraph("", 42), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+            expect(mockFetchFrameGraph).not.toHaveBeenCalled();
+        });
+
+        it("does not fetch when tick is 0", () => {
+            const { result } = renderHook(() => useFrameGraph("run1", 0), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+            expect(mockFetchFrameGraph).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("useObjectHistoryGraph", () => {
+        it("fetches from /graph/object/{uuid}", async () => {
+            const data = {
+                elements: { nodes: [], edges: [] },
+                meta: { root_id: null, node_count: 0, edge_count: 0 },
+            };
+            mockFetchObjectHistoryGraph.mockResolvedValue(data);
+
+            const { result } = renderHook(() => useObjectHistoryGraph("run1", 12345), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data).toEqual(data);
+            expect(mockFetchObjectHistoryGraph).toHaveBeenCalledWith("run1", 12345);
+        });
+
+        it("is disabled when uuid is null", () => {
+            const { result } = renderHook(() => useObjectHistoryGraph("run1", null), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+            expect(mockFetchObjectHistoryGraph).not.toHaveBeenCalled();
+        });
+
+        it("is disabled when run is empty", () => {
+            const { result } = renderHook(() => useObjectHistoryGraph("", 12345), {
+                wrapper: createWrapper(),
+            });
+
+            expect(result.current.fetchStatus).toBe("idle");
+            expect(mockFetchObjectHistoryGraph).not.toHaveBeenCalled();
         });
     });
 });

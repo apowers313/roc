@@ -20,6 +20,7 @@ import {
     HeartPulse,
     Layers,
     MessageSquare,
+    Network,
     ScanEye,
     Shapes,
     Bug,
@@ -47,6 +48,7 @@ import { FocusPoints } from "./components/panels/FocusPoints";
 import { GameMetrics } from "./components/panels/GameMetrics";
 import { GameScreen } from "./components/panels/GameScreen";
 import { GraphHistory } from "./components/panels/GraphHistory";
+import { GraphVisualization } from "./components/panels/GraphVisualization";
 import { IntrinsicsChart } from "./components/panels/IntrinsicsChart";
 import { IntrinsicsPanel } from "./components/panels/IntrinsicsPanel";
 import { InventoryPanel } from "./components/panels/InventoryPanel";
@@ -636,6 +638,10 @@ export function App() {
                         <div style={{ marginTop: 8 }}>
                             <EventSummary data={data} />
                         </div>
+                    </Section>
+
+                    <Section value="graph-visualization" title="Graph Visualization" icon={Network} color="cyan">
+                        <GraphVisualization run={run} step={step} game={game || undefined} />
                     </Section>
 
                     <Section value="sequences" title="Sequences" icon={Layers} color="indigo">

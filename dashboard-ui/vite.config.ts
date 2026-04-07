@@ -25,6 +25,7 @@ export default defineConfig({
             workbox: {
                 // Cache app shell (JS, CSS, HTML) for instant reload
                 globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+                maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB
                 // API and Socket.io requests go to network -- never cache data
                 navigateFallback: "index.html",
                 runtimeCaching: [

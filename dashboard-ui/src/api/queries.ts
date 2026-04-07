@@ -6,12 +6,14 @@ import {
     fetchActionHistory,
     fetchActionMap,
     fetchEventHistory,
+    fetchFrameGraph,
     fetchGames,
     fetchGraphHistory,
     fetchIntrinsicsHistory,
     fetchMetricsHistory,
     fetchAllObjects,
     fetchObjectHistory,
+    fetchObjectHistoryGraph,
     fetchResolutionHistory,
     fetchRuns,
     fetchSchema,
@@ -174,3 +176,23 @@ export function useObjectHistory(run: string, objectId: number | null) {
     });
 }
 
+export function useFrameGraph(run: string, tick: number, game?: number, depth?: number) {
+    return useQuery({
+        queryKey: ["frame-graph", run, tick, game, depth],
+        queryFn: () => fetchFrameGraph(run, tick, game, depth),
+        enabled: run !== "" && tick > 0,
+        staleTime: Infinity, // graph data is immutable per run/tick
+        retry: false,
+        placeholderData: keepPreviousData,
+    });
+}
+
+export function useObjectHistoryGraph(run: string, uuid: number | null) {
+    return useQuery({
+        queryKey: ["object-history-graph", run, uuid],
+        queryFn: () => fetchObjectHistoryGraph(run, uuid!),
+        enabled: run !== "" && uuid != null,
+        staleTime: Infinity, // object history is immutable per run/uuid
+        retry: false,
+    });
+}

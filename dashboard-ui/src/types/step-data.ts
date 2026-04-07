@@ -149,3 +149,42 @@ export interface ResolutionCycleData {
     candidate_details?: unknown[];
     [key: string]: unknown;
 }
+
+/** Cytoscape.js node data from the graph API. */
+export interface CytoscapeNodeData {
+    id: string;
+    labels?: string;
+    [key: string]: unknown;
+}
+
+/** Cytoscape.js edge data from the graph API. */
+export interface CytoscapeEdgeData {
+    id: string;
+    source: string;
+    target: string;
+    type?: string;
+    [key: string]: unknown;
+}
+
+/** A single Cytoscape node element (used in both CytoscapeData and GraphDiffData). */
+export interface CytoscapeNode {
+    data: CytoscapeNodeData;
+}
+
+/** A single Cytoscape edge element (used in both CytoscapeData and GraphDiffData). */
+export interface CytoscapeEdge {
+    data: CytoscapeEdgeData;
+}
+
+/** Response from /api/runs/{run}/graph/frame/{tick} in Cytoscape format. */
+export interface CytoscapeData {
+    elements: {
+        nodes: CytoscapeNode[];
+        edges: CytoscapeEdge[];
+    };
+    meta: {
+        root_id: number | null;
+        node_count: number;
+        edge_count: number;
+    };
+}

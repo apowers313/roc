@@ -1,6 +1,7 @@
 /** REST API client for the FastAPI backend. */
 
 import type { Bookmark, GameSummary, RunSummary, StepRange } from "../types/api";
+import type { CytoscapeData } from "../types/step-data";
 import type { StepData } from "../types/step-data";
 
 const BASE = "/api";
@@ -295,6 +296,43 @@ export async function fetchObjectHistory(
 ): Promise<ObjectHistoryData> {
     return fetchJson<ObjectHistoryData>(
         `${BASE}/runs/${encodeURIComponent(run)}/object/${objectId}/history`,
+    );
+}
+
+export async function fetchFrameGraph(
+    run: string,
+    tick: number,
+    game?: number,
+    depth?: number,
+): Promise<CytoscapeData> {
+    const params = new URLSearchParams();
+    if (game != null) params.set("game", String(game));
+    if (depth != null) params.set("depth", String(depth));
+    const qs = params.toString();
+    return fetchJson<CytoscapeData>(
+        `${BASE}/runs/${encodeURIComponent(run)}/graph/frame/${tick}${qsSuffix(qs)}`,
+    );
+}
+
+export async function fetchObjectHistoryGraph(
+    run: string,
+    uuid: number,
+): Promise<CytoscapeData> {
+    return fetchJson<CytoscapeData>(
+        `${BASE}/runs/${encodeURIComponent(run)}/graph/object/${uuid}`,
+    );
+}
+
+export async function fetchNodeGraph(
+    run: string,
+    nodeId: string,
+    depth?: number,
+): Promise<CytoscapeData> {
+    const params = new URLSearchParams();
+    if (depth != null) params.set("depth", String(depth));
+    const qs = params.toString();
+    return fetchJson<CytoscapeData>(
+        `${BASE}/runs/${encodeURIComponent(run)}/graph/node/${encodeURIComponent(nodeId)}${qsSuffix(qs)}`,
     );
 }
 
