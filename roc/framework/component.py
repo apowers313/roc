@@ -5,6 +5,7 @@ initialization, shutdown, etc.
 
 from __future__ import annotations
 
+import threading
 from abc import ABC
 from typing import TYPE_CHECKING, Any, NamedTuple, NewType, Self, TypeVar, cast
 from weakref import WeakSet
@@ -22,6 +23,7 @@ ComponentKey = NewType("ComponentKey", tuple[ComponentName, ComponentType])
 
 loaded_components: dict[tuple[ComponentName, ComponentType], Component] = {}
 component_set: WeakSet[Component] = WeakSet()
+_component_lock = threading.RLock()
 
 T = TypeVar("T")
 
@@ -45,10 +47,11 @@ class Component(ABC):
 
     def __init__(self) -> None:
         global component_set
-        for c in component_set:
-            if c.name == self.name and c.type == self.type:
-                raise ValueError(f"component already exists: {self.name}:{self.type}")
-        component_set.add(self)
+        with _component_lock:
+            for c in component_set:
+                if c.name == self.name and c.type == self.type:
+                    raise ValueError(f"component already exists: {self.name}:{self.type}")
+            component_set.add(self)
         self.bus_conns: dict[str, BusConnection[Any]] = {}
         logger.trace(f"++ incrementing component count: {self.name}:{self.type} {self}")
 
@@ -72,17 +75,18 @@ class Component(ABC):
 
         logger.debug(f"Registering component: {component_name}:{component_type} (auto={auto_load})")
 
-        reg_str = _component_registry_key(component_name, component_type)
-        if reg_str in component_registry:
-            raise ValueError(
-                f"{cls.__name__} attempting to register duplicate component name: '{component_name}', previously registered by {component_registry[reg_str].__name__}"
-            )
+        with _component_lock:
+            reg_str = _component_registry_key(component_name, component_type)
+            if reg_str in component_registry:
+                raise ValueError(
+                    f"{cls.__name__} attempting to register duplicate component name: '{component_name}', previously registered by {component_registry[reg_str].__name__}"
+                )
 
-        if auto_load:
-            global default_components
-            default_components.add(reg_str)
+            if auto_load:
+                global default_components
+                default_components.add(reg_str)
 
-        component_registry[reg_str] = cls
+            component_registry[reg_str] = cls
 
     def __del__(self) -> None:
         logger.trace(f"-- decrementing component count: {self.name}:{self.type} {self}")
@@ -143,17 +147,18 @@ class Component(ABC):
         """Loads all components registered as `auto` and perception components
         in the `perception_components` config field.
         """
-        settings = Config.get()
-        logger.debug(f"perception components from settings: {settings.perception_components}")
-        component_list = [*default_components, *settings.perception_components]
-        logger.debug(f"Component.init: default components: {component_list}")
+        with _component_lock:
+            settings = Config.get()
+            logger.debug(f"perception components from settings: {settings.perception_components}")
+            component_list = [*default_components, *settings.perception_components]
+            logger.debug(f"Component.init: default components: {component_list}")
 
-        for reg_str in component_list:
-            logger.trace(f"Loading component: {reg_str} ...")
-            comp_name, comp_type = reg_str
-            loaded_components[ComponentName(comp_name), ComponentType(comp_type)] = Component.get(
-                comp_name, comp_type
-            )
+            for reg_str in component_list:
+                logger.trace(f"Loading component: {reg_str} ...")
+                comp_name, comp_type = reg_str
+                loaded_components[ComponentName(comp_name), ComponentType(comp_type)] = (
+                    Component.get(comp_name, comp_type)
+                )
 
     @classmethod
     def get(cls, name: str, type: str, *args: Any, **kwargs: Any) -> Self:
@@ -175,8 +180,9 @@ class Component(ABC):
             (e.g. `Perception.get(...)` will return a Perception component and
             `Action.get(...)` will return an Action component)
         """
-        reg_str = _component_registry_key(name, type)
-        return cast(Self, component_registry[reg_str](*args, **kwargs))
+        with _component_lock:
+            reg_str = _component_registry_key(name, type)
+            return cast(Self, component_registry[reg_str](*args, **kwargs))
 
     @staticmethod
     def get_component_count() -> int:
@@ -187,8 +193,9 @@ class Component(ABC):
         Returns:
             int: The number of currently active Component instances
         """
-        global component_set
-        return len(component_set)
+        with _component_lock:
+            global component_set
+            return len(component_set)
 
     @staticmethod
     def get_loaded_components() -> list[str]:
@@ -197,8 +204,9 @@ class Component(ABC):
         Returns:
             list[str]: A list of the names and types of components, as strings.
         """
-        global loaded_components
-        return [f"{name}:{type}" for name, type in loaded_components.keys()]
+        with _component_lock:
+            global loaded_components
+            return [f"{name}:{type}" for name, type in loaded_components.keys()]
 
     @staticmethod
     def deregister(name: str, type: str) -> None:
@@ -208,24 +216,31 @@ class Component(ABC):
             name (str): The name of the Component to deregister
             type (str): The type of the Component to deregister
         """
-        reg_str = _component_registry_key(name, type)
-        del component_registry[reg_str]
+        with _component_lock:
+            reg_str = _component_registry_key(name, type)
+            del component_registry[reg_str]
 
     @staticmethod
     def reset() -> None:
         """Shuts down all components"""
-        # shutdown all components
-        global loaded_components
-        for name in loaded_components:
-            logger.trace(f"Shutting down component: {name}.")
-            c = loaded_components[name]
-            c.shutdown()
+        with _component_lock:
+            # shutdown all components
+            global loaded_components
+            for name in loaded_components:
+                logger.trace(f"Shutting down component: {name}.")
+                c = loaded_components[name]
+                c.shutdown()
 
-        loaded_components.clear()
+            loaded_components.clear()
 
-        global component_set
-        for c in component_set:
-            c.shutdown()
+            global component_set
+            for c in component_set:
+                c.shutdown()
+            # Explicitly clear so that lingering strong references (e.g. RxPY
+            # subscriptions) do not block re-registration of a component with
+            # the same name+type on the next run. The referenced objects are
+            # already shut down above; clearing only drops the weak refs.
+            component_set.clear()
 
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)

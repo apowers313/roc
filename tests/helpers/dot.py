@@ -82,11 +82,11 @@ def make_dot_node1() -> str:
     // Edge {e1}
     node{n0} -> node{n453} [label="Edge"]
 
-    // Edge {e11}
-    node{n2} -> node{n0} [label="Edge"]
-
     // Edge {e4}
     node{n2} -> node{n453} [label="Edge"]
+
+    // Edge {e11}
+    node{n2} -> node{n0} [label="Edge"]
 }}"""
 
 
@@ -119,9 +119,9 @@ def make_dot_node2() -> str:
     // Edge {e1}
     node{n0} -> node{n453} [label="Edge"]
 
-    // Edge {e11}
-    node{n2} -> node{n0} [label="Edge"]
-
     // Edge {e4}
     node{n2} -> node{n453} [label="Edge"]
+
+    // Edge {e11}
+    node{n2} -> node{n0} [label="Edge"]
 }}"""

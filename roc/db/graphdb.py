@@ -8,6 +8,7 @@ import functools
 import inspect
 import json
 import re
+import threading
 import time
 import warnings
 from collections.abc import Collection, Iterable, Iterator, MutableSet, Sequence
@@ -48,6 +49,7 @@ EdgeId = NewType("EdgeId", int)
 NodeId = NewType("NodeId", int)
 next_new_edge: EdgeId = cast(EdgeId, -1)
 next_new_node: NodeId = cast(NodeId, -1)
+_id_lock = threading.Lock()
 
 
 def true_filter(_: Any) -> bool:
@@ -94,6 +96,7 @@ class StrictSchemaWarning(Warning):
 # GRAPHDB
 #########
 graph_db_singleton: GraphDB | None = None
+_graphdb_lock = threading.Lock()
 
 
 class GraphDB:
@@ -112,6 +115,7 @@ class GraphDB:
         self.client_name = "roc-graphdb-client"
         self.db_conn = self.connect()
         self.closed = False
+        self._query_lock = threading.Lock()
         self.query_counter = Observability.meter.create_counter(
             "roc.graphdb.query",
             unit="query",
@@ -150,13 +154,14 @@ class GraphDB:
         params = params or {}
         logger.trace(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
-        cursor = self.db_conn.cursor()
-        cursor.execute(query, params)
-        while True:
-            row = cursor.fetchone()
-            if row is None:
-                break
-            yield {dsc.name: row[index] for index, dsc in enumerate(cursor.description)}
+        with self._query_lock:
+            cursor = self.db_conn.cursor()
+            cursor.execute(query, params)
+            while True:
+                row = cursor.fetchone()
+                if row is None:
+                    break
+                yield {dsc.name: row[index] for index, dsc in enumerate(cursor.description)}
 
     @Observability.tracer.start_as_current_span("graphdb.execute")
     def raw_execute(self, query: str, *, params: dict[str, Any] | None = None) -> None:
@@ -172,9 +177,10 @@ class GraphDB:
         params = params or {}
         logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
 
-        cursor = self.db_conn.cursor()
-        cursor.execute(query, params)
-        cursor.fetchall()
+        with self._query_lock:
+            cursor = self.db_conn.cursor()
+            cursor.execute(query, params)
+            cursor.fetchall()
 
     def connected(self) -> bool:
         """Returns True if the database is connected, False otherwise"""
@@ -297,8 +303,9 @@ class GraphDB:
         singleton isn't created yet, it creates it.
         """
         global graph_db_singleton
-        if not graph_db_singleton:
-            graph_db_singleton = GraphDB()
+        with _graphdb_lock:
+            if not graph_db_singleton:
+                graph_db_singleton = GraphDB()
 
         assert graph_db_singleton.closed is False
         return graph_db_singleton
@@ -361,8 +368,29 @@ class GraphCache[CacheKey, CacheValue](LRUCache[CacheKey, CacheValue]):
 
     def __init__(self, maxsize: int):
         super().__init__(maxsize=maxsize)
+        self._lock = threading.RLock()
         self.hits = 0
         self.misses = 0
+
+    def __getitem__(self, key: CacheKey) -> CacheValue:
+        with self._lock:
+            return super().__getitem__(key)
+
+    def __setitem__(self, key: CacheKey, value: CacheValue) -> None:
+        with self._lock:
+            super().__setitem__(key, value)
+
+    def __delitem__(self, key: CacheKey) -> None:
+        with self._lock:
+            super().__delitem__(key)
+
+    def __contains__(self, key: object) -> bool:
+        with self._lock:
+            return super().__contains__(key)
+
+    def __iter__(self) -> Iterator[CacheKey]:
+        with self._lock:
+            return iter(list(super().__iter__()))
 
     def __str__(self) -> str:
         return f"Size: {self.currsize}/{self.maxsize} ({self.currsize / self.maxsize * 100:1.2f}%), Hits: {self.hits}, Misses: {self.misses}"
@@ -383,24 +411,26 @@ class GraphCache[CacheKey, CacheValue](LRUCache[CacheKey, CacheValue]):
         Returns:
             CacheValue | None: The object from the cache, or None if not found.
         """
-        v = super().get(key)
-        if not v:
-            self.misses = self.misses + 1
-            if self.currsize == self.maxsize:
-                logger.warning(
-                    f"Cache miss and cache is full ({self.currsize}/{self.maxsize}). Cache may start thrashing and performance may be impaired."
-                )
-        else:
-            self.hits = self.hits + 1
-        return v
+        with self._lock:
+            v = super().get(key)
+            if not v:
+                self.misses = self.misses + 1
+                if self.currsize == self.maxsize:
+                    logger.warning(
+                        f"Cache miss and cache is full ({self.currsize}/{self.maxsize}). Cache may start thrashing and performance may be impaired."
+                    )
+            else:
+                self.hits = self.hits + 1
+            return v
 
     def clear(self) -> None:
         """Clears out all items from the cache and resets the cache
         statistics
         """
-        super().clear()
-        self.hits = 0
-        self.misses = 0
+        with self._lock:
+            super().clear()
+            self.hits = 0
+            self.misses = 0
 
     def flush(self) -> None:
         """Flushes the cache by saving every Node and Edge"""
@@ -430,9 +460,9 @@ class EdgeCreateFailed(Exception):
 def _get_next_new_edge_id() -> EdgeId:
     """Returns the next temporary negative EdgeId for unsaved edges."""
     global next_new_edge
-    new_id = next_new_edge
-    next_new_edge = cast(EdgeId, next_new_edge - 1)
-
+    with _id_lock:
+        new_id = next_new_edge
+        next_new_edge = cast(EdgeId, next_new_edge - 1)
     return new_id
 
 
@@ -1011,8 +1041,9 @@ class NodeCreationFailed(Exception):
 def _get_next_new_node_id() -> NodeId:
     """Returns the next temporary negative NodeId for unsaved nodes."""
     global next_new_node
-    new_id = next_new_node
-    next_new_node = cast(NodeId, next_new_node - 1)
+    with _id_lock:
+        new_id = next_new_node
+        next_new_node = cast(NodeId, next_new_node - 1)
     return new_id
 
 
@@ -1993,8 +2024,9 @@ class NodeList(MutableSet[Node | NodeId], Sequence[Node]):
             ret += f"\n    // Node {n.id}\n"
             ret += f"    {n._repr_dot_(style)}\n"
 
-        edges = self.connections
-        for e in edges:
+        edge_list: list[Edge] = [e for e in self.connections]
+        edge_list.sort(key=lambda e: e.id)
+        for e in edge_list:
             ret += f"\n    // Edge {e.id}\n"
             ret += f"    {e._repr_dot_()}\n"
 

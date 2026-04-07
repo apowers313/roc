@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import multiprocessing
+import threading
 from abc import ABC
 from collections import deque
 from typing import Any, Callable
@@ -34,6 +35,7 @@ class Event[EventData](ABC):
 
     #: Per-step event counts by bus name, reset after each emission.
     _step_counts: dict[str, int] = {}
+    _step_counts_lock = threading.Lock()
 
     def __init__(self, data: EventData, src_id: ComponentId, bus: EventBus[EventData]):
         """The initializer for the Event
@@ -44,7 +46,8 @@ class Event[EventData](ABC):
             bus (EventBus): The EventBus that the event is being sent over
         """
         event_counter.add(1, attributes={"source": src_id, "bus": bus.name})
-        Event._step_counts[bus.name] = Event._step_counts.get(bus.name, 0) + 1
+        with Event._step_counts_lock:
+            Event._step_counts[bus.name] = Event._step_counts.get(bus.name, 0) + 1
         self.data = data
         self.src_id = src_id
         self.bus = bus
@@ -52,8 +55,9 @@ class Event[EventData](ABC):
     @staticmethod
     def get_step_counts() -> dict[str, int]:
         """Return per-bus event counts since last reset and clear them."""
-        counts = dict(Event._step_counts)
-        Event._step_counts.clear()
+        with Event._step_counts_lock:
+            counts = dict(Event._step_counts)
+            Event._step_counts.clear()
         return counts
 
     def __repr__(self) -> str:
@@ -129,6 +133,7 @@ class BusConnection[EventData]:
 
 
 eventbus_names: set[str] = set()
+_eventbus_lock = threading.Lock()
 
 
 class EventBus[EventData]:
@@ -143,10 +148,11 @@ class EventBus[EventData]:
     """The RxPy Subject that the bus uses to communicate."""
 
     def __init__(self, name: str, cache_depth: int = 0) -> None:
-        if name in eventbus_names:
-            raise ValueError(f"Duplicate EventBus name: {name}")
-        self.name = name
-        eventbus_names.add(name)
+        with _eventbus_lock:
+            if name in eventbus_names:
+                raise ValueError(f"Duplicate EventBus name: {name}")
+            self.name = name
+            eventbus_names.add(name)
         self.subject = rx.Subject[Event[EventData]]()
         self.cache_depth = cache_depth
         self.cache: deque[Event[EventData]] | None = None
@@ -169,4 +175,5 @@ class EventBus[EventData]:
     @staticmethod
     def clear_names() -> None:
         """Clears all EventBusses that have been registered, mostly used for testing."""
-        eventbus_names.clear()
+        with _eventbus_lock:
+            eventbus_names.clear()
