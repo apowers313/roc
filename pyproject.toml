@@ -323,7 +323,7 @@ addopts = [
 
 [tool.coverage.run]
 source = ["roc"]
-omit = ["roc/script.py", "roc/gymnasium.py", "roc/__init__.py", "roc/jupyter/*", "roc/dashboard_cli.py", "roc/cleanup_cli.py", "roc/server_cli.py"]
+omit = ["roc/cli/script.py", "roc/game/gymnasium.py", "roc/__init__.py", "roc/jupyter/*", "roc/cli/dashboard_cli.py", "roc/cli/cleanup_cli.py", "roc/cli/server_cli.py"]
 branch = true
 
 [tool.coverage.paths]
