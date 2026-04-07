@@ -6,6 +6,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ROC (Reinforcement Learning of Concepts) is a Python agent system using a component-based, event-driven architecture. The agent perceives the game environment, identifies objects, tracks changes between frames, predicts future states, and decides actions. Currently tested against NetHack via Gymnasium.
 
+### Package Layout
+
+```
+roc/
+  framework/           # Infrastructure: component, config, event, expmod, logger, utils
+  db/                  # Graph database: graphdb.py (Node, Edge, GraphDB, GraphCache)
+  perception/          # Perception layer: base.py (Perception, FeatureNode), location.py
+    feature_extractors/  # Game-specific extractors: color, delta, distance, flood, etc.
+  pipeline/            # Processing pipeline stages
+    attention/           # VisionAttention, saliency attenuation ExpMods
+    object/              # Object identity resolution, ObjectInstance, ObjectTransform
+    temporal/            # Sequencer (Frame), Transformer, Predict, Transformable
+    action.py            # Action component, ActionRequest, TakeAction
+    intrinsic.py         # IntrinsicNode, IntrinsicData, IntrinsicOp
+    significance.py      # Significance component
+  game/                # Game interface: gymnasium, game_manager, breakpoint
+  cli/                 # CLI entry points: play, server, dashboard, cleanup
+  reporting/           # Observability, data storage, dashboard API, state tracking
+  jupyter/             # Jupyter/iPython magic commands
+```
+
 ### Design Principle: Game-Agnostic Core
 
 Everything from Attention onward (object resolution, sequencing, transforms, predictions, actions) must be generic -- not specific to NetHack or any other gym. Only the Perception layer (feature extractors) is game-specific. Object resolution, distance metrics, tracking, and all downstream logic must operate on abstract features without assuming anything about the game producing them.
@@ -16,15 +37,15 @@ These rules must never be violated regardless of local convenience. They are the
 
 1. **All inter-component communication MUST flow through named EventBuses.** Pipeline components (Attention, ObjectResolver, Sequencer, Transformer, Predict, Action, Significance) must never call methods directly on other pipeline component instances. Importing a component class to access its `.bus` class attribute is the only allowed cross-component reference.
 
-2. **Game-specific code is confined to the perception layer.** Only `roc/gymnasium.py` and `roc/feature_extractors/` may import from `nle` or `gymnasium`. The one permitted exception is `roc/reporting/state.py`, which imports `nle` for screen rendering in the reporting/display layer -- never in core pipeline logic.
+2. **Game-specific code is confined to the perception layer.** Only `roc/game/gymnasium.py` and `roc/perception/feature_extractors/` may import from `nle` or `gymnasium`. The one permitted exception is `roc/reporting/state.py`, which imports `nle` for screen rendering in the reporting/display layer -- never in core pipeline logic.
 
 3. **Algorithm selection goes through ExpMod, not hardcoded instantiation.** Object resolution, action selection, saliency attenuation, and prediction candidate/confidence scoring are all pluggable via `ExpMod.get(default="name")`. New algorithm implementations must register as ExpMod subclasses, not be wired in directly.
 
 4. **EventBuses are declared as class-level attributes on Component subclasses.** No ad-hoc bus creation in functions, methods, or module scope. Each bus has a globally unique name enforced at creation time. The bus topology is fixed at class definition time.
 
-5. **Database access is layered.** Graph operations go through `Node`/`Edge` API in `graphdb.py` (never raw mgclient). Analytics/storage goes through `DuckLakeStore` in `ducklake_store.py` (never raw duckdb). No other modules make direct database calls.
+5. **Database access is layered.** Graph operations go through `Node`/`Edge` API in `roc/db/graphdb.py` (never raw mgclient). Analytics/storage goes through `DuckLakeStore` in `ducklake_store.py` (never raw duckdb). No other modules make direct database calls.
 
-6. **Pipeline components must not create raw threads.** All concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Only `roc/reporting/` and `game_manager.py` are permitted to use `threading.Thread` / `threading.Lock` directly.
+6. **Pipeline components must not create raw threads.** All concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Only `roc/reporting/` and `roc/game/game_manager.py` are permitted to use `threading.Thread` / `threading.Lock` directly.
 
 7. **Config is a singleton accessed via `Config.get()`.** Never construct `Config()` directly. `Config.init()` initializes the singleton; `Config.get()` retrieves it. During pytest, env vars and `.env` are deliberately ignored to isolate tests.
 
@@ -46,9 +67,9 @@ make test               # Run all tests (excludes slow and requires_observabilit
 make test-unit          # Unit tests only
 make test-integration   # Integration tests only
 make test-e2e           # End-to-end tests only
-uv run pytest -c pyproject.toml tests/unit/test_object.py                    # Run one test file
-uv run pytest -c pyproject.toml tests/unit/test_object.py -k test_name      # Run single test by name
-uv run pytest -c pyproject.toml tests/unit/test_object.py::TestClass::test   # Run specific test method
+uv run pytest -c pyproject.toml tests/unit/pipeline/object/test_object.py                    # Run one test file
+uv run pytest -c pyproject.toml tests/unit/pipeline/object/test_object.py -k test_name      # Run single test by name
+uv run pytest -c pyproject.toml tests/unit/pipeline/object/test_object.py::TestClass::test   # Run specific test method
 
 # Linting & Formatting
 make lint               # Run mypy + check-codestyle + deptry
@@ -75,7 +96,7 @@ npx servherd logs roc-server  # View server logs
 
 ### Component System
 
-Everything is built on `Component` (component.py) -- an abstract base class with:
+Everything is built on `Component` (`roc/framework/component.py`) -- an abstract base class with:
 - **Auto-registration**: Subclasses register themselves in a global `component_registry` via `__init_subclass__`. Each component has a unique `name`+`type` pair (as a `ComponentKey` tuple). Registration fails if either is missing or if the pair is already taken.
 - **Auto-loading**: Components with `auto = True` are loaded at startup via `Component.init()`. Perception components are loaded separately from `Config.perception_components`.
 - **Bus connections**: Components communicate via `connect_bus(bus)` which attaches them to typed EventBus channels and stores connections in `bus_conns` for cleanup.
@@ -86,7 +107,7 @@ Everything is built on `Component` (component.py) -- an abstract base class with
 
 ### Event System
 
-Communication uses RxPy reactive streams (event.py):
+Communication uses RxPy reactive streams (`roc/framework/event.py`):
 - `EventBus[T]` -- typed communication channel (backed by `rx.Subject`). Names are globally unique (enforced at creation). Optional `cache_depth` retains recent events.
 - `Event[T]` -- carries `data` payload + `src_id` (ComponentId of sender) + `bus` reference. Tracks per-bus event counts via `_step_counts` for telemetry.
 - `BusConnection[T]` -- component-to-bus link. `send(data)` wraps in Event and publishes. `listen(callback, filter)` subscribes with optional filtering.
@@ -94,7 +115,7 @@ Communication uses RxPy reactive streams (event.py):
 
 ### ExpMod System
 
-`ExpMod` (expmod.py) provides runtime-swappable experimental modules -- a plugin architecture for algorithm selection:
+`ExpMod` (`roc/framework/expmod.py`) provides runtime-swappable experimental modules -- a plugin architecture for algorithm selection:
 
 - **Registration**: Like Components, uses `__init_subclass__` for auto-registration. Each ExpMod has a `modtype` (category, e.g. `"action"`) and a `name` (implementation, e.g. `"weighted"`). Abstract bases define `modtype` only; concrete implementations add `name`.
 - **Registry**: `expmod_registry[modtype][name] -> instance`. Instances are auto-created at registration time.
@@ -106,11 +127,11 @@ Communication uses RxPy reactive streams (event.py):
 
 | modtype | Implementations | Location |
 |---------|----------------|----------|
-| `action` | `pass` (default in-tree), `weighted` (experiments/) | action.py, experiments/modules/actions.py |
-| `object-resolution` | `symmetric-difference`, `dirichlet-categorical` | object.py |
-| `saliency-attenuation` | `none`, `linear-decline`, `active-inference` | saliency_attenuation.py |
-| `prediction-candidate` | `object-based` | predict.py |
-| `prediction-confidence` | `naive` | predict.py (or experiments/) |
+| `action` | `pass` (default in-tree), `weighted` (experiments/) | roc/pipeline/action.py, experiments/modules/actions.py |
+| `object-resolution` | `symmetric-difference`, `dirichlet-categorical` | roc/pipeline/object/object.py |
+| `saliency-attenuation` | `none`, `linear-decline`, `active-inference` | roc/pipeline/attention/saliency_attenuation.py |
+| `prediction-candidate` | `object-based` | roc/pipeline/temporal/predict.py |
+| `prediction-confidence` | `naive` | roc/pipeline/temporal/predict.py (or experiments/) |
 
 **Pattern**: Define an abstract base with `modtype`, then concrete subclasses with `name`. Use `MyBase.get(default="impl")` at call sites.
 
@@ -193,7 +214,7 @@ The action bus uses `cache_depth=10` so Gymnasium can wait for the TakeAction re
 
 ### Graph Database
 
-`graphdb.py` wraps Memgraph (via mgclient) with:
+`roc/db/graphdb.py` wraps Memgraph (via mgclient) with:
 - **GraphDB** singleton: connection management, Cypher query execution (`raw_fetch`/`raw_execute`), export to multiple formats (gml, gexf, dot, graphml, json, cytoscape), NetworkX conversion.
 - **Node** (Pydantic BaseModel): graph vertices with auto-save-on-modify. Features: auto-label generation from class hierarchy, LRU caching (`GraphCache`), CRUD via `create`/`load`/`update`/`save`/`delete`, query via `find`/`find_one`, DFS traversal via `walk(mode, edge_filter, node_filter)`, DOT/SVG rendering.
 - **Edge** (Pydantic BaseModel): typed graph relationships. Features: `allowed_connections` schema validation (list of allowed src_label -> dst_label pairs), auto-type from class name, `connect(src, dst)` factory.
@@ -207,33 +228,33 @@ CI requires a Memgraph service container. Tests that need the DB will fail witho
 ### Key Abstractions
 
 **Spatial**:
-- **Point / PointCollection** (location.py): 2D grid primitives with `XLoc`/`YLoc` coordinate types. PointCollection supports iteration, visualization, and numpy array conversion.
+- **Point / PointCollection** (`roc/perception/location.py`): 2D grid primitives with `XLoc`/`YLoc` coordinate types. PointCollection supports iteration, visualization, and numpy array conversion.
 
 **Perception**:
-- **Perception** (perception.py): Abstract base for feature extractors. Connects to perception bus.
-- **FeatureExtractor[FeatureType]** (perception.py): Generic base adding typed feature emission. Concrete implementations in `roc/feature_extractors/`.
-- **FeatureNode** (perception.py): Graph node for an extracted feature. Has `kind` (PHYSICAL or RELATIONAL). PHYSICAL features (shape, color, spatial) are used for object identity; RELATIONAL features (delta, motion, distance) are event-based.
-- **VisualFeature** (perception.py): Base for visual features with caching. Subtypes: `PointFeature` (single location), `AreaFeature` (multiple adjacent locations).
+- **Perception** (`roc/perception/base.py`): Abstract base for feature extractors. Connects to perception bus.
+- **FeatureExtractor[FeatureType]** (`roc/perception/base.py`): Generic base adding typed feature emission. Concrete implementations in `roc/perception/feature_extractors/`.
+- **FeatureNode** (`roc/perception/base.py`): Graph node for an extracted feature. Has `kind` (PHYSICAL or RELATIONAL). PHYSICAL features (shape, color, spatial) are used for object identity; RELATIONAL features (delta, motion, distance) are event-based.
+- **VisualFeature** (`roc/perception/base.py`): Base for visual features with caching. Subtypes: `PointFeature` (single location), `AreaFeature` (multiple adjacent locations).
 
 **Object Identity**:
-- **Object** (object.py): Persistent graph Node representing an identified entity. Fields: `uuid` (random 63-bit ID), `resolve_count`, `last_x`/`last_y`/`last_tick`, `annotations`. Properties: `feature_groups`, `features`, `frames`.
-- **FeatureGroup** (object.py): Graph Node collecting feature nodes from one observation. Connected to features via `Detail` edges and to Object via `Features` edges.
-- **ObjectResolutionExpMod** (object.py): Pluggable resolution algorithm. Implementations find candidate Objects via a reverse index (`_feature_to_objects`), then score matches.
-- **ResolutionContext** (object.py): Spatial/temporal context (x, y, tick) passed to resolution algorithms.
+- **Object** (`roc/pipeline/object/object.py`): Persistent graph Node representing an identified entity. Fields: `uuid` (random 63-bit ID), `resolve_count`, `last_x`/`last_y`/`last_tick`, `annotations`. Properties: `feature_groups`, `features`, `frames`.
+- **FeatureGroup** (`roc/pipeline/object/object.py`): Graph Node collecting feature nodes from one observation. Connected to features via `Detail` edges and to Object via `Features` edges.
+- **ObjectResolutionExpMod** (`roc/pipeline/object/object.py`): Pluggable resolution algorithm. Implementations find candidate Objects via a reverse index (`_feature_to_objects`), then score matches.
+- **ResolutionContext** (`roc/pipeline/object/object.py`): Spatial/temporal context (x, y, tick) passed to resolution algorithms.
 
 **Temporal**:
-- **Frame** (sequencer.py): Graph Node snapshot of game state at one tick. Connected to FeatureGroups, TakeAction, and IntrinsicNodes via `FrameAttribute` edges. Consecutive frames linked by `NextFrame` edges. `merge_transforms()` creates predicted frames.
-- **Transformable** (transformable.py): ABC interface for change detection. Methods: `same_transform_type()`, `compatible_transform()`, `create_transform()`, `apply_transform()`.
-- **Transform** (transformable.py): Graph Node representing the diff between two frame states. Connected to source/destination frames via `Change` edges.
+- **Frame** (`roc/pipeline/temporal/sequencer.py`): Graph Node snapshot of game state at one tick. Connected to FeatureGroups, TakeAction, and IntrinsicNodes via `FrameAttribute` edges. Consecutive frames linked by `NextFrame` edges. `merge_transforms()` creates predicted frames.
+- **Transformable** (`roc/pipeline/temporal/transformable.py`): ABC interface for change detection. Methods: `same_transform_type()`, `compatible_transform()`, `create_transform()`, `apply_transform()`.
+- **Transform** (`roc/pipeline/temporal/transformable.py`): Graph Node representing the diff between two frame states. Connected to source/destination frames via `Change` edges.
 
 **Agent State**:
-- **IntrinsicNode** (intrinsic.py): Graph Node implementing Transformable. Tracks a single intrinsic (e.g. hp) with `raw_value` and `normalized_value`. Normalization via pluggable `IntrinsicOp` operators (IntOp, PercentOp, MapOp, BoolOp).
-- **IntrinsicData** (intrinsic.py): Event payload carrying raw and normalized intrinsic values. `to_nodes()` converts to IntrinsicNode list.
+- **IntrinsicNode** (`roc/pipeline/intrinsic.py`): Graph Node implementing Transformable. Tracks a single intrinsic (e.g. hp) with `raw_value` and `normalized_value`. Normalization via pluggable `IntrinsicOp` operators (IntOp, PercentOp, MapOp, BoolOp).
+- **IntrinsicData** (`roc/pipeline/intrinsic.py`): Event payload carrying raw and normalized intrinsic values. `to_nodes()` converts to IntrinsicNode list.
 
 **Actions**:
-- **ActionRequest** (action.py): Dataclass signal that Gymnasium is waiting for an action.
-- **TakeAction** (action.py): Graph Node carrying the selected action ID (int). Attached to Frame via FrameAttribute edges.
-- **DefaultActionExpMod** (action.py): Pluggable action selection. In-tree default: `DefaultActionPass` (always action 19). Production: `WeightedAction` in experiments/modules/.
+- **ActionRequest** (`roc/pipeline/action.py`): Dataclass signal that Gymnasium is waiting for an action.
+- **TakeAction** (`roc/pipeline/action.py`): Graph Node carrying the selected action ID (int). Attached to Frame via FrameAttribute edges.
+- **DefaultActionExpMod** (`roc/pipeline/action.py`): Pluggable action selection. In-tree default: `DefaultActionPass` (always action 19). Production: `WeightedAction` in experiments/modules/.
 
 ### Reporting and Observability
 
@@ -261,7 +282,7 @@ The `roc/reporting/` package provides a full observability stack:
 
 ### Config
 
-`Config` (config.py) uses pydantic-settings, reads from `.env` file with `roc_` prefix. During pytest, env vars and .env file are deliberately ignored to isolate tests. Key categories:
+`Config` (`roc/framework/config.py`) uses pydantic-settings, reads from `.env` file with `roc_` prefix. During pytest, env vars and .env file are deliberately ignored to isolate tests. Key categories:
 
 - **Database**: `db_host`, `db_port`, `db_lazy`, `db_strict_schema`, `node_cache_size`, `edge_cache_size`
 - **Logging**: `log_enable`, `log_level`, `log_modules`
@@ -286,7 +307,7 @@ These target specific failure modes. When in doubt, prefer the constrained appro
 - **Do not bypass ExpMod for algorithm selection.** Even if there is only one implementation today, wire it through ExpMod so alternatives can be swapped without code changes. Hardcoding `SymmetricDifferenceResolution()` instead of `ObjectResolutionExpMod.get()` defeats the plugin architecture.
 - **Do not modify Node fields in tight loops.** Node auto-saves on field modification. Setting `node.field = x` inside a loop causes repeated persistence overhead. Batch your changes or use `_no_save=True` temporarily if performance is critical.
 - **Do not create EventBus instances outside of class-level Component definitions.** Buses must be class attributes so the topology is discoverable and static. Ad-hoc buses create invisible coupling.
-- **Do not add game-specific logic (NetHack, nle) outside the perception layer.** If you need game-specific data downstream, extract it as an abstract feature in a FeatureExtractor first. The only exception is `reporting/state.py` for display purposes.
+- **Do not add game-specific logic (NetHack, nle) outside the perception layer.** If you need game-specific data downstream, extract it as an abstract feature in a FeatureExtractor first. The only exception is `roc/reporting/state.py` for display purposes.
 - **Do not construct `Config()` directly.** Always use `Config.get()`. The singleton pattern ensures consistent configuration across the entire system.
 - **Do not start additional web servers.** Use the existing `roc-server` + `roc-ui` pair managed by servherd. Adding a new server creates port conflicts, CORS issues, and confusion about which URL to use.
 - **Do not add Edge connections without updating `allowed_connections`.** The schema validation catches invalid connections early. If you need a new connection pattern, add it to the Edge subclass's `allowed_connections` list first, then use it.
@@ -305,12 +326,12 @@ Defined in `pyproject.toml [project.scripts]`:
 
 | Command | Entry Point | Purpose |
 |---------|-------------|---------|
-| `play` | `roc.script:cli` | Run the ROC agent. Auto-generates click options from every Config field. |
-| `server` | `roc.server_cli:main` | Unified dashboard server with game lifecycle management via GameManager. |
-| `dashboard` | `roc.dashboard_cli:main` | Standalone historical dashboard viewer (no game management). |
-| `cleanup` | `roc.cleanup_cli:main` | Clean up empty/short game runs from data directory. |
+| `play` | `roc.cli.script:cli` | Run the ROC agent. Auto-generates click options from every Config field. |
+| `server` | `roc.cli.server_cli:main` | Unified dashboard server with game lifecycle management via GameManager. |
+| `dashboard` | `roc.cli.dashboard_cli:main` | Standalone historical dashboard viewer (no game management). |
+| `cleanup` | `roc.cli.cleanup_cli:main` | Clean up empty/short game runs from data directory. |
 
-The `server` command spawns games as subprocesses (`uv run play --no-dashboard-enabled --dashboard-callback-url=...`) and manages their lifecycle via `GameManager` (game_manager.py). State machine: idle -> initializing -> running -> stopping. Cooperative shutdown via REST, then SIGTERM, then SIGKILL.
+The `server` command spawns games as subprocesses (`uv run play --no-dashboard-enabled --dashboard-callback-url=...`) and manages their lifecycle via `GameManager` (`roc/game/game_manager.py`). State machine: idle -> initializing -> running -> stopping. Cooperative shutdown via REST, then SIGTERM, then SIGKILL.
 
 ## Debugging Tools
 
@@ -338,7 +359,7 @@ Then use MCP debugger tools:
 - Use `.venv/bin/play` as scriptPath, `justMyCode: true`, `stopOnEntry: false`
 - `justMyCode: false` breaks breakpoint resolution -- always use `true`
 - Step-over times out if the function takes >5s -- use continue-to-next-breakpoint instead
-- ROC uses ThreadPoolScheduler: breakpoints in `object.py` pause worker threads, breakpoints in `gymnasium.py` pause the main loop
+- ROC uses ThreadPoolScheduler: breakpoints in `roc/pipeline/object/object.py` pause worker threads, breakpoints in `roc/game/gymnasium.py` pause the main loop
 
 ### 2. Local JSONL Debug Log (Post-Hoc Analysis)
 
@@ -428,16 +449,34 @@ Key endpoint groups (all under `/api`):
 
 ### Test Organization
 
+Test directories mirror the source layout:
+
 ```
 tests/
-  conftest.py          # Root fixtures (autouse: clear_cache, restore_registries, do_init)
-  unit/                # Fast isolated tests (47+ modules)
-    conftest.py        # unit_config_init, clean_expmod_state (autouse)
-    feature_extractors/  # 8 feature extractor tests
-  integration/         # DB interaction tests (7 modules)
-  e2e/                 # Full pipeline tests (2 modules)
-    conftest.py        # all_components fixture (loads full pipeline)
-  helpers/             # Shared test utilities (FakeData, nethack_screens, testmods)
+  conftest.py                  # Root fixtures (autouse: clear_cache, restore_registries, do_init)
+  helpers/                     # Shared test utilities (FakeData, nethack_screens, testmods)
+  unit/
+    conftest.py                # unit_config_init, clean_expmod_state (autouse)
+    framework/                 # test_component, test_config, test_event, test_expmod, ...
+    db/                        # test_graphdb_pure
+    perception/                # test_perception, test_location
+      feature_extractors/      # test_color, test_phoneme
+    pipeline/                  # test_action, test_intrinsic, test_significance
+      attention/               # test_attention, test_saliency_attenuation, ...
+      object/                  # test_object, test_object_instance, ...
+      temporal/                # test_sequencer, test_transformer, test_predict, ...
+    game/                      # test_gymnasium, test_game_manager, test_breakpoint
+    cli/                       # test_script
+    reporting/                 # test_api_server, test_state, test_observability, ...
+  integration/
+    db/                        # test_graphdb
+    pipeline/
+      attention/               # test_attention, test_saliency_attenuation_integration
+      object/                  # test_object, test_dirichlet_integration, ...
+      temporal/                # test_sequencer, test_transformer
+  e2e/                         # Full pipeline tests (2 modules)
+    conftest.py                # all_components fixture (loads full pipeline)
+  test_feature_extractors/     # Legacy feature extractor tests (9 modules, *_test.py naming)
 ```
 
 ### Key Fixtures
