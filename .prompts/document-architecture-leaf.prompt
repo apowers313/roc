@@ -1,0 +1,230 @@
+<Prompt name="document-architecture-leaf" title="Document Architecture Leaf" description="Create a subdirectory CLAUDE.md that documents the WHY behind a subsystem's architecture, following progressive disclosure best practices" tags={["architecture", "documentation", "claude-md", "progressive-disclosure"]}>
+
+  <Role preset="architect" extend expertise="software architecture documentation, event-driven systems, Python, progressive disclosure, IEEE 42010, arc42, C4 model">
+    You are an architectural documentarian who understands that the most valuable documentation captures WHY decisions were made, not WHAT the code does. You follow the principle from "Documenting Software Architectures" (Clements et al.): "The system itself shows what it is; only documentation can explain why." You write documentation specifically optimized for consumption by Claude Code as a subdirectory CLAUDE.md file.
+  </Role>
+
+  <Task>
+    Create a subdirectory CLAUDE.md file for a specific leaf of the ROC project's architecture. This file will load on-demand when Claude Code reads files in that directory, providing domain-specific architectural context that helps Claude make correct decisions when working in that area of the codebase.
+
+    The target leaf is: <Ask.Select name="leaf" label="Which leaf subsystem are you documenting?">
+      <Option value="roc/pipeline" label="Pipeline">roc/pipeline -- pipeline flow, bus topology, sync rules, ActionRequest/TakeAction cycle</Option>
+      <Option value="roc/perception" label="Perception">roc/perception -- feature extractors, PHYSICAL vs RELATIONAL distinction, FeatureNode/VisualFeature</Option>
+      <Option value="roc/db" label="Database">roc/db -- Node/Edge patterns, schema constraints, GraphCache, allowed_connections</Option>
+      <Option value="roc/framework" label="Framework">roc/framework -- ExpMod system, Component lifecycle, EventBus mechanics, Config singleton</Option>
+      <Option value="roc/reporting" label="Reporting">roc/reporting -- observability stack, DuckLake/Parquet, dashboard API, StateComponent, debugging tools</Option>
+      <Option value="roc/game" label="Game">roc/game -- Gymnasium interface, GameManager, observation/action loop, subprocess lifecycle</Option>
+      <Option value="roc/cli" label="CLI">roc/cli -- CLI entry points, click option generation from Config, server vs dashboard vs play</Option>
+      <Option value="tests" label="Tests">tests -- test organization, fixtures, markers, conftest hierarchy, naming conventions</Option>
+      <Option value="dashboard-ui" label="Dashboard UI">dashboard-ui -- React/Mantine patterns, Socket.io client, TanStack Query, Vite config</Option>
+    </Ask.Select>
+  </Task>
+
+  <Context>
+    ## What This Document Is For
+
+    The ROC project uses progressive disclosure for architecture documentation:
+    - Root CLAUDE.md (~200 lines): universal rules, always loaded
+    - Subdirectory CLAUDE.md files: domain-specific context, loaded on-demand
+    - design/architecture.md: cross-cutting architectural context, imported at launch
+    - design/*.md: detailed design docs, read manually when needed
+
+    This prompt creates the subdirectory CLAUDE.md files (the leaves). Each leaf documents
+    the WHY behind a specific subsystem's design, not the WHAT (which Claude can read from
+    code).
+
+    ## Key Research Findings
+
+    For the full research behind these guidelines, read design/architecture-documentation-guide.md.
+    It contains the complete literature review, Claude Code loading mechanics, file structure
+    decisions, and sync/enforcement mechanisms.
+
+    Summary from our literature review:
+
+    1. Rationale is the most frequently missing and most often needed content (IEEE 42010,
+       arc42, Views and Beyond, Keeling). The system shows what it IS; only docs explain WHY.
+    2. Document in proportion to risk (Fairbanks). High-risk areas deserve deep documentation;
+       low-risk areas need only a sketch.
+    3. Anti-patterns to avoid: "The Dusty Tome" (stale docs), "No Rationale" (showing what
+       without why), "Technology-First" (listing tech stack without explaining structures),
+       "Uniform Documentation Density" (equal effort regardless of risk).
+    4. Cross-cutting concerns (error handling, logging, threading) are often where bugs and
+       confusion accumulate -- do not skip them.
+
+    ## Claude Code Constraints
+
+    - Target under 200 lines per CLAUDE.md file (instruction budget)
+    - Claude can infer: language patterns, library usage, type info, what code does
+    - Claude CANNOT infer: why decisions were made, what alternatives were rejected, what
+      breaks if invariants are violated, event flow in event-driven architectures, cross-
+      component invariants, config-driven behavior
+    - "For each line, ask: Would removing this cause Claude to make mistakes? If not, cut it."
+
+    ## What the User Has Provided
+
+    The user's description of the design motivation behind this subsystem:
+
+    <Ask.Editor name="motivation" label="Design motivation: Why does this subsystem exist? Why was this approach chosen over alternatives? What problem does it solve?" language="markdown" />
+
+    Tradeoffs and lessons learned:
+
+    <Ask.Editor name="tradeoffs" label="Tradeoffs and lessons learned: What did you sacrifice and why? What did you try before that failed? What breaks if the design constraints are violated?" language="markdown" />
+
+    Quality attributes this subsystem optimizes for:
+
+    <Ask.Editor name="qualityAttrs" label="Quality attributes: What non-functional properties matter most here? (e.g., modifiability, testability, performance, correctness, decoupling)" language="markdown" />
+
+    Domain-specific terminology or concepts:
+
+    <Ask.Editor name="terminology" label="(Optional) Any terminology where ROC's meaning differs from common usage, or names chosen to map to cognitive science / RL concepts" language="markdown" required={false} />
+  </Context>
+
+  <Constraints extend>
+    Follow these phases in order.
+
+    ## Phase 1: Read the Code
+
+    Read the source files in the target directory to understand the "what":
+
+    1. List all Python/TypeScript files in the target directory (and subdirectories)
+    2. Read each file to understand: classes, functions, data types, imports, EventBus
+       connections, Component registrations, ExpMod registrations, Edge schemas
+    3. Build a mental model of the subsystem's structure and behavior
+    4. Identify which parts of the root CLAUDE.md describe this subsystem (these sections
+       will eventually be moved here or removed from root)
+
+    ## Phase 2: Identify What Needs Documenting
+
+    Using the code understanding from Phase 1 and the user's input, identify:
+
+    1. **Design decisions with rationale**: Why was this approach chosen? What alternatives
+       were rejected and why? Use the user's motivation input as the primary source.
+    2. **Invariants and constraints**: Rules that must not be violated. For each one, document
+       what specifically breaks if it is violated. Draw from the user's tradeoffs input.
+    3. **Non-obvious behavior**: Event flow, implicit coupling, config-driven code paths,
+       threading considerations -- things that are not visible from reading a single file.
+    4. **Anti-patterns specific to this subsystem**: What mistakes would a developer (or
+       Claude) likely make without this documentation?
+    5. **Cross-cutting concerns**: How does this subsystem handle errors, logging, threading,
+       configuration?
+    6. **Interfaces with other subsystems**: How does this subsystem connect to the rest of
+       the pipeline? What buses does it listen on or send to?
+
+    Filter ruthlessly: if Claude can figure it out by reading the code, do not document it.
+    Focus on the WHY, not the WHAT.
+
+    ## Phase 3: Ask Clarifying Questions
+
+    Before writing the document, ask the user clarifying questions about anything you could
+    not determine from the code or the user's initial input. Focus on:
+
+    - Decisions where the rationale is unclear from the code
+    - Places where multiple reasonable approaches exist and it is not obvious why this one
+      was chosen
+    - Invariants where the consequence of violation is not obvious
+    - Historical context: "Was there a reason X was done this way instead of Y?"
+    - Any gaps in the user's motivation/tradeoffs input
+
+    Present questions as a numbered list. Wait for the user to answer before proceeding.
+    It is acceptable to ask zero questions if the user's input and the code together provide
+    sufficient context.
+
+    ## Phase 4: Write the CLAUDE.md
+
+    Create the subdirectory CLAUDE.md file with these guidelines:
+
+    **Structure** (adapt sections to what is relevant -- not all subsystems need all sections):
+
+    ```
+    # [Subsystem Name]
+
+    ## Why This Design
+    [1-3 paragraphs: the motivation, the problem being solved, why this approach]
+
+    ## Key Decisions
+    [Bulleted list of decisions with rationale. Format: "Decision -- because reason."]
+
+    ## Invariants
+    [Rules that must not be violated, with what breaks if they are]
+
+    ## Non-Obvious Behavior
+    [Event flow, implicit coupling, threading, config-driven paths]
+
+    ## Anti-Patterns
+    [What NOT to do in this subsystem, and why]
+
+    ## Interfaces
+    [How this subsystem connects to others -- buses, shared types, dependencies]
+    ```
+
+    **Writing guidelines:**
+    - Target under 200 lines. Prefer brevity. Every line must earn its place.
+    - Lead with the WHY, not the WHAT. Do not describe what classes exist or what methods do.
+    - Use concrete language: "X breaks because Y" not "X might cause issues"
+    - Use ASCII only -- no unicode characters, no smart quotes, no em dashes (use -- instead)
+    - Do not add auto-generated file warnings -- this is a human-authored document
+    - Write in present tense, imperative mood for rules
+    - Use markdown headers and bullets for scannability
+    - If referencing detailed design docs in design/, use relative links
+
+    ## Phase 5: Track Extraction from Root CLAUDE.md
+
+    After writing the leaf document, report which sections of the root CLAUDE.md this leaf
+    replaces or subsumes. Format as:
+
+    ```
+    ## Sections Extracted from Root CLAUDE.md
+
+    - [Section name or line range]: [brief description of what moved to this leaf]
+    - [Section name or line range]: [brief description]
+    ```
+
+    This tracking enables the eventual slimdown of the root CLAUDE.md. Do NOT modify the
+    root CLAUDE.md -- just report what could be moved.
+  </Constraints>
+
+  <Constraint type="must">Read all source files in the target directory before writing documentation</Constraint>
+  <Constraint type="must">Focus on WHY, not WHAT -- do not describe what the code does</Constraint>
+  <Constraint type="must">Ask clarifying questions about unclear design rationale before writing</Constraint>
+  <Constraint type="must">Document what breaks when invariants are violated, not just the rule</Constraint>
+  <Constraint type="must">Track which root CLAUDE.md sections this leaf replaces</Constraint>
+  <Constraint type="must">Keep the document under 200 lines</Constraint>
+  <Constraint type="must">Use ASCII only -- no unicode characters</Constraint>
+  <Constraint type="must-not">Describe what classes exist or what methods do -- Claude reads the code</Constraint>
+  <Constraint type="must-not">Document standard Python/library patterns Claude already knows</Constraint>
+  <Constraint type="must-not">Add content that would not cause Claude to make mistakes if removed</Constraint>
+  <Constraint type="must-not">Modify the root CLAUDE.md file</Constraint>
+  <Constraint type="must-not">Stage, commit, or push any changes</Constraint>
+
+  <Format>
+    ## Phase 1: Code Review Summary
+    Read [N] files in [directory]. Key structures found: [brief list].
+
+    ## Phase 2: Documentation Candidates
+    Identified [N] items to document:
+    1. [Decision/invariant/behavior] -- WHY: [rationale]
+    ...
+
+    ## Phase 3: Clarifying Questions
+    [Numbered questions for the user, or "No clarifying questions needed."]
+
+    ## Phase 4: CLAUDE.md Content
+    [The actual file content, written to disk]
+
+    ## Phase 5: Root CLAUDE.md Extraction Report
+    Sections that this leaf replaces or subsumes:
+    - [section]: [description]
+  </Format>
+
+  <SuccessCriteria>
+    <Criterion>Every documented item explains WHY, not just WHAT</Criterion>
+    <Criterion>Invariants include what breaks if violated</Criterion>
+    <Criterion>Document is under 200 lines</Criterion>
+    <Criterion>No content that Claude could infer from reading the code</Criterion>
+    <Criterion>Clarifying questions were asked for unclear rationale (or none were needed)</Criterion>
+    <Criterion>Extraction report identifies which root CLAUDE.md sections this leaf covers</Criterion>
+    <Criterion>User reviewed and approved before the file was written</Criterion>
+    <Criterion>ASCII only -- no unicode characters anywhere in the output</Criterion>
+  </SuccessCriteria>
+
+</Prompt>
