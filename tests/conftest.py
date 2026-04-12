@@ -129,6 +129,7 @@ def eb_reset() -> None:
 def do_init() -> Generator[None, None, None]:
     Config.reset()
     Config.init()
+    GraphDB.reset_singleton()
     Observability.init()
     Clock.reset()
     settings = Config.get()
@@ -152,6 +153,7 @@ def do_init() -> Generator[None, None, None]:
     # cleanup for clear_db fixture
     Config.reset()
     Config.init()
+    GraphDB.reset_singleton()
     Clock.reset()
 
 
@@ -162,13 +164,13 @@ def close_db() -> Generator[None, None, None]:
 
     yield
 
-    db = GraphDB.singleton()
-    # delete all test nodes (which may have edges that need to be detached)
-    db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
-    # delete all nodes without relationships
-    db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
-
-    db.close()
+    try:
+        db = GraphDB.singleton()
+        db.raw_execute("MATCH (n:TestNode) DETACH DELETE n")
+        db.raw_execute("MATCH (n) WHERE degree(n) = 0 DELETE n")
+        db.close()
+    except Exception:
+        pass
 
 
 @pytest.fixture

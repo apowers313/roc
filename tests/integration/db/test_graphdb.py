@@ -1754,7 +1754,7 @@ class TestEdge:
         assert f2.type == "Foo"
         assert f2.name == "bar"
 
-    def test_connection_allowed(self) -> None:
+    def test_connection_allowed(self, no_strict_schema) -> None:
         class Foo(Edge):
             allowed_connections: EdgeConnectionsList = [("Node", "Node")]
             name: str

@@ -383,6 +383,21 @@ class GraphDB:
         assert graph_db_singleton.closed is False
         return graph_db_singleton
 
+    @classmethod
+    def reset_singleton(cls) -> None:
+        """Discard the current singleton so the next ``singleton()`` call creates a fresh one.
+
+        Intended for test fixtures that need to isolate GraphDB state between tests.
+        """
+        global graph_db_singleton
+        with _graphdb_lock:
+            if graph_db_singleton is not None:
+                try:
+                    graph_db_singleton.db_conn.close()
+                except Exception:
+                    pass
+                graph_db_singleton = None
+
     @staticmethod
     def _add_node_to_nx(graph: nx.DiGraph, n: Node) -> None:
         """Add a single node and its outgoing edges to a NetworkX graph."""
