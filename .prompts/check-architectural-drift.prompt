@@ -96,7 +96,7 @@
   <Constraint type="must-not">Report false positives -- verify each finding before reporting</Constraint>
 
   <Format>
-    ## Architectural Drift Audit - <Date />
+    ## Architectural Drift Audit - <DateTime />
 
     ### Summary
     | Invariant | Status | Violations | Drift Risks |

@@ -45,7 +45,7 @@ These rules must never be violated regardless of local convenience. They are the
 
 5. **Database access is layered.** Graph operations go through `Node`/`Edge` API in `roc/db/graphdb.py` (never raw mgclient). Analytics/storage goes through `DuckLakeStore` in `ducklake_store.py` (never raw duckdb). No other modules make direct database calls.
 
-6. **Pipeline components must not create raw threads.** All concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Only `roc/reporting/` and `roc/game/game_manager.py` are permitted to use `threading.Thread` / `threading.Lock` directly.
+6. **Pipeline components must not create raw threads.** Code under `roc/pipeline/` and `roc/perception/` must not import `threading` -- all concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Threading primitives are permitted in supporting layers where they serve a documented purpose: `roc/reporting/` (background exporters, StepCache, API server), `roc/game/` (game loop daemon thread, stop signaling, legacy breakpoint Lock), `roc/db/graphdb.py` (cache and connection locks), `roc/framework/event.py` and `roc/framework/component.py` (registry locks), and `roc/__init__.py` (Jupyter execution mode). When adding threading anywhere outside `roc/pipeline/` or `roc/perception/`, document the reason in the relevant subsystem `CLAUDE.md`.
 
 7. **Config is a singleton accessed via `Config.get()`.** Never construct `Config()` directly. `Config.init()` initializes the singleton; `Config.get()` retrieves it. During pytest, env vars and `.env` are deliberately ignored to isolate tests.
 
@@ -53,7 +53,9 @@ These rules must never be violated regardless of local convenience. They are the
 
 9. **PHYSICAL vs RELATIONAL feature distinction matters.** Object identity resolution uses only PHYSICAL features (shape, color, spatial extent). RELATIONAL features (delta, motion, distance) are event-based and must not be used for identity matching. This is enforced in the resolution algorithms.
 
-10. **One UI server, one API server.** Never start additional dashboard or preview servers. `roc-server` (FastAPI + Socket.io) and `roc-ui` (Vite dev) are managed by servherd. Games are started/stopped via REST API, not by restarting servers.
+10. **One UI server, one API server.** Never start additional dashboard or preview servers. `roc-server` (FastAPI + Socket.io) and `roc-ui` (Vite dev) are managed by servherd. Games are started/stopped via REST API, not by restarting servers. There are three `uvicorn.Server()` instantiation sites for the same FastAPI app -- `roc/cli/server_cli.py` (unified server with `GameManager`), `roc/cli/dashboard_cli.py` (historical-only viewer), and `roc/reporting/api_server.py:start_dashboard()` (in-process startup invoked from `roc.init()` for standalone `uv run play`). These are alternative entry points, not concurrent servers: `start_dashboard()` short-circuits when `_game_manager is not None` (server_cli already owns the process) and the `_started` flag prevents double-start. Do not add a fourth entry point or remove these guards.
+
+11. **Run data has one read path through `RunReader`.** The dashboard server's read path goes `RunReader` -> `RunRegistry` -> `StepCache` -> `DuckLakeStore`. There is no separate "live" read path. The distinction between a run that is currently being recorded and one that is not is encoded as `tail_growing: bool` on the `StepRange` response, not as a separate API or code path. Do not add a parallel read path for live data.
 
 ## Common Commands
 
@@ -421,15 +423,15 @@ roc_graphdb_flush=true     # Flush cache to Memgraph on game end
 The debug dashboard is a React app in `dashboard-ui/` with a FastAPI + Socket.io backend in `roc/reporting/api_server.py`. Key architecture:
 
 - **Frontend**: React + Mantine (compact-mantine theme) + TanStack Query + Vite + Recharts + Socket.io client
-- **Backend**: FastAPI REST API + Socket.io live push via StepBuffer + DuckLake historical queries
-- **Data flow**: Game subprocess POSTs StepData to server via HTTP callback, server broadcasts via Socket.io. Historical data served from DuckLake/Parquet.
+- **Backend**: FastAPI REST API + Socket.io invalidation notifications + DuckLake historical queries
+- **Data flow**: Game subprocess POSTs StepData to server via HTTP callback. Server writes through `RunWriter` to a hot cache (`StepCache`) and asynchronously to DuckLake. Frontend reads via REST through `RunReader`, which checks the cache first then falls back to DuckLake. Socket.io broadcasts step-added notifications that the frontend uses to invalidate query caches; it never delivers data directly into React state.
 - **Server management**: All servers managed by servherd. Use `make run` / `make stop`.
 
 ### Server Architecture (One Server, One URL)
 
 There must be exactly ONE UI server (`roc-ui`) and ONE API server (`roc-server`). Never start additional dashboard or preview servers. See `design/dashboard-server-redesign.md` for full design.
 
-- `roc-server`: Unified FastAPI + Socket.io backend (`uv run server`). Always running. Serves API and manages game lifecycle.
+- `roc-server`: Unified FastAPI + Socket.io backend (`uv run server`). Always running. Serves API and manages game lifecycle. The same server reads from runs whether or not they are currently being written.
 - `roc-ui`: Vite dev server for frontend HMR. Proxies `/api` and `/socket.io` to `roc-server`.
 - Games are started/stopped via REST API (`POST /api/game/start`, `POST /api/game/stop`), not by restarting the server.
 - Both servers' ports are auto-assigned by servherd. Use `npx servherd info roc-ui` to get the dashboard URL.
