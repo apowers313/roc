@@ -38,27 +38,33 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     if port is None:
         port = cfg.dashboard_port
 
-    # Set module-level state for the API server (no StepBuffer -- historical only
-    # until a game is started via the /api/game/* endpoints).
-    import roc.reporting.api_server as srv
-    from roc.reporting.data_store import DataStore
+    # Initialize the registry against the data dir (historical only until a
+    # game is started via the /api/game/* endpoints, at which point
+    # _start_live_session creates the active RunWriter).
+    from roc.reporting.api_server import (
+        _emit_game_state_changed,
+        init_data_dir,
+        set_game_manager,
+    )
 
-    srv._data_store = DataStore(data_dir=data_dir)
+    init_data_dir(data_dir)
 
     ssl_certfile, ssl_keyfile = _resolve_ssl_certs(cfg)
     proto = "https" if ssl_certfile else "http"
 
-    # Initialize game manager for /api/game/* endpoints
+    # Initialize game manager for /api/game/* endpoints. Installed via
+    # ``set_game_manager`` so the single-ownership contract is enforced
+    # by api_server instead of being an implicit module-attribute write.
     from roc.game.game_manager import GameManager
     from roc.game.gymnasium import _game_main
 
     game_mgr = GameManager(
         data_dir=data_dir,
-        on_state_change=srv._emit_game_state_changed,
+        on_state_change=_emit_game_state_changed,
         server_url=f"{proto}://localhost:{port}",
         game_entry=_game_main,
     )
-    srv._game_manager = game_mgr
+    set_game_manager(game_mgr)
 
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)

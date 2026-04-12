@@ -34,6 +34,14 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   writes. All exporter and listener errors are silently caught -- a reporting failure
   must never crash or slow the experiment.
 
+- **StepCache for hot data, regardless of liveness** -- A process-wide LRU absorbs
+  recently-written steps so reads avoid the DuckLake round trip. The cache is a transparent
+  optimization, not a separate API. Live and historical reads use the identical code path.
+
+- **`tail_growing` is the only live signal at the API boundary** -- the dashboard never
+  sees an `is_live` predicate. A run with `tail_growing=True` may receive new steps; a run
+  with `tail_growing=False` is closed. That is the only distinction.
+
 - **OTel as the event pipeline** -- all state emissions flow through OpenTelemetry
   LogRecords. This unifies local archival (Parquet), remote monitoring (Grafana/Loki),
   live debugging (Remote Logger MCP), and dashboard display through a single emission
@@ -56,14 +64,28 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   it (e.g., calling `_conn.execute` directly from another thread) causes segfaults or
   corrupted results. Use `query_df` or `query_one` for thread-safe reads.
 
-- **StepBuffer listener notification happens outside the data lock.** StepBuffer has
-  separate `_lock` (data) and `_listener_lock` (callbacks). Notifying listeners inside
-  the data lock deadlocks if a listener tries to read the buffer.
+- **Cache-first reads.** `RunReader.get_step()` always checks `StepCache` before
+  `DuckLakeStore`. This is an internal optimization; callers do not see the difference.
 
 - **Socket.io emits use run_coroutine_threadsafe.** The game runs on a regular thread;
   Socket.io runs on an asyncio event loop. Cross-thread communication must go through
   `asyncio.run_coroutine_threadsafe(_sio_loop)`. Calling `await sio.emit()` from the
   game thread deadlocks.
+
+- **Active-writer reads share the writer's `DuckLakeStore` instance.** Phase 0 of the
+  unified-run architecture (2026-04-08, see `tmp/ducklake_concurrency_spike.py` and
+  `design/unified-run-architecture.md` Risk #2) proved that DuckDB rejects opening a
+  second `DuckLakeStore(read_only=True)` against the catalog file of an active writer
+  in the same Python process with `BinderException: Unique file handle conflict`.
+  Therefore, for any run with `tail_growing=True`, `RunRegistry._RunEntry.store` MUST
+  be the same `DuckLakeStore` instance held by the active `RunWriter`, installed via
+  `RunRegistry.attach_writer_store` and dropped via `RunRegistry.detach_writer_store`.
+  `RunReader` reads from that shared instance under its existing `_lock` on cache
+  miss; the `StepCache` (mandatory, not an optimization) absorbs the common case so
+  hot reads of an active run almost never need to take the writer's lock. The
+  closed-run path (`tail_growing=False`) lazily opens a fresh `read_only=True`
+  `DuckLakeStore` -- this is the only valid case for opening a second instance.
+  **Never construct a separate `read_only=True` `DuckLakeStore` for an active run.**
 
 ## Non-Obvious Behavior
 
@@ -78,12 +100,6 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   it falls back to incrementing on `roc.game_metrics`. The `_step_incremented` flag
   prevents double-counting when both arrive in the same step. Breaking this logic
   causes step numbers to drift from reality.
-
-- **Live data two-tier lookup.** DataStore checks the in-memory StepBuffer first
-  (instant), then falls back to RunStore/DuckLake for evicted steps. For live runs, it
-  also supplements missing log data from DuckLake when the buffer hit lacks logs. This
-  means live and historical queries hit different code paths with different performance
-  characteristics.
 
 - **Attention bus subscribes synchronously.** StateComponent's attention handler uses
   `subject.subscribe()` directly (no ThreadPoolScheduler) so that `states.saliency` is
@@ -109,9 +125,13 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   import is legacy debt, not a pattern to follow. New reporting code must work with
   abstract data structures from the pipeline.
 
-- **Do not create additional DuckLakeStore instances for the same run directory.** Two
-  stores pointing at the same catalog cause write contention. The live game writer and
-  dashboard reader share one store instance (passed via `set_live_session`).
+- **Do not bypass `RunReader`/`RunWriter`.** All run data access flows through these two
+  facades. Direct `DuckLakeStore` construction is allowed only inside `RunRegistry`.
+
+- **Do not reintroduce `is_live` branches.** If you find yourself about to write
+  `if run_name == self._live_run_name`, stop. The unified architecture means there is no
+  separate live read path. Use `RunReader.get_*()` and let the cache layer handle hot vs
+  cold.
 
 ## Interfaces
 
@@ -119,12 +139,14 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   significance, action, transformer, predict, perception). It is a Component but NOT
   auto-loaded -- initialized explicitly by `State.init()`.
 
-- **Game thread -> StepBuffer**: The game pushes StepData directly to the shared
-  StepBuffer via function call (zero serialization). Stop signaling uses
-  `threading.Event`.
+- **Game subprocess -> POST /api/internal/step -> RunWriter -> StepCache + ParquetExporter**:
+  The game subprocess POSTs StepData to the server's callback endpoint. The receiving handler
+  invokes `RunWriter.push_step` which fans out to the in-process cache, the async DuckLake
+  exporter, and any subscribers.
 
-- **API server -> browser**: Socket.io `new_step` pushes full StepData. REST endpoints
-  serve historical and buffered data.
+- **`RunReader` -> REST -> browser** for data; **`RunRegistry` subscribers -> Socket.io ->
+  browser** for invalidation notifications. Socket.io payloads contain only `{run, step}`,
+  never full `StepData`.
 
 - **ParquetExporter routes by event name**: `roc.screen` -> screens table,
   `roc.attention.saliency` -> saliency, `roc.game_metrics` -> metrics, other named

@@ -317,31 +317,65 @@ class RunStore:
     ) -> list[dict[str, Any]]:
         """Return a list of all resolved objects with their attributes.
 
-        Built from resolution events: new_object events create entries (with
-        new_object_id if available), match events increment match counts.
+        Architectural Invariant #9: PHYSICAL features (shape, glyph, color)
+        are object identity invariants. They MUST NOT change based on the
+        game filter. ``get_all_objects`` therefore reconstructs canonical
+        identity from the FULL event history first, then -- only when a
+        game filter is requested -- re-derives ``match_count`` and
+        visibility from the per-game subset.
+
+        BUG-H4 fix: previously this method ran the entire reconstruction
+        against game-filtered events, so an object first observed in game 1
+        and then matched in game 2 would have its ``shape``/``glyph``/
+        ``color`` overwritten with whatever the game-2 match's
+        ``matched_attrs`` happened to contain (often partial / missing).
+        That violated the identity invariant.
         """
         if not self._has_table("events"):
             return []
-        df = self._query_table(
+
+        # Pass 1 (canonical): unfiltered query rebuilds identity for every
+        # object ever observed in this run. Features here are authoritative.
+        df_decisions_all = self._query_table(
+            "events",
+            _STEP_BODY_COLUMNS,
+            None,
+            extra_where="\"event.name\" = 'roc.resolution.decision'",
+        )
+        objects, step_to_key, match_events = _collect_resolution_decisions(df_decisions_all)
+
+        df_new_ids_all = self._query_table(
+            "events",
+            _STEP_BODY_COLUMNS,
+            None,
+            extra_where="\"event.name\" = 'roc.resolution.new_object_id'",
+        )
+        _link_object_node_ids(df_new_ids_all, objects, step_to_key)
+
+        _apply_match_events(match_events, objects)
+
+        if game_number is None:
+            return list(objects.values())
+
+        # Pass 2 (per-game view): filtered query determines (a) which
+        # canonical objects are visible in this game and (b) per-game
+        # match counts. Identity stays canonical from Pass 1.
+        df_decisions_game = self._query_table(
             "events",
             _STEP_BODY_COLUMNS,
             game_number,
             extra_where="\"event.name\" = 'roc.resolution.decision'",
         )
+        visible_keys, per_game_counts = _build_per_game_view(df_decisions_game, objects)
 
-        objects, step_to_key, match_events = _collect_resolution_decisions(df)
-
-        id_df = self._query_table(
-            "events",
-            _STEP_BODY_COLUMNS,
-            game_number,
-            extra_where="\"event.name\" = 'roc.resolution.new_object_id'",
-        )
-        _link_object_node_ids(id_df, objects, step_to_key)
-
-        _apply_match_events(match_events, objects)
-
-        return list(objects.values())
+        result: list[dict[str, Any]] = []
+        for key, obj in objects.items():
+            if key not in visible_keys:
+                continue
+            obj_copy = dict(obj)
+            obj_copy["match_count"] = per_game_counts.get(key, 0)
+            result.append(obj_copy)
+        return result
 
     def get_step_data(self, step: int) -> StepData:
         """Assemble all available data for a single step."""
@@ -741,6 +775,67 @@ def _apply_match_events(
             _update_existing_object(objects[mid], m)
         else:
             objects[mid] = _create_object_from_match(mid, m)
+
+
+def _build_per_game_view(
+    df_decisions: pd.DataFrame,
+    canonical_objects: dict[str, dict[str, Any]],
+) -> tuple[set[str], dict[str, int]]:
+    """Determine per-game visibility + match counts from filtered decisions.
+
+    Identity is sourced from ``canonical_objects`` (built unfiltered). This
+    pass walks the per-game decision events to figure out (a) which
+    canonical entries should appear in the per-game view and (b) how many
+    times each appeared as a match within the filtered game.
+
+    Returns ``(visible_keys, per_game_counts)`` where keys are the canonical
+    dict keys (either the ``str(node_id)`` after linking, or a
+    ``"new@<step>"`` placeholder when the object never received a
+    ``roc.resolution.new_object_id`` event).
+    """
+    # Map node_id -> canonical key for fast match lookups.
+    nid_to_key: dict[str, str] = {}
+    # Map step -> canonical key for new_object lookups (some entries are
+    # keyed by node_id, some by ``new@<step>``; we want to find both).
+    step_to_canonical_key: dict[int, str] = {}
+    for key, obj in canonical_objects.items():
+        nid = obj.get("node_id")
+        if nid is not None:
+            nid_to_key[str(nid)] = key
+        step_added = obj.get("step_added")
+        if step_added is not None:
+            step_to_canonical_key[int(step_added)] = key
+
+    visible: set[str] = set()
+    counts: dict[str, int] = {}
+
+    for _, row in df_decisions.iterrows():
+        body = _parse_body(row.get("body"))
+        if body is None:
+            continue
+        outcome = body.get("outcome")
+        if outcome == "new_object":
+            step = int(row["step"])
+            new_key = step_to_canonical_key.get(step)
+            if new_key is not None:
+                visible.add(new_key)
+                counts.setdefault(new_key, 0)
+        elif outcome == "match":
+            matched_id = body.get("matched_object_id")
+            if matched_id is None:
+                continue
+            match_key = nid_to_key.get(str(matched_id))
+            if match_key is None:
+                # The match references an object whose new_object event is
+                # not in the canonical dict. This is the same edge case
+                # ``_create_object_from_match`` handles for the unfiltered
+                # path -- we can't surface a per-game view for it because
+                # the canonical features are unknown. Skip it.
+                continue
+            visible.add(match_key)
+            counts[match_key] = counts.get(match_key, 0) + 1
+
+    return visible, counts
 
 
 def _update_existing_object(obj: dict[str, Any], match: dict[str, Any]) -> None:

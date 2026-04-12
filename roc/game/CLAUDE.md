@@ -17,9 +17,11 @@ not primary concerns -- the code is disposable by design.
 ## Key Decisions
 
 - **Thread mode** -- GameManager runs the game as a daemon thread within the server
-  process. All Python objects (GraphCache, StepBuffer, DataStore) are shared via the
+  process. All Python objects (GraphCache, StepCache, DataStore) are shared via the
   process heap. No serialization, no HTTP callbacks, no IPC. The game pushes StepData
-  directly to StepBuffer via function call.
+  via `push_step_from_game`, which invokes `RunWriter.push_step` to fan out to the cache,
+  the async DuckLake exporter, and any subscribers. The game does not need to know whether
+  anyone is watching.
 
 - **Stop signaling via threading.Event** -- The server sets a `threading.Event` and
   the game thread checks `stop_event.is_set()` each step. The thread is marked as
@@ -69,10 +71,11 @@ processes all downstream handlers before the send returns. The pipeline's natura
 endpoint (Predict) is what Action waits for -- do not add custom synchronization
 barriers between pipeline stages and Action.
 
-**Dashboard data push is direct.** `_push_dashboard_data()` pushes StepData directly
-to the shared StepBuffer (zero serialization). In standalone mode (`uv run play`), it
-pushes to the globally registered StepBuffer created by `start_dashboard()`. If no
-buffer exists, the push is skipped silently.
+**Dashboard data push goes through RunWriter.** `_push_dashboard_data()` invokes
+`push_step_from_game()` which calls `RunWriter.push_step`. This fans out to the
+in-process `StepCache`, the async `ParquetExporter`, and any registered subscribers.
+In standalone mode (`uv run play`), the RunWriter is created by `start_dashboard()`.
+If no RunWriter is registered, the push is skipped silently.
 
 **GameManager receives run names via callback.** The game thread calls the `on_run_name`
 callback to report its run name to the GameManager. This replaces the old filesystem
@@ -109,7 +112,8 @@ from them. Moving the reset before the dashboard push loses that step's cycle da
 - **Writes to**: `Perception.bus` (VisionData, AuditoryData, ProprioceptiveData),
   `Intrinsic.bus` (IntrinsicData), `Action.bus` (ActionRequest)
 - **Reads from**: `Action.bus` cache (TakeAction -- the pipeline's response)
-- **StepBuffer**: Pushes StepData directly to shared StepBuffer. No HTTP serialization.
+- **Step reporting**: Calls `push_step_from_game()` -> `RunWriter.push_step` ->
+  `StepCache` + `ParquetExporter` + subscribers. No direct StepBuffer access.
 - **GameManager**: Manages game lifecycle via daemon thread, controlled via REST
   endpoints (`/api/game/start`, `/api/game/stop`). Stop signaling via
   `threading.Event`.

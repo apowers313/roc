@@ -53,7 +53,6 @@ from ..reporting.metrics import RocMetrics
 from ..reporting.observability import Observability
 from ..reporting.screen_renderer import screen_to_html_vals
 from ..reporting.state import State, _emit_state_record
-from ..reporting.step_buffer import StepBuffer
 
 # Cumulative glyph sets for attention spread tracking.
 _attended_glyphs: set[int] = set()
@@ -102,12 +101,11 @@ class Gym(Component, ABC):
     @abstractmethod
     def get_action(self) -> Any: ...
 
-    @logger.catch
+    @logger.catch(reraise=True)
     @Observability.tracer.start_as_current_span("start")
     def start(
         self,
         stop_event: threading.Event | None = None,
-        step_buffer: StepBuffer | None = None,
     ) -> None:
         from roc.framework.clock import Clock
 
@@ -145,7 +143,7 @@ class Gym(Component, ABC):
 
                 with Observability.tracer.start_as_current_span("observation"):
                     obs, done, truncated, loop_num = self._run_observation_step(
-                        obs, loop_num, game_num, loop_ctx, step_buffer
+                        obs, loop_num, game_num, loop_ctx
                     )
 
                     if done or truncated:
@@ -185,7 +183,6 @@ class Gym(Component, ABC):
         loop_num: int,
         game_num: int,
         loop_ctx: GameLoopContext,
-        step_buffer: StepBuffer | None = None,
     ) -> tuple[Any, bool, bool, int]:
         """Execute a single observation-action-step cycle.
 
@@ -236,7 +233,7 @@ class Gym(Component, ABC):
         if Config.get().emit_state:
             State.emit_state_logs()
 
-        _push_dashboard_data(obs, loop_num, game_num, step_buffer)
+        _push_dashboard_data(obs, loop_num, game_num)
 
         # Reset per-step cycle accumulators AFTER dashboard data has been read
         cycle_states = State.get_states()
@@ -752,12 +749,14 @@ def _push_dashboard_data(
     obs: Any,
     loop_num: int,
     game_num: int,
-    step_buffer: StepBuffer | None = None,
 ) -> None:
-    """Collect step data and push directly to the StepBuffer.
+    """Collect step data and push it through the active dashboard writer.
 
-    If step_buffer is provided (thread mode), pushes to it directly.
-    Otherwise falls back to the globally registered StepBuffer (standalone mode).
+    Routes through ``api_server.push_step_from_game`` which forwards to
+    the active ``RunWriter`` for the live session, mirrors the step into
+    the process-wide ``StepCache`` (write-through), and notifies
+    Socket.io subscribers for invalidation. No-op when no live writer
+    is registered (test runs, headless games).
     """
     import json as _json
 
@@ -767,12 +766,6 @@ def _push_dashboard_data(
         "roc.game_metrics",
         _json.dumps(game_metrics, separators=(",", ":")),
     )
-
-    from roc.reporting.step_buffer import get_step_buffer
-
-    buf = step_buffer or get_step_buffer()
-    if buf is None:
-        return
 
     inventory = _parse_inventory(obs)
 
@@ -784,6 +777,7 @@ def _push_dashboard_data(
 
     from time import time_ns
 
+    from roc.reporting.api_server import push_step_from_game
     from roc.reporting.run_store import StepData
     from roc.reporting.step_log_sink import drain_step_logs
 
@@ -821,7 +815,7 @@ def _push_dashboard_data(
         saliency_cycles=states.saliency_cycles.val or None,
         resolution_cycles=states.resolution_cycles.val or None,
     )
-    buf.push(step_data)
+    push_step_from_game(step_data)
 
 
 def _tty_chars_to_screen(tty_chars: Any) -> str:
@@ -1120,7 +1114,7 @@ def _game_main(
 
     Called by GameManager on the game worker thread. Initializes all game-specific
     components, runs the game loop, and cleans up afterward. All Python objects
-    (GraphCache, StepBuffer, etc.) are shared with the server thread via the
+    (GraphCache, StepCache, etc.) are shared with the server thread via the
     process heap.
 
     Args:

@@ -37,12 +37,11 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
     if port is None:
         port = cfg.dashboard_port
 
-    # Set module-level state for the API server (no StepBuffer needed for
-    # historical-only mode).
-    import roc.reporting.api_server as srv
-    from roc.reporting.data_store import DataStore
+    # Initialize the registry against the data dir (historical-only mode --
+    # no live writer is created).
+    from roc.reporting.api_server import init_data_dir
 
-    srv._data_store = DataStore(data_dir=data_dir)
+    init_data_dir(data_dir)
 
     # Mount the ASGI app (FastAPI + Socket.io)
     sio_app = socketio.ASGIApp(sio, other_asgi_app=app)
@@ -70,10 +69,16 @@ def main(data_dir: Path | None, port: int | None, host: str) -> None:
 
 
 def _mount_static_files(app: Any) -> None:
-    """Mount the React static build directory if it exists."""
+    """Mount the React static build directory if it exists.
+
+    ``dashboard_cli.py`` lives at ``roc/cli/dashboard_cli.py`` so the
+    dist directory is two parents up (``roc/cli`` -> ``roc`` ->
+    repo root -> ``dashboard-ui/dist``). This mirrors the path
+    computation in ``api_server.start_dashboard``.
+    """
     from fastapi.staticfiles import StaticFiles
 
-    dist_dir = Path(__file__).parent.parent / "dashboard-ui" / "dist"
+    dist_dir = Path(__file__).parent.parent.parent / "dashboard-ui" / "dist"
     if dist_dir.is_dir():
         app.mount("/", StaticFiles(directory=str(dist_dir), html=True), name="static")
 

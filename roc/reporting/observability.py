@@ -26,7 +26,7 @@ from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrument
 from opentelemetry.metrics import Meter, Observation
 from opentelemetry.sdk._events import EventLoggerProvider
 from opentelemetry._logs import LogRecord
-from opentelemetry.sdk._logs import LoggerProvider
+from opentelemetry.sdk._logs import LoggerProvider, LogRecordProcessor
 from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
     SimpleLogRecordProcessor,
@@ -106,6 +106,33 @@ roc_common_attributes = {
     # "roc.version": roc_version,
     "roc.instance.id": instance_id,
 }
+
+
+def _remove_log_record_processor(logger_provider: Any, processor: LogRecordProcessor) -> None:
+    """Remove a specific ``LogRecordProcessor`` from a ``LoggerProvider``.
+
+    OTel does not expose a public remove API on ``LoggerProvider``. We
+    reach into ``_multi_log_record_processor._log_record_processors`` --
+    a tuple the SDK exposes specifically so concurrent ``on_emit``
+    iterations can copy-on-modify -- and filter out the target
+    processor. This is the only way to swap per-game parquet exporters
+    in and out of a shared ``LoggerProvider`` that must live for the
+    full server process because ``set_logger_provider`` is
+    ``Once``-protected.
+    """
+    multi = getattr(logger_provider, "_multi_log_record_processor", None)
+    if multi is None:
+        return
+    processors = getattr(multi, "_log_record_processors", None)
+    if processors is None:
+        return
+    new_processors = tuple(p for p in processors if p is not processor)
+    lock = getattr(multi, "_lock", None)
+    if lock is not None:
+        with lock:
+            multi._log_record_processors = new_processors
+    else:
+        multi._log_record_processors = new_processors
 
 
 class ObservabilityBase(type):
@@ -192,7 +219,14 @@ class Observability(metaclass=ObservabilityBase):
         Observability._remote_log_configured = True
 
     def _attach_parquet_exporter(self, settings: Config, logger_provider: LoggerProvider) -> None:
-        """Attach the DuckLake/parquet exporter if _allow_parquet is set."""
+        """Attach the DuckLake/parquet exporter if _allow_parquet is set.
+
+        The ``SimpleLogRecordProcessor`` wrapper is stored on the instance so
+        ``Observability.reset`` can remove it from the shared LoggerProvider
+        between game runs. Without tracking the processor we would have no
+        way to clean up the per-game parquet exporter, because OTel does not
+        expose a public remove API on LoggerProvider.
+        """
         if not Observability._allow_parquet:
             return
         from pathlib import Path
@@ -202,7 +236,8 @@ class Observability(metaclass=ObservabilityBase):
         run_dir = Path(settings.data_dir) / instance_id
         self._ducklake_store = DuckLakeStore(run_dir)
         self._parquet_exporter = ParquetExporter(store=self._ducklake_store)
-        logger_provider.add_log_record_processor(SimpleLogRecordProcessor(self._parquet_exporter))
+        self._parquet_processor = SimpleLogRecordProcessor(self._parquet_exporter)
+        logger_provider.add_log_record_processor(self._parquet_processor)
         Observability._parquet_configured = True
 
     def _add_loguru_sinks(self, settings: Config) -> None:
@@ -320,7 +355,15 @@ class Observability(metaclass=ObservabilityBase):
         """Add the DuckLake/parquet exporter to the existing logger provider.
 
         Called after roc.init() sets _allow_parquet=True, if the module-level
-        init already created the singleton without parquet.
+        init already created the singleton without parquet. Also called
+        after ``Observability.reset`` clears ``_parquet_configured`` so the
+        next game run can install a fresh exporter without re-running
+        ``__init__`` (which would duplicate the server-wide OTLP, remote
+        log, and loguru sinks).
+
+        The ``SimpleLogRecordProcessor`` wrapper is stored on the instance
+        so ``reset`` can remove it from the shared LoggerProvider between
+        game runs.
         """
         from pathlib import Path
 
@@ -334,10 +377,11 @@ class Observability(metaclass=ObservabilityBase):
         run_dir = Path(settings.data_dir) / instance_id
         instance._ducklake_store = DuckLakeStore(run_dir)
         instance._parquet_exporter = ParquetExporter(store=instance._ducklake_store)
+        instance._parquet_processor = SimpleLogRecordProcessor(instance._parquet_exporter)
         # Add to existing logger provider
         provider = otel_logs.get_logger_provider()
         if hasattr(provider, "add_log_record_processor"):
-            provider.add_log_record_processor(SimpleLogRecordProcessor(instance._parquet_exporter))
+            provider.add_log_record_processor(instance._parquet_processor)
         cls._parquet_configured = True
 
     @classmethod
@@ -364,22 +408,62 @@ class Observability(metaclass=ObservabilityBase):
 
     @classmethod
     def reset(cls) -> None:
-        """Reset the Observability singleton for the next game run.
+        """Reset per-game state so the next game run can install fresh DuckLake.
 
-        Called at the end of a game in thread mode (unified server). Shuts
-        down the current parquet exporter and DuckLake store, clears the
-        singleton, resets the per-game config flags, and regenerates
-        ``instance_id``/``resource``/``roc_common_attributes`` so the next
-        call to ``Observability.init()`` creates fresh providers pointing
-        at a new run directory. Without this, the second game reuses the
-        first game's already-closed DuckLake connection and crashes with
-        ``ConnectionException: Connection already closed``.
+        Called at the end of a game in thread mode (unified server). Removes
+        the per-game parquet exporter processor from the shared
+        ``LoggerProvider``, closes the DuckLake store, and regenerates
+        ``instance_id`` / ``resource`` / ``roc_common_attributes`` so the
+        next call to ``Observability.init()`` creates a new run directory.
+
+        **Important**: this does NOT pop the ``Observability`` singleton or
+        shut down the shared ``LoggerProvider``. Three reasons:
+
+        1. OTel's ``set_logger_provider`` is ``Once``-protected. A new
+           ``LoggerProvider`` installed after the global has already been
+           set is silently ignored, which means any new per-game processors
+           added to it would never receive records. This manifested as
+           "second game produces steps but catalog stays empty" -- the
+           symptom that drove this investigation.
+        2. The OTLP batch processor and the remote logger exporter are
+           server-wide sinks that should persist across game runs.
+           Shutting down the provider would kill them too.
+        3. Re-running ``__init__`` on a fresh instance would re-add those
+           server-wide processors, leaving the existing provider with
+           duplicate OTLP/remote log processors every time a game starts.
+
+        Instead, we leave the singleton in place and only recycle the
+        per-game DuckLake store + parquet exporter. The next game's
+        ``Observability.init(enable_parquet=True)`` sees the existing
+        instance, sees ``_parquet_configured=False`` (cleared here), and
+        calls ``_init_parquet`` to attach a fresh exporter bound to the
+        new run directory.
         """
         instance = ObservabilityBase._instances.get(cls)
         if instance is not None:
+            # Remove the parquet processor from the shared provider first
+            # so no new records land in the store we are about to close.
+            provider = otel_logs.get_logger_provider()
+            if hasattr(instance, "_parquet_processor"):
+                try:
+                    _remove_log_record_processor(provider, instance._parquet_processor)
+                except Exception:
+                    pass
+                try:
+                    instance._parquet_processor.shutdown()
+                except Exception:
+                    pass
+                try:
+                    del instance._parquet_processor
+                except Exception:
+                    pass
             if hasattr(instance, "_parquet_exporter"):
                 try:
                     instance._parquet_exporter.shutdown()
+                except Exception:
+                    pass
+                try:
+                    del instance._parquet_exporter
                 except Exception:
                     pass
             if hasattr(instance, "_ducklake_store"):
@@ -387,23 +471,17 @@ class Observability(metaclass=ObservabilityBase):
                     instance._ducklake_store.close()
                 except Exception:
                     pass
+                try:
+                    del instance._ducklake_store
+                except Exception:
+                    pass
 
-        # Shut down the global logger provider so its BatchLogRecordProcessor
-        # stops forwarding records into the closed exporters above. A fresh
-        # provider is installed by the next Observability.__init__().
-        provider = otel_logs.get_logger_provider()
-        if hasattr(provider, "shutdown"):
-            try:
-                provider.shutdown()
-            except Exception:
-                pass
-
-        # Drop the singleton and per-game configuration flags so the next
-        # init() rebuilds everything from scratch.
-        ObservabilityBase._instances.pop(cls, None)
+        # Clear the per-game flags so the next ``Observability.init`` call
+        # triggers ``_init_parquet`` to attach a fresh exporter.
         cls._parquet_configured = False
-        cls._remote_log_configured = False
         cls._allow_parquet = False
+        # Leave ``_remote_log_configured`` alone -- the remote log exporter
+        # stays attached to the provider across game runs.
 
         # Regenerate the module-level run identity. New imports of
         # ``instance_id`` will see the fresh value; existing callers must

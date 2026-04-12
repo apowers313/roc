@@ -135,6 +135,76 @@ class GraphDB:
         if self.strict_schema:
             Schema.validate()
 
+    def _reconnect(self) -> None:
+        """Reconnect after a stale session.
+
+        Memgraph drops idle connections after a timeout. When this happens,
+        ``cursor()`` raises ``mgclient.InterfaceError: bad session``.
+        This helper replaces the dead connection with a fresh one.
+        Must be called under ``_query_lock``.
+        """
+        logger.warning("Memgraph session lost, reconnecting")
+        try:
+            self.db_conn.close()
+        except Exception:
+            pass
+        self.db_conn = self.connect()
+
+    def _is_transport_failure(self, exc: Exception) -> bool:
+        """Return True if ``exc`` indicates a broken Memgraph transport.
+
+        ``mgclient.DatabaseError`` is the same exception class used for
+        legitimate query errors (syntax, constraint, type mismatch). We
+        must not blindly retry those -- they will fail again. A
+        ``DatabaseError`` is a transport failure when either the
+        connection no longer reports as ready or the error message
+        matches a known transport-level pattern (currently the
+        ``failed to send chunk data`` wire-write failure observed when
+        an idle socket has been half-closed). Any other ``DatabaseError``
+        is a real query error and must propagate.
+        """
+        if not self.connected():
+            return True
+        # Known wire-level failure: mgclient's chunked wire protocol
+        # raises ``DatabaseError: failed to send chunk data`` when the
+        # socket write returns an error (observed after idle timeouts
+        # where ``CONN_STATUS_READY`` is still reported). The error
+        # message is the only reliable signal we have here.
+        return "failed to send chunk data" in str(exc)
+
+    def _execute_with_reconnect(self, query: str, params: dict[str, Any]) -> Any:
+        """Execute ``query`` on a cursor, reconnecting on transport loss.
+
+        Handles two classes of connection loss without swallowing
+        legitimate query errors:
+
+        - ``mgclient.InterfaceError``: clean session loss (e.g., Memgraph
+          dropped an idle connection). Always triggers a reconnect.
+        - ``mgclient.DatabaseError`` with a transport-level cause (see
+          :meth:`_is_transport_failure`): reconnect and retry.
+
+        Any other ``DatabaseError`` (syntax errors, constraint
+        violations, type mismatches) propagates unchanged. Must be
+        called while holding ``_query_lock``.
+        """
+        try:
+            cursor = self.db_conn.cursor()
+            cursor.execute(query, params)
+            return cursor
+        except mgclient.InterfaceError:
+            self._reconnect()
+            cursor = self.db_conn.cursor()
+            cursor.execute(query, params)
+            return cursor
+        except mgclient.DatabaseError as exc:
+            if not self._is_transport_failure(exc):
+                raise
+            logger.warning("Memgraph transport failure ({}): reconnecting", exc)
+            self._reconnect()
+            cursor = self.db_conn.cursor()
+            cursor.execute(query, params)
+            return cursor
+
     @Observability.tracer.start_as_current_span("graphdb.fetch")
     def raw_fetch(
         self, query: str, *, params: dict[str, Any] | None = None
@@ -155,8 +225,7 @@ class GraphDB:
         logger.trace(f"raw_fetch: '{query}' *** with params: *** '{params}")
 
         with self._query_lock:
-            cursor = self.db_conn.cursor()
-            cursor.execute(query, params)
+            cursor = self._execute_with_reconnect(query, params)
             while True:
                 row = cursor.fetchone()
                 if row is None:
@@ -178,8 +247,7 @@ class GraphDB:
         logger.trace(f"raw_execute: '{query}' *** with params: *** '{params}'")
 
         with self._query_lock:
-            cursor = self.db_conn.cursor()
-            cursor.execute(query, params)
+            cursor = self._execute_with_reconnect(query, params)
             cursor.fetchall()
 
     def connected(self) -> bool:
@@ -301,11 +369,16 @@ class GraphDB:
     def singleton(cls) -> GraphDB:
         """This returns a singleton object for the graph database. If the
         singleton isn't created yet, it creates it.
+
+        Also reconnects if the existing connection has gone stale (e.g.,
+        Memgraph dropped the idle connection between game runs).
         """
         global graph_db_singleton
         with _graphdb_lock:
             if not graph_db_singleton:
                 graph_db_singleton = GraphDB()
+            elif not graph_db_singleton.connected():
+                graph_db_singleton._reconnect()
 
         assert graph_db_singleton.closed is False
         return graph_db_singleton
