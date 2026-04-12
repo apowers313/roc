@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Generator
+from typing import Generator
 from unittest.mock import MagicMock, patch
 
 import networkx as nx
@@ -13,7 +13,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from roc.reporting.api_server import app
-from roc.reporting.data_store import DataStore
 
 
 def _make_subgraph(node_count: int = 3) -> nx.DiGraph:
@@ -33,13 +32,16 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _setup_data_store(tmp_path: Path) -> Generator[None, None, None]:
-    """Point the API at a DataStore backed by a temp directory."""
+    """Point the API at a RunRegistry backed by a temp directory."""
     import roc.reporting.api_server as mod
 
-    orig = mod._data_store
-    mod._data_store = DataStore(tmp_path)
+    orig_registry = mod._run_registry
+    orig_reader = mod._run_reader
+    mod.init_data_dir(tmp_path)
+    mod._run_reader = None
     yield
-    mod._data_store = orig
+    mod._run_registry = orig_registry
+    mod._run_reader = orig_reader
 
 
 @pytest.fixture()
@@ -184,6 +186,80 @@ class TestGetObjectHistory:
         assert resp.status_code == 404
 
 
+class TestObjectUuidPrecision:
+    """The /graph/object/{uuid} endpoint must accept and round-trip a 63-bit
+    Object UUID without precision loss. ROC's UUIDs exceed JS Number's safe
+    integer range (2^53 - 1), so the path param is a string and the
+    response stringifies the uuid in the response body. This pins the
+    failure mode that hit production: 6853809301722933453 -> 6853809301722933000.
+    """
+
+    BIG_UUID = 6853809301722933453
+
+    def test_path_param_accepts_63bit_uuid_string(self, client: TestClient, mock_graph_service):
+        """The handler parses the string path param into the int the
+        graph service expects, and forwards the *exact* value -- no JS
+        Number precision loss because the int never goes through JS."""
+        G = nx.DiGraph()
+        G.add_node(-1, labels="Object", uuid=self.BIG_UUID, resolve_count=1)
+        mock_graph_service.object_history.return_value = G
+
+        from roc.reporting.graph_service import GraphService
+
+        mock_graph_service.to_cytoscape = GraphService.to_cytoscape
+
+        resp = client.get(f"/api/runs/test-run/graph/object/{self.BIG_UUID}")
+        assert resp.status_code == 200
+        # The graph service was called with the exact int (lossless).
+        mock_graph_service.object_history.assert_called_once_with("test-run", self.BIG_UUID)
+
+    def test_invalid_uuid_returns_400(self, client: TestClient, mock_graph_service):
+        """Non-numeric path param is rejected with a 400 Bad Request."""
+        resp = client.get("/api/runs/test-run/graph/object/not-a-number")
+        assert resp.status_code == 400
+
+    def test_response_uuid_is_string(self, client: TestClient, mock_graph_service):
+        """The uuid field in the response body is a JSON string, not a
+        JSON number. A JS client parses strings as `string`, never as
+        Number, so the precision is preserved end-to-end."""
+        G = nx.DiGraph()
+        G.add_node(-1, labels="Object", uuid=self.BIG_UUID, resolve_count=189)
+        mock_graph_service.object_history.return_value = G
+
+        from roc.reporting.graph_service import GraphService
+
+        mock_graph_service.to_cytoscape = GraphService.to_cytoscape
+
+        resp = client.get(f"/api/runs/test-run/graph/object/{self.BIG_UUID}")
+        assert resp.status_code == 200
+        body = resp.json()
+        nodes = body["elements"]["nodes"]
+        obj = next(n for n in nodes if n["data"].get("labels") == "Object")
+        assert isinstance(obj["data"]["uuid"], str)
+        assert obj["data"]["uuid"] == str(self.BIG_UUID)
+        # And the raw JSON text contains the uuid as a quoted string.
+        # `"6853809301722933453"`, not `6853809301722933453`.
+        assert f'"{self.BIG_UUID}"' in resp.text
+
+    def test_response_includes_human_name(self, client: TestClient, mock_graph_service):
+        """Object nodes carry a derived human_name (FlexiHumanHash) so the
+        UI has something readable to display alongside the 19-digit uuid."""
+        G = nx.DiGraph()
+        G.add_node(-1, labels="Object", uuid=self.BIG_UUID, resolve_count=1)
+        mock_graph_service.object_history.return_value = G
+
+        from roc.reporting.graph_service import GraphService
+
+        mock_graph_service.to_cytoscape = GraphService.to_cytoscape
+
+        resp = client.get(f"/api/runs/test-run/graph/object/{self.BIG_UUID}")
+        body = resp.json()
+        obj = next(n for n in body["elements"]["nodes"] if n["data"].get("labels") == "Object")
+        assert "human_name" in obj["data"]
+        assert isinstance(obj["data"]["human_name"], str)
+        assert len(obj["data"]["human_name"]) > 0
+
+
 class TestDepthValidation:
     def test_depth_min_is_1(self, client: TestClient, mock_graph_service):
         """Depth must be >= 1."""
@@ -206,106 +282,3 @@ class TestDepthValidation:
 
         client.get("/api/runs/test-run/graph/frame/1")
         mock_graph_service.subgraph_from_frame.assert_called_once_with("test-run", 1, depth=2)
-
-
-# ---------------------------------------------------------------------------
-# Live routing tests -- endpoints route to live cache for active runs
-# ---------------------------------------------------------------------------
-
-
-def _wire_edge(src: Any, dst: Any, etype: str) -> Any:
-    """Create an Edge and wire it into the source and destination node edge lists."""
-    from roc.db.graphdb import Edge
-
-    e = Edge(type=etype, src_id=src.id, dst_id=dst.id)
-    e._no_save = True
-    src._src_edges.add(e)
-    dst._dst_edges.add(e)
-    return e
-
-
-def _build_live_api_graph() -> dict[str, Any]:
-    """Build minimal live graph for API routing tests."""
-    from roc.db.graphdb import Node
-
-    frame = Node(labels={"Frame"}, tick=1)
-    action = Node(labels={"TakeAction"}, action_id=19)
-    obj_inst = Node(labels={"ObjectInstance"}, x=5, y=10)
-    obj = Node(labels={"Object"}, uuid=42, resolve_count=1)
-
-    _wire_edge(frame, action, "FrameAttribute")
-    _wire_edge(frame, obj_inst, "SituatedObjectInstance")
-    _wire_edge(obj_inst, obj, "ObservedAs")
-
-    return {"frame": frame, "action": action, "obj_inst": obj_inst, "obj": obj}
-
-
-@pytest.fixture()
-def live_data_store(tmp_path: Path) -> Generator[DataStore, None, None]:
-    """Set up a DataStore with a live session named 'live-run'."""
-    import roc.reporting.api_server as mod
-    from roc.reporting.step_buffer import StepBuffer
-
-    orig = mod._data_store
-    ds = DataStore(tmp_path)
-    buf = StepBuffer(capacity=100)
-    ds.set_live_session("live-run", buf)
-    mod._data_store = ds
-    yield ds
-    ds.clear_live_session()
-    mod._data_store = orig
-
-
-class TestLiveRouting:
-    def test_frame_graph_routes_live(self, client: TestClient, live_data_store):
-        """Live run uses live cache instead of graph.json archive."""
-        g = _build_live_api_graph()
-        resp = client.get("/api/runs/live-run/graph/frame/1?depth=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "elements" in data
-        assert data["meta"]["node_count"] >= 3  # frame + action + obj_inst
-
-    def test_frame_graph_routes_historical(self, client: TestClient, mock_graph_service):
-        """Non-live run falls back to graph.json archive via GraphService."""
-        sub = _make_subgraph(3)
-        mock_graph_service.subgraph_from_frame.return_value = sub
-
-        from roc.reporting.graph_service import GraphService
-
-        mock_graph_service.to_cytoscape = GraphService.to_cytoscape
-
-        resp = client.get("/api/runs/test-run/graph/frame/1?depth=2")
-        assert resp.status_code == 200
-        mock_graph_service.subgraph_from_frame.assert_called_once()
-
-    def test_node_graph_routes_live(self, client: TestClient, live_data_store):
-        """Live run node endpoint uses live cache."""
-        g = _build_live_api_graph()
-        resp = client.get(f"/api/runs/live-run/graph/node/{g['frame'].id}?depth=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["meta"]["node_count"] >= 2
-
-    def test_object_history_routes_live(self, client: TestClient, live_data_store):
-        """Live run object history uses live cache."""
-        _build_live_api_graph()
-        resp = client.get("/api/runs/live-run/graph/object/42")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["meta"]["node_count"] >= 3  # obj + obj_inst + frame
-
-    def test_live_frame_404_missing_tick(self, client: TestClient, live_data_store):
-        """Live run returns 404 for missing tick."""
-        resp = client.get("/api/runs/live-run/graph/frame/999")
-        assert resp.status_code == 404
-
-    def test_live_node_404_missing(self, client: TestClient, live_data_store):
-        """Live run returns 404 for missing node."""
-        resp = client.get("/api/runs/live-run/graph/node/999999")
-        assert resp.status_code == 404
-
-    def test_live_object_404_missing(self, client: TestClient, live_data_store):
-        """Live run returns 404 for missing object UUID."""
-        resp = client.get("/api/runs/live-run/graph/object/999999")
-        assert resp.status_code == 404

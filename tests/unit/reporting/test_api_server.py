@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Generator
+from typing import Any, Generator
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -11,9 +11,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from roc.reporting.api_server import app
-from roc.reporting.data_store import DataStore, RunSummary
 from roc.reporting.run_store import StepData
-from roc.reporting.step_buffer import StepBuffer
+from roc.reporting.run_writer import RunWriter
+from roc.reporting.types import RunSummary
 
 
 @pytest.fixture()
@@ -23,28 +23,57 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _setup_data_store(tmp_path: Path) -> Generator[None, None, None]:
-    """Point the API at a DataStore backed by a temp directory."""
-    import roc.reporting.api_server as mod
+    """Point the API at a RunRegistry backed by a temp directory.
 
-    orig = mod._data_store
-    mod._data_store = DataStore(tmp_path)
+    Resets the unified-run singletons (reader, registry, cache) so the
+    next ``_get_reader()`` call rebuilds them against the new registry.
+    """
+    import roc.reporting.api_server as mod
+    from roc.reporting.step_cache import StepCache
+
+    orig_reader = mod._run_reader
+    orig_registry = mod._run_registry
+    orig_cache = mod._step_cache
+    mod.init_data_dir(tmp_path)
+    mod._run_reader = None
+    mod._step_cache = StepCache(capacity=5000)
     yield
-    mod._data_store = orig
+    mod._run_reader = orig_reader
+    mod._run_registry = orig_registry
+    mod._step_cache = orig_cache
 
 
 @pytest.fixture()
-def live_buffer() -> StepBuffer:
-    """Set up a StepBuffer with multi-game test data as the live run."""
-    import roc.reporting.api_server as mod
+def live_buffer(tmp_path: Path) -> Generator[RunWriter, None, None]:
+    """Set up a RunWriter with multi-game test data as the live run.
 
-    assert mod._data_store is not None
-    buf = StepBuffer(capacity=100)
-    mod._data_store.set_live_session("test-live-run", buf)
+    Seeds DuckLake with screen records for game 1 (steps 1-10) and game 2
+    (steps 11-15) so that list_games(), step-range, and step fetches all
+    work correctly. Also pushes steps via RunWriter so the in-memory cache
+    and registry step-range are updated.
+    """
+    import roc.reporting.api_server as mod
+    from roc.reporting.ducklake_store import DuckLakeStore
+
+    run_dir = tmp_path / "test-live-run"
+    store = DuckLakeStore(run_dir, read_only=False)
+    # Seed DuckLake with screen records so list_games() and step lookups work
+    records = [
+        {"step": i, "game_number": 1, "timestamp": i * 1000, "body": "{}"} for i in range(1, 11)
+    ] + [{"step": i, "game_number": 2, "timestamp": i * 1000, "body": "{}"} for i in range(11, 16)]
+    store.insert("screens", records)
+    registry = mod._get_registry()
+    assert registry is not None
+    writer = RunWriter("test-live-run", registry, mod._step_cache, None, store)
     for i in range(1, 11):
-        buf.push(StepData(step=i, game_number=1))
+        writer.push_step(StepData(step=i, game_number=1))
     for i in range(11, 16):
-        buf.push(StepData(step=i, game_number=2))
-    return buf
+        writer.push_step(StepData(step=i, game_number=2))
+    try:
+        yield writer
+    finally:
+        writer.close()
+        store.close()
 
 
 class TestListRuns:
@@ -56,8 +85,9 @@ class TestListRuns:
     def test_returns_runs_when_present(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "list_runs") as mock_list:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "list_runs") as mock_list:
             mock_list.return_value = [RunSummary(name="test-run", games=2, steps=100)]
             resp = client.get("/api/runs")
             assert resp.status_code == 200
@@ -66,11 +96,179 @@ class TestListRuns:
             assert data[0]["name"] == "test-run"
             assert data[0]["steps"] == 100
 
+    # ----------------------------------------------------------------
+    # /api/runs include_all parameter (regression: missing-runs bug)
+    # ----------------------------------------------------------------
+
+    def test_default_does_not_pass_include_all(self, client: TestClient) -> None:
+        """Default behavior must call list_runs(min_steps=10, include_all=False)."""
+        import roc.reporting.api_server as mod
+
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "list_runs") as mock_list:
+            mock_list.return_value = []
+            client.get("/api/runs")
+            mock_list.assert_called_once_with(min_steps=10, include_all=False)
+
+    def test_include_all_flag_propagates(self, client: TestClient) -> None:
+        import roc.reporting.api_server as mod
+
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "list_runs") as mock_list:
+            mock_list.return_value = []
+            client.get("/api/runs?include_all=true")
+            mock_list.assert_called_once_with(min_steps=10, include_all=True)
+
+    def test_min_steps_param_overrides_default(self, client: TestClient) -> None:
+        import roc.reporting.api_server as mod
+
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "list_runs") as mock_list:
+            mock_list.return_value = []
+            client.get("/api/runs?min_steps=0&include_all=true")
+            mock_list.assert_called_once_with(min_steps=0, include_all=True)
+
+    def test_response_includes_status_field(self, client: TestClient) -> None:
+        """Each run in the response carries a status (regression for the
+        bug class where the dropdown couldn't tell ok/short/empty/corrupt
+        runs apart)."""
+        import roc.reporting.api_server as mod
+
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "list_runs") as mock_list:
+            mock_list.return_value = [
+                RunSummary(name="ok-run", games=1, steps=100, status="ok"),
+                RunSummary(
+                    name="empty-run",
+                    games=0,
+                    steps=0,
+                    status="empty",
+                ),
+                RunSummary(
+                    name="bad-run",
+                    games=0,
+                    steps=0,
+                    status="corrupt",
+                    error="DuckLake catalog open failed",
+                ),
+            ]
+            resp = client.get("/api/runs?include_all=true")
+            assert resp.status_code == 200
+            data = resp.json()
+            statuses = {r["name"]: r["status"] for r in data}
+            assert statuses == {
+                "ok-run": "ok",
+                "empty-run": "empty",
+                "bad-run": "corrupt",
+            }
+            bad = next(r for r in data if r["name"] == "bad-run")
+            assert bad["error"] == "DuckLake catalog open failed"
+
 
 class TestStepRange:
     def test_returns_404_for_missing_run(self, client: TestClient) -> None:
         resp = client.get("/api/runs/nonexistent/step-range")
         assert resp.status_code == 404
+
+    def test_step_range_includes_tail_growing_false_for_closed_run(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """Phase 3: closed runs return tail_growing=False in step-range."""
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        run_dir = tmp_path / "closed-run"
+        store = DuckLakeStore(run_dir, read_only=False)
+        try:
+            records = [
+                {"step": s, "game_number": 1, "timestamp": s * 1000, "body": "{}"}
+                for s in range(1, 4)
+            ]
+            store.insert("screens", records)
+        finally:
+            store.close()
+
+        resp = client.get("/api/runs/closed-run/step-range")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["min"] == 1
+        assert body["max"] == 3
+        assert body["tail_growing"] is False
+
+    def test_step_range_endpoint_returns_tail_growing_true_for_active_writer(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """Phase 3: an active writer flips tail_growing=True for step-range."""
+        import roc.reporting.api_server as mod
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        run_dir = tmp_path / "live-run"
+        # Seed some baseline rows so the registry can list_games() etc.
+        seed = DuckLakeStore(run_dir, read_only=False)
+        try:
+            seed.insert(
+                "screens",
+                [
+                    {"step": s, "game_number": 1, "timestamp": s * 1000, "body": "{}"}
+                    for s in range(1, 3)
+                ],
+            )
+        finally:
+            seed.close()
+
+        # Open a writer and attach via the registry (mimics RunWriter init).
+        reader = mod._get_reader()
+        assert reader is not None
+        registry = mod._run_registry
+        assert registry is not None
+        writer_store = DuckLakeStore(run_dir, read_only=False)
+        try:
+            registry.attach_writer_store("live-run", writer_store)
+            resp = client.get("/api/runs/live-run/step-range")
+            assert resp.status_code == 200
+            body = resp.json()
+            assert body["tail_growing"] is True
+        finally:
+            registry.detach_writer_store("live-run")
+            writer_store.close()
+
+    def test_step_range_after_writer_close_returns_false(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """Phase 3: after detach, step-range tail_growing flips back to False."""
+        import roc.reporting.api_server as mod
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        run_dir = tmp_path / "lifecycle-run"
+        seed = DuckLakeStore(run_dir, read_only=False)
+        try:
+            seed.insert(
+                "screens",
+                [
+                    {"step": s, "game_number": 1, "timestamp": s * 1000, "body": "{}"}
+                    for s in range(1, 3)
+                ],
+            )
+        finally:
+            seed.close()
+
+        reader = mod._get_reader()
+        assert reader is not None
+        registry = mod._run_registry
+        assert registry is not None
+
+        writer_store = DuckLakeStore(run_dir, read_only=False)
+        registry.attach_writer_store("lifecycle-run", writer_store)
+        writer_store.close()
+        registry.detach_writer_store("lifecycle-run")
+
+        resp = client.get("/api/runs/lifecycle-run/step-range")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["tail_growing"] is False
 
 
 class TestGraphHistory:
@@ -84,23 +282,25 @@ class TestGraphHistory:
         mock_data = [
             {"step": 1, "node_count": 10, "node_max": 100, "edge_count": 20, "edge_max": 200},
         ]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_graph_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/graph-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None)
+            mock_method.assert_called_once_with("test-run", "graph", None)
 
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_graph_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/graph-history?game=2")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 2)
+            mock_method.assert_called_once_with("test-run", "graph", 2)
 
 
 class TestEventHistory:
@@ -114,29 +314,94 @@ class TestEventHistory:
         mock_data = [
             {"step": 1, "roc.perception": 5, "roc.attention": 3},
         ]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_event_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/event-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None)
+            mock_method.assert_called_once_with("test-run", "event", None)
 
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_event_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/event-history?game=1")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 1)
+            mock_method.assert_called_once_with("test-run", "event", 1)
 
 
 class TestGetStep:
     def test_returns_404_for_missing_run(self, client: TestClient) -> None:
         resp = client.get("/api/runs/nonexistent/step/1")
         assert resp.status_code == 404
+
+    def test_step_endpoint_returns_typed_envelope_on_404(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """A step that's out of range for an existing run returns a 404
+        with the typed StepResponse envelope, not an empty body."""
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        # Create a real DuckLake run with 3 steps
+        run_dir = tmp_path / "envelope-run"
+        store = DuckLakeStore(run_dir, read_only=False)
+        try:
+            records = [
+                {"step": s, "game_number": 1, "timestamp": s * 1000, "body": "{}"}
+                for s in range(1, 4)
+            ]
+            store.insert("screens", records)
+        finally:
+            store.close()
+
+        # Asking for step 999 should yield 404 with the envelope
+        resp = client.get("/api/runs/envelope-run/step/999")
+        assert resp.status_code == 404
+        body = resp.json()
+        # The body is the StepResponse envelope, not an empty dict.
+        assert body.get("status") == "out_of_range"
+        assert body.get("data") is None
+        assert body.get("range") is not None
+        assert body["range"]["max"] == 3
+
+    def test_step_endpoint_returns_typed_envelope_on_500(
+        self, client: TestClient, tmp_path: Path
+    ) -> None:
+        """A backend error returns a 500 with the typed StepResponse envelope."""
+        import roc.reporting.api_server as mod
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        # Create a real DuckLake run with 3 steps
+        run_dir = tmp_path / "boom-run"
+        store = DuckLakeStore(run_dir, read_only=False)
+        try:
+            records = [
+                {"step": s, "game_number": 1, "timestamp": s * 1000, "body": "{}"}
+                for s in range(1, 4)
+            ]
+            store.insert("screens", records)
+        finally:
+            store.close()
+
+        # Force the registry entry to load, then patch its run_store
+        reader = mod._get_reader()
+        assert reader is not None
+        registry = mod._run_registry
+        assert registry is not None
+        entry = registry.get("boom-run")
+        assert entry is not None
+        with patch.object(entry.run_store, "get_step_data", side_effect=RuntimeError("kaboom")):
+            resp = client.get("/api/runs/boom-run/step/2")
+        assert resp.status_code == 500
+        body = resp.json()
+        assert body.get("status") == "error"
+        assert "RuntimeError" in body.get("error", "")
+        assert "kaboom" in body.get("error", "")
 
 
 class TestBookmarks:
@@ -177,7 +442,7 @@ class TestBookmarks:
 class TestLiveGamesStepCounts:
     """Regression: games endpoint showed (0 steps) for all live games."""
 
-    def test_games_include_step_counts(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_games_include_step_counts(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/games")
         assert resp.status_code == 200
         games = resp.json()
@@ -191,21 +456,21 @@ class TestLiveGamesStepCounts:
 class TestLiveStepRangeGameFilter:
     """Regression: step-range endpoint ignored game filter for live run."""
 
-    def test_global_range(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_global_range(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/step-range")
         assert resp.status_code == 200
         data = resp.json()
         assert data["min"] == 1
         assert data["max"] == 15
 
-    def test_game1_range(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_game1_range(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/step-range?game=1")
         assert resp.status_code == 200
         data = resp.json()
         assert data["min"] == 1
         assert data["max"] == 10
 
-    def test_game2_range(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_game2_range(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/step-range?game=2")
         assert resp.status_code == 200
         data = resp.json()
@@ -213,50 +478,13 @@ class TestLiveStepRangeGameFilter:
         assert data["max"] == 15
 
     def test_nonexistent_game_returns_zeros(
-        self, client: TestClient, live_buffer: StepBuffer
+        self, client: TestClient, live_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs/test-live-run/step-range?game=99")
         assert resp.status_code == 200
         data = resp.json()
         assert data["min"] == 0
         assert data["max"] == 0
-
-
-class TestLiveStatus:
-    def test_no_live_session(self, client: TestClient) -> None:
-        resp = client.get("/api/live/status")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["active"] is False
-        assert data["run_name"] is None
-
-    def test_active_live_session(self, client: TestClient, live_buffer: StepBuffer) -> None:
-        resp = client.get("/api/live/status")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["active"] is True
-        assert data["run_name"] == "test-live-run"
-        assert data["step"] == 15
-        assert data["game_numbers"] == [1, 2]
-
-
-class TestLiveStepEndpoint:
-    def test_get_step_from_buffer(self, client: TestClient, live_buffer: StepBuffer) -> None:
-        resp = client.get("/api/live/step/5")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["step"] == 5
-        assert data["game_number"] == 1
-
-    def test_step_not_in_buffer_returns_404(
-        self, client: TestClient, live_buffer: StepBuffer
-    ) -> None:
-        resp = client.get("/api/live/step/999")
-        assert resp.status_code == 404
-
-    def test_no_live_session_returns_404(self, client: TestClient) -> None:
-        resp = client.get("/api/live/step/1")
-        assert resp.status_code == 404
 
 
 # ---------------------------------------------------------------------------
@@ -267,18 +495,36 @@ class TestLiveStepEndpoint:
 
 
 @pytest.fixture()
-def live_subprocess_buffer() -> StepBuffer:
-    """Set up a StepBuffer in subprocess/HTTP callback mode."""
-    import roc.reporting.api_server as mod
+def live_subprocess_buffer(tmp_path: Path) -> Generator[RunWriter, None, None]:
+    """Set up a RunWriter in subprocess/HTTP callback mode.
 
-    assert mod._data_store is not None
-    buf = StepBuffer(capacity=100)
-    mod._data_store.set_live_session("test-subprocess-run", buf)
+    Seeds DuckLake with screen records for game 1 (steps 1-10) and game 2
+    (steps 11-15) so that list_games(), step-range, and step fetches all
+    work correctly. Also pushes steps via RunWriter so the in-memory cache
+    and registry step-range are updated.
+    """
+    import roc.reporting.api_server as mod
+    from roc.reporting.ducklake_store import DuckLakeStore
+
+    run_dir = tmp_path / "test-subprocess-run"
+    store = DuckLakeStore(run_dir, read_only=False)
+    # Seed DuckLake with screen records so list_games() and step lookups work
+    records = [
+        {"step": i, "game_number": 1, "timestamp": i * 1000, "body": "{}"} for i in range(1, 11)
+    ] + [{"step": i, "game_number": 2, "timestamp": i * 1000, "body": "{}"} for i in range(11, 16)]
+    store.insert("screens", records)
+    registry = mod._get_registry()
+    assert registry is not None
+    writer = RunWriter("test-subprocess-run", registry, mod._step_cache, None, store)
     for i in range(1, 11):
-        buf.push(StepData(step=i, game_number=1))
+        writer.push_step(StepData(step=i, game_number=1))
     for i in range(11, 16):
-        buf.push(StepData(step=i, game_number=2))
-    return buf
+        writer.push_step(StepData(step=i, game_number=2))
+    try:
+        yield writer
+    finally:
+        writer.close()
+        store.close()
 
 
 class TestSubprocessBufferInRunsList:
@@ -287,7 +533,7 @@ class TestSubprocessBufferInRunsList:
     and fell back to 0 steps, which was filtered by min_steps."""
 
     def test_live_run_appears_in_runs_list(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs?min_steps=0")
         assert resp.status_code == 200
@@ -296,7 +542,7 @@ class TestSubprocessBufferInRunsList:
         assert "test-subprocess-run" in names
 
     def test_live_run_has_correct_step_count(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs?min_steps=0")
         assert resp.status_code == 200
@@ -306,7 +552,7 @@ class TestSubprocessBufferInRunsList:
         assert live["games"] == 2
 
     def test_live_run_not_filtered_by_min_steps(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs?min_steps=10")
         assert resp.status_code == 200
@@ -320,7 +566,7 @@ class TestSubprocessBufferStepFetch:
     started via subprocess because _get_step_data didn't check the live buffer."""
 
     def test_step_from_subprocess_buffer(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs/test-subprocess-run/step/5")
         assert resp.status_code == 200
@@ -328,18 +574,24 @@ class TestSubprocessBufferStepFetch:
         assert data["step"] == 5
         assert data["game_number"] == 1
 
-    def test_step_not_in_subprocess_buffer_returns_404(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+    def test_step_not_in_subprocess_buffer_falls_through_to_store(
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
+        """When the step isn't in the buffer, the live read path falls
+        through to the writer's RunStore. The registry has a real
+        backing store (via attach_writer_store), so the request returns
+        an out_of_range response for steps beyond the range."""
         resp = client.get("/api/runs/test-subprocess-run/step/999")
         assert resp.status_code == 404
+        data = resp.json()
+        assert data.get("status") == "out_of_range"
 
 
 class TestSubprocessBufferGames:
     """Regression: GET /api/runs/{run}/games returned 404 for subprocess live runs."""
 
     def test_games_from_subprocess_buffer(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs/test-subprocess-run/games")
         assert resp.status_code == 200
@@ -354,7 +606,7 @@ class TestSubprocessBufferGames:
 class TestSubprocessBufferStepRange:
     """Regression: GET /api/runs/{run}/step-range returned 404 for subprocess live runs."""
 
-    def test_global_range(self, client: TestClient, live_subprocess_buffer: StepBuffer) -> None:
+    def test_global_range(self, client: TestClient, live_subprocess_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-subprocess-run/step-range")
         assert resp.status_code == 200
         data = resp.json()
@@ -362,28 +614,13 @@ class TestSubprocessBufferStepRange:
         assert data["max"] == 15
 
     def test_game_filtered_range(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
+        self, client: TestClient, live_subprocess_buffer: RunWriter
     ) -> None:
         resp = client.get("/api/runs/test-subprocess-run/step-range?game=1")
         assert resp.status_code == 200
         data = resp.json()
         assert data["min"] == 1
         assert data["max"] == 10
-
-
-class TestSubprocessBufferLiveStatus:
-    """Regression: /api/live/status didn't report subprocess buffer sessions."""
-
-    def test_active_subprocess_session(
-        self, client: TestClient, live_subprocess_buffer: StepBuffer
-    ) -> None:
-        resp = client.get("/api/live/status")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["active"] is True
-        assert data["run_name"] == "test-subprocess-run"
-        assert data["step"] == 15
-        assert data["game_numbers"] == [1, 2]
 
 
 # ---------------------------------------------------------------------------
@@ -393,113 +630,14 @@ class TestSubprocessBufferLiveStatus:
 # ---------------------------------------------------------------------------
 
 
-class TestLiveHistoryEndpoints:
-    """Test that history endpoints return data from the live buffer."""
-
-    @pytest.fixture()
-    def live_history_buffer(self) -> StepBuffer:
-        """Set up a buffer with history-relevant StepData fields."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("test-history-run", buf)
-        buf.push(
-            StepData(
-                step=1,
-                game_number=1,
-                graph_summary={"node_count": 10, "edge_count": 5},
-                event_summary=[{"roc.perception": 3}],
-                intrinsics={"hp": 16, "max_hp": 16},
-                game_metrics={"score": 0, "level": 1},
-                action_taken={"action_id": 7, "action_name": "north"},
-                resolution_metrics={
-                    "outcome": "new_object",
-                    "features": ["ShapeNode(@)", "ColorNode(white)"],
-                    "new_object_id": 42,
-                },
-            )
-        )
-        buf.push(
-            StepData(
-                step=2,
-                game_number=1,
-                graph_summary={"node_count": 12, "edge_count": 6},
-                game_metrics={"score": 1, "level": 1},
-                resolution_metrics={
-                    "outcome": "match",
-                    "matched_object_id": 42,
-                    "matched_attrs": {"char": "@", "color": "white", "glyph": "64"},
-                    "features": ["ShapeNode(@)", "ColorNode(white)", "SingleNode(64)"],
-                },
-            )
-        )
-        return buf
-
-    def test_graph_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/graph-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 2
-        assert data[0]["step"] == 1
-        assert data[0]["node_count"] == 10
-
-    def test_event_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/event-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 1
-        assert data[0]["roc.perception"] == 3
-
-    def test_intrinsics_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/intrinsics-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 1
-        assert data[0]["hp"] == 16
-
-    def test_metrics_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/metrics-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 2
-        assert data[0]["score"] == 0
-        assert data[1]["score"] == 1
-
-    def test_metrics_history_field_filter(
-        self, client: TestClient, live_history_buffer: StepBuffer
-    ) -> None:
-        resp = client.get("/api/runs/test-history-run/metrics-history?game=1&fields=score")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 2
-        assert "score" in data[0]
-        assert "level" not in data[0]
-
-    def test_action_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/action-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 1
-        assert data[0]["action_id"] == 7
-
-    def test_resolution_history(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/resolution-history?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 2
-        assert data[0]["outcome"] == "new_object"
-        assert data[1]["outcome"] == "match"
-        assert data[1]["correct"] is True
-
-    def test_all_objects(self, client: TestClient, live_history_buffer: StepBuffer) -> None:
-        resp = client.get("/api/runs/test-history-run/all-objects?game=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert len(data) == 1
-        assert data[0]["node_id"] == "42"
-        assert data[0]["match_count"] == 1
-        assert data[0]["shape"] == "@"
+# Phase 2 of the unified-run architecture deletes the in-memory live history
+# indexing path that ``TestLiveHistoryEndpoints`` exercised here. The same
+# behavior shapes are now covered against a real DuckLake catalog by
+# ``tests/integration/reporting/test_history_via_ducklake.py`` -- live runs
+# read through the writer's ``DuckLakeStore`` (installed via
+# ``RunRegistry.attach_writer_store``) and historical runs read through a
+# fresh ``read_only=True`` instance, so a pure in-memory unit test for the
+# old buffer-driven path no longer maps to a real code path.
 
 
 # ---------------------------------------------------------------------------
@@ -553,41 +691,117 @@ class TestConvertNumpy:
         assert _convert_numpy(42) == 42
         assert _convert_numpy(None) is None
 
+    # ----------------------------------------------------------------
+    # Regression: NAType / NaN serialization (the recurring "step
+    # endpoint returns 500 and dashboard renders nothing" failure)
+    # ----------------------------------------------------------------
+
+    def test_pandas_NA_becomes_none(self) -> None:
+        """Pandas NA must serialize to None, not raise TypeError.
+
+        Hit during dashboard probe at 2026-04-08: GET /step/1 returned
+        500 because DuckDB returned a nullable Int column whose missing
+        values are pd.NA, and json.dumps cannot encode NAType. The UI
+        showed "no data" with no visible error -- a textbook example
+        of the "errors not visible in the UI" failure mode.
+        """
+        import json
+
+        import pandas as pd
+
+        from roc.reporting.api_server import _convert_numpy
+
+        result = _convert_numpy(pd.NA)
+        assert result is None
+        # And it must round-trip through json.dumps without raising.
+        assert json.dumps(_convert_numpy({"x": pd.NA})) == '{"x": null}'
+
+    def test_pandas_NaT_becomes_none(self) -> None:
+        import pandas as pd
+
+        from roc.reporting.api_server import _convert_numpy
+
+        assert _convert_numpy(pd.NaT) is None
+
+    def test_numpy_nan_becomes_none(self) -> None:
+        """numpy NaN cannot be encoded as valid JSON -- map to None."""
+        import json
+
+        from roc.reporting.api_server import _convert_numpy
+
+        result = _convert_numpy(np.float64("nan"))
+        assert result is None
+        # Without the fix, json.dumps would emit "NaN" which is invalid JSON.
+        assert json.dumps(_convert_numpy({"x": np.float64("nan")})) == '{"x": null}'
+
+    def test_numpy_inf_becomes_none(self) -> None:
+        from roc.reporting.api_server import _convert_numpy
+
+        assert _convert_numpy(np.float64("inf")) is None
+        assert _convert_numpy(np.float64("-inf")) is None
+
+    def test_python_nan_becomes_none(self) -> None:
+        from roc.reporting.api_server import _convert_numpy
+
+        assert _convert_numpy(float("nan")) is None
+
+    def test_nested_NA_in_list(self) -> None:
+        """A list with NA elements (e.g. logs from DuckLake) must serialize."""
+        import json
+
+        import pandas as pd
+
+        from roc.reporting.api_server import _convert_numpy
+
+        data = {"rows": [{"col": pd.NA}, {"col": 5}]}
+        result = _convert_numpy(data)
+        # The whole tree must be JSON-serializable now.
+        out = json.loads(json.dumps(result))
+        assert out["rows"][0]["col"] is None
+        assert out["rows"][1]["col"] == 5
+
 
 class TestGetStepWithData:
     """Test GET /api/runs/{run}/step/{step} returning actual data."""
 
-    def test_returns_step_data(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_returns_step_data(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/step/3")
         assert resp.status_code == 200
         data = resp.json()
         assert data["step"] == 3
         assert data["game_number"] == 1
 
-    def test_returns_step_with_numpy_values(self, client: TestClient) -> None:
+    def test_returns_step_with_numpy_values(self, client: TestClient, tmp_path: Path) -> None:
         import roc.reporting.api_server as mod
+        from roc.reporting.ducklake_store import DuckLakeStore
 
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("numpy-run", buf)
-        buf.push(
-            StepData(
-                step=1,
-                game_number=1,
-                game_metrics={"score": np.int64(100), "ratio": np.float64(0.5)},
+        run_dir = tmp_path / "numpy-run"
+        store = DuckLakeStore(run_dir, read_only=False)
+        registry = mod._get_registry()
+        assert registry is not None
+        writer = RunWriter("numpy-run", registry, mod._step_cache, None, store)
+        try:
+            writer.push_step(
+                StepData(
+                    step=1,
+                    game_number=1,
+                    game_metrics={"score": np.int64(100), "ratio": np.float64(0.5)},
+                )
             )
-        )
-        resp = client.get("/api/runs/numpy-run/step/1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["game_metrics"]["score"] == 100
-        assert type(data["game_metrics"]["score"]) is int
+            resp = client.get("/api/runs/numpy-run/step/1")
+            assert resp.status_code == 200
+            data = resp.json()
+            assert data["game_metrics"]["score"] == 100
+            assert type(data["game_metrics"]["score"]) is int
+        finally:
+            writer.close()
+            store.close()
 
 
 class TestGetStepsBatch:
     """Test GET /api/runs/{run}/steps?steps=1,2,3 batch endpoint."""
 
-    def test_returns_batch_data(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_returns_batch_data(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/steps?steps=1,3,5")
         assert resp.status_code == 200
         data = resp.json()
@@ -597,47 +811,56 @@ class TestGetStepsBatch:
         assert data["1"]["step"] == 1
         assert data["5"]["game_number"] == 1
 
-    def test_missing_steps_are_skipped(self, client: TestClient, live_buffer: StepBuffer) -> None:
+    def test_missing_steps_fall_through_to_store(
+        self, client: TestClient, live_buffer: RunWriter
+    ) -> None:
+        """Missing steps fall through to the store and return empty StepData (game_number=0)."""
         resp = client.get("/api/runs/test-live-run/steps?steps=1,999")
         assert resp.status_code == 200
         data = resp.json()
         assert "1" in data
-        assert "999" not in data
+        assert "999" in data
+        assert data["1"]["game_number"] == 1
+        assert data["999"]["game_number"] == 0
 
-    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
+    def test_returns_503_when_no_registry(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        orig = mod._data_store
-        mod._data_store = None
+        orig_registry = mod._run_registry
+        orig_reader = mod._run_reader
+        mod._run_registry = None
+        mod._run_reader = None
         try:
             resp = client.get("/api/runs/test-run/steps?steps=1,2")
             assert resp.status_code == 503
         finally:
-            mod._data_store = orig
+            mod._run_registry = orig_registry
+            mod._run_reader = orig_reader
 
 
 class TestGetStepRangeWithData:
     """Test GET /api/runs/{run}/step-range returning actual data (not 404)."""
 
-    def test_returns_step_range_from_live(
-        self, client: TestClient, live_buffer: StepBuffer
-    ) -> None:
+    def test_returns_step_range_from_live(self, client: TestClient, live_buffer: RunWriter) -> None:
         resp = client.get("/api/runs/test-live-run/step-range")
         assert resp.status_code == 200
         data = resp.json()
         assert data["min"] == 1
         assert data["max"] == 15
 
-    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
+    def test_returns_503_when_no_registry(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        orig = mod._data_store
-        mod._data_store = None
+        orig_registry = mod._run_registry
+        orig_reader = mod._run_reader
+        mod._run_registry = None
+        mod._run_reader = None
         try:
             resp = client.get("/api/runs/test-run/step-range")
             assert resp.status_code == 503
         finally:
-            mod._data_store = orig
+            mod._run_registry = orig_registry
+            mod._run_reader = orig_reader
 
 
 class TestMetricsHistoryStandalone:
@@ -647,34 +870,39 @@ class TestMetricsHistoryStandalone:
         import roc.reporting.api_server as mod
 
         mock_data = [{"step": 1, "score": 10}, {"step": 2, "score": 20}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_metrics_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/metrics-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None, None)
+            mock_method.assert_called_once_with("test-run", "metrics", None, fields=None)
 
     def test_passes_game_and_fields(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_metrics_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = [{"step": 1, "score": 10}]
             resp = client.get("/api/runs/test-run/metrics-history?game=1&fields=score")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 1, ["score"])
+            mock_method.assert_called_once_with("test-run", "metrics", 1, fields=["score"])
 
-    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
+    def test_returns_503_when_no_registry(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        orig = mod._data_store
-        mod._data_store = None
+        orig_reader = mod._run_reader
+        orig_registry = mod._run_registry
+        mod._run_reader = None
+        mod._run_registry = None
         try:
             resp = client.get("/api/runs/test-run/metrics-history")
             assert resp.status_code == 503
         finally:
-            mod._data_store = orig
+            mod._run_reader = orig_reader
+            mod._run_registry = orig_registry
 
 
 class TestIntrinsicsHistoryStandalone:
@@ -684,23 +912,25 @@ class TestIntrinsicsHistoryStandalone:
         import roc.reporting.api_server as mod
 
         mock_data = [{"step": 1, "hp": 16}, {"step": 2, "hp": 14}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_intrinsics_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/intrinsics-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None)
+            mock_method.assert_called_once_with("test-run", "intrinsics", None)
 
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_intrinsics_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/intrinsics-history?game=2")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 2)
+            mock_method.assert_called_once_with("test-run", "intrinsics", 2)
 
 
 class TestActionHistoryStandalone:
@@ -710,23 +940,25 @@ class TestActionHistoryStandalone:
         import roc.reporting.api_server as mod
 
         mock_data = [{"step": 1, "action_id": 7, "action_name": "north"}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_action_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/action-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None)
+            mock_method.assert_called_once_with("test-run", "action", None)
 
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_action_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/action-history?game=1")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 1)
+            mock_method.assert_called_once_with("test-run", "action", 1)
 
 
 class TestResolutionHistoryStandalone:
@@ -736,34 +968,41 @@ class TestResolutionHistoryStandalone:
         import roc.reporting.api_server as mod
 
         mock_data = [{"step": 1, "outcome": "new_object"}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_resolution_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/resolution-history")
             assert resp.status_code == 200
             assert resp.json() == mock_data
-            mock_method.assert_called_once_with("test-run", None)
+            mock_method.assert_called_once_with("test-run", "resolution", None)
 
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_resolution_history") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_history") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/resolution-history?game=3")
             assert resp.status_code == 200
-            mock_method.assert_called_once_with("test-run", 3)
+            mock_method.assert_called_once_with("test-run", "resolution", 3)
 
 
 class TestAllObjectsStandalone:
-    """Test GET /api/runs/{run}/all-objects standalone."""
+    """Test GET /api/runs/{run}/all-objects standalone.
+
+    Phase 1 bug-fix migration (BUG-C1): the endpoint reads through
+    ``RunReader`` instead of ``DataStore``. The patches target the reader.
+    """
 
     def test_returns_objects_from_mock(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
         mock_data = [{"node_id": "1", "shape": "@", "match_count": 5}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_all_objects") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_all_objects") as mock_method:
             mock_method.return_value = mock_data
             resp = client.get("/api/runs/test-run/all-objects")
             assert resp.status_code == 200
@@ -773,12 +1012,87 @@ class TestAllObjectsStandalone:
     def test_passes_game_filter(self, client: TestClient) -> None:
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_all_objects") as mock_method:
+        reader = mod._get_reader()
+        assert reader is not None
+        with patch.object(reader, "get_all_objects") as mock_method:
             mock_method.return_value = []
             resp = client.get("/api/runs/test-run/all-objects?game=1")
             assert resp.status_code == 200
             mock_method.assert_called_once_with("test-run", 1)
+
+
+class TestGameManagerSingleton:
+    """Test the ``set_game_manager``/``get_game_manager`` interface.
+
+    The old code path had ``server_cli.py`` writing directly to
+    ``api_server._game_manager``, a module attribute hop that made
+    single-ownership of the GameManager unenforceable. All production
+    code now goes through ``set_game_manager``, which rejects a
+    silent overwrite with a different instance.
+    """
+
+    def test_set_and_get_roundtrip(self) -> None:
+        import roc.reporting.api_server as mod
+        from unittest.mock import MagicMock
+
+        orig = mod._game_manager
+        try:
+            mod.set_game_manager(None)
+            assert mod.get_game_manager() is None
+
+            mgr = MagicMock()
+            mod.set_game_manager(mgr)
+            assert mod.get_game_manager() is mgr
+        finally:
+            mod._game_manager = orig
+
+    def test_set_same_manager_twice_is_noop(self) -> None:
+        """Re-installing the same instance is allowed (idempotent)."""
+        import roc.reporting.api_server as mod
+        from unittest.mock import MagicMock
+
+        orig = mod._game_manager
+        try:
+            mod.set_game_manager(None)
+            mgr = MagicMock()
+            mod.set_game_manager(mgr)
+            mod.set_game_manager(mgr)  # must not raise
+            assert mod.get_game_manager() is mgr
+        finally:
+            mod._game_manager = orig
+
+    def test_silent_overwrite_with_different_instance_raises(self) -> None:
+        """Installing a second DIFFERENT GameManager is a programming error."""
+        import roc.reporting.api_server as mod
+        from unittest.mock import MagicMock
+
+        orig = mod._game_manager
+        try:
+            mod.set_game_manager(None)
+            mgr1 = MagicMock()
+            mgr2 = MagicMock()
+            mod.set_game_manager(mgr1)
+            with pytest.raises(RuntimeError, match="already installed"):
+                mod.set_game_manager(mgr2)
+        finally:
+            mod._game_manager = orig
+
+    def test_clearing_to_none_always_allowed(self) -> None:
+        """``set_game_manager(None)`` clears the slot and unblocks reinstall."""
+        import roc.reporting.api_server as mod
+        from unittest.mock import MagicMock
+
+        orig = mod._game_manager
+        try:
+            mod.set_game_manager(None)
+            mgr1 = MagicMock()
+            mod.set_game_manager(mgr1)
+            mod.set_game_manager(None)  # clear
+            mgr2 = MagicMock()
+            mod.set_game_manager(mgr2)  # must not raise
+            assert mod.get_game_manager() is mgr2
+        finally:
+            mod._game_manager = orig
 
 
 class TestGameStatus:
@@ -913,356 +1227,81 @@ class TestGameStop:
             mod._game_manager = orig
 
 
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
-class TestEmitGameStateChanged:
-    """Test _emit_game_state_changed function."""
-
-    def test_starts_live_session_on_running(self) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        orig_loop = mod._sio_loop
-        mod._sio_loop = None  # disable socket.io emission
-        try:
-            mod._emit_game_state_changed({"state": "running", "run_name": "emit-test-run"})
-            assert mod._data_store.live_run_name == "emit-test-run"
-            assert mod._data_store.live_buffer is not None
-        finally:
-            mod._data_store.clear_live_session()
-            mod._sio_loop = orig_loop
-
-    def test_stops_live_session_on_idle(self) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("emit-stop-run", buf)
-        orig_loop = mod._sio_loop
-        mod._sio_loop = None
-        try:
-            mod._emit_game_state_changed({"state": "idle"})
-            # Buffer is retained after idle for historical queries
-            assert mod._data_store.live_run_name == "emit-stop-run"
-            assert mod._data_store.live_buffer is buf
-        finally:
-            mod._sio_loop = orig_loop
-
-    def test_emits_socket_event_when_loop_running(self) -> None:
-        from unittest.mock import MagicMock
-
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        orig_loop = mod._sio_loop
-        mock_loop = MagicMock()
-        mock_loop.is_running.return_value = True
-        mock_loop.call_soon_threadsafe = MagicMock()
-        mod._sio_loop = mock_loop
-        try:
-            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
-                mod._emit_game_state_changed({"state": "idle"})
-                mock_run.assert_called_once()
-                # Close the unawaited coroutine to avoid RuntimeWarning
-                coro = mock_run.call_args[0][0]
-                coro.close()
-        finally:
-            mod._sio_loop = orig_loop
-
-
-class TestStartStopLiveSession:
-    """Test _start_live_session and _stop_live_session functions."""
-
-    def test_start_creates_buffer(self) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        mod._start_live_session("session-test-run")
-        try:
-            assert mod._data_store.live_run_name == "session-test-run"
-            assert mod._data_store.live_buffer is not None
-        finally:
-            mod._data_store.clear_live_session()
-
-    def test_stop_retains_session(self) -> None:
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        mod._start_live_session("session-stop-run")
-        mod._stop_live_session()
-        # Buffer is retained for historical queries
-        assert mod._data_store.live_run_name == "session-stop-run"
-        assert mod._data_store.live_buffer is not None
-
-    def test_start_does_nothing_when_no_data_store(self) -> None:
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
-        try:
-            mod._start_live_session("no-store-run")
-        finally:
-            mod._data_store = orig
-
-    def test_stop_does_nothing_when_no_data_store(self) -> None:
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
-        try:
-            mod._stop_live_session()
-        finally:
-            mod._data_store = orig
-
-
-class TestStartLiveSessionRegistersGlobalBuffer:
-    """Regression: _start_live_session must register the buffer globally.
-
-    Without global registration, the game thread's _push_dashboard_data()
-    cannot find the buffer via get_step_buffer() and silently drops all data.
-    """
-
-    def test_start_registers_global_buffer(self) -> None:
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import clear_step_buffer, get_step_buffer
-
-        assert mod._data_store is not None
-        # Ensure clean state
-        clear_step_buffer()
-        assert get_step_buffer() is None
-
-        try:
-            mod._start_live_session("global-buf-test")
-            buf = get_step_buffer()
-            assert buf is not None, "Buffer should be globally registered"
-            assert mod._data_store.live_buffer is buf
-        finally:
-            mod._data_store.clear_live_session()
-            clear_step_buffer()
-
-    def test_start_adds_socket_listener(self) -> None:
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import clear_step_buffer
-
-        assert mod._data_store is not None
-        try:
-            mod._start_live_session("listener-test")
-            buf = mod._data_store.live_buffer
-            assert buf is not None
-            assert len(buf._listeners) > 0, "Buffer should have a socket.io listener"
-        finally:
-            mod._data_store.clear_live_session()
-            clear_step_buffer()
-
-    def test_start_passes_ducklake_store_to_data_store(self) -> None:
-        """Regression: _start_live_session must pass the in-process
-        DuckLakeStore to DataStore.set_live_session.
-
-        Without this, DataStore._get_run_store() opens a second, read-only
-        DuckLakeStore on the same catalog directory as the game writer's
-        store -- the exact reader/writer contention that prompted the
-        migration to DuckLake in the first place (see roc/reporting/CLAUDE.md).
-        """
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import clear_step_buffer
-
-        assert mod._data_store is not None
-        mock_store = MagicMock(name="ducklake-store")
-        try:
-            with (
-                patch(
-                    "roc.reporting.observability.Observability.get_ducklake_store",
-                    return_value=mock_store,
-                ),
-                patch.object(mod._data_store, "set_live_session") as mock_set,
-            ):
-                mod._start_live_session("store-passthrough-test")
-            assert mock_set.call_count == 1
-            kwargs = mock_set.call_args.kwargs
-            assert kwargs.get("store") is mock_store
-            assert kwargs.get("run_name") == "store-passthrough-test"
-        finally:
-            mod._data_store.clear_live_session()
-            clear_step_buffer()
-
-
-class TestStopLiveSessionClearsGlobalBuffer:
-    """Regression: _stop_live_session must clear the global step buffer.
-
-    Without clearing, a stale buffer from the previous game remains globally
-    registered, causing the next game's data to go to the wrong buffer.
-    """
-
-    def test_stop_clears_global_buffer(self) -> None:
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import clear_step_buffer, get_step_buffer
-
-        assert mod._data_store is not None
-        clear_step_buffer()
-        try:
-            mod._start_live_session("stop-clear-test")
-            assert get_step_buffer() is not None
-            mod._stop_live_session()
-            assert get_step_buffer() is None, "Global buffer should be cleared on stop"
-        finally:
-            mod._data_store.clear_live_session()
-            clear_step_buffer()
-
-
-class TestEmitGameStateChangedIdempotency:
-    """Regression: _emit_game_state_changed must not create duplicate sessions.
-
-    When _set_run_name re-triggers the state change callback, the same
-    (state=running, run_name=X) notification fires twice. Without an
-    idempotency guard, two StepBuffers would be created and the first
-    (with the socket.io listener) would be orphaned.
-    """
-
-    def test_duplicate_running_notification_does_not_create_second_session(self) -> None:
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import clear_step_buffer
-
-        assert mod._data_store is not None
-        orig_loop = mod._sio_loop
-        mod._sio_loop = None
-        try:
-            # First notification creates the session
-            mod._emit_game_state_changed({"state": "running", "run_name": "idem-test"})
-            first_buf = mod._data_store.live_buffer
-            assert first_buf is not None
-
-            # Second notification with same run_name should NOT replace it
-            mod._emit_game_state_changed({"state": "running", "run_name": "idem-test"})
-            assert mod._data_store.live_buffer is first_buf, (
-                "Second notification should not create a new buffer"
-            )
-        finally:
-            mod._data_store.clear_live_session()
-            clear_step_buffer()
-            mod._sio_loop = orig_loop
-
-
-class TestLiveStatusInitializing:
-    """Test live_status when game_manager is initializing but no steps yet."""
-
-    def test_returns_active_when_manager_initializing(self, client: TestClient) -> None:
-        import roc.reporting.api_server as mod
-
-        from unittest.mock import MagicMock
-
-        assert mod._data_store is not None
-        # Set up a live session with an empty buffer
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("init-run", buf)
-        # Don't push any steps -- buffer is empty
-        mock_mgr = MagicMock()
-        mock_mgr.state = "initializing"
-        orig_mgr = mod._game_manager
-        try:
-            mod._game_manager = mock_mgr
-            resp = client.get("/api/live/status")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["active"] is True
-            assert data["run_name"] == "init-run"
-            assert data["step"] == 0
-            assert data["game_numbers"] == []
-        finally:
-            mod._game_manager = orig_mgr
-
-    def test_returns_active_when_manager_running_no_steps(self, client: TestClient) -> None:
-        import roc.reporting.api_server as mod
-
-        from unittest.mock import MagicMock
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("running-empty-run", buf)
-        mock_mgr = MagicMock()
-        mock_mgr.state = "running"
-        orig_mgr = mod._game_manager
-        try:
-            mod._game_manager = mock_mgr
-            resp = client.get("/api/live/status")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["active"] is True
-            assert data["run_name"] == "running-empty-run"
-        finally:
-            mod._game_manager = orig_mgr
-
-
 # ---------------------------------------------------------------------------
-# Tests for 503 responses when _data_store is None
+# Tests for 503 responses when _run_registry is None
 # ---------------------------------------------------------------------------
 
 
 class TestDataStoreNoneReturns503:
-    """Test that endpoints return 503 when _data_store is None."""
+    """Test that endpoints return 503 when _run_registry is None."""
 
     @pytest.fixture(autouse=True)
-    def _nullify_data_store(self) -> Generator[None, None, None]:
-        """Temporarily set _data_store to None for these tests."""
+    def _nullify_registry(self) -> Generator[None, None, None]:
+        """Temporarily set _run_registry and _run_reader to None for these tests."""
         import roc.reporting.api_server as mod
 
-        orig = mod._data_store
-        mod._data_store = None
+        orig_registry = mod._run_registry
+        orig_reader = mod._run_reader
+        mod._run_registry = None
+        mod._run_reader = None
         yield
-        mod._data_store = orig
+        mod._run_registry = orig_registry
+        mod._run_reader = orig_reader
 
     def test_list_runs_returns_empty(self, client: TestClient) -> None:
-        """list_runs returns empty list when _data_store is None."""
+        """list_runs returns empty list when _run_registry is None."""
         resp = client.get("/api/runs")
         assert resp.status_code == 200
         assert resp.json() == []
 
     def test_list_games_returns_503(self, client: TestClient) -> None:
-        """list_games returns 503 when _data_store is None."""
+        """list_games returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/games")
         assert resp.status_code == 503
 
     def test_get_step_returns_503(self, client: TestClient) -> None:
-        """get_step returns 503 when _data_store is None."""
+        """get_step returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/step/1")
         assert resp.status_code == 503
 
     def test_graph_history_returns_503(self, client: TestClient) -> None:
-        """get_graph_history returns 503 when _data_store is None."""
+        """get_graph_history returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/graph-history")
         assert resp.status_code == 503
 
     def test_event_history_returns_503(self, client: TestClient) -> None:
-        """get_event_history returns 503 when _data_store is None."""
+        """get_event_history returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/event-history")
         assert resp.status_code == 503
 
     def test_intrinsics_history_returns_503(self, client: TestClient) -> None:
-        """get_intrinsics_history returns 503 when _data_store is None."""
+        """get_intrinsics_history returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/intrinsics-history")
         assert resp.status_code == 503
 
     def test_action_history_returns_503(self, client: TestClient) -> None:
-        """get_action_history returns 503 when _data_store is None."""
+        """get_action_history returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/action-history")
         assert resp.status_code == 503
 
     def test_resolution_history_returns_503(self, client: TestClient) -> None:
-        """get_resolution_history returns 503 when _data_store is None."""
+        """get_resolution_history returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/resolution-history")
         assert resp.status_code == 503
 
     def test_all_objects_returns_503(self, client: TestClient) -> None:
-        """get_all_objects returns 503 when _data_store is None."""
+        """get_all_objects returns 503 when _run_registry is None."""
         resp = client.get("/api/runs/test-run/all-objects")
         assert resp.status_code == 503
 
     def test_save_bookmarks_returns_503(self, client: TestClient) -> None:
-        """save_bookmarks returns 503 when _data_store is None."""
+        """save_bookmarks returns 503 when _run_registry is None."""
         bookmarks = [{"step": 1, "game": 1, "annotation": "test", "created": "2026-01-01T00:00:00"}]
         resp = client.post("/api/runs/test-run/bookmarks", json=bookmarks)
         assert resp.status_code == 503
 
     def test_get_bookmarks_returns_empty(self, client: TestClient) -> None:
-        """get_bookmarks returns empty list when _data_store is None."""
+        """get_bookmarks returns empty list when _run_registry is None."""
         resp = client.get("/api/runs/test-run/bookmarks")
         assert resp.status_code == 200
         assert resp.json() == []
@@ -1274,42 +1313,45 @@ class TestDataStoreNoneReturns503:
 
 
 class TestGetSchema:
-    """Test GET /api/runs/{run}/schema endpoint."""
+    """Test GET /api/runs/{run}/schema endpoint.
 
-    def test_returns_schema_from_store(self, client: TestClient) -> None:
+    Phase 1 bug-fix migration (BUG-C1): the endpoint reads through
+    ``RunReader`` instead of ``DataStore``. The reader reads ``schema.json``
+    directly from the run directory; tests now seed real files instead of
+    mocking the store.
+    """
+
+    def test_returns_schema_from_store(self, client: TestClient, tmp_path: Path) -> None:
         """get_schema returns schema data from the store."""
-        import roc.reporting.api_server as mod
+        import json
 
         mock_schema = {"nodes": [{"label": "Object"}], "edges": [{"type": "HAS"}]}
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_schema") as mock_method:
-            mock_method.return_value = mock_schema
-            resp = client.get("/api/runs/test-run/schema")
-            assert resp.status_code == 200
-            assert resp.json() == mock_schema
-            mock_method.assert_called_once_with("test-run")
+        run_dir = tmp_path / "test-run"
+        run_dir.mkdir()
+        (run_dir / "schema.json").write_text(json.dumps(mock_schema))
+        resp = client.get("/api/runs/test-run/schema")
+        assert resp.status_code == 200
+        assert resp.json() == mock_schema
 
     def test_returns_404_when_schema_not_found(self, client: TestClient) -> None:
         """get_schema returns 404 when no schema exists for the run."""
+        resp = client.get("/api/runs/test-run/schema")
+        assert resp.status_code == 404
+
+    def test_returns_503_when_no_registry(self, client: TestClient) -> None:
+        """get_schema returns 503 when _run_registry is None."""
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_schema") as mock_method:
-            mock_method.return_value = None
-            resp = client.get("/api/runs/test-run/schema")
-            assert resp.status_code == 404
-
-    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
-        """get_schema returns 503 when _data_store is None."""
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
+        orig_registry = mod._run_registry
+        orig_reader = mod._run_reader
+        mod._run_registry = None
+        mod._run_reader = None
         try:
             resp = client.get("/api/runs/test-run/schema")
             assert resp.status_code == 503
         finally:
-            mod._data_store = orig
+            mod._run_registry = orig_registry
+            mod._run_reader = orig_reader
 
 
 # ---------------------------------------------------------------------------
@@ -1318,43 +1360,45 @@ class TestGetSchema:
 
 
 class TestGetActionMap:
-    """Test GET /api/runs/{run}/action-map endpoint."""
+    """Test GET /api/runs/{run}/action-map endpoint.
 
-    def test_returns_action_map_from_store(self, client: TestClient) -> None:
+    Phase 1 bug-fix migration (BUG-C1): the endpoint reads through
+    ``RunReader`` instead of ``DataStore``. The reader reads
+    ``action_map.json`` directly from the run directory.
+    """
+
+    def test_returns_action_map_from_store(self, client: TestClient, tmp_path: Path) -> None:
         """get_action_map returns action map data from the store."""
-        import roc.reporting.api_server as mod
+        import json
 
         mock_map = [{"id": 0, "name": "wait"}, {"id": 1, "name": "north"}]
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_action_map") as mock_method:
-            mock_method.return_value = mock_map
-            resp = client.get("/api/runs/test-run/action-map")
-            assert resp.status_code == 200
-            assert resp.json() == mock_map
-            mock_method.assert_called_once_with("test-run")
+        run_dir = tmp_path / "test-run"
+        run_dir.mkdir()
+        (run_dir / "action_map.json").write_text(json.dumps(mock_map))
+        resp = client.get("/api/runs/test-run/action-map")
+        assert resp.status_code == 200
+        assert resp.json() == mock_map
 
     def test_returns_empty_list_when_no_action_map(self, client: TestClient) -> None:
         """get_action_map returns empty list when action_map is None."""
+        resp = client.get("/api/runs/test-run/action-map")
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_returns_503_when_no_registry(self, client: TestClient) -> None:
+        """get_action_map returns 503 when _run_registry is None."""
         import roc.reporting.api_server as mod
 
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_action_map") as mock_method:
-            mock_method.return_value = None
-            resp = client.get("/api/runs/test-run/action-map")
-            assert resp.status_code == 200
-            assert resp.json() == []
-
-    def test_returns_503_when_no_data_store(self, client: TestClient) -> None:
-        """get_action_map returns 503 when _data_store is None."""
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
+        orig_registry = mod._run_registry
+        orig_reader = mod._run_reader
+        mod._run_registry = None
+        mod._run_reader = None
         try:
             resp = client.get("/api/runs/test-run/action-map")
             assert resp.status_code == 503
         finally:
-            mod._data_store = orig
+            mod._run_registry = orig_registry
+            mod._run_reader = orig_reader
 
 
 # ---------------------------------------------------------------------------
@@ -1369,9 +1413,6 @@ class TestBookmarkEdgeCases:
         self, client: TestClient, tmp_path: Path
     ) -> None:
         """get_bookmarks returns empty list when bookmarks file is malformed."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
         run_dir = tmp_path / "bad-run"
         run_dir.mkdir()
         bookmarks_file = run_dir / "bookmarks.json"
@@ -1384,146 +1425,6 @@ class TestBookmarkEdgeCases:
 # ---------------------------------------------------------------------------
 # get_steps_batch exception handling
 # ---------------------------------------------------------------------------
-
-
-class TestGetStepsBatchExceptionPath:
-    """Test get_steps_batch exception fallback."""
-
-    def test_returns_empty_on_data_store_exception(self, client: TestClient) -> None:
-        """get_steps_batch returns empty dict when data_store raises."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        with patch.object(mod._data_store, "get_steps_batch") as mock_method:
-            mock_method.side_effect = RuntimeError("DB error")
-            resp = client.get("/api/runs/test-run/steps?steps=1,2,3")
-            assert resp.status_code == 200
-            assert resp.json() == {}
-
-
-# ---------------------------------------------------------------------------
-# _notify_new_step function
-# ---------------------------------------------------------------------------
-
-
-class TestNotifyNewStep:
-    """Test _notify_new_step function."""
-
-    def test_emits_step_via_socket_when_loop_running(self) -> None:
-        """_notify_new_step emits socket event when loop is running."""
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        mock_loop = MagicMock()
-        mock_loop.is_running.return_value = True
-        mod._sio_loop = mock_loop
-        try:
-            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
-                step_data = StepData(step=1, game_number=1)
-                mod._notify_new_step(step_data)
-                mock_run.assert_called_once()
-                # Close the unawaited coroutine to avoid RuntimeWarning
-                coro = mock_run.call_args[0][0]
-                coro.close()
-        finally:
-            mod._sio_loop = orig_loop
-
-    def test_does_nothing_when_loop_is_none(self) -> None:
-        """_notify_new_step does nothing when _sio_loop is None."""
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        mod._sio_loop = None
-        try:
-            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
-                step_data = StepData(step=1, game_number=1)
-                mod._notify_new_step(step_data)
-                mock_run.assert_not_called()
-        finally:
-            mod._sio_loop = orig_loop
-
-    def test_does_nothing_when_loop_not_running(self) -> None:
-        """_notify_new_step does nothing when the event loop is not running."""
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        mock_loop = MagicMock()
-        mock_loop.is_running.return_value = False
-        mod._sio_loop = mock_loop
-        try:
-            with patch("asyncio.run_coroutine_threadsafe") as mock_run:
-                step_data = StepData(step=1, game_number=1)
-                mod._notify_new_step(step_data)
-                mock_run.assert_not_called()
-        finally:
-            mod._sio_loop = orig_loop
-
-    def test_swallows_exceptions(self) -> None:
-        """_notify_new_step swallows exceptions to avoid breaking the game loop."""
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        mock_loop = MagicMock()
-        mock_loop.is_running.return_value = True
-        mod._sio_loop = mock_loop
-        try:
-            with patch("asyncio.run_coroutine_threadsafe", side_effect=RuntimeError("boom")):
-                step_data = StepData(step=1, game_number=1)
-                # Should not raise
-                mod._notify_new_step(step_data)
-        finally:
-            mod._sio_loop = orig_loop
-
-
-# ---------------------------------------------------------------------------
-# _emit_game_state_changed edge cases
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# live_status with manager but no live_run_name
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
-class TestLiveStatusManagerNoRunName:
-    """Test live_status when manager is running but no live_run_name set."""
-
-    def test_returns_inactive_when_no_run_name(self, client: TestClient) -> None:
-        """live_status returns inactive when manager is running but no run name."""
-        import roc.reporting.api_server as mod
-
-        mock_mgr = MagicMock()
-        mock_mgr.state = "initializing"
-        orig_mgr = mod._game_manager
-        # Clear any live session so live_run_name is None
-        assert mod._data_store is not None
-        mod._data_store.clear_live_session()
-        mod._game_manager = mock_mgr
-        try:
-            resp = client.get("/api/live/status")
-            assert resp.status_code == 200
-            data = resp.json()
-            # No live_run_name means the fallback returns inactive
-            assert data["active"] is False
-        finally:
-            mod._game_manager = orig_mgr
-
-    def test_returns_inactive_when_manager_idle(self, client: TestClient) -> None:
-        """live_status returns inactive when manager state is idle."""
-        import roc.reporting.api_server as mod
-
-        mock_mgr = MagicMock()
-        mock_mgr.state = "idle"
-        orig_mgr = mod._game_manager
-        mod._game_manager = mock_mgr
-        try:
-            resp = client.get("/api/live/status")
-            assert resp.status_code == 200
-            data = resp.json()
-            assert data["active"] is False
-        finally:
-            mod._game_manager = orig_mgr
 
 
 # ---------------------------------------------------------------------------
@@ -1543,9 +1444,7 @@ class TestCaptureEventLoop:
 
         orig_loop = mod._sio_loop
         orig_ready = mod._server_ready
-        orig_summary_thread = mod._summary_thread
         mod._server_ready = __import__("threading").Event()
-        mod._summary_thread = None
         try:
             loop = asyncio.new_event_loop()
             loop.run_until_complete(mod._capture_event_loop())
@@ -1555,97 +1454,6 @@ class TestCaptureEventLoop:
         finally:
             mod._sio_loop = orig_loop
             mod._server_ready = orig_ready
-            mod._summary_thread = orig_summary_thread
-
-    @pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
-    def test_starts_summary_thread_when_data_store_present(self) -> None:
-        """_capture_event_loop starts a summary thread when _data_store exists."""
-        import asyncio
-        import threading
-
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        orig_ready = mod._server_ready
-        orig_summary_thread = mod._summary_thread
-        mod._server_ready = threading.Event()
-        mod._summary_thread = None
-        try:
-            assert mod._data_store is not None
-            with patch.object(mod._data_store, "populate_run_summaries"):
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(mod._capture_event_loop())
-                # _capture_event_loop sets _summary_thread via global assignment;
-                # use getattr to bypass mypy type narrowing from the None assignment above
-                thread = getattr(mod, "_summary_thread")
-                assert isinstance(thread, threading.Thread)
-                assert thread.daemon is True
-                # Wait for the thread to finish (it's mocked so it returns immediately)
-                thread.join(timeout=2)
-                loop.close()
-        finally:
-            mod._sio_loop = orig_loop
-            mod._server_ready = orig_ready
-            mod._summary_thread = orig_summary_thread
-
-    def test_does_not_restart_summary_thread(self) -> None:
-        """_capture_event_loop does not restart summary thread if already set."""
-        import asyncio
-
-        import roc.reporting.api_server as mod
-
-        orig_loop = mod._sio_loop
-        orig_ready = mod._server_ready
-        orig_summary_thread = mod._summary_thread
-        mod._server_ready = __import__("threading").Event()
-        existing_thread = MagicMock()
-        mod._summary_thread = existing_thread
-        try:
-            with patch.object(mod.sio, "emit", return_value=MagicMock()):
-                loop = asyncio.new_event_loop()
-                loop.run_until_complete(mod._capture_event_loop())
-                # Should not have been replaced
-                assert mod._summary_thread is existing_thread
-                loop.close()
-        finally:
-            mod._sio_loop = orig_loop
-            mod._server_ready = orig_ready
-            mod._summary_thread = orig_summary_thread
-
-
-# ---------------------------------------------------------------------------
-# stop_dashboard
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
-class TestStopDashboard:
-    """Test stop_dashboard function."""
-
-    def test_clears_buffer_and_session(self) -> None:
-        """stop_dashboard clears step buffer and pauses live session."""
-        import roc.reporting.api_server as mod
-
-        assert mod._data_store is not None
-        buf = StepBuffer(capacity=100)
-        mod._data_store.set_live_session("stop-test", buf)
-        with patch("roc.reporting.step_buffer.clear_step_buffer") as mock_clear:
-            mod.stop_dashboard()
-            mock_clear.assert_called_once()
-        # Buffer is retained (step_buffer itself is cleared separately above)
-        assert mod._data_store.live_run_name == "stop-test"
-
-    def test_handles_no_data_store(self) -> None:
-        """stop_dashboard does not crash when _data_store is None."""
-        import roc.reporting.api_server as mod
-
-        orig = mod._data_store
-        mod._data_store = None
-        try:
-            with patch("roc.reporting.step_buffer.clear_step_buffer"):
-                mod.stop_dashboard()
-        finally:
-            mod._data_store = orig
 
 
 # ---------------------------------------------------------------------------
@@ -1736,3 +1544,198 @@ class TestStartDashboard:
         finally:
             mod._started = orig_started
             mod._game_manager = orig_mgr
+
+
+# ---------------------------------------------------------------------------
+# Socket.io subscribe_run / unsubscribe_run (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+class TestSubscribeRunSocketHandlers:
+    """Phase 4: Socket.io is now an invalidation channel.
+
+    ``subscribe_run`` registers a per-sid callback on ``RunRegistry`` so
+    every step push fans out as a tiny ``{run, step}`` ``step_added``
+    payload to the originating client only. The handler must clean up
+    the prior subscription on rebind and on disconnect.
+    """
+
+    def _setup_run(self, tmp_path: Path, run_name: str = "sub-run") -> tuple[Any, Any]:
+        """Seed a registry entry by attaching a writer store."""
+        import roc.reporting.api_server as mod
+        from roc.reporting.ducklake_store import DuckLakeStore
+
+        run_dir = tmp_path / run_name
+        store = DuckLakeStore(run_dir, read_only=False)
+        registry = mod._get_registry()
+        assert registry is not None
+        registry.attach_writer_store(run_name, store)
+        return store, registry
+
+    def test_subscribe_run_registers_callback_with_registry(self, tmp_path: Path) -> None:
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        store, registry = self._setup_run(tmp_path)
+        try:
+            mod._sio_subscriptions.clear()
+            orig_loop = mod._sio_loop
+            mock_loop = MagicMock()
+            mock_loop.is_running.return_value = True
+            mod._sio_loop = mock_loop
+            try:
+                with patch("asyncio.run_coroutine_threadsafe") as mock_run:
+                    asyncio.new_event_loop().run_until_complete(
+                        mod.subscribe_run("sid-A", "sub-run")
+                    )
+                    # The subscription is recorded on the sid
+                    assert "sid-A" in mod._sio_subscriptions
+                    # Trigger a notification: should hop the loop and emit
+                    registry.notify_subscribers("sub-run", 42)
+                    mock_run.assert_called_once()
+                    # Close the unawaited coroutine to avoid RuntimeWarning
+                    coro = mock_run.call_args[0][0]
+                    coro.close()
+            finally:
+                mod._sio_loop = orig_loop
+                mod._sio_subscriptions.clear()
+        finally:
+            registry.detach_writer_store("sub-run")
+            store.close()
+
+    def test_subscribe_run_replaces_prior_subscription(self, tmp_path: Path) -> None:
+        """Subscribing the same sid to a new run drops the old subscription."""
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        store, registry = self._setup_run(tmp_path, run_name="sub-r1")
+        store2, _ = self._setup_run(tmp_path, run_name="sub-r2")
+        try:
+            mod._sio_subscriptions.clear()
+            mod._sio_loop = MagicMock(is_running=MagicMock(return_value=True))
+            try:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(mod.subscribe_run("sid-X", "sub-r1"))
+                first = mod._sio_subscriptions["sid-X"]
+                loop.run_until_complete(mod.subscribe_run("sid-X", "sub-r2"))
+                second = mod._sio_subscriptions["sid-X"]
+                assert second is not first
+            finally:
+                mod._sio_subscriptions.clear()
+        finally:
+            registry.detach_writer_store("sub-r1")
+            registry.detach_writer_store("sub-r2")
+            store.close()
+            store2.close()
+
+    def test_unsubscribe_run_removes_sid_subscription(self, tmp_path: Path) -> None:
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        store, registry = self._setup_run(tmp_path)
+        try:
+            mod._sio_subscriptions.clear()
+            mod._sio_loop = MagicMock(is_running=MagicMock(return_value=True))
+            try:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(mod.subscribe_run("sid-Y", "sub-run"))
+                assert "sid-Y" in mod._sio_subscriptions
+                loop.run_until_complete(mod.unsubscribe_run("sid-Y"))
+                assert "sid-Y" not in mod._sio_subscriptions
+            finally:
+                mod._sio_subscriptions.clear()
+        finally:
+            registry.detach_writer_store("sub-run")
+            store.close()
+
+    def test_unsubscribe_run_unknown_sid_is_noop(self) -> None:
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        mod._sio_subscriptions.clear()
+        loop = asyncio.new_event_loop()
+        loop.run_until_complete(mod.unsubscribe_run("never-subscribed"))
+        # No exception, no state change
+        assert mod._sio_subscriptions == {}
+
+    def test_disconnect_drops_subscription(self, tmp_path: Path) -> None:
+        """Disconnecting a client drops their per-sid run subscription."""
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        store, registry = self._setup_run(tmp_path)
+        try:
+            mod._sio_subscriptions.clear()
+            mod._sio_loop = MagicMock(is_running=MagicMock(return_value=True))
+            try:
+                loop = asyncio.new_event_loop()
+                loop.run_until_complete(mod.subscribe_run("sid-D", "sub-run"))
+                assert "sid-D" in mod._sio_subscriptions
+                loop.run_until_complete(mod.disconnect("sid-D"))
+                assert "sid-D" not in mod._sio_subscriptions
+            finally:
+                mod._sio_subscriptions.clear()
+        finally:
+            registry.detach_writer_store("sub-run")
+            store.close()
+
+    def test_subscribe_run_ignores_empty_run_name(self) -> None:
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        mod._sio_subscriptions.clear()
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(mod.subscribe_run("sid-E", ""))
+            assert "sid-E" not in mod._sio_subscriptions
+        finally:
+            mod._sio_subscriptions.clear()
+
+    def test_step_added_payload_is_minimal_run_step_only(self, tmp_path: Path) -> None:
+        """The new step_added event must contain only {run, step} -- no full StepData."""
+        import asyncio
+
+        import roc.reporting.api_server as mod
+
+        store, registry = self._setup_run(tmp_path)
+        try:
+            mod._sio_subscriptions.clear()
+            mod._sio_loop = MagicMock(is_running=MagicMock(return_value=True))
+            try:
+                with patch.object(mod.sio, "emit", return_value=MagicMock()) as mock_emit:
+
+                    def fake_run_coro(coro: Any, _loop: Any) -> Any:
+                        # Drive the coroutine far enough to capture the
+                        # ``sio.emit`` call argument, then close it cleanly.
+                        try:
+                            coro.send(None)
+                        except StopIteration:
+                            pass
+                        coro.close()
+                        return MagicMock()
+
+                    with patch("asyncio.run_coroutine_threadsafe", side_effect=fake_run_coro):
+                        loop = asyncio.new_event_loop()
+                        loop.run_until_complete(mod.subscribe_run("sid-P", "sub-run"))
+                        registry.notify_subscribers("sub-run", 9)
+                        # mock_emit should have been called with the minimal payload
+                        assert mock_emit.call_count >= 1
+                        args, kwargs = mock_emit.call_args
+                        assert args[0] == "step_added"
+                        payload = args[1]
+                        assert payload == {"run": "sub-run", "step": 9}
+                        # Targeted at the originating sid
+                        assert kwargs.get("to") == "sid-P"
+            finally:
+                mod._sio_loop = None
+                mod._sio_subscriptions.clear()
+        finally:
+            registry.detach_writer_store("sub-run")
+            store.close()

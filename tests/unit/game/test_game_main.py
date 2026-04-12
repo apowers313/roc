@@ -422,3 +422,169 @@ class TestGameMainCallsCleanup:
             _game_main(num_games=1, stop_event=threading.Event(), on_run_name=on_run_name)
 
             on_run_name.assert_called_once_with("test-instance-42")
+
+
+class TestGameMainRealGymCrashPropagation:
+    """Regression: when the REAL ``NethackGym.start`` raises, the exception
+    must propagate through ``_game_main`` so ``GameManager`` can capture it
+    as ``_error_message``.
+
+    Until 2026-04-09, ``NethackGym.start`` was decorated with the default
+    ``@logger.catch`` (no ``reraise=True``), which logs and SUPPRESSES the
+    exception. A real crash inside the pipeline (e.g., a broken Memgraph
+    connection raising ``mgclient.DatabaseError``) would be swallowed,
+    ``gym.start`` would return ``None``, ``_game_main`` would clean up and
+    return normally, and ``GameManager._run_game`` would set the state
+    back to ``idle`` with ``error=None`` -- indistinguishable from a
+    clean game completion.
+
+    The existing ``test_game_main_cleanup_runs_on_exception`` doesn't
+    catch this regression because it patches ``NethackGym`` with a
+    ``MagicMock``, bypassing the real decorator. This test class uses a
+    real ``Gym`` subclass whose ``send_obs`` raises the exception, so
+    ``@logger.catch`` is actually exercised.
+    """
+
+    @staticmethod
+    def _enter_game_main_patches(stack, crashing_gym_cls):
+        """Enter all patches needed to drive _game_main in isolation.
+
+        Uses contextlib.ExitStack to avoid Python's "too many statically
+        nested blocks" limit on ``with`` chains.
+        """
+        from roc.framework.config import Config
+        from roc.framework.event import EventBus
+        from roc.framework.expmod import ExpMod
+        from roc.reporting.state import State
+
+        stack.enter_context(patch("roc.game.gymnasium.NethackGym", crashing_gym_cls))
+        stack.enter_context(patch("roc.game.gymnasium.roc_logger"))
+        stack.enter_context(patch("roc.reporting.api_server.start_dashboard"))
+        stack.enter_context(patch("roc.reporting.api_server.stop_dashboard"))
+        stack.enter_context(patch.object(Config, "init"))
+        stack.enter_context(patch.object(Component, "init"))
+        stack.enter_context(patch.object(Component, "reset"))
+        stack.enter_context(patch.object(ExpMod, "init"))
+        stack.enter_context(patch.object(State, "init"))
+        stack.enter_context(patch.object(State, "reset_init"))
+        stack.enter_context(patch.object(EventBus, "clear_names"))
+        stack.enter_context(patch("roc.reporting.observability.Observability.init"))
+        stack.enter_context(patch("roc.reporting.observability.Observability.shutdown"))
+        stack.enter_context(patch("roc.reporting.observability.Observability.reset"))
+        stack.enter_context(patch("roc.game.gymnasium._dump_env_start"))
+        stack.enter_context(patch("roc.game.gymnasium._dump_env_record"))
+        stack.enter_context(patch("roc.game.gymnasium._dump_env_end"))
+        stack.enter_context(patch("roc.game.gymnasium._publish_action_map"))
+        stack.enter_context(patch("roc.game.gymnasium.breakpoints"))
+        stack.enter_context(patch("roc.game.gymnasium.State"))
+        stack.enter_context(patch("roc.game.gymnasium._export_graph_archive"))
+        stack.enter_context(patch("roc.game.gymnasium.GraphDB.flush"))
+        stack.enter_context(patch("roc.game.gymnasium.GraphDB.export"))
+
+    def test_real_gym_start_propagates_through_game_main(self):
+        """A Gym subclass that raises during the pipeline must propagate out."""
+        import contextlib
+
+        import numpy as np
+
+        from roc.framework.config import Config
+        from roc.game.gymnasium import Gym, _game_main
+
+        # Unique name so Component registration does not collide with
+        # sibling tests in the same process.
+        class CrashingGymPropagate(Gym):
+            name: str = "crash-gym-propagate"
+            type: str = "game"
+
+            def __init__(self) -> None:
+                obs = {
+                    "tty_chars": np.full((24, 80), ord(" "), dtype=np.uint8),
+                    "tty_colors": np.zeros((24, 80), dtype=np.int8),
+                    "tty_cursor": np.array([0, 0]),
+                    "blstats": np.zeros(27, dtype=np.int64),
+                }
+                self.env = MagicMock()
+                self.env.reset.return_value = (obs, {})
+                self.env.step.return_value = (obs, 0, True, False, {})
+
+            def send_obs(self, obs: object) -> None:
+                raise RuntimeError("pipeline crash: broken graphdb connection")
+
+            def config(self, env: object) -> None:
+                """No-op; required by abstract base class."""
+
+            def get_action(self) -> int:
+                return 0
+
+        with contextlib.ExitStack() as stack:
+            self._enter_game_main_patches(stack, CrashingGymPropagate)
+
+            settings = Config.get()
+            settings.num_games = 1
+
+            with pytest.raises(RuntimeError, match="pipeline crash"):
+                _game_main(
+                    num_games=1,
+                    stop_event=threading.Event(),
+                    on_run_name=MagicMock(),
+                )
+
+    def test_game_manager_captures_real_gym_crash(self, tmp_path: Path) -> None:
+        """End-to-end: GameManager must store the error from a real gym crash.
+
+        This is the direct regression for the 2026-04-09 "silent idle"
+        bug. Before the fix, ``GameManager._error_message`` was ``None``
+        after a crash because ``@logger.catch`` on ``Gym.start``
+        swallowed the exception. After the fix (reraise=True), the
+        error propagates to ``_run_game``'s ``except`` block and is
+        captured as ``_error_message``.
+        """
+        import contextlib
+
+        import numpy as np
+
+        from roc.framework.config import Config
+        from roc.game.game_manager import GameManager
+        from roc.game.gymnasium import Gym, _game_main
+
+        class CrashingGymE2E(Gym):
+            name: str = "crash-gym-e2e"
+            type: str = "game"
+
+            def __init__(self) -> None:
+                obs = {
+                    "tty_chars": np.full((24, 80), ord(" "), dtype=np.uint8),
+                    "tty_colors": np.zeros((24, 80), dtype=np.int8),
+                    "tty_cursor": np.array([0, 0]),
+                    "blstats": np.zeros(27, dtype=np.int64),
+                }
+                self.env = MagicMock()
+                self.env.reset.return_value = (obs, {})
+                self.env.step.return_value = (obs, 0, True, False, {})
+
+            def send_obs(self, obs: object) -> None:
+                raise RuntimeError("e2e crash marker")
+
+            def config(self, env: object) -> None:
+                """No-op; required by abstract base class."""
+
+            def get_action(self) -> int:
+                return 0
+
+        with contextlib.ExitStack() as stack:
+            self._enter_game_main_patches(stack, CrashingGymE2E)
+
+            settings = Config.get()
+            settings.num_games = 1
+
+            gm = GameManager(data_dir=tmp_path, game_entry=_game_main)
+            gm.start_game(num_games=1)
+            assert gm._game_thread is not None
+            gm._game_thread.join(timeout=5)
+
+            assert gm.state == "idle"
+            assert gm._error_message is not None, (
+                "Expected _error_message to be set after a crash, "
+                "but it was None -- the 'silent idle' regression is back"
+            )
+            assert "e2e crash marker" in gm._error_message

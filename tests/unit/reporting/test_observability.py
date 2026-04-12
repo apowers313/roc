@@ -932,9 +932,16 @@ class TestReset:
         assert resource_attrs["service.instance.id"] == obs_mod.instance_id
         assert obs_mod.roc_common_attributes["roc.instance.id"] == obs_mod.instance_id
 
-    def test_reset_clears_singleton_and_flags(self, full_state_reset):
-        """After reset(), the singleton is gone and per-game flags are cleared
-        so the next init() rebuilds providers from scratch.
+    def test_reset_preserves_singleton_and_clears_parquet_flags(self, full_state_reset):
+        """After reset(), the singleton is preserved but per-game flags are
+        cleared so the next ``init`` calls ``_init_parquet`` to attach a
+        fresh exporter to the shared provider.
+
+        The singleton intentionally survives because OTel's
+        ``set_logger_provider`` is ``Once``-protected: any replacement
+        provider installed after ``reset`` would be silently ignored,
+        leaving the second game's records flowing into the shut-down
+        first-game provider.
         """
         from roc.reporting.observability import Observability, ObservabilityBase
 
@@ -949,31 +956,57 @@ class TestReset:
 
         Observability.reset()
 
-        assert Observability not in ObservabilityBase._instances
+        # Singleton is preserved across reset()
+        assert Observability in ObservabilityBase._instances
+        # Parquet flags are cleared so next init() rebuilds the exporter
         assert Observability._parquet_configured is False
-        assert Observability._remote_log_configured is False
         assert Observability._allow_parquet is False
+        # Remote-log flag stays set because the exporter is server-wide
+        assert Observability._remote_log_configured is True
 
     def test_reset_closes_parquet_exporter_and_store(self, full_state_reset):
         """reset() must shut down the parquet exporter and close the
         DuckLakeStore so the next game opens a fresh connection.
+
+        Uses a real ``Observability`` instance via ``object.__new__``
+        (bypassing the heavy ``__init__`` side effects) so that
+        attribute-deletion semantics are real -- ``MagicMock.hasattr``
+        always returns True, which would mask the ``del instance._x``
+        cleanup that ``reset()`` performs.
         """
         from roc.reporting.observability import Observability, ObservabilityBase
 
-        mock_instance = MagicMock()
-        mock_instance._parquet_exporter = MagicMock()
-        mock_instance._ducklake_store = MagicMock()
-        ObservabilityBase._instances[Observability] = mock_instance
+        mock_exporter = MagicMock()
+        mock_store = MagicMock()
+        mock_processor = MagicMock()
+
+        instance = object.__new__(Observability)
+        instance._parquet_exporter = mock_exporter
+        instance._ducklake_store = mock_store
+        instance._parquet_processor = mock_processor
+        ObservabilityBase._instances[Observability] = instance
 
         Observability.reset()
 
-        mock_instance._parquet_exporter.shutdown.assert_called_once()
-        mock_instance._ducklake_store.close.assert_called_once()
+        mock_exporter.shutdown.assert_called_once()
+        mock_store.close.assert_called_once()
+        mock_processor.shutdown.assert_called_once()
+        # Attributes are deleted after cleanup so the next _init_parquet
+        # starts from a clean slate. We rely on a real object here
+        # because MagicMock.hasattr always returns True.
+        assert not hasattr(instance, "_parquet_exporter")
+        assert not hasattr(instance, "_ducklake_store")
+        assert not hasattr(instance, "_parquet_processor")
 
-    def test_reset_shuts_down_logger_provider(self, full_state_reset):
-        """reset() must shut down the active logger provider so its
-        batch processors stop forwarding records into the (now closed)
-        downstream exporters.
+    def test_reset_does_not_shut_down_logger_provider(self, full_state_reset):
+        """reset() must NOT shut down the active logger provider.
+
+        OTel's ``set_logger_provider`` is ``Once``-protected. Shutting down
+        the provider and trying to install a replacement would leave the
+        process with a dead provider because the second call to
+        ``set_logger_provider`` is silently ignored. Instead, reset()
+        leaves the provider running and only detaches the per-game
+        parquet processor.
         """
         from roc.reporting.observability import Observability
 
@@ -981,23 +1014,74 @@ class TestReset:
         with patch("roc.reporting.observability.otel_logs") as mock_logs:
             mock_logs.get_logger_provider.return_value = mock_provider
             Observability.reset()
-            mock_provider.shutdown.assert_called_once()
+            mock_provider.shutdown.assert_not_called()
+
+    def test_reset_removes_parquet_processor_from_provider(self, full_state_reset):
+        """reset() removes the per-game parquet processor from the shared
+        provider so the next game can attach a fresh one without
+        accumulating dead processors.
+
+        Uses a real ``LoggerProvider`` (from the OTel SDK) with real
+        processors so the removal path exercises the actual
+        ``_multi_log_record_processor._log_record_processors`` tuple
+        manipulation, not a mocked stand-in that could pass even if the
+        real internal structure changed.
+        """
+        from opentelemetry.sdk._logs import LoggerProvider
+        from opentelemetry.sdk._logs.export import (
+            ConsoleLogExporter,
+            SimpleLogRecordProcessor,
+        )
+
+        from roc.reporting.observability import Observability, ObservabilityBase
+
+        # Real LoggerProvider with two real processors: one "server-wide"
+        # (to preserve) and one "per-game parquet" (to remove).
+        logger_provider = LoggerProvider()
+        other_processor = SimpleLogRecordProcessor(ConsoleLogExporter())
+        parquet_processor = SimpleLogRecordProcessor(ConsoleLogExporter())
+        logger_provider.add_log_record_processor(other_processor)
+        logger_provider.add_log_record_processor(parquet_processor)
+        # Sanity check: both processors are attached before reset.
+        assert other_processor in logger_provider._multi_log_record_processor._log_record_processors
+        assert (
+            parquet_processor in logger_provider._multi_log_record_processor._log_record_processors
+        )
+
+        instance = object.__new__(Observability)
+        instance._parquet_exporter = MagicMock()
+        instance._ducklake_store = MagicMock()
+        instance._parquet_processor = parquet_processor
+        ObservabilityBase._instances[Observability] = instance
+
+        with patch("roc.reporting.observability.otel_logs") as mock_logs:
+            mock_logs.get_logger_provider.return_value = logger_provider
+            Observability.reset()
+
+        # The parquet processor is gone; the unrelated processor stays.
+        remaining = logger_provider._multi_log_record_processor._log_record_processors
+        assert parquet_processor not in remaining
+        assert other_processor in remaining
 
     def test_reset_swallows_exporter_shutdown_errors(self, full_state_reset):
         """A broken exporter must not prevent reset() from completing."""
         from roc.reporting.observability import Observability, ObservabilityBase
 
-        mock_instance = MagicMock()
-        mock_instance._parquet_exporter = MagicMock()
-        mock_instance._parquet_exporter.shutdown.side_effect = RuntimeError("boom")
-        mock_instance._ducklake_store = MagicMock()
-        mock_instance._ducklake_store.close.side_effect = RuntimeError("boom2")
-        ObservabilityBase._instances[Observability] = mock_instance
+        instance = object.__new__(Observability)
+        instance._parquet_exporter = MagicMock()
+        instance._parquet_exporter.shutdown.side_effect = RuntimeError("boom")
+        instance._ducklake_store = MagicMock()
+        instance._ducklake_store.close.side_effect = RuntimeError("boom2")
+        instance._parquet_processor = MagicMock()
+        instance._parquet_processor.shutdown.side_effect = RuntimeError("boom3")
+        ObservabilityBase._instances[Observability] = instance
 
         # Must not raise
         Observability.reset()
-        # Singleton still cleared despite errors
-        assert Observability not in ObservabilityBase._instances
+        # Singleton survives despite errors; flags are cleared
+        assert Observability in ObservabilityBase._instances
+        assert Observability._parquet_configured is False
+        assert Observability._allow_parquet is False
 
     def test_reset_handles_missing_instance(self, full_state_reset):
         """reset() with no singleton present is a valid no-op path."""
@@ -1006,6 +1090,133 @@ class TestReset:
         ObservabilityBase._instances.clear()
         # Must not raise
         Observability.reset()
+
+    def test_sequential_games_attach_fresh_parquet_to_shared_provider(
+        self, full_state_reset, tmp_path
+    ):
+        """Regression for the UAT sequential-game failure.
+
+        The original bug: after the first game's ``reset()``, the second
+        game's ``Observability.init(enable_parquet=True)`` created a new
+        ``LoggerProvider`` and tried to install it via
+        ``otel_logs.set_logger_provider``. OTel's ``Once`` guard silently
+        ignored the replacement, so the second game's parquet exporter
+        was wired to a provider that ``get_logger_provider`` never
+        returns. Every log record kept flowing into the shut-down
+        first-game provider and the second game's DuckLake catalog
+        stayed empty -- the "0g, N steps" inconsistency the UAT report
+        flagged as Critical/D-01.
+
+        The fix: keep the singleton and shared provider alive across
+        games; only recycle the per-game parquet store + exporter +
+        processor via ``reset`` / ``_init_parquet``. This test walks
+        that sequence using REAL OTel ``LoggerProvider``, REAL
+        ``DuckLakeStore``, and REAL ``ParquetExporter`` instances --
+        only ``settings.data_dir`` is redirected to ``tmp_path`` so the
+        test does not touch the real data directory. Every assertion
+        fires against real object state. A mock-based version would
+        pass even if the LoggerProvider internals changed underneath us;
+        this one fails loudly if they do.
+        """
+        import roc.reporting.observability as obs_mod
+        from opentelemetry.sdk._logs import LoggerProvider
+        from opentelemetry.sdk._logs.export import (
+            ConsoleLogExporter,
+            SimpleLogRecordProcessor,
+        )
+
+        from roc.framework.config import Config
+        from roc.reporting.ducklake_store import DuckLakeStore
+        from roc.reporting.observability import Observability, ObservabilityBase
+        from roc.reporting.parquet_exporter import ParquetExporter
+
+        # Redirect data_dir to tmp_path so we do not pollute the real
+        # run directory while using real DuckLakeStore instances.
+        settings = Config.get()
+        original_data_dir = settings.data_dir
+        settings.data_dir = str(tmp_path)
+
+        # Real shared LoggerProvider with a "server-wide" processor
+        # that must survive both game resets (modeling the OTLP batch
+        # processor in production).
+        logger_provider = LoggerProvider(shutdown_on_exit=False)
+        server_wide = SimpleLogRecordProcessor(ConsoleLogExporter())
+        logger_provider.add_log_record_processor(server_wide)
+
+        instance = object.__new__(Observability)
+        ObservabilityBase._instances[Observability] = instance
+
+        try:
+            with patch("roc.reporting.observability.otel_logs") as mock_logs:
+                mock_logs.get_logger_provider.return_value = logger_provider
+
+                # --- Game 1: real DuckLakeStore, real ParquetExporter,
+                # real SimpleLogRecordProcessor attached to the shared
+                # provider via _init_parquet.
+                Observability._allow_parquet = True
+                game1_instance_id = obs_mod.instance_id
+                Observability._init_parquet()
+                game1_store = instance._ducklake_store
+                game1_exporter = instance._parquet_exporter
+                game1_processor = instance._parquet_processor
+
+                assert isinstance(game1_store, DuckLakeStore)
+                assert isinstance(game1_exporter, ParquetExporter)
+                attached = logger_provider._multi_log_record_processor._log_record_processors
+                assert game1_processor in attached
+                assert server_wide in attached
+                assert str(tmp_path) in str(game1_store.run_dir)
+                assert game1_instance_id in str(game1_store.run_dir)
+
+                # --- End of game 1.
+                Observability.reset()
+
+                # Singleton survived reset -- critical for the fix.
+                assert Observability in ObservabilityBase._instances
+                attached = logger_provider._multi_log_record_processor._log_record_processors
+                # Game 1's per-game processor is gone.
+                assert game1_processor not in attached
+                # Server-wide processor is preserved.
+                assert server_wide in attached
+                # Per-game attributes were deleted from the instance.
+                assert not hasattr(instance, "_ducklake_store")
+                assert not hasattr(instance, "_parquet_exporter")
+                assert not hasattr(instance, "_parquet_processor")
+                # Parquet flags cleared so the next init recreates them.
+                assert Observability._parquet_configured is False
+                assert Observability._allow_parquet is False
+                # A new run identity was generated for game 2.
+                assert obs_mod.instance_id != game1_instance_id
+
+                # --- Game 2: real _init_parquet against the same
+                # shared provider. The new processor must land on the
+                # same provider that log emitters see -- this is the
+                # load-bearing check. If the fix regressed, the new
+                # processor would land on a throw-away provider.
+                Observability._allow_parquet = True
+                Observability._init_parquet()
+                game2_store = instance._ducklake_store
+                game2_exporter = instance._parquet_exporter
+                game2_processor = instance._parquet_processor
+
+                assert isinstance(game2_store, DuckLakeStore)
+                assert isinstance(game2_exporter, ParquetExporter)
+                assert game2_store is not game1_store
+                assert game2_exporter is not game1_exporter
+                assert game2_processor is not game1_processor
+                attached = logger_provider._multi_log_record_processor._log_record_processors
+                assert game2_processor in attached
+                assert server_wide in attached
+                # Game 2's run directory uses the new instance_id.
+                assert obs_mod.instance_id in str(game2_store.run_dir)
+                assert game1_instance_id not in str(game2_store.run_dir)
+                assert game2_store.run_dir != game1_store.run_dir
+
+                # Clean up game 2 so the fixture does not leak an open
+                # DuckLake connection.
+                Observability.reset()
+        finally:
+            settings.data_dir = original_data_dir
 
 
 class TestConfigureDebugExporters:

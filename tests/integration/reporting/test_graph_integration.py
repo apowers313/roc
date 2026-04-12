@@ -11,14 +11,13 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import Any, Generator
+from typing import Generator
 
 import networkx as nx
 import pytest
 from fastapi.testclient import TestClient
 
 from roc.reporting.api_server import app
-from roc.reporting.data_store import DataStore
 from roc.reporting.graph_service import GraphService
 
 
@@ -114,13 +113,16 @@ def client() -> TestClient:
 
 @pytest.fixture(autouse=True)
 def _setup_data_store(tmp_path: Path) -> Generator[None, None, None]:
-    """Point the API at a DataStore backed by a temp directory."""
+    """Point the API at a RunRegistry backed by a temp directory."""
     import roc.reporting.api_server as mod
 
-    orig = mod._data_store
-    mod._data_store = DataStore(tmp_path)
+    orig_registry = mod._run_registry
+    orig_reader = mod._run_reader
+    mod.init_data_dir(tmp_path)
+    mod._run_reader = None
     yield
-    mod._data_store = orig
+    mod._run_registry = orig_registry
+    mod._run_reader = orig_reader
 
 
 class TestGraphApiServesArchivedData:
@@ -160,43 +162,6 @@ class TestGraphApiServesArchivedData:
         """API returns 404 when graph.json does not exist."""
         resp = client.get("/api/runs/nonexistent/graph/frame/1")
         assert resp.status_code == 404
-
-
-class TestGraphApiLiveSnapshotRouting:
-    """Verify that API routes to live cache for active game runs."""
-
-    def _build_live_graph(self) -> dict[str, Any]:
-        """Build live graph nodes in GraphCache."""
-        from roc.db.graphdb import Edge, Node
-
-        frame = Node(labels={"Frame"}, tick=1)
-        action = Node(labels={"TakeAction"}, action_id=19)
-
-        e = Edge(type="FrameAttribute", src_id=frame.id, dst_id=action.id)
-        e._no_save = True
-        frame._src_edges.add(e)
-        action._dst_edges.add(e)
-
-        return {"frame": frame, "action": action}
-
-    def test_live_frame_graph(self, client: TestClient, tmp_path: Path):
-        """Push StepData with graph_snapshot, verify API returns live data."""
-        import roc.reporting.api_server as mod
-        from roc.reporting.step_buffer import StepBuffer
-
-        ds = DataStore(tmp_path)
-        buf = StepBuffer(capacity=100)
-        ds.set_live_session("live-run", buf)
-        mod._data_store = ds
-
-        g = self._build_live_graph()
-
-        resp = client.get("/api/runs/live-run/graph/frame/1?depth=1")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["meta"]["node_count"] >= 2
-
-        ds.clear_live_session()
 
 
 class TestLargeGraphSubgraphExtraction:

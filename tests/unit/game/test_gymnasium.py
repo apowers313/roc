@@ -965,7 +965,15 @@ class TestGraphArchiveOnStop:
 # dashboard_cli helpers
 # ========================================================================
 class TestDashboardCliMountStaticFiles:
-    """Tests for dashboard_cli._mount_static_files."""
+    """Tests for dashboard_cli._mount_static_files.
+
+    The real file lives at ``roc/cli/dashboard_cli.py`` (two levels below
+    the repo root), so the mount helper computes
+    ``Path(__file__).parent.parent.parent / "dashboard-ui" / "dist"``.
+    The fixtures below mirror that layout by pointing ``dcli.__file__``
+    at ``tmp_path / "roc" / "cli" / "dashboard_cli.py"`` so the
+    ``.parent.parent.parent`` walk lands on ``tmp_path``.
+    """
 
     def test_no_dist_dir(self, tmp_path):
         """When dist dir does not exist, mount is not called."""
@@ -975,8 +983,11 @@ class TestDashboardCliMountStaticFiles:
         mock_app = MagicMock()
         orig_file = dcli.__file__
         try:
-            # Point __file__ to a location where dashboard-ui/dist won't exist
-            dcli.__file__ = str(tmp_path / "roc" / "dashboard_cli.py")
+            # Point __file__ to the real layout (roc/cli/dashboard_cli.py)
+            # so the relative dist path resolves under tmp_path. The test
+            # does not create dashboard-ui/dist, so the mount must be a
+            # no-op.
+            dcli.__file__ = str(tmp_path / "roc" / "cli" / "dashboard_cli.py")
             _mount_static_files(mock_app)
             mock_app.mount.assert_not_called()
         finally:
@@ -990,7 +1001,7 @@ class TestDashboardCliMountStaticFiles:
         mock_app = MagicMock()
         orig_file = dcli.__file__
         try:
-            dcli.__file__ = str(tmp_path / "roc" / "dashboard_cli.py")
+            dcli.__file__ = str(tmp_path / "roc" / "cli" / "dashboard_cli.py")
             (tmp_path / "dashboard-ui" / "dist").mkdir(parents=True)
             _mount_static_files(mock_app)
             mock_app.mount.assert_called_once()
@@ -1278,3 +1289,117 @@ class TestCleanupCliCountParquetFiles:
         (nested / "deep.parquet").touch()
 
         assert _count_parquet_files(run_dir) == 1
+
+
+class TestGymStartExceptionPropagation:
+    """Regression: ``NethackGym.start`` must propagate exceptions.
+
+    Background (2026-04-09): the game subprocess silently transitioned
+    back to ``idle`` after starting, with no error message, because
+    ``@logger.catch`` (the default loguru decorator) catches and
+    suppresses ALL exceptions by default. When the pipeline's graphdb
+    call raised ``mgclient.DatabaseError``, the exception was logged
+    but never propagated, so ``GameManager._run_game`` saw a "clean"
+    return and set the state to idle with ``error=None``. The symptom
+    was a game that appeared to run to completion in 0 steps. The fix
+    is ``@logger.catch(reraise=True)`` so the decorator still logs the
+    exception for observability but propagates it so ``GameManager``
+    can capture it as ``_error_message`` and the dashboard can surface
+    a real error.
+
+    These tests verify that:
+
+    1. An exception raised inside the ``start()`` body propagates out.
+    2. Specifically, a ``RuntimeError`` (the same class the game throws
+       for mgclient errors when they bubble up) reaches the caller.
+    3. The ``finally`` block still runs (cleanup is not skipped).
+    """
+
+    def _make_failing_gym(self, mocker, exc: Exception, name: str):
+        """Create a Gym subclass whose first send_obs raises ``exc``.
+
+        ``name`` must be unique per test case because Component registration
+        is a module-level dict that keeps entries across the pytest run.
+        """
+        from roc.game.gymnasium import Gym
+
+        # Define the subclass with a unique name so two instantiations
+        # do not collide with the component_registry.
+        failing_gym_cls: Any = type(
+            f"FailingGym_{name}",
+            (Gym,),
+            {
+                "name": name,
+                "type": "game",
+                "send_obs": lambda self, obs: (_ for _ in ()).throw(exc),
+                "config": lambda self, env: None,
+                "get_action": lambda self: 0,
+            },
+        )
+
+        gym_instance = failing_gym_cls.__new__(failing_gym_cls)
+        obs = _make_fake_obs()
+        gym_instance.env = MagicMock()
+        gym_instance.env.reset.return_value = (obs, {})
+        gym_instance.env.step.return_value = (obs, 0, True, False, {})
+
+        # Patch helpers so we don't need a real dump/log pipeline.
+        mocker.patch("roc.game.gymnasium._dump_env_start")
+        mocker.patch("roc.game.gymnasium._dump_env_record")
+        mocker.patch("roc.game.gymnasium._dump_env_end")
+        mocker.patch("roc.game.gymnasium._publish_action_map")
+        mocker.patch("roc.game.gymnasium.breakpoints")
+        mocker.patch("roc.game.gymnasium.State")
+        mocker.patch("roc.game.gymnasium._export_graph_archive")
+        mocker.patch("roc.game.gymnasium.GraphDB.flush")
+        mocker.patch("roc.game.gymnasium.GraphDB.export")
+        # Don't actually stop the dashboard (it's a no-op in tests, but
+        # importing pulls in heavy dependencies).
+        mocker.patch("roc.reporting.api_server.stop_dashboard")
+        mocker.patch("roc.reporting.observability.Observability.shutdown")
+
+        settings = Config.get()
+        settings.num_games = 1
+        return gym_instance
+
+    def test_runtime_error_in_pipeline_propagates(self, mocker):
+        """A RuntimeError raised inside the pipeline must propagate out of start()."""
+        gym_instance = self._make_failing_gym(
+            mocker, RuntimeError("pipeline boom"), name="fail-gym-rt"
+        )
+        with pytest.raises(RuntimeError, match="pipeline boom"):
+            gym_instance.start()
+
+    def test_db_error_propagates(self, mocker):
+        """The real-world mgclient.DatabaseError must propagate.
+
+        We use a generic Exception subclass here so we don't depend on
+        mgclient being importable in the test environment; the class
+        parity is that anything inheriting from Exception must make it
+        through ``@logger.catch(reraise=True)``.
+        """
+
+        class FakeDatabaseError(Exception):
+            pass
+
+        gym_instance = self._make_failing_gym(
+            mocker,
+            FakeDatabaseError("failed to send chunk data"),
+            name="fail-gym-db",
+        )
+        with pytest.raises(FakeDatabaseError, match="failed to send chunk data"):
+            gym_instance.start()
+
+    def test_cleanup_still_runs_on_error(self, mocker):
+        """The finally block runs even when start() raises."""
+        gym_instance = self._make_failing_gym(
+            mocker, RuntimeError("pipeline boom"), name="fail-gym-cleanup"
+        )
+        mock_stop_dash = mocker.patch("roc.reporting.api_server.stop_dashboard")
+        mock_shutdown = mocker.patch("roc.reporting.observability.Observability.shutdown")
+        mock_dump_end = mocker.patch("roc.game.gymnasium._dump_env_end")
+        with pytest.raises(RuntimeError):
+            gym_instance.start()
+        mock_stop_dash.assert_called_once()
+        mock_shutdown.assert_called_once()
+        mock_dump_end.assert_called_once()

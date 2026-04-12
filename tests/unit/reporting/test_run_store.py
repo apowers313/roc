@@ -31,14 +31,17 @@ def _default_clock_tick() -> Generator[None, None, None]:
     Clock.reset()
 
 
-@pytest.fixture()
-def populated_store(tmp_path: Path) -> DuckLakeStore:
+@pytest.fixture(scope="module")
+def populated_store(tmp_path_factory: pytest.TempPathFactory) -> DuckLakeStore:
     """Create a DuckLakeStore with known test data using ParquetExporter.
 
     Records carry an explicit ``tick`` attribute (the same way
     ``_emit_state_record`` stamps them in production), so that
     ``ParquetExporter`` writes deterministic step numbers into DuckLake.
+
+    Module-scoped: all consumers are read-only (verified 2026-04-09).
     """
+    tmp_path = tmp_path_factory.mktemp("populated")
     store = DuckLakeStore(tmp_path)
     exporter = ParquetExporter(store=store, background=False)
 
@@ -782,13 +785,16 @@ _STEP_TIME_LIMIT = 0.100  # 100ms per step -- dashboard needs <100ms for smooth 
 _BATCH_TIME_LIMIT = 0.500  # 500ms for a 10-step batch
 
 
-@pytest.fixture()
-def large_populated_store(tmp_path: Path) -> DuckLakeStore:
+@pytest.fixture(scope="module")
+def large_populated_store(tmp_path_factory: pytest.TempPathFactory) -> DuckLakeStore:
     """Create a DuckLakeStore with 500 steps and checkpoints.
 
     This produces realistic parquet file counts (checkpoints every 50 steps)
     to catch performance regressions that only appear with many small files.
+
+    Module-scoped: all 3 consumers are read-only (verified 2026-04-09).
     """
+    tmp_path = tmp_path_factory.mktemp("large_populated")
     store = DuckLakeStore(tmp_path)
     exporter = ParquetExporter(store=store, background=False, checkpoint_interval=50)
 
@@ -923,34 +929,6 @@ class TestPerformanceRealistic:
         # Batch should be at least 2x faster than sequential
         assert batch_elapsed < seq_elapsed * 0.75, (
             f"Batch ({batch_elapsed:.3f}s) not faster than sequential ({seq_elapsed:.3f}s)"
-        )
-
-
-class TestPerformanceLive:
-    """Performance: live StepBuffer access must be < 100ms."""
-
-    def test_step_buffer_get_step_under_limit(self):
-        from roc.reporting.step_buffer import StepBuffer
-
-        buf = StepBuffer(capacity=10_000)
-        for i in range(1, 1001):
-            buf.push(StepData(step=i, game_number=1))
-
-        # Warm up
-        buf.get_step(500)
-
-        times = []
-        for step in range(100, 1000, 100):
-            t0 = time.perf_counter()
-            sd = buf.get_step(step)
-            elapsed = time.perf_counter() - t0
-            times.append(elapsed)
-            assert sd is not None
-            assert sd.step == step
-
-        worst = max(times)
-        assert worst < _STEP_TIME_LIMIT, (
-            f"StepBuffer worst step time {worst:.3f}s exceeds {_STEP_TIME_LIMIT}s"
         )
 
 

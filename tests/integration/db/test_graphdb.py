@@ -123,6 +123,234 @@ class TestGraphDB:
         assert len(node_ids) == G.number_of_nodes()
 
 
+class TestGraphDBReconnect:
+    """End-to-end reconnect behavior against a live Memgraph.
+
+    Regression coverage for the UAT failure where the unified server's
+    long-lived mgclient connection entered a half-closed state and the
+    game thread's first Cypher query raised
+    ``mgclient.DatabaseError("failed to send chunk data")``. The old
+    reconnect logic only caught ``mgclient.InterfaceError("bad session")``
+    so that exception propagated out of the pipeline and crashed the
+    game. These tests verify the user-visible behavior -- broken
+    connections recover, legitimate query errors still raise -- without
+    caring about which specific exception class or message text mgclient
+    happens to emit.
+    """
+
+    def test_raw_fetch_recovers_from_closed_connection(self) -> None:
+        """A broken underlying connection must not leak into callers.
+
+        Simulates the real failure mode (Memgraph dropped the idle
+        session, socket write fails on the next query) by closing
+        ``db.db_conn`` from the outside. ``raw_fetch`` should detect the
+        dead connection, reconnect, and return results as if nothing
+        happened.
+        """
+        db = GraphDB.singleton()
+        # Establish that the connection is healthy up front.
+        list(db.raw_fetch("RETURN 1 AS n"))
+        # Simulate the half-closed / dropped-idle state by closing the
+        # mgclient connection object. The next ``cursor()`` or
+        # ``execute()`` call will raise a transport-level error.
+        db.db_conn.close()
+        # The recovery path must swallow the transport error, install a
+        # fresh connection, and retry the query.
+        rows = list(db.raw_fetch("RETURN 42 AS answer"))
+        assert len(rows) == 1
+        assert rows[0]["answer"] == 42
+        # The singleton's connection is healthy again for subsequent
+        # tests.
+        assert db.connected()
+
+    def test_raw_execute_recovers_from_closed_connection(self) -> None:
+        """The write path (used by ``Node.save``/``Edge.create``) must
+        also recover from a broken connection.
+        """
+        db = GraphDB.singleton()
+        # Warm up, then break the connection.
+        db.raw_execute("RETURN 1")
+        db.db_conn.close()
+        # raw_execute should reconnect transparently.
+        db.raw_execute("RETURN 1")
+        assert db.connected()
+
+    def test_raw_fetch_propagates_syntax_error(self) -> None:
+        """Legitimate query errors must not be swallowed by the
+        reconnect logic.
+
+        ``DatabaseError`` is also raised for syntax errors, constraint
+        violations, and type mismatches. Retrying those against a fresh
+        connection would fail the same way and mask the real bug. The
+        reconnect path is gated on connection health, so a query error
+        against a healthy connection must propagate to the caller.
+        """
+        db = GraphDB.singleton()
+        # Ensure the connection is healthy so the reconnect heuristic
+        # does not trigger on its own.
+        list(db.raw_fetch("RETURN 1"))
+        with pytest.raises(Exception) as exc_info:
+            list(db.raw_fetch("THIS IS NOT VALID CYPHER"))
+        # The error should be a mgclient database error, not our
+        # reconnect path swallowing it.
+        assert (
+            "DatabaseError" in type(exc_info.value).__name__
+            or "syntax" in str(exc_info.value).lower()
+        )
+        # The connection must remain usable after a query error --
+        # we did not reconnect because this was not a transport failure.
+        list(db.raw_fetch("RETURN 1"))
+
+    def test_raw_execute_propagates_syntax_error(self) -> None:
+        """The write path also propagates legitimate query errors."""
+        db = GraphDB.singleton()
+        db.raw_execute("RETURN 1")
+        with pytest.raises(Exception) as exc_info:
+            db.raw_execute("CREATE NOTHING HERE IS VALID")
+        assert (
+            "DatabaseError" in type(exc_info.value).__name__
+            or "syntax" in str(exc_info.value).lower()
+        )
+        # Connection remains usable.
+        db.raw_execute("RETURN 1")
+
+    def test_singleton_reconnects_stale_connection(self) -> None:
+        """``GraphDB.singleton()`` must reconnect a closed connection.
+
+        Between game runs, Memgraph's idle timeout can drop the
+        connection. The singleton getter detects this via
+        ``connected()`` and calls ``_reconnect`` before returning, so
+        the first query from the next game thread works. Verified
+        here by closing the real connection and asserting the next
+        ``singleton()`` call produces a usable one.
+        """
+        db = GraphDB.singleton()
+        list(db.raw_fetch("RETURN 1"))
+        assert db.connected()
+
+        # Close the real connection -- this is exactly the state
+        # Memgraph leaves an idle socket in after its timeout fires.
+        db.db_conn.close()
+        assert not db.connected()
+
+        # The singleton getter must detect the dead connection and
+        # reconnect before returning. After this call the singleton
+        # is usable again.
+        same_db = GraphDB.singleton()
+        assert same_db is db
+        assert db.connected()
+        rows = list(db.raw_fetch("RETURN 99 AS n"))
+        assert len(rows) == 1
+        assert rows[0]["n"] == 99
+
+    def test_raw_fetch_recovers_from_failed_to_send_chunk_data(self) -> None:
+        """Specific regression for ``DatabaseError: failed to send chunk data``.
+
+        The production bug was mgclient raising ``DatabaseError`` (not
+        ``InterfaceError``) with the message ``"failed to send chunk data"``
+        when the underlying socket was half-closed. That specific wire
+        state cannot be reproduced reliably against a live Memgraph --
+        ``db_conn.close()`` raises ``InterfaceError``, timing-based socket
+        tricks are flaky, and killing Memgraph mid-query is too disruptive
+        for the integration suite. Both ``mgclient.Cursor`` and
+        ``mgclient.Connection`` are immutable C types, so their methods
+        cannot be monkeypatched directly.
+
+        Instead, this test replaces ``db.db_conn`` with a lightweight
+        Python proxy that wraps a real mgclient connection and injects
+        the production ``DatabaseError`` on the first ``execute`` call.
+        Everything past the injected exception is real: the reconnect
+        uses the real ``connect()`` against real Memgraph, the retry
+        runs a real Cypher query on a real cursor, and the result is
+        validated end-to-end. The key invariant: the fix must catch
+        ``DatabaseError`` with a transport-level message, call
+        ``_reconnect``, and retry against the reopened connection.
+        """
+        import mgclient
+
+        db = GraphDB.singleton()
+        # Warm up with a real query to ensure the connection is healthy.
+        list(db.raw_fetch("RETURN 1"))
+
+        real_conn = db.db_conn
+        call_count = {"n": 0}
+
+        class FailingCursor:
+            """Thin proxy around a real mgclient.Cursor. First execute
+            call raises the production error; subsequent calls would
+            delegate but by then reconnect has replaced db.db_conn with
+            a fresh real connection, so this cursor is not reused.
+            """
+
+            def __init__(self, real_cursor: Any) -> None:
+                self._real = real_cursor
+
+            def execute(self, query: str, params: Any = None) -> Any:
+                call_count["n"] += 1
+                if call_count["n"] == 1:
+                    raise mgclient.DatabaseError("failed to send chunk data")
+                return self._real.execute(query, params)
+
+            def fetchone(self) -> Any:
+                return self._real.fetchone()
+
+            def fetchall(self) -> Any:
+                return self._real.fetchall()
+
+            @property
+            def description(self) -> Any:
+                return self._real.description
+
+        class FailingConnection:
+            """Proxy around a real mgclient.Connection that returns a
+            ``FailingCursor`` from ``cursor()``. Everything else passes
+            through, so ``connected()`` returns the real status and
+            ``close()`` hits the real connection.
+            """
+
+            def __init__(self, real_conn: Any) -> None:
+                self._real = real_conn
+
+            def cursor(self) -> Any:
+                return FailingCursor(self._real.cursor())
+
+            def close(self) -> Any:
+                return self._real.close()
+
+            @property
+            def status(self) -> Any:
+                return self._real.status
+
+            @property
+            def autocommit(self) -> Any:
+                return self._real.autocommit
+
+            @autocommit.setter
+            def autocommit(self, value: Any) -> None:
+                self._real.autocommit = value
+
+        db.db_conn = FailingConnection(real_conn)
+        try:
+            rows = list(db.raw_fetch("RETURN 7 AS n"))
+        finally:
+            # If the test failed mid-way, make sure the singleton still
+            # has a working connection for subsequent tests.
+            if not db.connected():
+                db._reconnect()
+
+        assert len(rows) == 1
+        assert rows[0]["n"] == 7
+        assert db.connected()
+        # Guard against the test silently skipping the reconnect path:
+        # the FailingCursor's execute should fire exactly once, after
+        # which reconnect swaps in a real cursor that never goes through
+        # the proxy again.
+        assert call_count["n"] == 1, (
+            "FailingCursor.execute should have been called exactly once; "
+            "subsequent executes run on the fresh reconnected cursor."
+        )
+
+
 class TestNode:
     def test_node_get(self) -> None:
         n = Node.get(cast(NodeId, got_node_id(0)))

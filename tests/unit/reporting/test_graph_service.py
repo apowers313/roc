@@ -210,6 +210,116 @@ class TestToCytoscape:
         assert result["meta"]["root_id"] is None
 
 
+class TestUuidPrecision:
+    """Object UUIDs are 63-bit ints. They exceed JS Number.MAX_SAFE_INTEGER
+    (2^53 - 1), so they MUST be serialized as strings on the wire -- a JS
+    client parsing them as numbers would silently truncate the trailing
+    digits. These tests pin that behaviour against future regressions.
+    """
+
+    BIG_UUID = 6853809301722933453  # observed in production, > 2^53
+
+    def _build_object_graph(self) -> nx.DiGraph:
+        """One Object + one ObjectInstance + one ObjectTransform, all
+        carrying the same 63-bit uuid via different field names."""
+        G = nx.DiGraph()
+        G.add_node(-1, labels="Object", uuid=self.BIG_UUID, resolve_count=189)
+        G.add_node(
+            -2,
+            labels="ObjectInstance",
+            object_uuid=self.BIG_UUID,
+            x=23,
+            y=9,
+        )
+        G.add_node(
+            -3,
+            labels="ObjectTransform, Transform",
+            object_uuid=self.BIG_UUID,
+            num_discrete_changes=1,
+            num_continuous_changes=2,
+        )
+        G.add_edge(-2, -1, type="ObservedAs")
+        return G
+
+    def test_object_uuid_emitted_as_string(self):
+        result = GraphService.to_cytoscape(self._build_object_graph())
+        nodes_by_id = {n["data"]["id"]: n["data"] for n in result["elements"]["nodes"]}
+        obj = nodes_by_id["-1"]
+        assert isinstance(obj["uuid"], str)
+        # Round-trips losslessly via str(int).
+        assert obj["uuid"] == str(self.BIG_UUID)
+        # Round-trip back through int recovers the original value.
+        assert int(obj["uuid"]) == self.BIG_UUID
+
+    def test_object_instance_object_uuid_emitted_as_string(self):
+        result = GraphService.to_cytoscape(self._build_object_graph())
+        nodes_by_id = {n["data"]["id"]: n["data"] for n in result["elements"]["nodes"]}
+        inst = nodes_by_id["-2"]
+        assert isinstance(inst["object_uuid"], str)
+        assert inst["object_uuid"] == str(self.BIG_UUID)
+
+    def test_object_transform_object_uuid_emitted_as_string(self):
+        result = GraphService.to_cytoscape(self._build_object_graph())
+        nodes_by_id = {n["data"]["id"]: n["data"] for n in result["elements"]["nodes"]}
+        ot = nodes_by_id["-3"]
+        assert isinstance(ot["object_uuid"], str)
+        assert ot["object_uuid"] == str(self.BIG_UUID)
+
+    def test_human_name_added_to_object_nodes(self):
+        result = GraphService.to_cytoscape(self._build_object_graph())
+        nodes_by_id = {n["data"]["id"]: n["data"] for n in result["elements"]["nodes"]}
+        # Object, ObjectInstance, and ObjectTransform all carry a uuid and
+        # should all get a human_name field for display.
+        for node_id in ("-1", "-2", "-3"):
+            assert "human_name" in nodes_by_id[node_id], f"missing on {node_id}"
+            assert isinstance(nodes_by_id[node_id]["human_name"], str)
+        # Same uuid produces the same name across node types.
+        assert (
+            nodes_by_id["-1"]["human_name"]
+            == nodes_by_id["-2"]["human_name"]
+            == nodes_by_id["-3"]["human_name"]
+        )
+
+    def test_human_name_is_deterministic_for_uuid(self):
+        from roc.reporting.graph_service import object_human_name
+
+        a = object_human_name(self.BIG_UUID)
+        b = object_human_name(self.BIG_UUID)
+        assert a == b
+        # Different uuid -> different name
+        c = object_human_name(self.BIG_UUID + 1)
+        assert a != c
+
+    def test_human_name_accepts_string_uuid(self):
+        from roc.reporting.graph_service import object_human_name
+
+        # The function takes the int form internally but should accept
+        # the string-on-the-wire form too without choking.
+        from_int = object_human_name(self.BIG_UUID)
+        from_str = object_human_name(str(self.BIG_UUID))
+        assert from_int == from_str
+
+    def test_serialized_response_round_trips_through_json(self):
+        """The whole point: a 63-bit uuid that survives a JSON round trip
+        without any precision loss. This is the bug that the user hit --
+        the JS Number parser was truncating trailing digits."""
+        result = GraphService.to_cytoscape(self._build_object_graph())
+        as_json = json.dumps(result)
+        decoded = json.loads(as_json)
+        nodes_by_id = {n["data"]["id"]: n["data"] for n in decoded["elements"]["nodes"]}
+        # If uuid had been serialized as an int, json.loads in Python would
+        # still preserve it. The point is that it's a *string* in the JSON
+        # text, so a JS parser will not trip on Number precision either.
+        for node_id in ("-1", "-2", "-3"):
+            field = "uuid" if node_id == "-1" else "object_uuid"
+            value = nodes_by_id[node_id][field]
+            assert isinstance(value, str)
+            assert int(value) == self.BIG_UUID
+        # Sanity: the JSON text contains the uuid as a quoted string, not
+        # a bare numeric literal. (`"6853809301722933453"`, not `6853809301722933453`.)
+        assert f'"{self.BIG_UUID}"' in as_json
+
+
 class TestGraphServiceIO:
     def test_get_graph_loads_from_file(self, tmp_path: Path):
         """get_graph loads a graph.json file into a NetworkX DiGraph."""
