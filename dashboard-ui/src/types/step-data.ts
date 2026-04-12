@@ -79,9 +79,14 @@ export interface ObjectTransformChangeData {
 }
 
 export interface ObjectTransformData {
-    uuid: number;
+    /** Object UUID. String, not number, because ROC UUIDs are 63-bit ints
+     *  that exceed JS Number.MAX_SAFE_INTEGER. See `ObjectHistoryInfo`. */
+    uuid: string;
+    /** Stable display name from FlexiHumanHash, e.g. "rancorous-fey-devy". */
+    human_name?: string;
     glyph?: string;
     color?: string;
+    /** Memgraph internal node id. Small int, safe as number. */
     node_id?: number;
     status?: "matched" | "new" | "gone";
     changes: ObjectTransformChangeData[];

@@ -1,29 +1,58 @@
+/**
+ * MenuBar tests -- post-consolidation.
+ *
+ * MenuBar now reads game state from ``useGameState`` (the dashboard's
+ * single source of truth) instead of maintaining its own fetch +
+ * useState copy. These tests mock the hook directly and drive
+ * different game states through it.
+ *
+ * The previous shared helpers (``mockFetchIdle``, ``mockGameState``)
+ * were built around the old per-component fetch pattern and are no
+ * longer meaningful here -- the whole point of the consolidation is
+ * that MenuBar no longer talks to the network at all for state.
+ */
+
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+vi.mock("../../hooks/useRunSubscription", () => ({
+    useGameState: vi.fn(() => ({ state: "idle", run_name: null })),
+    useRunSubscription: vi.fn(),
+}));
+
 import { renderWithProviders } from "../../test-utils";
 import { MenuBar } from "./MenuBar";
-import {
-    assertGameStateShowsText,
-    assertMenuActionCallsApi,
-    expectMenuText,
-    mockFetchIdle,
-    renderAndOpenMenu,
-    restoreAllMocks,
-} from "./test-helpers";
+import { useGameState, type GameState } from "../../hooks/useRunSubscription";
 
-const TRIGGER = { label: "Game", byLabelText: false };
-const ui = (<MenuBar />);
+const mockUseGameState = vi.mocked(useGameState);
+
+function setGameState(state: Partial<GameState> & { state: string }) {
+    mockUseGameState.mockReturnValue({
+        run_name: null,
+        exit_code: null,
+        error: null,
+        ...state,
+    } as GameState);
+}
+
+function openMenu() {
+    fireEvent.click(screen.getByText("Game"));
+}
+
+beforeEach(() => {
+    vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
+    );
+    setGameState({ state: "idle" });
+});
+
+afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+});
 
 describe("MenuBar", () => {
-    beforeEach(() => {
-        mockFetchIdle();
-    });
-
-    afterEach(() => {
-        restoreAllMocks();
-    });
-
     it("renders the Game button", () => {
         renderWithProviders(<MenuBar />);
         expect(screen.getByText("Game")).toBeInTheDocument();
@@ -48,68 +77,101 @@ describe("MenuBar", () => {
         await waitFor(() => {
             expect(writeTextSpy).toHaveBeenCalled();
         });
-
-        // Should briefly show "Copied!" text
         await waitFor(() => {
             expect(screen.getByText("Copied!")).toBeInTheDocument();
         });
     });
 
     it("opens Game menu dropdown when Game button is clicked", async () => {
-        renderAndOpenMenu(ui, TRIGGER.label);
-        await expectMenuText("No game running");
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("No game running")).toBeInTheDocument();
     });
 
-    it("shows Start Game in game dropdown when idle", async () => {
-        renderAndOpenMenu(ui, TRIGGER.label);
-        await expectMenuText("Start Game");
+    it("shows Start Game in dropdown when idle", async () => {
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("Start Game")).toBeInTheDocument();
     });
 
     it("shows Stop Game when game is running", async () => {
-        await assertGameStateShowsText(ui, TRIGGER, "running", "Stop Game");
+        setGameState({ state: "running", run_name: "live-run" });
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("Stop Game")).toBeInTheDocument();
     });
 
-    it("shows error message when game has error", async () => {
-        await assertGameStateShowsText(
-            ui, TRIGGER, "idle", "Process crashed", { error: "Process crashed" },
-        );
+    // TC-GAME-004 consolidation: the ``error`` field must survive
+    // state transitions because useGameState now carries it from both
+    // the Socket.io event and the initial REST fetch. Previously
+    // MenuBar held its own fetch copy so an error could disappear
+    // whenever Socket.io emitted a state update without the field.
+    it("shows error message when idle state carries an error", async () => {
+        setGameState({ state: "idle", error: "Process crashed" });
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("Process crashed")).toBeInTheDocument();
     });
 
     it("shows Stopping badge when game is stopping", async () => {
-        await assertGameStateShowsText(ui, TRIGGER, "stopping", "Stopping...");
-    });
-
-    it("calls start game API when Start Game is clicked", async () => {
-        await assertMenuActionCallsApi(
-            ui, TRIGGER, "Start Game",
-            "/api/game/start?num_games=5", { method: "POST" },
-        );
-    });
-
-    it("calls stop game API when Stop Game is clicked", async () => {
-        await assertMenuActionCallsApi(
-            ui, TRIGGER, "Stop Game",
-            "/api/game/stop", { method: "POST" },
-            "running",
-        );
+        setGameState({ state: "stopping", run_name: "live-run" });
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("Stopping...")).toBeInTheDocument();
     });
 
     it("shows initializing state as running", async () => {
-        await assertGameStateShowsText(ui, TRIGGER, "initializing", "Game Running");
+        setGameState({ state: "initializing", run_name: "live-run" });
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        expect(await screen.findByText("Game Running")).toBeInTheDocument();
     });
 
-    it("handles fetch error gracefully", async () => {
-        vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Network error"));
-        renderAndOpenMenu(ui, TRIGGER.label);
+    it("calls /api/game/start when Start Game is clicked", async () => {
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        fireEvent.click(await screen.findByText("Start Game"));
         await waitFor(() => {
-            expect(screen.getByText("No game running")).toBeInTheDocument();
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                "/api/game/start?num_games=5",
+                { method: "POST" },
+            );
         });
     });
 
-    it("has consistent background styling", () => {
-        const { container } = renderWithProviders(<MenuBar />);
-        // The outer Group element should be rendered
-        const menuBar = container.firstElementChild;
-        expect(menuBar).toBeTruthy();
+    it("calls /api/game/stop when Stop Game is clicked", async () => {
+        setGameState({ state: "running", run_name: "live-run" });
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        fireEvent.click(await screen.findByText("Stop Game"));
+        await waitFor(() => {
+            expect(globalThis.fetch).toHaveBeenCalledWith(
+                "/api/game/stop",
+                { method: "POST" },
+            );
+        });
+    });
+
+    it("tolerates a rejected /api/game/start fetch", async () => {
+        vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Network down"));
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        fireEvent.click(await screen.findByText("Start Game"));
+        // Should not crash. The Start Game button stays in the DOM.
+        await waitFor(() => {
+            expect(screen.getByText("Start Game")).toBeInTheDocument();
+        });
+    });
+
+    it("does not fetch /api/game/status directly", async () => {
+        // MenuBar must not hold its own game-status fetch -- the hook
+        // owns it. Drives home the TC-GAME-004 consolidation invariant.
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        await screen.findByText("Start Game");
+        const calls = vi.mocked(globalThis.fetch).mock.calls;
+        for (const call of calls) {
+            expect(call[0]).not.toBe("/api/game/status");
+        }
     });
 });

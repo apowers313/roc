@@ -65,7 +65,13 @@ export function LogMessages({ data }: Readonly<LogMessagesProps>) {
                                 const color =
                                     SEVERITY_COLORS[level] ??
                                     "var(--mantine-color-text)";
-                                const logKey = `${level}-${log.timestamp ?? i}-${String(log.body ?? "").slice(0, 40)}`;
+                                // Include ``i`` as the leading component so
+                                // the key is unique even when two log
+                                // records share the same level+timestamp+
+                                // body prefix. The list is rebuilt from
+                                // fresh data on every step change so the
+                                // index is stable within a single render.
+                                const logKey = `${i}-${level}-${log.timestamp ?? "notime"}-${String(log.body ?? "").slice(0, 40)}`;
                                 return (
                                     <Table.Tr key={logKey}>
                                         <Table.Td

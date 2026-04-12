@@ -1,7 +1,7 @@
 /** All Objects panel -- sortable table of every resolved object. */
 
-import { Table, Text } from "@mantine/core";
-import { type ReactNode, useCallback, useState } from "react";
+import { Group, Switch, Table, Text } from "@mantine/core";
+import { type ReactNode, useCallback, useMemo, useState } from "react";
 
 import type { ResolvedObject } from "../../api/client";
 import { useAllObjects } from "../../api/queries";
@@ -16,9 +16,18 @@ const NH_COLOR_MAP: Record<string, string> = {
     BLACK: "#444", "NO COLOR": "#888",
 };
 
+interface GameStepRange {
+    game_number: number;
+    min: number;
+    max: number;
+}
+
 interface AllObjectsProps {
     run: string;
     game?: number;
+    /** Per-game step ranges, used to attribute step_added to its origin game
+     *  when an object was first observed in an earlier game (BUG-M2). */
+    gameStepRanges?: ReadonlyArray<GameStepRange>;
     onStepClick?: (step: number) => void;
 }
 
@@ -48,10 +57,27 @@ function compareValues(a: unknown, b: unknown): number {
     return toSortString(a).localeCompare(toSortString(b));
 }
 
-export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>) {
-    const { data: objects } = useAllObjects(run, game);
+export function AllObjects({
+    run,
+    game,
+    gameStepRanges,
+    onStepClick,
+}: Readonly<AllObjectsProps>) {
+    // BUG-H4 fix: always fetch the unfiltered dataset alongside the
+    // filtered one. The unfiltered query is the source of truth for
+    // identity (canonical PHYSICAL features) and totals; the filtered
+    // query produces the per-game match counts and visibility set.
+    const { data: filteredObjects } = useAllObjects(run, game);
+    const { data: allObjects } = useAllObjects(run, undefined);
+
     const [sortKey, setSortKey] = useState<SortKey>("shape");
     const [sortAsc, setSortAsc] = useState(true);
+    const [showAllGames, setShowAllGames] = useState(false);
+
+    const isFiltering = game !== undefined && game > 0;
+    const displayed = !isFiltering || showAllGames ? allObjects : filteredObjects;
+    const filteredCount = filteredObjects?.length ?? 0;
+    const totalCount = allObjects?.length ?? 0;
 
     const handleSort = useCallback((key: SortKey) => {
         if (key === sortKey) {
@@ -62,15 +88,39 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
         }
     }, [sortKey]);
 
-    if (!objects || objects.length === 0) {
+    // Map step_added -> game_number, so we can flag rows whose canonical
+    // first-observation step belongs to an earlier game (BUG-M2).
+    const stepToGame = useMemo(() => {
+        const ranges = gameStepRanges ?? [];
+        return (step: number | null | undefined): number | null => {
+            if (step == null) return null;
+            for (const r of ranges) {
+                if (step >= r.min && step <= r.max) return r.game_number;
+            }
+            return null;
+        };
+    }, [gameStepRanges]);
+
+    if (!displayed || displayed.length === 0) {
         return (
-            <Text size="xs" c="dimmed">
-                No objects
-            </Text>
+            <>
+                {isFiltering && (
+                    <FilterHeader
+                        game={game}
+                        filteredCount={filteredCount}
+                        totalCount={totalCount}
+                        showAllGames={showAllGames}
+                        onToggle={setShowAllGames}
+                    />
+                )}
+                <Text size="xs" c="dimmed">
+                    No objects
+                </Text>
+            </>
         );
     }
 
-    const sorted = [...objects].sort((a, b) => {
+    const sorted = [...displayed].sort((a, b) => {
         const cmp = compareValues(a[sortKey], b[sortKey]);
         return sortAsc ? cmp : -cmp;
     });
@@ -92,6 +142,15 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
 
     return (
         <div style={{ maxHeight: "calc(100vh - 120px)", overflowY: "auto" }}>
+            {isFiltering && (
+                <FilterHeader
+                    game={game}
+                    filteredCount={filteredCount}
+                    totalCount={totalCount}
+                    showAllGames={showAllGames}
+                    onToggle={setShowAllGames}
+                />
+            )}
             <Table
                 striped
                 highlightOnHover
@@ -176,7 +235,11 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
                                     {obj.node_id ?? "--"}
                                 </Table.Td>
                                 <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
-                                    {obj.step_added ?? "--"}
+                                    <StepAddedCell
+                                        stepAdded={obj.step_added}
+                                        currentGame={game}
+                                        originGame={stepToGame(obj.step_added)}
+                                    />
                                 </Table.Td>
                                 <Table.Td style={{ fontSize: 10, fontFamily: "monospace", padding: "1px 4px" }}>
                                     {obj.match_count}
@@ -188,4 +251,74 @@ export function AllObjects({ run, game, onStepClick }: Readonly<AllObjectsProps>
             </Table>
         </div>
     );
+}
+
+interface FilterHeaderProps {
+    game: number;
+    filteredCount: number;
+    totalCount: number;
+    showAllGames: boolean;
+    onToggle: (next: boolean) => void;
+}
+
+function FilterHeader({
+    game,
+    filteredCount,
+    totalCount,
+    showAllGames,
+    onToggle,
+}: Readonly<FilterHeaderProps>) {
+    const title = showAllGames ? "All Objects" : `Objects in Game ${game}`;
+    const countText = showAllGames ? `${totalCount}` : `${filteredCount} / ${totalCount}`;
+    return (
+        <Group justify="space-between" align="center" mb={4} px={4}>
+            <Group gap={6}>
+                <Text size="xs" fw={600}>
+                    {title}
+                </Text>
+                <Text size="xs" c="dimmed">
+                    {countText}
+                </Text>
+            </Group>
+            <Switch
+                size="xs"
+                label="Show all games"
+                labelPosition="left"
+                checked={showAllGames}
+                onChange={(e) => onToggle(e.currentTarget.checked)}
+            />
+        </Group>
+    );
+}
+
+interface StepAddedCellProps {
+    stepAdded: number | null;
+    currentGame: number | undefined;
+    originGame: number | null;
+}
+
+function StepAddedCell({ stepAdded, currentGame, originGame }: Readonly<StepAddedCellProps>) {
+    if (stepAdded == null) {
+        return <span>--</span>;
+    }
+    if (
+        currentGame !== undefined &&
+        currentGame > 0 &&
+        originGame !== null &&
+        originGame !== currentGame
+    ) {
+        // Native title tooltip + a visible "(game N)" annotation so the
+        // origin is discoverable without hovering. The tooltip text is
+        // also queryable from tests via the title attribute.
+        const tooltip = `created in game ${originGame}`;
+        return (
+            <span title={tooltip} style={{ cursor: "help" }}>
+                {stepAdded}{" "}
+                <Text component="span" size="xs" c="dimmed">
+                    ({tooltip})
+                </Text>
+            </span>
+        );
+    }
+    return <span>{stepAdded}</span>;
 }

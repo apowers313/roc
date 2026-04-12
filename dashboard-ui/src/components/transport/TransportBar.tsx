@@ -2,6 +2,7 @@
 
 import {
     ActionIcon,
+    Checkbox,
     Group,
     Select,
     Slider,
@@ -15,10 +16,13 @@ import {
     Pause,
     Play,
 } from "lucide-react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
+import { fetchStepRange } from "../../api/client";
 import { useGames, useRuns, useStepRange } from "../../api/queries";
 import { useDashboard } from "../../state/context";
+import type { RunStatus, RunSummary } from "../../types/api";
 
 const SPEED_OPTIONS = [
     { value: "2000", label: "0.5x" },
@@ -29,6 +33,39 @@ const SPEED_OPTIONS = [
     { value: "50", label: "20x" },
     { value: "16", label: "60x" },
 ];
+
+/**
+ * Render a RunSummary as a Mantine Select option.
+ *
+ * Exported for testing. The label format is:
+ *   "[MM/DD HH:MM] adj-first-last (Ng, S steps)"
+ *
+ * Non-ok statuses are tagged with a trailing marker so the user can
+ * see at a glance which runs are partial. We do NOT use color/icons
+ * here because Mantine Select renders option text only -- enriching
+ * options requires `renderOption`, which we add separately if needed.
+ */
+export function buildRunOption(r: RunSummary): { value: string; label: string } {
+    const ts = r.name.slice(0, 14);
+    const date =
+        ts.length === 14
+            ? `${ts.slice(4, 6)}/${ts.slice(6, 8)} ${ts.slice(8, 10)}:${ts.slice(10, 12)}`
+            : "";
+    const status: RunStatus = (r.status ?? "ok") as RunStatus;
+    const suffix =
+        r.games > 0 || r.steps > 0
+            ? ` (${r.games}g, ${r.steps} steps)`
+            : "";
+    let tag = "";
+    if (status === "short") tag = " [short]";
+    else if (status === "empty") tag = " [empty]";
+    else if (status === "corrupt") tag = " [corrupt]";
+    else if (status === "missing") tag = " [missing]";
+    return {
+        value: r.name,
+        label: `[${date}] ${r.name.slice(15)}${suffix}${tag}`,
+    };
+}
 
 interface TransportBarProps {
     connected?: boolean;
@@ -49,50 +86,148 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
         setStepRange,
         playing,
         setPlaying,
+        setAutoFollow,
         speed,
         setSpeed,
-        playback,
-        dispatchPlayback,
-        liveRunName,
-        liveGameNumber,
     } = useDashboard();
 
-    const { data: runs } = useRuns();
+    const queryClient = useQueryClient();
+
+    // "Show all runs" toggles between the default `ok`-only list and
+    // the full list (including `short`/`empty`/`corrupt`). When the
+    // user explicitly navigates to a run via URL param that the
+    // server hides by default, we auto-flip this to `true` so the
+    // dropdown reflects the active run instead of looking blank.
+    // Persist across reloads so the user does not have to re-toggle.
+    const [showAllRuns, setShowAllRuns] = useState<boolean>(() => {
+        if (typeof window === "undefined") return false;
+        return window.localStorage.getItem("roc.dashboard.showAllRuns") === "1";
+    });
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        window.localStorage.setItem(
+            "roc.dashboard.showAllRuns",
+            showAllRuns ? "1" : "0",
+        );
+    }, [showAllRuns]);
+
+    const { data: runs } = useRuns(showAllRuns);
     const { data: games } = useGames(run);
     const { data: stepRangeData } = useStepRange(run, game || undefined);
 
-    // Derive effective step range. When viewing the live run's active game,
-    // prefer context (driven by Socket.io pushes in onNewStep). For historical
-    // runs or historical games within the live run, prefer REST (authoritative).
-    const isViewingLiveGame =
-        run !== "" && run === liveRunName && game === liveGameNumber;
-    const effectiveMin = isViewingLiveGame ? stepMin : (stepRangeData?.min ?? stepMin);
-    const effectiveMax = isViewingLiveGame ? stepMax : (stepRangeData?.max ?? stepMax);
-
-    // Sync REST range to context for historical runs so other components see it.
-    // Skip when viewing the live run -- Socket.io pushes drive the range.
+    // Diagnostic logging: every time the run list arrives, log a
+    // status breakdown so we can see from the iPad's remote logs
+    // exactly what the dropdown is showing. Tagged "[Runs]" so it
+    // is easy to grep for via remote-logger MCP.
     useEffect(() => {
-        if (stepRangeData && !isViewingLiveGame) {
+        if (!runs) return;
+        const breakdown: Record<string, number> = {};
+        for (const r of runs) {
+            const s = r.status ?? "ok";
+            breakdown[s] = (breakdown[s] ?? 0) + 1;
+        }
+        // eslint-disable-next-line no-console
+        console.log(
+            "[Runs] received",
+            JSON.stringify({
+                total: runs.length,
+                showAllRuns,
+                breakdown,
+                first: runs[0]?.name ?? null,
+            }),
+        );
+    }, [runs, showAllRuns]);
+
+    // If the URL pointed at a run that the default ("ok"-only) list
+    // does not contain, automatically widen to include_all so the
+    // user is not staring at a blank dropdown. We log this transition
+    // so it is visible from the iPad's remote logs.
+    useEffect(() => {
+        if (!run) return;
+        if (showAllRuns) return;
+        if (!runs) return;
+        const found = runs.some((r) => r.name === run);
+        if (!found) {
+            // eslint-disable-next-line no-console
+            console.warn(
+                "[Runs] active run not in default list; switching to include_all",
+                JSON.stringify({ run, knownRuns: runs.length }),
+            );
+            setShowAllRuns(true);
+        }
+    }, [run, runs, showAllRuns]);
+
+    // Phase 4: TanStack Query is the only data path. ``stepRangeData``
+    // is always fresh -- Socket.io ``step_added`` events invalidate
+    // the query via ``useRunSubscription`` and the refetch updates
+    // this component's render. Prefer the query value over the context
+    // fallback so a tail-growing run's slider tracks the live max even
+    // when autoFollow is off (TC-GAME-004: after the user breaks
+    // auto-follow, the slider must still show the growing max so
+    // clicking GO LIVE snaps to the true head instead of a stale one).
+    const effectiveMin = stepRangeData?.min ?? stepMin;
+    const effectiveMax = stepRangeData?.max ?? stepMax;
+
+    // Sync REST range to context so consumers that read from context
+    // (App.tsx auto-follow effect, StatusBar, panels) see the same
+    // value. TransportBar is the single owner of this sync -- App.tsx
+    // used to dual-write from its auto-follow effect but now only
+    // advances ``step``.
+    useEffect(() => {
+        if (stepRangeData) {
             setStepRange(stepRangeData.min, stepRangeData.max);
         }
-    }, [stepRangeData, setStepRange, isViewingLiveGame]);
+    }, [stepRangeData, setStepRange]);
 
-    // Auto-select first run (API returns newest-first)
+    // Auto-select first run (API returns newest-first).
+    //
+    // URL sovereignty (BUG-C2): the ``!run`` guard already protects
+    // explicit URL runs -- when the URL has ``?run=X``, context init
+    // populates ``run="X"`` so the effect bails. We deliberately do
+    // NOT add an additional ``initialUrlRun`` ref guard here because
+    // the ref would also block the legitimate "user clicked Browse
+    // runs" path: after that click, ``run`` is cleared but a stale
+    // ref would still hold the broken URL run, preventing the
+    // dashboard from auto-selecting any new run. App.tsx's auto-select
+    // -live-run effect uses ``initialUrlRun`` for a different reason
+    // (to block live-takeover) where the stale ref behaviour is
+    // actually correct.
+    //
+    // BUG-H1 fix: the eager step-range fetch must use the current
+    // ``game`` from context, not a hardcoded ``?game=1``. If the URL
+    // specified ``?game=N`` for N != 1, the prior code populated the
+    // context range with game 1's bounds, then briefly rendered the
+    // wrong slider (and queried step 1 of game N from the data fetcher,
+    // which 404'd). Using the context's game keeps the eager fetch in
+    // lock-step with the React Query that ``useStepRange(run, game)``
+    // will eventually issue.
     useEffect(() => {
         if (runs && runs.length > 0 && !run) {
-            const name = runs[0]!.name;
+            // Prefer a run with data -- skip empty/corrupt/missing runs
+            // so "Browse runs" doesn't land on an unusable run.
+            const viable = runs.find(
+                (r) =>
+                    r.steps > 0 &&
+                    (r.status === "ok" || r.status === "short" || !r.status),
+            );
+            const name = (viable ?? runs[0]!).name;
             setRun(name);
-            // Eagerly fetch step-range
-            void fetch(`/api/runs/${encodeURIComponent(name)}/step-range?game=1`)
-                .then((r) => r.json())
-                .then((d: { min: number; max: number }) => {
+            // Eagerly prime the TanStack Query cache so ``useStepRange``
+            // sees a cache hit on its next render.
+            const targetGame = game > 0 ? game : 1;
+            void queryClient
+                .fetchQuery({
+                    queryKey: ["step-range", name, targetGame],
+                    queryFn: () => fetchStepRange(name, targetGame),
+                })
+                .then((d) => {
                     if (d.max > 0) {
                         setStepRange(d.min, d.max);
                     }
                 })
                 .catch(() => {});
         }
-    }, [runs, run, setRun, setStepRange]);
+    }, [runs, run, game, setRun, setStepRange, queryClient]);
 
     // Auto-play timer -- uses setTimeout loop that waits for the current
     // step's data to load before advancing. This prevents request pileup
@@ -135,67 +270,43 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
     }, [playing, speed, setStep, setPlaying, stepDataReadyRef]);
 
     const togglePlay = useCallback(() => {
-        if (playback === "historical") {
-            dispatchPlayback({ type: "TOGGLE_PLAY" });
-        }
         setPlaying(!playing);
-    }, [playing, playback, setPlaying, dispatchPlayback]);
+    }, [playing, setPlaying]);
 
     const stepForward = useCallback(() => {
         setStep((prev) => (prev < effectiveMax ? prev + 1 : prev));
-        if (playback === "live_following") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [effectiveMax, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [effectiveMax, setStep, setAutoFollow]);
 
     const stepBack = useCallback(() => {
         setStep((prev) => (prev > effectiveMin ? prev - 1 : prev));
-        if (playback === "live_following") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [effectiveMin, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [effectiveMin, setStep, setAutoFollow]);
 
     const jumpToStart = useCallback(() => {
         setStep(effectiveMin);
-        if (
-            playback === "live_following" ||
-            playback === "live_catchup"
-        ) {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [effectiveMin, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [effectiveMin, setStep, setAutoFollow]);
 
     const jumpToEnd = useCallback(() => {
         setStep(effectiveMax);
         // Pure navigation -- just go to end of current game's range.
         // Use "L" or click "GO LIVE" badge to return to live-following.
-        if (playback === "live_following") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [effectiveMax, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [effectiveMax, setStep, setAutoFollow]);
 
     const handleSliderChange = useCallback(
         (value: number) => {
             setStep(value);
-            if (playback === "live_following") {
-                dispatchPlayback({ type: "USER_NAVIGATE" });
-            }
+            setAutoFollow(false);
         },
-        [setStep, playback, dispatchPlayback],
+        [setStep, setAutoFollow],
     );
 
-    const runOptions =
-        runs?.map((r) => {
-            // Parse "20260318131128-pitiable-sigismundo-nesto" into readable label
-            const ts = r.name.slice(0, 14); // YYYYMMDDHHMMSS
-            const date = ts.length === 14
-                ? `${ts.slice(4, 6)}/${ts.slice(6, 8)} ${ts.slice(8, 10)}:${ts.slice(10, 12)}`
-                : "";
-            const suffix = r.games > 0 || r.steps > 0
-                ? ` (${r.games}g, ${r.steps} steps)`
-                : "";
-            return { value: r.name, label: `[${date}] ${r.name.slice(15)}${suffix}` };
-        }) ?? [];
+    const runOptions = useMemo(
+        () => (runs ?? []).map(buildRunOption),
+        [runs],
+    );
     const gameOptions =
         games?.map((g) => ({
             value: String(g.game_number),
@@ -215,16 +326,20 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                             setRun(v);
                             setStep(1);
                             setGame(1);
-                            // Switching away from live run enters historical mode
-                            if (v !== liveRunName) {
-                                dispatchPlayback({ type: "USER_NAVIGATE" });
-                            }
-                            // Eagerly fetch step-range for the new run so the
-                            // slider updates immediately without waiting for
-                            // TanStack Query to re-render.
-                            void fetch(`/api/runs/${encodeURIComponent(v)}/step-range?game=1`)
-                                .then((r) => r.json())
-                                .then((d: { min: number; max: number }) => {
+                            // Switching runs drops autoFollow -- the new
+                            // run's tail_growing flag (driven by
+                            // useStepRange) determines whether GO LIVE
+                            // applies.
+                            setAutoFollow(false);
+                            // Prime the TanStack Query cache so the slider
+                            // updates immediately without waiting for
+                            // ``useStepRange`` to re-render.
+                            void queryClient
+                                .fetchQuery({
+                                    queryKey: ["step-range", v, 1],
+                                    queryFn: () => fetchStepRange(v, 1),
+                                })
+                                .then((d) => {
                                     if (d.max > 0) {
                                         setStepRange(d.min, d.max);
                                     }
@@ -243,17 +358,18 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                         if (v) {
                             const gameNum = Number(v);
                             setGame(gameNum);
-                            // Selecting a specific game exits live-following
-                            if (playback === "live_following") {
-                                dispatchPlayback({ type: "USER_NAVIGATE" });
-                            }
-                            // Eagerly fetch step range for the game so
-                            // we can jump to the game's first step.
-                            void fetch(
-                                `/api/runs/${encodeURIComponent(run)}/step-range?game=${gameNum}`,
-                            )
-                                .then((r) => r.json())
-                                .then((d: { min: number; max: number }) => {
+                            // Selecting a specific game drops autoFollow
+                            setAutoFollow(false);
+                            // Prime the TanStack Query cache with the new
+                            // game's step range so we can jump to its first
+                            // step without waiting for ``useStepRange`` to
+                            // re-render.
+                            void queryClient
+                                .fetchQuery({
+                                    queryKey: ["step-range", run, gameNum],
+                                    queryFn: () => fetchStepRange(run, gameNum),
+                                })
+                                .then((d) => {
                                     if (d.max > 0) {
                                         setStepRange(d.min, d.max);
                                         setStep(d.min);
@@ -266,6 +382,21 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                     }}
                     data={gameOptions}
                     style={{ width: 200 }}
+                />
+                <Checkbox
+                    size="xs"
+                    label="Show all"
+                    checked={showAllRuns}
+                    onChange={(e) => {
+                        const next = e.currentTarget.checked;
+                        setShowAllRuns(next);
+                        // eslint-disable-next-line no-console
+                        console.log(
+                            "[Runs] showAllRuns toggled",
+                            JSON.stringify({ next }),
+                        );
+                    }}
+                    title="Show all runs including short, empty, and corrupt ones (default hides them)"
                 />
                 <Select
                     size="xs"

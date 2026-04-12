@@ -1,6 +1,7 @@
 /** Graph DB cache history -- node/edge counts over time as an area chart. */
 
 import { Text } from "@mantine/core";
+import { memo } from "react";
 import {
     Area,
     AreaChart,
@@ -24,7 +25,7 @@ interface GraphHistoryProps {
     onStepClick?: (step: number) => void;
 }
 
-export function GraphHistory({ run, game, currentStep, onStepClick }: Readonly<GraphHistoryProps>) {
+function GraphHistoryInner({ run, game, currentStep, onStepClick }: Readonly<GraphHistoryProps>) {
     const { data: history } = useGraphHistory(run, game);
 
     if (!history || history.length === 0) {
@@ -111,3 +112,5 @@ export function GraphHistory({ run, game, currentStep, onStepClick }: Readonly<G
     }
     return chart;
 }
+
+export const GraphHistory = memo(GraphHistoryInner);

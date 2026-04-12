@@ -1,9 +1,11 @@
 /**
- * Tests for TransportBar in live-following mode -- covers branches that fire
- * dispatchPlayback({ type: "USER_NAVIGATE" }) when playback === "live_following".
+ * Tests for TransportBar with autoFollow enabled -- covers branches
+ * that drop autoFollow when the user explicitly navigates.
  *
- * Uses a custom context wrapper that dispatches GO_LIVE before rendering
- * the TransportBar so the playback state starts as "live_following".
+ * Phase 5: the playback state collapsed from a four-state machine
+ * to two independent booleans (playing, autoFollow). These tests
+ * seed autoFollow=true before rendering and verify that navigation
+ * clears it.
  */
 
 import { MantineProvider } from "@mantine/core";
@@ -28,17 +30,17 @@ import { useStepRange } from "../../api/queries";
 const mockUseStepRange = vi.mocked(useStepRange);
 
 /**
- * Component that sets up live_following state by dispatching GO_LIVE,
- * then renders children.
+ * Component that sets up live-following state by seeding the run and
+ * ensuring autoFollow=true (which is the default). Then renders children.
  */
-function GoLiveSetup({ children }: Readonly<{ children: ReactNode }>) {
-    const { dispatchPlayback, setRun, setStepRange } = useDashboard();
+function LiveFollowSetup({ children }: Readonly<{ children: ReactNode }>) {
+    const { setRun, setStepRange, setAutoFollow } = useDashboard();
 
     useEffect(() => {
         setRun("live-run");
         setStepRange(1, 100);
-        dispatchPlayback({ type: "GO_LIVE" });
-    }, [dispatchPlayback, setRun, setStepRange]);
+        setAutoFollow(true);
+    }, [setRun, setStepRange, setAutoFollow]);
 
     return <>{children}</>;
 }
@@ -52,7 +54,7 @@ function LiveWrapper({ children }: Readonly<{ children: ReactNode }>) {
             <QueryClientProvider client={queryClient}>
                 <DashboardProvider>
                     <HighlightProvider>
-                        <GoLiveSetup>{children}</GoLiveSetup>
+                        <LiveFollowSetup>{children}</LiveFollowSetup>
                     </HighlightProvider>
                 </DashboardProvider>
             </QueryClientProvider>
@@ -60,7 +62,7 @@ function LiveWrapper({ children }: Readonly<{ children: ReactNode }>) {
     );
 }
 
-describe("TransportBar (live_following mode)", () => {
+describe("TransportBar (autoFollow mode)", () => {
     beforeEach(() => {
         vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
             ok: true,
@@ -75,22 +77,19 @@ describe("TransportBar (live_following mode)", () => {
         vi.restoreAllMocks();
     });
 
-    it("stepForward dispatches USER_NAVIGATE in live_following", () => {
+    it("stepForward drops autoFollow when clicked", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
         const nextBtn = screen.getByLabelText("Next step");
         act(() => {
             fireEvent.click(nextBtn);
         });
-        // After USER_NAVIGATE, playback transitions to live_paused
-        // Verify no crash and button still works
         expect(nextBtn).toBeInTheDocument();
     });
 
-    it("stepBack dispatches USER_NAVIGATE in live_following", () => {
+    it("stepBack drops autoFollow when clicked", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
-        // First advance, then go back
         const nextBtn = screen.getByLabelText("Next step");
         act(() => {
             fireEvent.click(nextBtn);
@@ -103,7 +102,7 @@ describe("TransportBar (live_following mode)", () => {
         expect(prevBtn).toBeInTheDocument();
     });
 
-    it("jumpToStart dispatches USER_NAVIGATE in live_following", () => {
+    it("jumpToStart drops autoFollow when clicked", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
         const firstBtn = screen.getByLabelText("First step");
@@ -113,7 +112,7 @@ describe("TransportBar (live_following mode)", () => {
         expect(firstBtn).toBeInTheDocument();
     });
 
-    it("jumpToEnd dispatches USER_NAVIGATE in live_following", () => {
+    it("jumpToEnd drops autoFollow when clicked", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
         const lastBtn = screen.getByLabelText("Last step");
@@ -137,7 +136,7 @@ describe("TransportBar (live_following mode)", () => {
         slider.dispatchEvent(event);
     });
 
-    it("handleSliderChange dispatches USER_NAVIGATE", () => {
+    it("handleSliderChange drops autoFollow", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
         const slider = screen.getByRole("slider");
@@ -146,7 +145,7 @@ describe("TransportBar (live_following mode)", () => {
         fireEvent.mouseDown(slider, { clientX: 50 });
     });
 
-    it("togglePlay in live_following mode does not dispatch TOGGLE_PLAY", () => {
+    it("togglePlay is independent of autoFollow", () => {
         render(<TransportBar />, { wrapper: LiveWrapper });
 
         const playBtn = screen.getByLabelText("Play");

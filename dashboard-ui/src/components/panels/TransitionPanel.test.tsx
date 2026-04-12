@@ -7,7 +7,7 @@ import { TransitionPanel } from "./TransitionPanel";
 // Mock useObjectHistory for ObjectLink's ObjectModal
 vi.mock("../../api/queries", () => ({
     useObjectHistory: vi.fn().mockReturnValue({
-        data: { info: { uuid: 100, resolve_count: 1 }, states: [], transforms: [] },
+        data: { info: { uuid: "100", resolve_count: 1 }, states: [], transforms: [] },
         isLoading: false,
     }),
 }));
@@ -32,7 +32,7 @@ describe("TransitionPanel three-column", () => {
                 count: 1,
                 changes: [],
                 object_transforms: [{
-                    uuid: 100,
+                    uuid: "100",
                     glyph: "@",
                     color: "WHITE",
                     node_id: -10,
@@ -87,7 +87,7 @@ describe("TransitionPanel three-column", () => {
                 count: 1,
                 changes: [],
                 object_transforms: [{
-                    uuid: 200,
+                    uuid: "200",
                     glyph: ".",
                     status: "gone",
                     changes: [
@@ -143,7 +143,7 @@ describe("TransitionPanel three-column", () => {
                 count: 1,
                 changes: [],
                 object_transforms: [{
-                    uuid: 100,
+                    uuid: "100",
                     glyph: "@",
                     color: "WHITE",
                     node_id: -10,
@@ -168,7 +168,7 @@ describe("TransitionPanel three-column", () => {
                 count: 1,
                 changes: [],
                 object_transforms: [{
-                    uuid: 100,
+                    uuid: "100",
                     glyph: "@",
                     node_id: -10,
                     changes: [{ property: "x", type: "continuous", delta: 1, old_value: 5, new_value: 6 }],

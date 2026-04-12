@@ -42,9 +42,11 @@ function normalizeChange(ch: TransformChangeData | string): TransformChangeData 
 // ---------------------------------------------------------------------------
 
 interface ObjectRow {
-    uuid: number;
+    /** Object UUID -- string because ROC UUIDs are 63-bit ints. */
+    uuid: string;
     glyph?: string;
     color?: string;
+    /** Memgraph internal node id (small int, safe as number). */
     nodeId?: number;
     prevLabel: string;
     currentLabel: string;
@@ -149,21 +151,23 @@ function buildObjectRows(
         });
     }
 
-    // New objects from sequence_summary that aren't already in transforms
+    // New objects from sequence_summary that aren't already in transforms.
+    // obj.id from sequence_summary is the Memgraph node id (small int as
+    // string); transform.uuid is the 63-bit Object UUID (also a string
+    // now). They aren't directly comparable, so we match by node_id.
     for (const obj of currentObjects) {
         if (obj.matched_previous === false) {
-            // Check if already covered by a transform with status="new"
-            const alreadyCovered = transforms.some(
-                (t) => t.status === "new" && String(t.uuid) === obj.id,
-            );
-            if (alreadyCovered) continue;
-            // Also skip if there's a matching transform by node_id
-            if (transformUuids.has(Number(obj.id))) continue;
+            // Skip if already covered by a transform with the same node id.
+            const objNodeId = Number(obj.id);
+            if (Number.isFinite(objNodeId) && transformUuids.has(String(objNodeId))) {
+                continue;
+            }
 
             rows.push({
-                uuid: Number(obj.id) || 0,
+                // No UUID available from sequence_summary, fall back to node id.
+                uuid: obj.id,
                 glyph: obj.glyph,
-                nodeId: Number(obj.id) || undefined,
+                nodeId: Number.isFinite(objNodeId) ? objNodeId : undefined,
                 prevLabel: "--",
                 currentLabel: positionLabel(obj.x, obj.y),
                 deltaLabel: "(new)",

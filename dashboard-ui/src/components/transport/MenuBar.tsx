@@ -1,15 +1,20 @@
-/** Menu bar with Game and utility actions. */
+/** Menu bar with Game and utility actions.
+ *
+ * Game state reads come exclusively from ``useGameState`` (the
+ * dashboard's single source of truth: Socket.io event stream plus a
+ * one-shot REST fetch on mount). MenuBar does not maintain its own
+ * copy of the game status -- it only owns the local UX state for
+ * start/stop actions (``numGames``, ``loading``) and the clipboard
+ * copy indicator. This is the consolidated replacement for the prior
+ * GameMenu.tsx + nested ``GameMenu`` duplication that caused
+ * TC-GAME-004 (stale local state diverging from the live hook).
+ */
 
 import { Badge, Group, Menu, NumberInput, Text, UnstyledButton } from "@mantine/core";
 import { Link, Gamepad2 } from "lucide-react";
 import { useCallback, useState } from "react";
 
-interface GameState {
-    state: string;
-    run_name?: string | null;
-    exit_code?: number | null;
-    error?: string | null;
-}
+import { useGameState } from "../../hooks/useRunSubscription";
 
 function getGameIconColor(isRunning: boolean, isStopping: boolean): string | undefined {
     if (isRunning) return "var(--mantine-color-green-5)";
@@ -40,60 +45,48 @@ function GameStatusLabel({ isRunning, isStopping }: Readonly<{ isRunning: boolea
 }
 
 function GameMenu() {
-    const [gameState, setGameState] = useState<GameState>({ state: "idle" });
+    const gameState = useGameState();
     const [numGames, setNumGames] = useState<number>(5);
     const [loading, setLoading] = useState(false);
-
-    const refreshStatus = useCallback(async () => {
-        try {
-            const res = await fetch("/api/game/status");
-            if (res.ok) {
-                const data: GameState = await res.json();
-                setGameState(data);
-            }
-        } catch {
-            // ignore
-        }
-    }, []);
 
     const startGame = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/game/start?num_games=${numGames}`, {
+            await fetch(`/api/game/start?num_games=${numGames}`, {
                 method: "POST",
             });
-            if (res.ok) {
-                await refreshStatus();
-            }
+            // No manual refresh: the server emits a game_state_changed
+            // Socket.io event and useGameState picks it up. Same for stop.
         } catch {
             // ignore
         } finally {
             setLoading(false);
         }
-    }, [numGames, refreshStatus]);
+    }, [numGames]);
 
     const stopGame = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch("/api/game/stop", { method: "POST" });
-            if (res.ok) {
-                await refreshStatus();
-            }
+            await fetch("/api/game/stop", { method: "POST" });
         } catch {
             // ignore
         } finally {
             setLoading(false);
         }
-    }, [refreshStatus]);
+    }, []);
 
-    const isRunning =
-        gameState.state === "running" || gameState.state === "initializing";
-    const isStopping = gameState.state === "stopping";
+    // Default to "idle" before the one-shot initial fetch in
+    // useGameState resolves. Treat ``null`` the same as ``idle`` so
+    // the menu is always interactive.
+    const state = gameState?.state ?? "idle";
+    const error = gameState?.error ?? null;
+    const isRunning = state === "running" || state === "initializing";
+    const isStopping = state === "stopping";
 
     const iconColor = getGameIconColor(isRunning, isStopping);
 
     return (
-        <Menu position="bottom-start" withArrow shadow="md" onOpen={() => void refreshStatus()}>
+        <Menu position="bottom-start" withArrow shadow="md">
             <Menu.Target>
                 <UnstyledButton
                     style={{
@@ -115,10 +108,10 @@ function GameMenu() {
                     <GameStatusLabel isRunning={isRunning} isStopping={isStopping} />
                 </Menu.Label>
 
-                {gameState.error && !isRunning && (
+                {error && !isRunning && (
                     <Menu.Label>
                         <Text size="xs" c="red">
-                            {gameState.error}
+                            {error}
                         </Text>
                     </Menu.Label>
                 )}

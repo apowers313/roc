@@ -13,7 +13,7 @@ import {
     Alert, Badge, Box, Button, Checkbox, CloseButton, Divider, Group, Paper,
     Popover, Progress, ScrollArea, Stack, Table, Text,
 } from "@mantine/core";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
 import fcose from "cytoscape-fcose";
 import CytoscapeComponent from "react-cytoscapejs";
@@ -63,6 +63,7 @@ export const NODE_TYPE_OPTIONS: ReadonlyArray<{ value: string; label: string }> 
     { value: "action", label: "Action" },
     { value: "intrinsic", label: "Intrinsic" },
     { value: "transform", label: "Transform" },
+    { value: "property-transform", label: "Property Change" },
 ];
 
 /** Node types visible by default: everything except Intrinsic. Intrinsics are
@@ -262,13 +263,19 @@ export function mergeGraphData(
 // Node / edge type mapping
 // ---------------------------------------------------------------------------
 
-/** Map a graph node's labels attribute to a visual type string. */
+/** Map a graph node's labels attribute to a visual type string.
+ *
+ *  IMPORTANT: order matters because we use substring matching. PropertyTransformNode
+ *  must be checked BEFORE the bare-Transform branch -- the substring "Transform"
+ *  is in "PropertyTransformNode" too, and a misclassification sends it to the
+ *  TransformDetail panel which shows only "kind: Transform" with no useful info. */
 export function getNodeType(data: Record<string, unknown>): string {
     const labels = String(data.labels ?? "");
     // Check more specific types first (ObjectInstance before Object,
     // RelationshipGroup before FeatureGroup since both are groups,
-    // ObjectTransform/IntrinsicTransform before bare Transform)
+    // PropertyTransformNode / ObjectTransform / IntrinsicTransform before bare Transform).
     if (labels.includes("ObjectInstance")) return "object-instance";
+    if (labels.includes("PropertyTransformNode")) return "property-transform";
     if (labels.includes("ObjectTransform")) return "transform";
     if (labels.includes("IntrinsicTransform")) return "transform";
     if (labels.includes("Frame")) return "frame";
@@ -346,6 +353,8 @@ export function makeLabel(
             if (labels.includes("IntrinsicTransform")) return "IntrinsicTransform";
             return "Transform";
         }
+        case "property-transform":
+            return String(data.property_name ?? "PropChange");
         default:
             return String(data.labels ?? "Node");
     }
@@ -506,6 +515,22 @@ export function buildElements(
         // Walk children of expanded frames up to 3 levels deep
         walkExpandedSubtree(frame.data.id, 3);
     });
+
+    // Final pass: draw every edge whose endpoints are both already placed.
+    // Without this, an edge like (Transform -> Frame N+1) is missing from
+    // the canvas when Transform was added by walking out of Frame N -- the
+    // walk only places parent->child edges, so the Transform's outgoing
+    // edge to the next Frame stays invisible even though Frame N+1 is on
+    // the canvas. Same problem for any cross-link added by the BFS that
+    // isn't on the walk path. Edges already placed are skipped via the
+    // placedEdges set in addEdgeBetween.
+    for (const e of apiData.elements.edges) {
+        const src = String(e.data.source);
+        const dst = String(e.data.target);
+        if (placedNodes.has(src) && placedNodes.has(dst)) {
+            addEdgeBetween(src, dst);
+        }
+    }
 
     return elements;
 }
@@ -677,7 +702,7 @@ interface DetailPanelProps {
     apiData: CytoscapeData;
     actionMap: ActionMapEntry[];
     onClose: () => void;
-    onViewHistory?: (uuid: number) => void;
+    onViewHistory?: (uuid: string) => void;
 }
 
 /** Right-side detail panel showing context-appropriate info for the selected node or edge. */
@@ -760,7 +785,7 @@ function NodeDetailContent({
     apiData,
     actionMap,
     onViewHistory,
-}: Readonly<{ selected: SelectedElement; apiData: CytoscapeData; actionMap: ActionMapEntry[]; onViewHistory?: (uuid: number) => void }>) {
+}: Readonly<{ selected: SelectedElement; apiData: CytoscapeData; actionMap: ActionMapEntry[]; onViewHistory?: (uuid: string) => void }>) {
     switch (selected.type) {
         case "frame": return <FrameDetail nodeId={String(selected.data.id)} apiData={apiData} actionMap={actionMap} />;
         case "object-instance": return <ObjectInstanceDetail selected={selected} apiData={apiData} />;
@@ -771,6 +796,7 @@ function NodeDetailContent({
         case "action": return <ActionDetail data={selected.data} actionMap={actionMap} />;
         case "intrinsic": return <IntrinsicDetail data={selected.data} />;
         case "transform": return <TransformDetail data={selected.data} apiData={apiData} />;
+        case "property-transform": return <PropertyTransformDetail data={selected.data} />;
         default: return <RawDataDetail data={selected.data} />;
     }
 }
@@ -913,6 +939,17 @@ function ObjectInstanceDetail({
 
     const instanceChar = getInstanceChar(d) ?? "?";
 
+    // Surface the parent Object's identity at the top of the instance
+    // panel: human_name (display) + uuid (precision-safe). Walk the
+    // ObservedAs edge to the Object and read its fields. Falls back to
+    // the instance's own copies if the Object isn't loaded yet -- both
+    // sides carry the same uuid/human_name from the server.
+    const parentName =
+        (objectNode && typeof objectNode.data.human_name === "string"
+            ? objectNode.data.human_name
+            : null) ?? (typeof d.human_name === "string" ? d.human_name : null);
+    const parentUuid = (objectNode?.data.uuid ?? d.object_uuid) as unknown;
+
     return (
         <Stack gap="xs">
             <Group gap="xs">
@@ -921,6 +958,33 @@ function ObjectInstanceDetail({
                     Position: ({String(selected.data.x ?? "?")}, {String(selected.data.y ?? "?")})
                 </Text>
             </Group>
+            {(parentName != null || parentUuid != null) && (
+                <Table verticalSpacing={2} horizontalSpacing="xs" style={{ fontSize: "12px" }}>
+                    <Table.Tbody>
+                        {parentName != null && (
+                            <Table.Tr>
+                                <Table.Td style={{ color: "#868E96" }}>object</Table.Td>
+                                <Table.Td style={{ color: "#e0e0e0" }}>{parentName}</Table.Td>
+                            </Table.Tr>
+                        )}
+                        {parentUuid != null && (
+                            <Table.Tr>
+                                <Table.Td style={{ color: "#868E96" }}>uuid</Table.Td>
+                                <Table.Td
+                                    style={{
+                                        color: "#e0e0e0",
+                                        fontFamily: "monospace",
+                                        fontSize: "11px",
+                                        wordBreak: "break-all",
+                                    }}
+                                >
+                                    {String(parentUuid)}
+                                </Table.Td>
+                            </Table.Tr>
+                        )}
+                    </Table.Tbody>
+                </Table>
+            )}
             {instanceAttrs.length > 0 && (
                 <>
                     <Divider color="#2C2E33" />
@@ -999,7 +1063,7 @@ function ObjectDetail({
 }: Readonly<{
     data: Record<string, unknown>;
     apiData: CytoscapeData;
-    onViewHistory?: (uuid: number) => void;
+    onViewHistory?: (uuid: string) => void;
 }>) {
     const nodeMap = useMemo(() => {
         const m = new Map<string, Record<string, unknown>>();
@@ -1015,14 +1079,32 @@ function ObjectDetail({
             {glyphChar != null && (
                 <Group gap="xs">
                     <Text size="lg" ff="monospace" fw={700}>{glyphChar}</Text>
-                    <Text size="xs" c="dimmed">seen as {glyphChar}</Text>
+                    {data.human_name != null && (
+                        <Text size="xs" c="dimmed">{String(data.human_name)}</Text>
+                    )}
                 </Group>
             )}
             <Table verticalSpacing={2} horizontalSpacing="xs" style={{ fontSize: "12px" }}>
                 <Table.Tbody>
+                    {data.human_name != null && (
+                        <Table.Tr>
+                            <Table.Td style={{ color: "#868E96" }}>name</Table.Td>
+                            <Table.Td style={{ color: "#e0e0e0" }}>{String(data.human_name)}</Table.Td>
+                        </Table.Tr>
+                    )}
                     <Table.Tr>
                         <Table.Td style={{ color: "#868E96" }}>UUID</Table.Td>
-                        <Table.Td style={{ color: "#e0e0e0" }}>{String(data.uuid ?? "--")}</Table.Td>
+                        <Table.Td
+                            style={{
+                                color: "#e0e0e0",
+                                fontFamily: "monospace",
+                                fontSize: "11px",
+                                wordBreak: "break-all",
+                            }}
+                        >
+                            {/* uuid is a string for precision -- never coerce to Number */}
+                            {data.uuid != null ? String(data.uuid) : "--"}
+                        </Table.Td>
                     </Table.Tr>
                     <Table.Tr>
                         <Table.Td style={{ color: "#868E96" }}>resolve count</Table.Td>
@@ -1047,7 +1129,7 @@ function ObjectDetail({
                         size="xs"
                         variant="light"
                         color="cyan"
-                        onClick={() => onViewHistory(Number(data.uuid))}
+                        onClick={() => onViewHistory(String(data.uuid))}
                     >
                         View History
                     </Button>
@@ -1206,6 +1288,186 @@ function IntrinsicDetail({ data }: Readonly<{ data: Record<string, unknown> }>) 
     );
 }
 
+/** Walk Change edges from a Transform node to its source and destination
+ *  Frame neighbors. Returns the (src_tick, dst_tick) pair, or null when
+ *  either side isn't reachable in the loaded graph. */
+export function findTransformFrameTicks(
+    transformId: string,
+    nodeMap: Map<string, Record<string, unknown>>,
+    edges: ReadonlyArray<{ data: Record<string, unknown> }>,
+): { srcFrameTick: number | null; dstFrameTick: number | null } {
+    let srcFrameTick: number | null = null;
+    let dstFrameTick: number | null = null;
+    for (const e of edges) {
+        if (String(e.data.type ?? "") !== "Change") continue;
+        if (String(e.data.target) === transformId) {
+            const frame = nodeMap.get(String(e.data.source));
+            if (frame && typeof frame.tick === "number") srcFrameTick = frame.tick;
+        }
+        if (String(e.data.source) === transformId) {
+            const frame = nodeMap.get(String(e.data.target));
+            if (frame && typeof frame.tick === "number") dstFrameTick = frame.tick;
+        }
+    }
+    return { srcFrameTick, dstFrameTick };
+}
+
+/** Each row of the per-property change table inside a Transform detail. */
+export interface PropertyChangeRow {
+    propertyName: string;
+    changeType: string;
+    summary: string;
+}
+
+/** Walk TransformDetail edges from an ObjectTransform to its
+ *  PropertyTransformNode children and convert each into a display row.
+ *
+ *  PropertyTransformNode shapes vary by change type:
+ *  - position changes (x/y): old/new are null, only `delta` is set
+ *  - size/distance changes: old, new, and delta are all set
+ *  - discrete changes (motion_direction, glyph_type, ...): old/new strings, no delta
+ */
+export function buildPropertyChangeRows(
+    transformId: string,
+    nodeMap: Map<string, Record<string, unknown>>,
+    edges: ReadonlyArray<{ data: Record<string, unknown> }>,
+): PropertyChangeRow[] {
+    const rows: PropertyChangeRow[] = [];
+    for (const e of edges) {
+        if (String(e.data.type ?? "") !== "TransformDetail") continue;
+        if (String(e.data.source) !== transformId) continue;
+        const child = nodeMap.get(String(e.data.target));
+        if (!child) continue;
+        const labels = String(child.labels ?? "");
+        if (!labels.includes("PropertyTransformNode")) continue;
+        rows.push(propertyChangeRowFromNode(child));
+    }
+    // Stable order: continuous first (position before others), then discrete.
+    // Inside each group, alphabetical by property name. This keeps the panel
+    // readable when the same Transform is inspected across steps.
+    const order = (r: PropertyChangeRow): number => {
+        if (r.changeType === "continuous") {
+            if (r.propertyName === "x") return 0;
+            if (r.propertyName === "y") return 1;
+            return 2;
+        }
+        return 3;
+    };
+    rows.sort((a, b) => {
+        const oa = order(a);
+        const ob = order(b);
+        if (oa !== ob) return oa - ob;
+        return a.propertyName.localeCompare(b.propertyName);
+    });
+    return rows;
+}
+
+function propertyChangeRowFromNode(
+    child: Record<string, unknown>,
+): PropertyChangeRow {
+    const propertyName = String(child.property_name ?? "?");
+    const changeType = String(child.change_type ?? "?");
+    const oldVal = child.old_value;
+    const newVal = child.new_value;
+    const delta = child.delta;
+
+    let summary: string;
+    if (oldVal != null && newVal != null) {
+        // Discrete-style: old -> new
+        summary = `${formatPropValue(oldVal)} -> ${formatPropValue(newVal)}`;
+        if (typeof delta === "number") summary += ` (${formatDelta(delta)})`;
+    } else if (typeof delta === "number") {
+        // Position/relative change: only delta is set
+        summary = formatDelta(delta);
+    } else {
+        summary = `${formatPropValue(oldVal)} -> ${formatPropValue(newVal)}`;
+    }
+    return { propertyName, changeType, summary };
+}
+
+function formatPropValue(v: unknown): string {
+    if (v == null) return "--";
+    if (Array.isArray(v)) return `[${v.map(formatPropValue).join(",")}]`;
+    if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
+    return String(v);
+}
+
+function formatDelta(d: number): string {
+    const sign = d > 0 ? "+" : "";
+    const body = Number.isInteger(d) ? String(d) : d.toFixed(3);
+    return `${sign}${body}`;
+}
+
+/** A child transform reachable from a bare parent Transform via an outgoing
+ *  Change edge. Each entry summarises one ObjectTransform or IntrinsicTransform
+ *  that the parent groups together for a single frame transition. */
+export interface TransformChildSummary {
+    id: string;
+    /** "object" | "intrinsic" -- determines which fields are populated. */
+    kind: "object" | "intrinsic" | "other";
+    /** human_name from FlexiHumanHash for object transforms. */
+    humanName?: string;
+    /** Object UUID string for object transforms. */
+    objectUuid?: string;
+    /** Intrinsic name for intrinsic transforms. */
+    intrinsicName?: string;
+    /** Normalized change for intrinsic transforms. */
+    normalizedChange?: number;
+    /** Number of property changes summarised in the child node attributes. */
+    changeCount?: number;
+}
+
+/** Walk outgoing Change edges from a bare parent Transform to its child
+ *  ObjectTransform / IntrinsicTransform nodes. Used by TransformDetail to
+ *  show a meaningful summary instead of a bare "kind: Transform" row.
+ *
+ *  This is the "container" half of the Transform multiplexing -- a parent
+ *  Transform represents a frame transition and groups one child per object
+ *  or intrinsic that changed. The Change edges to its children are
+ *  distinct from the two Change edges that link it to the source/destination
+ *  Frames. */
+export function findTransformChildren(
+    transformId: string,
+    nodeMap: Map<string, Record<string, unknown>>,
+    edges: ReadonlyArray<{ data: Record<string, unknown> }>,
+): TransformChildSummary[] {
+    const out: TransformChildSummary[] = [];
+    for (const e of edges) {
+        if (String(e.data.type ?? "") !== "Change") continue;
+        if (String(e.data.source) !== transformId) continue;
+        const child = nodeMap.get(String(e.data.target));
+        if (!child) continue;
+        const labels = String(child.labels ?? "");
+        // Skip the parent->Frame Change edges (frames are not children).
+        if (labels.includes("Frame")) continue;
+        const id = String(child.id);
+        if (labels.includes("ObjectTransform")) {
+            const discrete = typeof child.num_discrete_changes === "number"
+                ? child.num_discrete_changes : 0;
+            const continuous = typeof child.num_continuous_changes === "number"
+                ? child.num_continuous_changes : 0;
+            out.push({
+                id,
+                kind: "object",
+                humanName: typeof child.human_name === "string" ? child.human_name : undefined,
+                objectUuid: child.object_uuid != null ? String(child.object_uuid) : undefined,
+                changeCount: discrete + continuous,
+            });
+        } else if (labels.includes("IntrinsicTransform")) {
+            out.push({
+                id,
+                kind: "intrinsic",
+                intrinsicName: typeof child.name === "string" ? child.name : undefined,
+                normalizedChange: typeof child.normalized_change === "number"
+                    ? child.normalized_change : undefined,
+            });
+        } else {
+            out.push({ id, kind: "other" });
+        }
+    }
+    return out;
+}
+
 function TransformDetail({
     data,
     apiData,
@@ -1217,45 +1479,205 @@ function TransformDetail({
             ? "IntrinsicTransform"
             : "Transform";
 
-    // Walk Change edges to identify source/destination frames, matching
-    // the Transform.src_frame / Transform.dst_frame properties.
-    const nodeMap = new Map<string, Record<string, unknown>>();
-    for (const n of apiData.elements.nodes) {
-        nodeMap.set(n.data.id, n.data as Record<string, unknown>);
-    }
-    let srcFrameTick: number | null = null;
-    let dstFrameTick: number | null = null;
-    const selfId = String(data.id);
-    for (const e of apiData.elements.edges) {
-        if (String(e.data.type ?? "") !== "Change") continue;
-        if (String(e.data.target) === selfId) {
-            const frame = nodeMap.get(String(e.data.source));
-            if (frame && typeof frame.tick === "number") srcFrameTick = frame.tick;
+    const nodeMap = useMemo(() => {
+        const m = new Map<string, Record<string, unknown>>();
+        for (const n of apiData.elements.nodes) {
+            m.set(n.data.id, n.data as Record<string, unknown>);
         }
-        if (String(e.data.source) === selfId) {
-            const frame = nodeMap.get(String(e.data.target));
-            if (frame && typeof frame.tick === "number") dstFrameTick = frame.tick;
+        return m;
+    }, [apiData]);
+
+    const selfId = String(data.id);
+    const { srcFrameTick, dstFrameTick } = findTransformFrameTicks(
+        selfId,
+        nodeMap,
+        apiData.elements.edges,
+    );
+    const propertyRows = buildPropertyChangeRows(
+        selfId,
+        nodeMap,
+        apiData.elements.edges,
+    );
+    // For a bare parent Transform (frame transition container), enumerate
+    // its child ObjectTransform / IntrinsicTransform nodes via outgoing
+    // Change edges. ObjectTransform / IntrinsicTransform leaves don't
+    // have child transforms, so this list is always empty for them.
+    const childTransforms = kind === "Transform"
+        ? findTransformChildren(selfId, nodeMap, apiData.elements.edges)
+        : [];
+
+    // Header rows describe the transform itself; the per-property table
+    // below it (for ObjectTransforms) shows the actual changes.
+    const headerRows: Array<[string, string]> = [["kind", kind]];
+    // human_name is the friendly display name; show it first when present.
+    if (typeof data.human_name === "string") {
+        headerRows.push(["object", data.human_name]);
+    }
+    // object_uuid arrives as a string from the wire format. Accept the
+    // legacy number / bigint shapes too so this code keeps working if we
+    // ever load an older graph fixture.
+    if (data.object_uuid != null) {
+        const ot = typeof data.object_uuid;
+        if (ot === "string" || ot === "number" || ot === "bigint") {
+            headerRows.push(["object uuid", String(data.object_uuid)]);
+        }
+    }
+    if (typeof data.name === "string") {
+        headerRows.push(["intrinsic", data.name]);
+    }
+    if (typeof data.normalized_change === "number") {
+        headerRows.push(["normalized change", data.normalized_change.toFixed(3)]);
+    }
+    if (srcFrameTick != null) headerRows.push(["from frame", `tick ${srcFrameTick}`]);
+    if (dstFrameTick != null) headerRows.push(["to frame", `tick ${dstFrameTick}`]);
+
+    // Show the count rows only when we don't have the actual per-property
+    // children loaded -- otherwise the children table makes the counts
+    // redundant noise. The depth-1 frame fetch leaves PropertyTransformNodes
+    // unfetched, so the counts give the user *some* signal until they click
+    // the transform to expand it.
+    if (propertyRows.length === 0) {
+        if (typeof data.num_discrete_changes === "number") {
+            headerRows.push(["discrete changes", String(data.num_discrete_changes)]);
+        }
+        if (typeof data.num_continuous_changes === "number") {
+            headerRows.push(["continuous changes", String(data.num_continuous_changes)]);
         }
     }
 
-    const rows: Array<[string, string]> = [["kind", kind]];
-    if (typeof data.object_uuid === "number" || typeof data.object_uuid === "bigint") {
-        rows.push(["object uuid", String(data.object_uuid)]);
+    const totalAdvertised =
+        (typeof data.num_discrete_changes === "number" ? data.num_discrete_changes : 0) +
+        (typeof data.num_continuous_changes === "number" ? data.num_continuous_changes : 0);
+    // PositionChange contributes 2 PropertyTransformNodes (x and y) but counts
+    // as 1 continuous change, so node-count > advertised-count by up to 1.
+    const childrenIncomplete =
+        propertyRows.length > 0 &&
+        totalAdvertised > 0 &&
+        propertyRows.length < totalAdvertised;
+
+    return (
+        <Stack gap="xs">
+            <Table verticalSpacing={2} horizontalSpacing="xs" style={{ fontSize: "12px" }}>
+                <Table.Tbody>
+                    {headerRows.map(([k, v]) => (
+                        <Table.Tr key={k}>
+                            <Table.Td style={{ color: "#868E96" }}>{k}</Table.Td>
+                            <Table.Td style={{ color: "#e0e0e0" }}>{v}</Table.Td>
+                        </Table.Tr>
+                    ))}
+                </Table.Tbody>
+            </Table>
+            {propertyRows.length > 0 && (
+                <>
+                    <Divider color="#2C2E33" />
+                    <Text size="xs" c="dimmed">Property changes</Text>
+                    <Table verticalSpacing={2} horizontalSpacing="xs" style={{ fontSize: "12px" }}>
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th style={{ color: "#868E96" }}>property</Table.Th>
+                                <Table.Th style={{ color: "#868E96" }}>type</Table.Th>
+                                <Table.Th style={{ color: "#868E96" }}>change</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {propertyRows.map((row) => (
+                                <Table.Tr key={row.propertyName}>
+                                    <Table.Td style={{ color: "#e0e0e0" }}>
+                                        {row.propertyName}
+                                    </Table.Td>
+                                    <Table.Td style={{ color: "#868E96" }}>
+                                        {row.changeType}
+                                    </Table.Td>
+                                    <Table.Td
+                                        style={{
+                                            color: "#e0e0e0",
+                                            fontFamily: "monospace",
+                                        }}
+                                    >
+                                        {row.summary}
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                    {childrenIncomplete && (
+                        <Text size="xs" c="dimmed">
+                            Showing {propertyRows.length} of {totalAdvertised}
+                            {" "}property changes -- expand the transform node
+                            to load the rest.
+                        </Text>
+                    )}
+                </>
+            )}
+            {childTransforms.length > 0 && (
+                <>
+                    <Divider color="#2C2E33" />
+                    <Text size="xs" c="dimmed">
+                        Frame transition with {childTransforms.length}
+                        {childTransforms.length === 1 ? " change" : " changes"}
+                    </Text>
+                    <Table verticalSpacing={2} horizontalSpacing="xs" style={{ fontSize: "12px" }}>
+                        <Table.Thead>
+                            <Table.Tr>
+                                <Table.Th style={{ color: "#868E96" }}>kind</Table.Th>
+                                <Table.Th style={{ color: "#868E96" }}>target</Table.Th>
+                                <Table.Th style={{ color: "#868E96" }}>change</Table.Th>
+                            </Table.Tr>
+                        </Table.Thead>
+                        <Table.Tbody>
+                            {childTransforms.map((c) => (
+                                <Table.Tr key={c.id}>
+                                    <Table.Td style={{ color: "#868E96" }}>
+                                        {c.kind}
+                                    </Table.Td>
+                                    <Table.Td style={{ color: "#e0e0e0" }}>
+                                        {c.kind === "object"
+                                            ? (c.humanName ?? c.objectUuid ?? c.id)
+                                            : c.kind === "intrinsic"
+                                                ? (c.intrinsicName ?? c.id)
+                                                : c.id}
+                                    </Table.Td>
+                                    <Table.Td
+                                        style={{
+                                            color: "#e0e0e0",
+                                            fontFamily: "monospace",
+                                        }}
+                                    >
+                                        {c.kind === "object" && c.changeCount != null
+                                            ? `${c.changeCount} prop${c.changeCount === 1 ? "" : "s"}`
+                                            : c.kind === "intrinsic" && c.normalizedChange != null
+                                                ? formatDelta(c.normalizedChange)
+                                                : "--"}
+                                    </Table.Td>
+                                </Table.Tr>
+                            ))}
+                        </Table.Tbody>
+                    </Table>
+                </>
+            )}
+        </Stack>
+    );
+}
+
+function PropertyTransformDetail({
+    data,
+}: Readonly<{ data: Record<string, unknown> }>) {
+    const propertyName = String(data.property_name ?? "?");
+    const changeType = String(data.change_type ?? "?");
+    const oldVal = data.old_value;
+    const newVal = data.new_value;
+    const delta = data.delta;
+
+    const rows: Array<[string, string]> = [
+        ["kind", "PropertyTransformNode"],
+        ["property", propertyName],
+        ["change type", changeType],
+    ];
+    if (oldVal != null) rows.push(["old value", formatPropDisplayValue(oldVal)]);
+    if (newVal != null) rows.push(["new value", formatPropDisplayValue(newVal)]);
+    if (typeof delta === "number") {
+        rows.push(["delta", Number.isInteger(delta) ? String(delta) : delta.toFixed(3)]);
     }
-    if (typeof data.num_discrete_changes === "number") {
-        rows.push(["discrete changes", String(data.num_discrete_changes)]);
-    }
-    if (typeof data.num_continuous_changes === "number") {
-        rows.push(["continuous changes", String(data.num_continuous_changes)]);
-    }
-    if (typeof data.name === "string") {
-        rows.push(["intrinsic", data.name]);
-    }
-    if (typeof data.normalized_change === "number") {
-        rows.push(["normalized change", data.normalized_change.toFixed(3)]);
-    }
-    if (srcFrameTick != null) rows.push(["from frame", `tick ${srcFrameTick}`]);
-    if (dstFrameTick != null) rows.push(["to frame", `tick ${dstFrameTick}`]);
 
     return (
         <Stack gap="xs">
@@ -1264,13 +1686,31 @@ function TransformDetail({
                     {rows.map(([k, v]) => (
                         <Table.Tr key={k}>
                             <Table.Td style={{ color: "#868E96" }}>{k}</Table.Td>
-                            <Table.Td style={{ color: "#e0e0e0" }}>{v}</Table.Td>
+                            <Table.Td
+                                style={{
+                                    color: "#e0e0e0",
+                                    fontFamily: "monospace",
+                                }}
+                            >
+                                {v}
+                            </Table.Td>
                         </Table.Tr>
                     ))}
                 </Table.Tbody>
             </Table>
         </Stack>
     );
+}
+
+/** Display-format a PropertyTransformNode old/new value, which may be a
+ *  string, number, array (delta pair), or null. */
+function formatPropDisplayValue(v: unknown): string {
+    if (v == null) return "--";
+    if (Array.isArray(v)) return `[${v.map(formatPropDisplayValue).join(", ")}]`;
+    if (typeof v === "number") {
+        return Number.isInteger(v) ? String(v) : v.toFixed(3);
+    }
+    return String(v);
 }
 
 function RawDataDetail({ data }: Readonly<{ data: Record<string, unknown> }>) {
@@ -1345,7 +1785,7 @@ interface GraphVisualizationProps {
     game?: number;
 }
 
-export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizationProps>) {
+function GraphVisualizationInner({ run, step, game }: Readonly<GraphVisualizationProps>) {
     const cyRef = useRef<cytoscape.Core | null>(null);
     const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
     const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
@@ -1373,11 +1813,20 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
     }, []);
 
     // Object history view mode
-    const [historyUuid, setHistoryUuid] = useState<number | null>(null);
+    // Object UUIDs are 63-bit ints stored as strings -- never coerce to
+    // Number, that loses precision and View History fetches the wrong key.
+    const [historyUuid, setHistoryUuid] = useState<string | null>(null);
     const isHistoryView = historyUuid != null;
 
-    // Debounce step changes during rapid scrubbing to avoid excessive API calls
+    // Debounce step changes during rapid scrubbing to avoid excessive API calls.
+    // Reset immediately on run change to prevent stale cross-run requests
+    // (e.g. step 507 from a 573-step run firing against a 13-step run).
     const [debouncedStep, setDebouncedStep] = useState(step);
+    const [prevRun, setPrevRun] = useState(run);
+    if (run !== prevRun) {
+        setPrevRun(run);
+        setDebouncedStep(step);
+    }
     useEffect(() => {
         const timer = setTimeout(() => setDebouncedStep(step), STEP_DEBOUNCE_MS);
         return () => clearTimeout(timer);
@@ -1451,9 +1900,20 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
     // DEBUG: sequence counter + timestamp for tracking the click flicker bug.
     // Every log line prints a monotonic counter so we can see event ordering
     // even when React batching or async timing shuffles the console output.
+    //
+    // Gated behind localStorage so the console stays quiet on a normal page
+    // load (BUG-L2: this used to spam 25+ "[GraphViz]" lines per load). To
+    // re-enable, run in DevTools:
+    //     localStorage.setItem("graphviz-debug", "1")
+    // and reload. Clear with localStorage.removeItem("graphviz-debug").
     const debugSeq = useRef(0);
     const dbg = useCallback((event: string, data: Record<string, unknown> = {}) => {
         if (!import.meta.env.DEV) return;
+        try {
+            if (globalThis.localStorage?.getItem("graphviz-debug") == null) return;
+        } catch {
+            return;
+        }
         debugSeq.current += 1;
         const payload = { seq: debugSeq.current, t: performance.now().toFixed(1), event, ...data };
         // eslint-disable-next-line no-console
@@ -1580,6 +2040,39 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
 
     // Use history data when in history view, otherwise accumulated data
     const graphData = isHistoryView ? (historyData ?? null) : accumulatedData;
+
+    // When the History view's data arrives, auto-expand every non-leaf
+    // node so the entire curated subgraph is visible. The History subgraph
+    // is curated server-side to be exactly the Frames the Object appeared
+    // in, the linking ObjectInstances, and the Object itself. Without
+    // expansion the user sees only the timeline backbone (171 lonely
+    // Frame nodes for a long-lived object) because the buildElements walk
+    // only renders children of expanded nodes -- and:
+    //   - Frames must be expanded so their ObjectInstance children render.
+    //   - ObjectInstances must be expanded so the Object node renders
+    //     (Object is reachable via the ObservedAs out-edge from each
+    //     instance). Without this the panel shows ObjectInstances but
+    //     not the Object the user navigated to inspect.
+    const historyAutoExpandedFor = useRef<string | null>(null);
+    useEffect(() => {
+        if (!isHistoryView) {
+            historyAutoExpandedFor.current = null;
+            return;
+        }
+        if (historyData == null) return;
+        // Only auto-expand once per History session, so a user collapse
+        // sticks. Re-runs only when historyUuid changes (new History view).
+        if (historyAutoExpandedFor.current === historyUuid) return;
+        historyAutoExpandedFor.current = historyUuid;
+        // Expand every node that has any outgoing edge (i.e. anything
+        // that's not a leaf in the curated history subgraph). This pulls
+        // in Frames -> ObjectInstances -> Object in one shot.
+        const expandable = new Set<string>();
+        for (const n of historyData.elements.nodes) {
+            expandable.add(String(n.data.id));
+        }
+        setExpandedNodes(expandable);
+    }, [isHistoryView, historyData, historyUuid]);
 
     // Build positioned elements from graph data + expand state + action map.
     // The ``hiddenTypes`` set controls the "Show Nodes" filter from the toolbar.
@@ -1818,9 +2311,17 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
         [toggleExpand, fitGraph, pinNodeAtCurrentPosition, unpinNode, runFcoseLayout, dbg],
     );
 
-    const handleViewHistory = useCallback((uuid: number) => {
+    const handleViewHistory = useCallback((uuid: string) => {
         setHistoryUuid(uuid);
         setSelectedElement(null);
+        // The History view returns the Object's full lifetime: every Frame
+        // it appeared in, plus the ObjectInstances linking the two. The
+        // buildElements walk only renders children of *expanded* frames,
+        // so leaving expandedNodes empty here would show only the timeline
+        // backbone (171 lonely Frame nodes for a long-lived object) and
+        // hide the very ObjectInstances and Object the user came to see.
+        // The actual expansion is populated by an effect once historyData
+        // arrives -- this just clears stale state from the frame view.
         setExpandedNodes(new Set());
     }, []);
 
@@ -1932,7 +2433,6 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
                         layout={PRESET_LAYOUT}
                         cy={handleCyInit}
                         style={{ width: "100%", height: "100%" }}
-                        wheelSensitivity={0.3}
                         userPanningEnabled={true}
                         userZoomingEnabled={true}
                         boxSelectionEnabled={false}
@@ -1951,3 +2451,14 @@ export function GraphVisualization({ run, step, game }: Readonly<GraphVisualizat
         </Paper>
     );
 }
+
+// GraphVisualization is the heaviest panel in the dashboard (Cytoscape.js
+// graph layout, ~2500 LOC, expensive re-renders). On step navigation the
+// parent App re-renders and passes a new ``step`` prop on every keystroke,
+// which cascades into a useless inner re-render of the whole Cytoscape
+// subtree before the internal debounce even decides whether to refetch.
+// Wrap the component in ``React.memo`` so props equality ends the
+// reconciliation at this boundary. The component still reacts to step
+// changes via its internal ``debouncedStep`` effect; memo just removes the
+// extra work when props haven't actually shifted.
+export const GraphVisualization = memo(GraphVisualizationInner);

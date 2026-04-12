@@ -58,4 +58,53 @@ describe("LogMessages", () => {
         const cellTexts = Array.from(cells).map((c) => c.textContent);
         expect(cellTexts).toContain("WARN");
     });
+
+    it("renders duplicate log entries without React key warnings", () => {
+        // Regression: during a live game, the attenuation DEBUG records
+        // from the saliency pipeline are emitted many times per step with
+        // identical timestamp and body. The pre-fix key (level + timestamp
+        // + body-prefix) collided, producing "Encountered two children
+        // with the same key" warnings that flooded the console and
+        // prompted React to unmount/remount rows on every render. The fix
+        // includes the array index in the key so every row is unique.
+        const warnings: unknown[][] = [];
+        const originalWarn = console.error;
+        console.error = (...args: unknown[]) => {
+            warnings.push(args);
+        };
+        try {
+            const duplicateBody =
+                "attenuation: 5 history entries, max_penalty=1.000, 61 cells attenuated";
+            const data = makeStepData({
+                logs: [
+                    makeLog({
+                        body: duplicateBody,
+                        severity_text: "DEBUG",
+                        timestamp: 1775860974437,
+                    }),
+                    makeLog({
+                        body: duplicateBody,
+                        severity_text: "DEBUG",
+                        timestamp: 1775860974437,
+                    }),
+                    makeLog({
+                        body: duplicateBody,
+                        severity_text: "DEBUG",
+                        timestamp: 1775860974437,
+                    }),
+                ],
+            });
+            renderWithProviders(<LogMessages data={data} />);
+            const duplicateKeyWarnings = warnings.filter((args) =>
+                args.some(
+                    (a) =>
+                        typeof a === "string" &&
+                        a.includes("Encountered two children with the same key"),
+                ),
+            );
+            expect(duplicateKeyWarnings).toHaveLength(0);
+        } finally {
+            console.error = originalWarn;
+        }
+    });
 });

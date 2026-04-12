@@ -19,10 +19,8 @@ describe("DashboardProvider / useDashboard", () => {
         expect(result.current.stepMin).toBe(1);
         expect(result.current.stepMax).toBe(1);
         expect(result.current.playing).toBe(false);
+        expect(result.current.autoFollow).toBe(true);
         expect(result.current.speed).toBe(200);
-        expect(result.current.liveRunName).toBe("");
-        expect(result.current.liveGameActive).toBe(false);
-        expect(result.current.playback).toBe("historical");
     });
 
     it("updates run", () => {
@@ -55,11 +53,70 @@ describe("DashboardProvider / useDashboard", () => {
         expect(result.current.stepMax).toBe(100);
     });
 
-    it("dispatches playback actions", () => {
+    // Regression: a URL like ?step=2500 against a 314-step game would set
+    // step=2500 in state. The slider clamps display but the state stays
+    // out of range, so the StatusBar shows "Step 2500 | Game 0" with no
+    // data. setStepRange must clamp the current step into the new range.
+    it("setStepRange clamps current step down to the new max", () => {
         const { result } = renderHook(() => useDashboard(), { wrapper });
 
-        act(() => result.current.dispatchPlayback({ type: "GO_LIVE" }));
-        expect(result.current.playback).toBe("live_following");
+        act(() => result.current.setStep(2500));
+        expect(result.current.step).toBe(2500);
+
+        act(() => result.current.setStepRange(1, 314));
+        expect(result.current.step).toBe(314);
+        expect(result.current.stepMax).toBe(314);
+    });
+
+    it("setStepRange clamps current step up to the new min", () => {
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setStep(5));
+        act(() => result.current.setStepRange(50, 100));
+        expect(result.current.step).toBe(50);
+    });
+
+    it("setStepRange leaves an in-range step unchanged", () => {
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setStep(75));
+        act(() => result.current.setStepRange(1, 100));
+        expect(result.current.step).toBe(75);
+    });
+
+    // Skip the clamp when max <= 0 (no data yet) so we don't clobber an
+    // in-progress URL navigation while the range query is still loading.
+    it("setStepRange does not clamp when max is 0", () => {
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setStep(2500));
+        act(() => result.current.setStepRange(0, 0));
+        expect(result.current.step).toBe(2500);
+    });
+
+    it("toggles playing", () => {
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setPlaying(true));
+        expect(result.current.playing).toBe(true);
+        act(() => result.current.setPlaying(false));
+        expect(result.current.playing).toBe(false);
+    });
+
+    it("toggles autoFollow independently of playing", () => {
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setAutoFollow(false));
+        expect(result.current.autoFollow).toBe(false);
+        expect(result.current.playing).toBe(false);
+
+        act(() => result.current.setPlaying(true));
+        expect(result.current.autoFollow).toBe(false);
+        expect(result.current.playing).toBe(true);
+
+        act(() => result.current.setAutoFollow(true));
+        expect(result.current.autoFollow).toBe(true);
+        expect(result.current.playing).toBe(true);
     });
 
     it("throws when used outside provider", () => {

@@ -1,66 +1,34 @@
-/** Client-side playback state machine implemented as a React useReducer. */
+/**
+ * Client-side playback state as two independent booleans.
+ *
+ * Phase 5: the previous four-state machine (`historical`, `live_following`,
+ * `live_paused`, `live_catchup`) collapsed to two independent booleans:
+ *
+ *   - `playing`: is the auto-play timer advancing the step cursor?
+ *   - `autoFollow`: should the step cursor jump to the new max as
+ *     `useStepRange(run).data.tail_growing` pushes it forward?
+ *
+ * `autoFollow` is the liveness surface -- combined with
+ * `useStepRange(run).data.tail_growing`, it covers every case the old
+ * state machine enumerated:
+ *
+ *   - old "live_following"  ->  autoFollow=true,  tail_growing=true
+ *   - old "live_paused"     ->  autoFollow=false, tail_growing=true
+ *   - old "live_catchup"    ->  autoFollow=true,  tail_growing=true (step < max)
+ *   - old "historical"      ->  tail_growing=false (autoFollow irrelevant)
+ *
+ * New live runs default to `autoFollow=true` so the dashboard tracks
+ * the head by default. Explicit user navigation drops `autoFollow` to
+ * `false`; clicking the GO LIVE badge sets it back to `true` and snaps
+ * the step to the current max.
+ */
 
-export type PlaybackState =
-    | "historical"
-    | "live_following"
-    | "live_paused"
-    | "live_catchup";
-
-export type PlaybackAction =
-    | { type: "GO_LIVE" }
-    | { type: "PAUSE" }
-    | { type: "RESUME" }
-    | { type: "JUMP_TO_END" }
-    | { type: "USER_NAVIGATE" }
-    | { type: "PUSH_ARRIVED"; atEdge: boolean }
-    | { type: "TOGGLE_PLAY" };
-
-export function playbackReducer(
-    state: PlaybackState,
-    action: PlaybackAction,
-): PlaybackState {
-    // GO_LIVE transitions to live_following from any state
-    if (action.type === "GO_LIVE") return "live_following";
-
-    switch (state) {
-        case "historical":
-            switch (action.type) {
-                case "TOGGLE_PLAY":
-                case "USER_NAVIGATE":
-                case "JUMP_TO_END":
-                    return "historical";
-                default:
-                    return state;
-            }
-        case "live_following":
-            switch (action.type) {
-                case "PAUSE":
-                case "USER_NAVIGATE":
-                    return "live_paused";
-                case "PUSH_ARRIVED":
-                    return "live_following";
-                default:
-                    return state;
-            }
-        case "live_paused":
-            switch (action.type) {
-                case "RESUME":
-                    return "live_catchup";
-                case "PUSH_ARRIVED":
-                case "USER_NAVIGATE":
-                    return "live_paused";
-                default:
-                    return state;
-            }
-        case "live_catchup":
-            switch (action.type) {
-                case "PAUSE":
-                case "USER_NAVIGATE":
-                    return "live_paused";
-                case "PUSH_ARRIVED":
-                    return action.atEdge ? "live_following" : "live_catchup";
-                default:
-                    return state;
-            }
-    }
+export interface PlaybackState {
+    playing: boolean;
+    autoFollow: boolean;
 }
+
+export const initialPlayback: PlaybackState = {
+    playing: false,
+    autoFollow: true,
+};

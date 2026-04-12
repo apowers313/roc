@@ -21,10 +21,10 @@ import {
     fetchStepRange,
 } from "./client";
 
-export function useRuns() {
+export function useRuns(includeAll = false) {
     return useQuery({
-        queryKey: ["runs"],
-        queryFn: fetchRuns,
+        queryKey: ["runs", includeAll],
+        queryFn: () => fetchRuns(includeAll),
         refetchInterval: 10_000,
     });
 }
@@ -187,11 +187,13 @@ export function useFrameGraph(run: string, tick: number, game?: number, depth?: 
     });
 }
 
-export function useObjectHistoryGraph(run: string, uuid: number | null) {
+export function useObjectHistoryGraph(run: string, uuid: string | null) {
+    // uuid is a string because ROC UUIDs are 63-bit ints (see ObjectHistoryInfo
+    // for details). Passing a number here would already have lost precision.
     return useQuery({
         queryKey: ["object-history-graph", run, uuid],
         queryFn: () => fetchObjectHistoryGraph(run, uuid!),
-        enabled: run !== "" && uuid != null,
+        enabled: run !== "" && uuid != null && uuid !== "",
         staleTime: Infinity, // object history is immutable per run/uuid
         retry: false,
     });

@@ -12,7 +12,7 @@ vi.mock("../../api/queries", () => ({
 import { useObjectHistory } from "../../api/queries";
 
 const MOCK_HISTORY: ObjectHistoryData = {
-    info: { uuid: 12345, resolve_count: 42 },
+    info: { uuid: "12345", resolve_count: 42 },
     states: [
         { tick: 1, x: 10, y: 5, glyph_type: 333, color_type: 7, shape_type: 64, distance: null, flood_size: null, line_size: null, motion_direction: null, delta_old: null, delta_new: null },
         { tick: 2, x: 12, y: 5, glyph_type: 333, color_type: 3, shape_type: 64, distance: 2.5, flood_size: null, line_size: null, motion_direction: null, delta_old: null, delta_new: null },
@@ -112,7 +112,7 @@ describe("ObjectModal", () => {
     });
 
     it("shows 'No history data' when data is empty", () => {
-        mockHistory({ info: { uuid: 1, resolve_count: 0 }, states: [], transforms: [] });
+        mockHistory({ info: { uuid: "1", resolve_count: 0 }, states: [], transforms: [] });
         renderWithProviders(
             <ObjectModal objectId={1} opened={true} onClose={() => {}} />,
         );

@@ -14,13 +14,11 @@ There is no pre-planned final design. The dashboard expands indefinitely as new 
 
 - **TanStack Query with staleTime: Infinity for step data** -- step data is immutable for a given run/step/game. Infinite stale time means cached steps never refetch, giving <15ms navigation for visited steps.
 - **Prefetch window: radius=100, batch=50, debounce=50ms** -- empirically tuned. Fills 200-step cache in ~2 seconds (4 HTTP requests). AbortController cancels in-flight batches on navigation to prevent stale request buildup.
-- **StepBuffer for live data (bypasses DuckDB)** -- DuckDB uses file-level locking. The game subprocess holds a write lock on the DuckLake catalog, adding 300-600ms to API reads. StepBuffer (100K ring buffer) serves live steps directly, keeping latency at ~10ms.
+- **TanStack Query is the only client store for server data** -- Components never hold parallel state for step data, step ranges, run lists, or live status. Socket.io is invalidation-only -- it tells the query cache when to refetch but never writes data directly into React state.
 - **Mantine Drawer for popout panels (not Modal or draggable)** -- zero new dependencies, non-blocking (main accordion stays interactive), shares DashboardContext so click-to-navigate works unchanged. If drag-and-drop is needed later, only the container wrapper changes.
 - **HTTP callback IPC (not DuckLake polling)** -- DuckDB file-level locking prevents cross-process reads while the game writes. Game subprocess POSTs StepData to the server's /api/internal/step endpoint instead.
 
 ## Invariants
-
-- **Live/historical feature parity.** Every new panel or feature must work in both live-following mode (Socket.io push) and historical mode (REST fetch from DuckLake). Validate both with Playwright MCP after any UI change. Write tests covering both modes. Failure to test both has repeatedly caused multi-iteration debugging sessions to achieve feature parity after the fact.
 
 - **No inline styles.** Never use `style={{}}` for sizing, spacing, or colors. Use Mantine component props or app-level theme overrides. When the compact-mantine theme does not provide the right default, fix it at the theme level or create a reusable wrapper component. Inline styles bypass the theme system, creating per-component inconsistencies that compound across 40+ panels.
 
@@ -30,23 +28,33 @@ There is no pre-planned final design. The dashboard expands indefinitely as new 
 
 - **One UI server, one API server.** Never start additional servers. `roc-ui` (Vite) and `roc-server` (FastAPI) are managed by servherd. Use `make run` / `make stop`. Adding servers creates port conflicts and URL confusion. See design/dashboard-server-redesign.md.
 
-## Playback State Machine
+- **Single source of truth for each server concept.** Every category of server-owned data has exactly one hook or query that owns it, and every consumer reads through that one door. This is mechanically enforced by `src/architecture.test.ts`. The current single sources are:
+  - **Game state** (state/run_name/exit_code/error): `useGameState()` in `hooks/useRunSubscription.ts`. REST via one-shot `/api/game/status` fetch on mount, Socket.io `game_state_changed` for updates. No other component may fetch `/api/game/status` or hold a parallel copy.
+  - **Step range** (min/max/tail_growing): `useStepRange(run, game)` in `api/queries.ts`. TransportBar is the single owner that syncs the query to context. App.tsx's auto-follow effect only advances `step`; it never writes `stepRange`.
+  - **Step data** (one game step): `useStepData(run, step, game)` in `api/queries.ts`. Immutable, `staleTime: Infinity`.
+  - **Run list**: `useRuns(includeAll)` in `api/queries.ts`. Polled every 10s.
+  - **Games per run**: `useGames(run)` in `api/queries.ts`. Polled every 10s.
+  - **Socket.io client**: `getSocket()` singleton inside `useRunSubscription.ts`. No other file calls `io({...})`.
+  Adding a new piece of server data? Add one hook, one queryKey, one owner. Two components duplicating the fetch is how TC-GAME-004 happened: the step range was mirrored in context and a TransportBar effect, guarded differently in each place, and clicking GO LIVE read a stale closure. The Phase-3 live-vs-historical split had the same flavor and was fixed by the unified-run architecture (see `design/unified-run-architecture.md`).
 
-Four states govern live/historical mode transitions. Getting transitions wrong causes the dashboard to stop updating or to fight user navigation.
+- **Socket.io is invalidation-only.** Server never pushes data through it; it only says "the N-th step exists now" so TanStack Query knows to refetch. A second `io({...})` call in any file is a smell -- almost always a component trying to receive data directly, the Phase-3 anti-pattern. The architecture test fails on this.
 
-```
-historical --GO_LIVE--> live_following
-live_following --USER_NAVIGATE/PAUSE--> live_paused
-live_paused --RESUME--> live_catchup
-live_catchup --PUSH_ARRIVED(atEdge)--> live_following
-```
+## Playback Model
 
-- `live_following`: renders Socket.io push data directly (no REST round-trip)
-- `live_paused`: user navigated away from live edge; REST fetches like historical
-- `live_catchup`: playing forward toward live edge; transitions to following only when caught up
-- `historical`: no live game; all data from REST
+Two booleans drive playback: `playing` (timer is ticking) and `autoFollow` (snap to head as
+it grows). The four old states map to combinations:
 
-The `PUSH_ARRIVED` transition checks `atEdge` -- whether the displayed step equals the live edge. Only transition to `live_following` when truly caught up, otherwise the UI skips steps.
+| Old | `playing` | `autoFollow` |
+|---|---|---|
+| historical | t/f | false |
+| live_following | n/a | true |
+| live_paused | false | false |
+| live_catchup | true | true |
+
+Transitions are direct mutations of the two booleans -- no reducer, no state machine. Any
+explicit user navigation sets `autoFollow=false`. "GO LIVE" sets `autoFollow=true` and snaps
+to `range.max`. The auto-follow effect watches `range.max` and pulls the user along while
+`autoFollow && range.tail_growing`.
 
 ## Component Extraction Rules
 
@@ -79,10 +87,6 @@ After any UI change -- new panel, modified layout, data flow change:
 2. Use Nanobanana MCP to verify rendering -- ask objective yes/no questions, not leading ones
 3. Verify that data flows correctly into components (not just that they render)
 4. Check compact layout rules: no overflow, proper alignment, no excessive whitespace
-
-## Stale Closure Pattern
-
-Socket.io callbacks capture state at registration time. All mutable state accessed in Socket.io handlers (run, game, step, callbacks) must go through refs (`useRef`) updated in effects, not direct state variables. Accessing stale state causes the dashboard to silently process events with outdated context -- e.g., pushing live data to the wrong run.
 
 ## Performance Targets
 

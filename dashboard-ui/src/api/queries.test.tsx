@@ -141,6 +141,32 @@ describe("TanStack Query hooks", () => {
 
             expect(result.current.fetchStatus).toBe("idle");
         });
+
+        // Phase 3: tail_growing is the only liveness signal at the API
+        // boundary. Confirm useStepRange surfaces it from the response.
+        it("returns tail_growing in the response when present", async () => {
+            const range = { min: 1, max: 10, tail_growing: true };
+            mockFetchStepRange.mockResolvedValue(range);
+
+            const { result } = renderHook(() => useStepRange("run1"), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data?.tail_growing).toBe(true);
+        });
+
+        it("returns tail_growing=false for closed runs", async () => {
+            const range = { min: 1, max: 10, tail_growing: false };
+            mockFetchStepRange.mockResolvedValue(range);
+
+            const { result } = renderHook(() => useStepRange("run1"), {
+                wrapper: createWrapper(),
+            });
+
+            await waitFor(() => expect(result.current.isSuccess).toBe(true));
+            expect(result.current.data?.tail_growing).toBe(false);
+        });
     });
 
     describe("useMetricsHistory", () => {
@@ -268,13 +294,13 @@ describe("TanStack Query hooks", () => {
             };
             mockFetchObjectHistoryGraph.mockResolvedValue(data);
 
-            const { result } = renderHook(() => useObjectHistoryGraph("run1", 12345), {
+            const { result } = renderHook(() => useObjectHistoryGraph("run1", "12345"), {
                 wrapper: createWrapper(),
             });
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true));
             expect(result.current.data).toEqual(data);
-            expect(mockFetchObjectHistoryGraph).toHaveBeenCalledWith("run1", 12345);
+            expect(mockFetchObjectHistoryGraph).toHaveBeenCalledWith("run1", "12345");
         });
 
         it("is disabled when uuid is null", () => {
@@ -287,7 +313,7 @@ describe("TanStack Query hooks", () => {
         });
 
         it("is disabled when run is empty", () => {
-            const { result } = renderHook(() => useObjectHistoryGraph("", 12345), {
+            const { result } = renderHook(() => useObjectHistoryGraph("", "12345"), {
                 wrapper: createWrapper(),
             });
 

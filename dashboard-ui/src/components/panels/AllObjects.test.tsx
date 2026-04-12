@@ -232,3 +232,125 @@ describe("AllObjects", () => {
         expect(shapeHeader.textContent).toContain("\u25B2");
     });
 });
+
+// ---------------------------------------------------------------------------
+// BUG-H3 / BUG-M2: filter visibility + counts + Show all games toggle
+//
+// The dashboard's All Objects popout used to silently apply the active
+// game filter without telling the user. Phase 4 of the bugfix plan adds:
+//
+//  * A header that shows "Objects in Game N" when filtering and "All
+//    Objects" when not.
+//  * A "filtered / total" count so the user can tell something is hidden.
+//  * A "Show all games" toggle that switches to the unfiltered view.
+//  * A tooltip on rows whose canonical step_added falls in an earlier
+//    game (BUG-M2) explaining where the object came from.
+// ---------------------------------------------------------------------------
+
+describe("AllObjects filter visibility (BUG-H3 / BUG-M2)", () => {
+    function mockObjectsByGame(per: Map<number | undefined, ResolvedObject[]>) {
+        // useAllObjects is called twice -- once with the active game and once
+        // with undefined for the total. Map by the second arg.
+        vi.mocked(useAllObjects).mockImplementation(((_run: string, game?: number) => {
+            const data = per.get(game) ?? [];
+            return { data } as ReturnType<typeof useAllObjects>;
+        }) as typeof useAllObjects);
+    }
+
+    it("shows 'Objects in Game N' header when game filter is active", () => {
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [2, [OBJ_A]],
+                [undefined, [OBJ_A, OBJ_B]],
+            ]),
+        );
+        renderWithProviders(<AllObjects run="test-run" game={2} />);
+        expect(screen.getByText(/objects in game 2/i)).toBeInTheDocument();
+    });
+
+    it("shows '1 / 2' filtered/total count when filtering", () => {
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [2, [OBJ_A]],
+                [undefined, [OBJ_A, OBJ_B]],
+            ]),
+        );
+        renderWithProviders(<AllObjects run="test-run" game={2} />);
+        // Header should mention both counts.
+        expect(screen.getByText(/1\s*\/\s*2/)).toBeInTheDocument();
+    });
+
+    it("renders a 'Show all games' toggle when filtering", () => {
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [1, [OBJ_A]],
+                [undefined, [OBJ_A, OBJ_B]],
+            ]),
+        );
+        renderWithProviders(<AllObjects run="test-run" game={1} />);
+        expect(
+            screen.getByRole("switch", { name: /show all games/i }),
+        ).toBeInTheDocument();
+    });
+
+    it("clicking 'Show all games' switches to the unfiltered dataset", () => {
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [2, [OBJ_A]], // game 2 only has @
+                [undefined, [OBJ_A, OBJ_B]], // unfiltered has @ and .
+            ]),
+        );
+        renderWithProviders(<AllObjects run="test-run" game={2} />);
+        // Initially the . row is not visible (only @ is in game 2).
+        expect(screen.queryByText(".")).not.toBeInTheDocument();
+
+        const toggle = screen.getByRole("switch", { name: /show all games/i });
+        fireEvent.click(toggle);
+
+        // After toggle, the . row appears.
+        expect(screen.getByText(".")).toBeInTheDocument();
+    });
+
+    it("does not show the filter header or toggle when no game is set", () => {
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [undefined, [OBJ_A]],
+            ]),
+        );
+        renderWithProviders(<AllObjects run="test-run" />);
+        expect(screen.queryByText(/objects in game/i)).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole("switch", { name: /show all games/i }),
+        ).not.toBeInTheDocument();
+    });
+
+    it("flags rows whose step_added belongs to an earlier game with a tooltip", () => {
+        // OBJ_A's step_added=5 but the run is currently filtered by game=2,
+        // and the run's per-game ranges are passed in via prop. The header
+        // doesn't need to know -- the row's tooltip is the surface.
+        const earlier: ResolvedObject = {
+            ...OBJ_A,
+            step_added: 5, // game 1's range is, say, 1..50
+        };
+        mockObjectsByGame(
+            new Map<number | undefined, ResolvedObject[]>([
+                [2, [earlier]],
+                [undefined, [earlier]],
+            ]),
+        );
+        renderWithProviders(
+            <AllObjects
+                run="test-run"
+                game={2}
+                gameStepRanges={[
+                    { game_number: 1, min: 1, max: 50 },
+                    { game_number: 2, min: 51, max: 100 },
+                ]}
+            />,
+        );
+        // Find the row containing the OBJ_A shape and check the step_added cell
+        // for the tooltip "created in game 1".
+        const tooltipHost = screen.getByText(/created in game 1/i);
+        expect(tooltipHost).toBeInTheDocument();
+    });
+});

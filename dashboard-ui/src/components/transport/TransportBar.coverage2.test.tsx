@@ -1,9 +1,13 @@
 /**
  * Additional coverage tests for TransportBar.tsx -- targets remaining uncovered branches:
- * - Timer cleanup effect (line 133)
- * - Game selector onChange in live_following mode (lines 248-249)
- * - Game selector fetch error handler (line 263)
- * - stepDataReadyRef gating in auto-play (line 116-118)
+ * - Timer cleanup effect
+ * - Game selector onChange in autoFollow mode
+ * - Game selector fetch error handler
+ * - stepDataReadyRef gating in auto-play
+ *
+ * Phase 5: playback state collapsed to two booleans. Tests that
+ * previously exercised the dispatchPlayback({ type: "GO_LIVE" }) code
+ * path now seed autoFollow=true instead.
  */
 
 import { MantineProvider } from "@mantine/core";
@@ -35,17 +39,17 @@ const mockUseGames = vi.mocked(useGames);
 const mockUseStepRange = vi.mocked(useStepRange);
 
 /**
- * GoLive wrapper -- puts playback into live_following state.
+ * LiveFollow wrapper -- sets autoFollow=true for a seeded run.
  */
-function GoLiveSetup({ children }: Readonly<{ children: ReactNode }>) {
-    const { dispatchPlayback, setRun, setStepRange, setGame } = useDashboard();
+function LiveFollowSetup({ children }: Readonly<{ children: ReactNode }>) {
+    const { setRun, setStepRange, setGame, setAutoFollow } = useDashboard();
 
     useEffect(() => {
         setRun("live-run");
         setStepRange(1, 100);
         setGame(1);
-        dispatchPlayback({ type: "GO_LIVE" });
-    }, [dispatchPlayback, setRun, setStepRange, setGame]);
+        setAutoFollow(true);
+    }, [setRun, setStepRange, setGame, setAutoFollow]);
 
     return <>{children}</>;
 }
@@ -59,7 +63,7 @@ function LiveWrapper({ children }: Readonly<{ children: ReactNode }>) {
             <QueryClientProvider client={queryClient}>
                 <DashboardProvider>
                     <HighlightProvider>
-                        <GoLiveSetup>{children}</GoLiveSetup>
+                        <LiveFollowSetup>{children}</LiveFollowSetup>
                     </HighlightProvider>
                 </DashboardProvider>
             </QueryClientProvider>
@@ -202,8 +206,8 @@ describe("TransportBar (coverage2)", () => {
         });
     });
 
-    describe("game selector onChange in live_following mode", () => {
-        it("dispatches USER_NAVIGATE when selecting a game in live_following", async () => {
+    describe("game selector onChange in autoFollow mode", () => {
+        it("drops autoFollow when selecting a game", async () => {
             mockUseGames.mockReturnValue({
                 data: [
                     { game_number: 1, steps: 46, start_ts: null, end_ts: null },
@@ -257,16 +261,15 @@ describe("TransportBar (coverage2)", () => {
         });
     });
 
-    describe("stepBack in live_following mode", () => {
-        it("dispatches USER_NAVIGATE when stepping back in live_following", () => {
+    describe("stepBack in autoFollow mode", () => {
+        it("drops autoFollow when stepping back", () => {
             mockUseStepRange.mockReturnValue({
                 data: { min: 1, max: 100 },
             } as ReturnType<typeof useStepRange>);
 
             render(<TransportBar />, { wrapper: LiveWrapper });
 
-            // Click "Previous step" directly in live_following mode
-            // (don't click Next first, which would transition to live_paused)
+            // Click "Previous step" directly in autoFollow mode
             const prevBtn = screen.getByLabelText("Previous step");
             act(() => {
                 fireEvent.click(prevBtn);
@@ -275,8 +278,8 @@ describe("TransportBar (coverage2)", () => {
         });
     });
 
-    describe("handleSliderChange in live_following mode", () => {
-        it("invokes handleSliderChange which dispatches USER_NAVIGATE", () => {
+    describe("handleSliderChange in autoFollow mode", () => {
+        it("invokes handleSliderChange which drops autoFollow", () => {
             mockUseStepRange.mockReturnValue({
                 data: { min: 1, max: 100 },
             } as ReturnType<typeof useStepRange>);
@@ -288,24 +291,15 @@ describe("TransportBar (coverage2)", () => {
             const slider = screen.getByRole("slider");
             slider.focus();
 
-            // ArrowLeft on slider calls stepBack, but we need handleSliderChange.
             // The Mantine Slider's onChange is called when dragging the thumb.
-            // In jsdom we can simulate a pointer-based change by
-            // dispatching mouseDown/mouseMove on the slider track.
-            // However, jsdom layout doesn't work well for this.
-            // Let's use the keyboard Home key which calls jumpToStart instead.
-            // The handleSliderChange path is the Slider onChange prop.
-
-            // Actually, the best way to trigger handleSliderChange is via
-            // the Mantine Slider's internal behavior. Since the slider wrapper
-            // onKeyDownCapture catches arrow keys, let's just verify the
-            // component renders in live_following mode without crashing.
+            // In jsdom layout doesn't work well for this. Just verify
+            // the component renders in autoFollow mode without crashing.
             expect(slider).toBeInTheDocument();
         });
     });
 
-    describe("run selector onChange dispatches USER_NAVIGATE for non-live run", () => {
-        it("dispatches USER_NAVIGATE when selecting a non-live run", async () => {
+    describe("run selector onChange drops autoFollow for non-live run", () => {
+        it("drops autoFollow when selecting a non-live run", async () => {
             mockUseRuns.mockReturnValue({
                 data: [
                     { name: "20260318131128-historical-run", games: 2, steps: 200 },
@@ -318,8 +312,8 @@ describe("TransportBar (coverage2)", () => {
             });
             vi.stubGlobal("fetch", fetchMock);
 
-            // Use LiveWrapper so playback starts as live_following,
-            // then selecting a non-live run should dispatch USER_NAVIGATE
+            // Use LiveWrapper so autoFollow starts as true,
+            // then selecting a non-live run should drop autoFollow.
             render(<TransportBar />, { wrapper: LiveWrapper });
 
             const runInput = screen.getByPlaceholderText("Run");

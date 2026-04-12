@@ -16,23 +16,25 @@ import { useEffect, type ReactNode } from "react";
 import { DashboardProvider, useDashboard } from "./state/context";
 import { HighlightProvider } from "./state/highlight";
 
+let mockGameStateValue: { state: string; run_name: string | null } | null = null;
+
 vi.mock("socket.io-client");
 vi.mock("./api/queries");
 vi.mock("./hooks/usePrefetchWindow");
-vi.mock("./hooks/useLiveUpdates");
+vi.mock("./hooks/useRunSubscription", () => ({
+    useRunSubscription: vi.fn(),
+    useGameState: vi.fn(() => mockGameStateValue),
+}));
 vi.mock("./api/client");
 
 import { renderWithProviders, makeStepData, stubDefaultFetch } from "./test-utils";
 import { App } from "./App";
 import { useStepData, useGames } from "./api/queries";
-import {
-    getCapturedOnNewStep,
-    resetLiveUpdatesMock,
-    setMockLiveStatusValue,
-} from "./hooks/__mocks__/useLiveUpdates";
+import { useGameState } from "./hooks/useRunSubscription";
 
 const mockUseStepData = vi.mocked(useStepData);
 const mockUseGames = vi.mocked(useGames);
+const mockUseGameState = vi.mocked(useGameState);
 
 /**
  * A wrapper that sets the speed to a non-standard value (not in SPEED_VALUES)
@@ -66,7 +68,8 @@ function NonStandardSpeedWrapper({ children }: Readonly<{ children: ReactNode }>
 
 describe("App (coverage2)", () => {
     beforeEach(() => {
-        resetLiveUpdatesMock();
+        mockGameStateValue = null;
+        mockUseGameState.mockReturnValue(null);
         stubDefaultFetch();
         mockUseStepData.mockReturnValue({
             data: undefined,
@@ -134,58 +137,11 @@ describe("App (coverage2)", () => {
         });
     });
 
-    describe("onNewStep in paused mode with atEdge detection", () => {
-        it("dispatches PUSH_ARRIVED with atEdge=true when at the live edge", () => {
-            // Set up live mode
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 50,
-                game_number: 1,
-                step_min: 1,
-                step_max: 50,
-                game_numbers: [1],
-            });
-
-            renderWithProviders(<App />);
-            expect(getCapturedOnNewStep()).toBeDefined();
-
-            // Navigate away to exit live_following
-            act(() => {
-                fireEvent.keyDown(document, { key: "ArrowLeft" });
-            });
-
-            // Push arrives -- we're at the edge (step >= stepMax)
-            act(() => {
-                getCapturedOnNewStep()!(makeStepData({ step: 51, game_number: 1 }));
-            });
-        });
-
-        it("dispatches PUSH_ARRIVED with atEdge=false when not at edge", () => {
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 50,
-                game_number: 1,
-                step_min: 1,
-                step_max: 50,
-                game_numbers: [1],
-            });
-
-            renderWithProviders(<App />);
-            expect(getCapturedOnNewStep()).toBeDefined();
-
-            // Navigate to step 1 (far from edge) to exit live_following
-            act(() => {
-                fireEvent.keyDown(document, { key: "Home" });
-            });
-
-            // Now push for step 52 arrives for the same game while we're at step 1
-            act(() => {
-                getCapturedOnNewStep()!(makeStepData({ step: 52, game_number: 1 }));
-            });
-        });
-    });
+    // Phase 4: ``onNewStep``-based PUSH_ARRIVED dispatch was deleted along
+    // with the ``liveData`` state and the playback state machine's atEdge
+    // detection. The unit coverage lives in
+    // ``hooks/useRunSubscription.test.tsx``. Phase 5 collapses the
+    // playback state machine to two booleans.
 
     describe("navigateToBookmark cross-game", () => {
         it("fetches step range and updates when navigating to bookmark in different game", async () => {
@@ -196,16 +152,8 @@ describe("App (coverage2)", () => {
             vi.stubGlobal("fetch", fetchMock);
 
             // Enable live status so we can test the bookmark navigation path
-            // that dispatches USER_NAVIGATE in live_following mode
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 50,
-                game_number: 1,
-                step_min: 1,
-                step_max: 50,
-                game_numbers: [1, 2],
-            });
+            // that drops autoFollow in autoFollow mode
+            mockUseGameState.mockReturnValue({ state: "running", run_name: "live-run" });
 
             renderWithProviders(<App />);
 
@@ -230,35 +178,10 @@ describe("App (coverage2)", () => {
         });
     });
 
-    describe("live data preference in following mode", () => {
-        it("uses live push data when in live_following mode", () => {
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 50,
-                game_number: 1,
-                step_min: 1,
-                step_max: 50,
-                game_numbers: [1],
-            });
-
-            mockUseStepData.mockReturnValue({
-                data: makeStepData({ step: 49, game_number: 1 }),
-                isLoading: false,
-                isPlaceholderData: false,
-            } as unknown as ReturnType<typeof useStepData>);
-
-            renderWithProviders(<App />);
-            expect(getCapturedOnNewStep()).toBeDefined();
-
-            // Push live data
-            act(() => {
-                getCapturedOnNewStep()!(makeStepData({ step: 50, game_number: 1 }));
-            });
-
-            // In live_following mode, the push data is preferred
-        });
-    });
+    // Phase 4: there is no longer a "live push data" preference -- the
+    // single source of truth is the TanStack Query cache populated by
+    // REST. Socket.io ``step_added`` events invalidate the cache via
+    // ``useRunSubscription``, triggering a refetch.
 
     describe("cycleGame with fetch returning max=0", () => {
         it("handles step-range response where max is 0", async () => {

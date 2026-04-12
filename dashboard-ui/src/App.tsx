@@ -2,8 +2,11 @@
 
 import {
     Accordion,
+    Alert,
     AppShell,
+    Button,
     Grid,
+    Group,
     Text,
 } from "@mantine/core";
 import {
@@ -29,7 +32,10 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useStepData, useGames } from "./api/queries";
+import { useQueryClient } from "@tanstack/react-query";
+
+import { fetchStepRange } from "./api/client";
+import { useStepData, useGames, useStepRange } from "./api/queries";
 import { PopoutToolbar } from "./components/common/PopoutToolbar";
 import { Section } from "./components/common/Section";
 import { useHighlight } from "./state/highlight";
@@ -68,12 +74,12 @@ import { KeyboardHelp } from "./components/transport/KeyboardHelp";
 import { MenuBar } from "./components/transport/MenuBar";
 import { TransportBar } from "./components/transport/TransportBar";
 import { useBookmarks } from "./hooks/useBookmarks";
+import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePrefetchWindow } from "./hooks/usePrefetchWindow";
-import { useLiveUpdates } from "./hooks/useLiveUpdates";
 import { useRemoteLogger } from "./hooks/useRemoteLogger";
+import { useRunSubscription, useGameState } from "./hooks/useRunSubscription";
 import { useDashboard } from "./state/context";
-import type { StepData } from "./types/step-data";
 
 /** Safely convert an unknown value to a display string, handling objects. */
 function toDisplayString(value: unknown): string | undefined {
@@ -103,20 +109,137 @@ export function App() {
         stepMin,
         stepMax,
         setStepRange,
-        playback,
-        dispatchPlayback,
         playing,
         setPlaying,
+        autoFollow,
+        setAutoFollow,
         speed,
         setSpeed,
-        liveRunName,
-        setLiveRunName,
-        setLiveGameNumber,
-        liveGameActive,
-        setLiveGameActive,
     } = useDashboard();
 
-    const { data: games } = useGames(run);
+    const queryClient = useQueryClient();
+
+    // Game state is tracked via the Socket.io ``game_state_changed``
+    // event. ``gameState`` carries the run name and active flag so the
+    // auto-navigation effect can jump to a freshly started game.
+    const gameState = useGameState();
+
+    const {
+        data: games,
+        isError: gamesIsError,
+        error: gamesError,
+    } = useGames(run);
+    const { data: stepRangeData } = useStepRange(run, game || undefined);
+
+    // Debounce ``step`` for the heaviest panel (GraphVisualization).
+    // That panel is wrapped in ``React.memo`` so a stable prop value
+    // here skips its re-render during rapid scrubbing. The 200ms window
+    // is empirically the smallest that prevents piling up useless
+    // Cytoscape reconcile passes without making the graph feel
+    // disconnected from the slider.
+    const debouncedGraphStep = useDebouncedValue(step, 200);
+
+    // Debounced step for history panels that only use ``currentStep``
+    // to draw a marker/reference line (IntrinsicsChart, GraphHistory,
+    // EventHistory, ResolutionChart). A 150ms window is imperceptible
+    // for marker movement and cuts recharts reconciliation on rapid
+    // scrubbing -- the bulk of the TC-PERF-001 budget was being spent
+    // re-rendering these charts once per step when they only need the
+    // final resting position.
+    const debouncedHistoryStep = useDebouncedValue(step, 150);
+
+    // Per-game step ranges, derived from the contiguous-step-numbering
+    // convention (game N starts where game N-1 ended). Used by AllObjects
+    // to attribute an object's canonical step_added to its origin game
+    // when the user is filtering by a different game (BUG-M2).
+    const gameStepRanges = useMemo(() => {
+        if (!games) return [];
+        const ranges: { game_number: number; min: number; max: number }[] = [];
+        let cursor = 0;
+        for (const g of games) {
+            ranges.push({
+                game_number: g.game_number,
+                min: cursor + 1,
+                max: cursor + g.steps,
+            });
+            cursor += g.steps;
+        }
+        return ranges;
+    }, [games]);
+
+    // Track whether we've auto-selected the live run
+    const liveRunSelected = useRef(false);
+    // Track the run name from the initial URL (if any). Used to avoid
+    // overriding explicit URL navigation to a specific run/step, while
+    // still allowing auto-navigation to a NEW game the user starts.
+    // Declared up here (instead of further down) because
+    // ``handleBrowseRuns`` clears it -- the callback's TDZ requires
+    // the binding to be initialized before the useCallback runs.
+    const initialUrlRun = useRef<string | null>(
+        new URLSearchParams(globalThis.location.search).get("run"),
+    );
+    // BUG-M4: state for the bookmark guard. The guard itself uses
+    // ``stepDataReadyRef`` (declared below alongside ``stepDataReady``)
+    // because TanStack Query's ``placeholderData: keepPreviousData``
+    // means raw ``data`` can be the previous run's data while a new
+    // query is loading or errored -- so a "data != null" check would
+    // pass even on a broken run. ``stepDataReady`` accounts for both
+    // undefined data AND placeholder data, so it is the correct gate.
+    const [bookmarkError, setBookmarkError] = useState<string | null>(null);
+
+    // BUG-C2 follow-up (T2.6): when an explicit URL run cannot be
+    // loaded (e.g. /games returns 500 or 404), show a banner so the
+    // user knows WHY the dashboard is empty and has an escape hatch
+    // back to the run picker. URL sovereignty preserves the broken run
+    // name in the URL; this banner makes the failure visible instead
+    // of showing a confusingly-empty dashboard. The "Browse runs"
+    // button clears the URL and resets the context to its empty state
+    // so the auto-select-first-run effect can take over.
+    //
+    // Empty-catalog case (post-Phase-7): some runs are on disk with
+    // status="ok" in /api/runs but their DuckLake catalog has zero
+    // tables (e.g., the writer crashed before any data was emitted).
+    // For those, /games returns 200 with [] and /step-range returns
+    // {min:0,max:0}. The Mantine Game Select with an empty data array
+    // is non-interactive (clicks do nothing), so the user is stranded
+    // -- they think the dropdown is broken. Surface the same banner so
+    // the user can navigate away.
+    const isEmptyCatalogRun =
+        run !== "" &&
+        games !== undefined &&
+        games.length === 0 &&
+        stepRangeData !== undefined &&
+        stepRangeData.max === 0;
+    const showLoadFailureBanner = (gamesIsError && run !== "") || isEmptyCatalogRun;
+    const loadFailureMessage =
+        gamesError instanceof Error
+            ? gamesError.message
+            : gamesError != null
+                ? String(gamesError)
+                : isEmptyCatalogRun
+                    ? "This run has no recorded steps (empty catalog)."
+                    : "";
+    const handleBrowseRuns = useCallback(() => {
+        // Clear the URL and reset context state. The auto-select-first
+        // -run effect picks up the empty ``run`` and lands the user on
+        // ``runs[0]`` automatically. Clearing ``initialUrlRun.current``
+        // also re-enables the auto-select-live-run effect (its guard
+        // would otherwise still hold the stale broken-URL run name and
+        // block live-run auto-selection forever in this session).
+        globalThis.history.replaceState(null, "", globalThis.location.pathname);
+        initialUrlRun.current = null;
+        setRun("");
+        setGame(1);
+        setStep(1);
+    }, [setRun, setGame, setStep]);
+
+    // Phase 4: subscribe to ``step_added`` invalidation events for the
+    // current run. This is the single point where Socket.io meets
+    // TanStack Query -- when the writer pushes a new step, the server
+    // emits a tiny ``{run, step}`` payload to this client and the
+    // matching step-range query invalidates. The slider, StatusBar,
+    // and any other consumers re-render against the fresh range.
+    useRunSubscription(run);
 
     // Clear point highlights when step changes
     const { clear: clearHighlights } = useHighlight();
@@ -125,8 +248,6 @@ export function App() {
     }, [step, clearHighlights]);
 
     useRemoteLogger();
-
-    const isFollowing = playback === "live_following";
 
     // Bookmarks
     const bm = useBookmarks(run);
@@ -169,133 +290,110 @@ export function App() {
         prevHasBookmarks.current = hasBookmarks;
     }, [hasBookmarks]);
 
-    // Live push data -- always updated from Socket.io push, regardless of
-    // playback mode. This eliminates the race where isFollowingRef is stale
-    // and liveData never gets populated.
-    const [liveData, setLiveData] = useState<StepData | null>(null);
+    // Phase 4: liveData/onNewStep/refs deleted. The data path now flows
+    // through TanStack Query exclusively -- ``useStepData`` for the
+    // current step, ``useStepRange`` for the slider range. Socket.io
+    // ``step_added`` events invalidate those queries via
+    // ``useRunSubscription``, which triggers a refetch.
 
-    // Track whether we've auto-selected the live run
-    const liveRunSelected = useRef(false);
-    // Track the run name from the initial URL (if any). Used to avoid
-    // overriding explicit URL navigation to a specific run/step, while
-    // still allowing auto-navigation to a NEW game the user starts.
-    const initialUrlRun = useRef<string | null>(
-        new URLSearchParams(globalThis.location.search).get("run"),
-    );
+    // Phase 5: the auto-follow effect now drives off the two-boolean
+    // playback model. When the run is tail_growing AND autoFollow is
+    // on, advance the step cursor to the new max as the range grows.
+    // `autoFollow` defaults to true for new live runs and flips to
+    // false on any explicit user navigation. Clicking GO LIVE flips
+    // it back to true and snaps the cursor to the head.
+    //
+    // TransportBar is the single owner of ``setStepRange`` -- it syncs
+    // the query data to context on every update. This effect only
+    // advances ``step``; it never writes ``stepRange``. Keeping the
+    // writes separate avoids a dead-band where a stale context
+    // ``stepMax`` pins the slider behind the true head when the user
+    // has auto-follow off (TC-GAME-004 regression).
+    const tailGrowing = stepRangeData?.tail_growing ?? false;
+    const restMax = stepRangeData?.max ?? 0;
+    useEffect(() => {
+        if (!tailGrowing) return;
+        if (!autoFollow) return;
+        if (restMax <= 0) return;
+        if (step !== restMax) {
+            setStep(restMax);
+        }
+    }, [tailGrowing, autoFollow, restMax, step, setStep]);
 
-    // Use refs to avoid stale closures in the Socket.io callback
-    const runRef = useRef(run);
-    runRef.current = run;
-    const gameRef = useRef(game);
-    gameRef.current = game;
-    const stepRef = useRef(step);
-    stepRef.current = step;
-    const stepMinRef = useRef(stepMin);
-    stepMinRef.current = stepMin;
-    const stepMaxRef = useRef(stepMax);
-    stepMaxRef.current = stepMax;
-    const isFollowingRef = useRef(isFollowing);
-    isFollowingRef.current = isFollowing;
-    const liveRunNameRef = useRef(liveRunName);
-    liveRunNameRef.current = liveRunName;
-
-    const onNewStep = useCallback(
-        (pushData: StepData) => {
-            // Always store the latest push data for live-following mode
-            setLiveData(pushData);
-            // Track which game is currently live
-            setLiveGameNumber(pushData.game_number);
-
-            const isViewingLiveRun =
-                runRef.current === liveRunNameRef.current;
-            const gameMatches =
-                gameRef.current === pushData.game_number;
-
-            if (isFollowingRef.current && isViewingLiveRun) {
-                if (gameMatches) {
-                    // Update stepMax for the current game
-                    setStepRange(stepMinRef.current, pushData.step);
-                } else {
-                    // Live game changed (e.g. game 1 ended, game 2 started).
-                    // Auto-switch to the new game so the user keeps following.
-                    setGame(pushData.game_number);
-                    setStepRange(pushData.step, pushData.step);
-                }
-                // Advance step cursor to the live edge
-                setStep(pushData.step);
-            } else if (isViewingLiveRun && gameMatches) {
-                // Paused on the same game -- update range and notify state machine
-                setStepRange(stepMinRef.current, pushData.step);
-                const atEdge = stepRef.current >= stepMaxRef.current;
-                dispatchPlayback({ type: "PUSH_ARRIVED", atEdge });
-            }
-            // If viewing a different game than what's live, do nothing --
-            // the user is browsing historical data for another game.
-        },
-        [setStep, setGame, setStepRange, dispatchPlayback, setLiveGameNumber],
-    );
-
-    const { connected, liveStatus } = useLiveUpdates({ onNewStep });
+    const connected = true; // Socket.io connection managed by useRunSubscription
 
     // Keyboard shortcut handlers
     const stepForward = useCallback(() => {
         setStep((prev) => (prev < stepMax ? prev + 1 : prev));
-        if (playback === "live_following") dispatchPlayback({ type: "USER_NAVIGATE" });
-    }, [stepMax, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMax, setStep, setAutoFollow]);
 
     const stepBack = useCallback(() => {
         setStep((prev) => (prev > stepMin ? prev - 1 : prev));
-        if (playback === "live_following") dispatchPlayback({ type: "USER_NAVIGATE" });
-    }, [stepMin, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMin, setStep, setAutoFollow]);
 
     const jumpToStart = useCallback(() => {
         setStep(stepMin);
-        if (playback === "live_following" || playback === "live_catchup") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [stepMin, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMin, setStep, setAutoFollow]);
 
     const jumpToEnd = useCallback(() => {
         setStep(stepMax);
         // Pure navigation -- just go to end of current game's range.
         // Use "L" or click "GO LIVE" badge to return to live-following.
-        if (playback === "live_following") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-    }, [stepMax, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMax, setStep, setAutoFollow]);
 
     const togglePlay = useCallback(() => {
-        if (playback === "historical") dispatchPlayback({ type: "TOGGLE_PLAY" });
         setPlaying(!playing);
-    }, [playing, playback, setPlaying, dispatchPlayback]);
+    }, [playing, setPlaying]);
 
     const stepForward10 = useCallback(() => {
         setStep((prev) => Math.min(prev + 10, stepMax));
-        if (playback === "live_following") dispatchPlayback({ type: "USER_NAVIGATE" });
-    }, [stepMax, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMax, setStep, setAutoFollow]);
 
     const stepBack10 = useCallback(() => {
         setStep((prev) => Math.max(prev - 10, stepMin));
-        if (playback === "live_following") dispatchPlayback({ type: "USER_NAVIGATE" });
-    }, [stepMin, setStep, playback, dispatchPlayback]);
+        setAutoFollow(false);
+    }, [stepMin, setStep, setAutoFollow]);
 
     const toggleBookmark = useCallback(() => {
+        // BUG-M4: do not bookmark when no real step data is loaded. The
+        // user sees a transient notification instead of a phantom
+        // bookmark. ``stepDataReadyRef`` is the right gate (not raw
+        // ``data``): TanStack Query's ``keepPreviousData`` means ``data``
+        // can be a stale placeholder from a previous run while the new
+        // run's query is loading or errored, so a plain null check would
+        // miss the broken-run case.
+        if (!stepDataReadyRef.current) {
+            setBookmarkError("Cannot bookmark: no step loaded");
+            return;
+        }
         bm.toggleBookmark(step, game);
     }, [bm, step, game]);
+
+    // Auto-clear the bookmark error after a few seconds so the user
+    // does not see a stale notification stuck on screen.
+    useEffect(() => {
+        if (bookmarkError == null) return;
+        const t = globalThis.setTimeout(() => setBookmarkError(null), 3000);
+        return () => globalThis.clearTimeout(t);
+    }, [bookmarkError]);
 
     // Navigate to a bookmark -- switches game and fetches step range if needed.
     const navigateToBookmark = useCallback(
         (bookmark: { step: number; game: number }) => {
             if (bookmark.game !== game) {
                 setGame(bookmark.game);
-                if (playback === "live_following") {
-                    dispatchPlayback({ type: "USER_NAVIGATE" });
-                }
-                void fetch(
-                    `/api/runs/${encodeURIComponent(run)}/step-range?game=${bookmark.game}`,
-                )
-                    .then((r) => r.json())
-                    .then((d: { min: number; max: number }) => {
+                setAutoFollow(false);
+                void queryClient
+                    .fetchQuery({
+                        queryKey: ["step-range", run, bookmark.game],
+                        queryFn: () => fetchStepRange(run, bookmark.game),
+                    })
+                    .then((d) => {
                         if (d.max > 0) {
                             setStepRange(d.min, d.max);
                         }
@@ -304,7 +402,7 @@ export function App() {
             }
             setStep(bookmark.step);
         },
-        [game, run, setGame, setStep, setStepRange, playback, dispatchPlayback],
+        [game, run, setGame, setStep, setStepRange, setAutoFollow, queryClient],
     );
 
     const goToNextBookmark = useCallback(() => {
@@ -319,13 +417,18 @@ export function App() {
 
     // Go live: jump to the live game's latest step and resume following.
     // Used by the "GO LIVE" badge click and the "L" keyboard shortcut.
+    // Flip autoFollow on and snap step to the current max so the
+    // StatusBar and slider catch up immediately. The auto-follow
+    // effect then owns subsequent step advancement as range.max grows.
     const goLive = useCallback(() => {
-        if (!liveGameActive || !liveRunName) return;
-        setRun(liveRunName);
-        dispatchPlayback({ type: "GO_LIVE" });
-        // The next Socket.io push will set the game, step, and range
-        // via onNewStep's live_following path.
-    }, [liveGameActive, liveRunName, setRun, dispatchPlayback]);
+        const runName = gameState?.run_name;
+        if (!runName || gameState?.state !== "running") return;
+        setRun(runName);
+        setAutoFollow(true);
+        if (restMax > 0) {
+            setStep(restMax);
+        }
+    }, [gameState, setRun, setAutoFollow, restMax, setStep]);
 
     // Speed intervals ordered slow -> fast (matching SPEED_OPTIONS in TransportBar)
     const SPEED_VALUES = [2000, 1000, 500, 200, 100, 50, 16] as const;
@@ -359,15 +462,15 @@ export function App() {
         const nextIdx = (currentIdx + 1) % gameNumbers.length;
         const nextGame = gameNumbers[nextIdx]!;
         setGame(nextGame);
-        if (playback === "live_following") {
-            dispatchPlayback({ type: "USER_NAVIGATE" });
-        }
-        // Fetch step range for the new game
-        void fetch(
-            `/api/runs/${encodeURIComponent(run)}/step-range?game=${nextGame}`,
-        )
-            .then((r) => r.json())
-            .then((d: { min: number; max: number }) => {
+        setAutoFollow(false);
+        // Fetch step range for the new game through the TanStack Query cache
+        // so ``useStepRange`` sees a cache hit on its next render.
+        void queryClient
+            .fetchQuery({
+                queryKey: ["step-range", run, nextGame],
+                queryFn: () => fetchStepRange(run, nextGame),
+            })
+            .then((d) => {
                 if (d.max > 0) {
                     setStepRange(d.min, d.max);
                     setStep(d.min);
@@ -376,7 +479,7 @@ export function App() {
             .catch(() => {
                 setStep(1);
             });
-    }, [games, game, setGame, run, setStep, setStepRange, playback, dispatchPlayback]);
+    }, [games, game, setGame, run, setStep, setStepRange, setAutoFollow, queryClient]);
 
     useKeyboardShortcuts({
         stepForward,
@@ -396,53 +499,90 @@ export function App() {
         cycleGame,
     });
 
-    // Track the live run name, game number, and active state from status polls
-    useEffect(() => {
-        if (liveStatus?.active && liveStatus.run_name) {
-            setLiveRunName(liveStatus.run_name);
-            setLiveGameNumber(liveStatus.game_number);
-        }
-        setLiveGameActive(liveStatus?.active ?? false);
-    }, [liveStatus, setLiveRunName, setLiveGameNumber, setLiveGameActive]);
-
     // Auto-select the live run when a game starts.
-    // Sets the run and game to match the live session, then GO_LIVE
-    // so Socket.io pushes advance the step cursor.
-    // The per-game step range is set by the useStepRange REST query
-    // (authoritative), not from liveStatus (which reports global range).
+    // Sets the run and game to match the live session and flips
+    // autoFollow on so the inline auto-follow effect advances the
+    // step cursor as range.max grows.
+    //
+    // URL parameter sovereignty (BUG-C2): if the user navigated to
+    // ``?run=X`` via URL, this effect must NEVER auto-navigate to a
+    // different run, even if X's endpoints fail or a different live
+    // game appears in the background. The user explicitly asked to look
+    // at X; silently teleporting them away violates the documented
+    // sovereignty invariant in ``dashboard-ui/CLAUDE.md``. Auto-select
+    // is only allowed when the URL has no explicit run, OR when the
+    // live run happens to be the same one the URL points at (in which
+    // case "auto-select" just confirms the user's choice and lets us
+    // flip autoFollow on).
     const prevLiveRunName = useRef<string | null>(null);
     useEffect(() => {
-        if (!liveStatus?.active || !liveStatus.run_name) return;
+        if (!gameState || gameState.state !== "running" || !gameState.run_name) return;
 
-        const isNewRun = liveStatus.run_name !== prevLiveRunName.current;
-        prevLiveRunName.current = liveStatus.run_name;
+        const isNewRun = gameState.run_name !== prevLiveRunName.current;
+        prevLiveRunName.current = gameState.run_name;
 
-        // Auto-navigate when a new live run appears. Block only if
-        // the live run matches the URL's explicit run (user navigated
-        // to a specific step of that run and we shouldn't override it).
-        // A different run name means the user started a new game -- always navigate.
+        // URL sovereignty guard: bail entirely when an explicit URL run
+        // exists and points at a *different* run from the live session.
+        // We still allow the (URL run === live run) case so GO LIVE can
+        // resume on the user's explicitly-chosen run.
+        if (
+            initialUrlRun.current &&
+            gameState.run_name !== initialUrlRun.current
+        ) {
+            return;
+        }
+
+        // Auto-navigate when a new live run appears, OR on first load
+        // when the URL has no explicit run. ``isNewRun`` covers the
+        // "user started a new game during the session" case; the second
+        // clause covers the bare-page first-load case.
         const shouldAutoNavigate =
-            (isNewRun && liveStatus.run_name !== initialUrlRun.current) ||
-            (!liveRunSelected.current && !initialUrlRun.current);
+            isNewRun || (!liveRunSelected.current && !initialUrlRun.current);
 
         if (shouldAutoNavigate) {
             liveRunSelected.current = true;
-            setRun(liveStatus.run_name);
-            setGame(liveStatus.game_number);
-            setStep(liveStatus.step);
-            dispatchPlayback({ type: "GO_LIVE" });
+            setRun(gameState.run_name);
+            setGame(1);
+            setStep(1);
+            setAutoFollow(true);
         }
-    }, [liveStatus, setRun, setGame, setStep, dispatchPlayback]);
+    }, [gameState, setRun, setGame, setStep, setAutoFollow]);
 
     // REST data fetch. No debounce: with keepPreviousData the previous
     // step stays visible while the next one loads, so rapid step changes
     // don't cause flicker. DuckLake queries complete in ~8ms, well within
     // the playback interval.
-    const { data: restData, isLoading, isPlaceholderData } = useStepData(
-        run,
-        step,
-        game || undefined,
-    );
+    const {
+        data: restData,
+        isLoading,
+        isPlaceholderData,
+        isError: stepIsError,
+        error: stepError,
+    } = useStepData(run, step, game || undefined);
+
+    // Surface fetch errors to the remote logger so failures show up in
+    // the iPad debug session even when the user can't see the dev tools.
+    // This is the trace for the recurring "errors not visible in UI"
+    // class of bug -- the dashboard was silently absorbing 500s from
+    // /api/runs/{run}/step/{n} and rendering "no data" indistinguishably
+    // from a real missing-step state.
+    useEffect(() => {
+        if (stepIsError && stepError) {
+            // eslint-disable-next-line no-console
+            console.error(
+                "[Step] fetch failed",
+                JSON.stringify({
+                    run,
+                    step,
+                    game,
+                    message:
+                        stepError instanceof Error
+                            ? stepError.message
+                            : String(stepError),
+                }),
+            );
+        }
+    }, [stepIsError, stepError, run, step, game]);
 
     // Signal to the play timer that the current step's real data has
     // arrived (not just placeholder from the previous step).
@@ -450,11 +590,11 @@ export function App() {
     const stepDataReadyRef = useRef(stepDataReady);
     stepDataReadyRef.current = stepDataReady;
 
-    // In live-following mode, prefer push data (instant) with REST fallback.
-    // In historical/paused mode, use ONLY REST data -- never fall back to
-    // liveData, which would cause a flicker of the live frame while the
-    // historical step loads.
-    const data = isFollowing ? liveData ?? restData : restData;
+    // Phase 4: only one data source -- REST via TanStack Query. The
+    // ``useRunSubscription`` hook invalidates the relevant queries when
+    // a step_added event arrives, triggering a fresh fetch through the
+    // unified RunReader path.
+    const data = restData;
 
     // Attention cycle stepper state -- reset when step changes
     const [selectedSaliencyCycle, setSelectedSaliencyCycle] = useState(0);
@@ -475,11 +615,9 @@ export function App() {
     const handleChartStepClick = useCallback(
         (clickedStep: number) => {
             setStep(clickedStep);
-            if (playback === "live_following") {
-                dispatchPlayback({ type: "USER_NAVIGATE" });
-            }
+            setAutoFollow(false);
         },
-        [setStep, playback, dispatchPlayback],
+        [setStep, setAutoFollow],
     );
 
     usePrefetchWindow(run, step, stepMin, stepMax, game || undefined);
@@ -503,7 +641,45 @@ export function App() {
             <KeyboardHelp opened={helpOpen} onClose={() => setHelpOpen(false)} />
 
             <AppShell.Main>
-                <StatusBar data={data} playbackState={playback} onGoLive={goLive} />
+                {showLoadFailureBanner && (
+                    <Alert
+                        color="red"
+                        variant="filled"
+                        radius={0}
+                        mb={4}
+                        title={`Run "${run}" could not be loaded`}
+                    >
+                        <Group justify="space-between" align="center">
+                            <Text size="xs">
+                                {loadFailureMessage || "Unknown error"}
+                            </Text>
+                            <Button
+                                size="xs"
+                                color="red"
+                                variant="white"
+                                onClick={handleBrowseRuns}
+                            >
+                                Browse runs
+                            </Button>
+                        </Group>
+                    </Alert>
+                )}
+                {bookmarkError && (
+                    <Alert
+                        color="yellow"
+                        variant="filled"
+                        radius={0}
+                        mb={4}
+                    >
+                        <Text size="xs">{bookmarkError}</Text>
+                    </Alert>
+                )}
+                <StatusBar
+                    data={data}
+                    autoFollow={autoFollow}
+                    onGoLive={goLive}
+                    fetchError={stepIsError ? stepError : null}
+                />
 
                 {isLoading && !data && (
                     <Text size="xs" c="dimmed" p="md">
@@ -513,12 +689,17 @@ export function App() {
 
                 <PopoutToolbar>
                     <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
-                        <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
+                        <AllObjects
+                            run={run}
+                            game={game || undefined}
+                            gameStepRanges={gameStepRanges}
+                            onStepClick={handleChartStepClick}
+                        />
                     </PopoutToolbar.Button>
                     <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
-                        <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                        <GraphHistory run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                         <div style={{ marginTop: 16 }}>
-                            <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                            <EventHistory run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                         </div>
                     </PopoutToolbar.Button>
                 </PopoutToolbar>
@@ -545,9 +726,9 @@ export function App() {
                     <Section value="game-state" title="Game State" icon={Gamepad2} color="gray" toolbar={
                         <>
                             <PopoutToolbar.Button title="Graph & Events" icon={BarChart3}>
-                                <GraphHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                <GraphHistory run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                                 <div style={{ marginTop: 16 }}>
-                                    <EventHistory run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                    <EventHistory run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                                 </div>
                             </PopoutToolbar.Button>
                             <PopoutToolbar.Button title="Schema" icon={Database}>
@@ -575,7 +756,7 @@ export function App() {
                                 <IntrinsicsPanel data={data} />
                             </Grid.Col>
                             <Grid.Col span={{ base: 12, md: 6 }}>
-                                <IntrinsicsChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                <IntrinsicsChart run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                             </Grid.Col>
                         </Grid>
                     </Section>
@@ -627,10 +808,15 @@ export function App() {
                     <Section value="object-resolution" title="Object Resolution" icon={Shapes} color="violet" expmod={toDisplayString(data?.resolution_metrics?.algorithm)} toolbar={
                         <>
                             <PopoutToolbar.Button title="All Objects" icon={TableIcon}>
-                                <AllObjects run={run} game={game || undefined} onStepClick={handleChartStepClick} />
+                                <AllObjects
+                                    run={run}
+                                    game={game || undefined}
+                                    gameStepRanges={gameStepRanges}
+                                    onStepClick={handleChartStepClick}
+                                />
                             </PopoutToolbar.Button>
                             <PopoutToolbar.Button title="Resolution Error Rate" icon={Bug}>
-                                <ResolutionChart run={run} game={game || undefined} currentStep={step} onStepClick={handleChartStepClick} />
+                                <ResolutionChart run={run} game={game || undefined} currentStep={debouncedHistoryStep} onStepClick={handleChartStepClick} />
                             </PopoutToolbar.Button>
                         </>
                     }>
@@ -641,7 +827,7 @@ export function App() {
                     </Section>
 
                     <Section value="graph-visualization" title="Graph Visualization" icon={Network} color="cyan">
-                        <GraphVisualization run={run} step={step} game={game || undefined} />
+                        <GraphVisualization run={run} step={debouncedGraphStep} game={game || undefined} />
                     </Section>
 
                     <Section value="sequences" title="Sequences" icon={Layers} color="indigo">

@@ -75,7 +75,7 @@ describe("TransitionPanel", () => {
                 count: 0,
                 changes: [],
                 object_transforms: [
-                    { uuid: 42, glyph: "@", changes: [
+                    { uuid: "42", glyph: "@", changes: [
                         { property: "x", type: "continuous", delta: 2, old_value: 10, new_value: 12 },
                     ]},
                 ],
@@ -115,7 +115,7 @@ describe("TransitionPanel", () => {
                 count: 0,
                 changes: [],
                 object_transforms: [{
-                    uuid: 42,
+                    uuid: "42",
                     glyph: "@",
                     changes: [
                         { property: "x", type: "continuous", delta: 2 },

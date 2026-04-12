@@ -1,6 +1,7 @@
 /** Resolution accuracy chart -- correct matches, incorrect matches, new objects over time. */
 
 import { Text } from "@mantine/core";
+import { memo } from "react";
 import {
     Area,
     AreaChart,
@@ -30,7 +31,7 @@ interface BucketedPoint {
     unknown: number;
 }
 
-export function ResolutionChart({ run, game, currentStep, onStepClick }: Readonly<ResolutionChartProps>) {
+function ResolutionChartInner({ run, game, currentStep, onStepClick }: Readonly<ResolutionChartProps>) {
     const { data: history } = useResolutionHistory(run, game);
 
     if (!history || history.length === 0) {
@@ -142,3 +143,5 @@ export function ResolutionChart({ run, game, currentStep, onStepClick }: Readonl
         </div>
     );
 }
+
+export const ResolutionChart = memo(ResolutionChartInner);

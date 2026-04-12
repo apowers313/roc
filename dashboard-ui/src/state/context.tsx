@@ -11,18 +11,12 @@ import {
     useContext,
     useEffect,
     useMemo,
-    useReducer,
     useRef,
     useState,
-    type Dispatch,
     type ReactNode,
 } from "react";
 
-import {
-    playbackReducer,
-    type PlaybackAction,
-    type PlaybackState,
-} from "./playback";
+import { initialPlayback } from "./playback";
 
 // ---------------------------------------------------------------------------
 // URL param helpers -- persist navigation state across reloads
@@ -83,21 +77,12 @@ interface DashboardState {
     stepMin: number;
     stepMax: number;
     setStepRange: (min: number, max: number) => void;
-    playback: PlaybackState;
-    dispatchPlayback: Dispatch<PlaybackAction>;
     playing: boolean;
     setPlaying: (playing: boolean) => void;
+    autoFollow: boolean;
+    setAutoFollow: (autoFollow: boolean) => void;
     speed: number;
     setSpeed: (speed: number) => void;
-    /** The name of the currently-live run (set by live status poll). */
-    liveRunName: string;
-    setLiveRunName: (name: string) => void;
-    /** The game number currently being played live. */
-    liveGameNumber: number;
-    setLiveGameNumber: (game: number) => void;
-    /** Whether a live game is currently active (from status poll). */
-    liveGameActive: boolean;
-    setLiveGameActive: (active: boolean) => void;
 }
 
 export const DashboardContext = createContext<DashboardState | null>(null);
@@ -111,15 +96,9 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
     const [step, setStep] = useState(initial.current.step ?? 1);
     const [stepMin, setStepMin] = useState(1);
     const [stepMax, setStepMax] = useState(1);
-    const [playing, setPlaying] = useState(false);
+    const [playing, setPlaying] = useState(initialPlayback.playing);
+    const [autoFollow, setAutoFollow] = useState(initialPlayback.autoFollow);
     const [rawSpeed, setRawSpeed] = useState(readSessionSpeed);
-    const [liveRunName, setLiveRunName] = useState("");
-    const [liveGameNumber, setLiveGameNumber] = useState(0);
-    const [liveGameActive, setLiveGameActive] = useState(false);
-    const [playback, dispatchPlayback] = useReducer(
-        playbackReducer,
-        "historical" as PlaybackState,
-    );
 
     // Wrap setSpeed to also persist to sessionStorage
     const speed = rawSpeed;
@@ -131,6 +110,20 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
     const setStepRange = useCallback((min: number, max: number) => {
         setStepMin(min);
         setStepMax(max);
+        // Clamp current step into the new range. Without this, navigating
+        // via URL (?step=2500) or chart click to a step beyond the data
+        // range leaves step state pointing at a non-existent step. The
+        // slider clamps display but the underlying state stays out of
+        // range, so the StatusBar shows "Step 2500 | Game 0" with no data.
+        // Skip when max <= 0 (range not yet known) so we don't clobber an
+        // in-progress URL navigation while the range query is loading.
+        if (max > 0) {
+            setStep((current) => {
+                if (current < min) return min;
+                if (current > max) return max;
+                return current;
+            });
+        }
     }, []);
 
     // Sync navigation state to URL. Debounced: during playback step changes
@@ -161,25 +154,17 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
         stepMin,
         stepMax,
         setStepRange,
-        playback,
-        dispatchPlayback,
         playing,
         setPlaying,
+        autoFollow,
+        setAutoFollow,
         speed,
         setSpeed,
-        liveRunName,
-        setLiveRunName,
-        liveGameNumber,
-        setLiveGameNumber,
-        liveGameActive,
-        setLiveGameActive,
     }), [
         run, setRun, game, setGame, step, setStep,
         stepMin, stepMax, setStepRange,
-        playback, dispatchPlayback, playing, setPlaying,
-        speed, setSpeed, liveRunName, setLiveRunName,
-        liveGameNumber, setLiveGameNumber,
-        liveGameActive, setLiveGameActive,
+        playing, setPlaying, autoFollow, setAutoFollow,
+        speed, setSpeed,
     ]);
 
     return (

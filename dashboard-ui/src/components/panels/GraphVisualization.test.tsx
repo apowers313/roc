@@ -6,8 +6,11 @@ import type { ReactNode } from "react";
 import type { CytoscapeData } from "../../types/step-data";
 import {
     buildElements,
+    buildPropertyChangeRows,
     DetailPanel,
     findConnectedNodes,
+    findTransformChildren,
+    findTransformFrameTicks,
     getActionId,
     getDescendants,
     getFeatureNodeDisplay,
@@ -212,6 +215,50 @@ describe("GraphVisualization", () => {
         vi.useRealTimers();
     });
 
+    it("resets debounced step immediately on run change to avoid stale cross-run requests", () => {
+        // Bug regression: switching from a 573-step run at step 507 to a
+        // 13-step run must NOT fire a request for step 507 on the new run.
+        // The debounced step must reset to the new step prop immediately
+        // when the run changes.
+        vi.useFakeTimers();
+        mockUseFrameGraph.mockReturnValue({
+            data: makeCytoscapeData(),
+            isLoading: false,
+        } as ReturnType<typeof useFrameGraph>);
+
+        const { rerender } = render(
+            <GraphVisualization run="long-run" step={507} />,
+            { wrapper: Wrapper },
+        );
+
+        // Initial render: step=507 on long-run
+        expect(mockUseFrameGraph).toHaveBeenCalledWith("long-run", 507, undefined, 1);
+
+        // Switch to a short run with step reset to 1
+        rerender(
+            <Wrapper>
+                <GraphVisualization run="short-run" step={1} />
+            </Wrapper>,
+        );
+
+        // The hook must NEVER be called with step=507 on the new run.
+        // This catches the case where the debounced step from the old run
+        // leaks into a request against the new run's API endpoint.
+        expect(mockUseFrameGraph).not.toHaveBeenCalledWith(
+            "short-run", 507, expect.anything(), expect.anything(),
+        );
+        // It MUST have been called with the correct step on the new run
+        expect(mockUseFrameGraph).toHaveBeenCalledWith("short-run", 1, undefined, 1);
+
+        // After debounce fires, should still be step=1 on short-run
+        vi.advanceTimersByTime(300);
+        const latestCall = mockUseFrameGraph.mock.calls[mockUseFrameGraph.mock.calls.length - 1];
+        expect(latestCall?.[0]).toBe("short-run");
+        expect(latestCall?.[1]).toBe(1);
+
+        vi.useRealTimers();
+    });
+
     it("passes game parameter to useFrameGraph", () => {
         mockUseFrameGraph.mockReturnValue({
             data: makeCytoscapeData(),
@@ -348,6 +395,19 @@ describe("getNodeType", () => {
 
     it("maps IntrinsicTransform labels", () => {
         expect(getNodeType({ labels: "IntrinsicTransform" })).toBe("transform");
+    });
+
+    // Regression: PropertyTransformNode contains the substring "Transform",
+    // and the old getNodeType used substring matching that put it in the
+    // "transform" bucket. Clicking it then opened TransformDetail which
+    // showed only "kind: Transform" with nothing else, because none of the
+    // expected fields exist on a PropertyTransformNode. The fix is to
+    // check the more-specific PropertyTransformNode label first and route
+    // it to its own detail panel.
+    it("maps PropertyTransformNode to its own type, not 'transform'", () => {
+        expect(getNodeType({ labels: "PropertyTransformNode" })).toBe(
+            "property-transform",
+        );
     });
 
     it("returns unknown for unrecognized labels", () => {
@@ -631,6 +691,77 @@ describe("buildElements", () => {
 
         expect(nodeTypes).toContain("frame");
     });
+
+    // Regression: a parent Transform between Frame N and Frame N+1 has two
+    // outgoing Change edges (one to each frame). When the user expands
+    // Frame N, the walk places the Transform and the (Frame N -> Transform)
+    // edge but used to skip the (Transform -> Frame N+1) edge -- because
+    // the walk only adds edges along the parent->child direction it took.
+    // Even though Frame N+1 is on the canvas (it's the timeline backbone),
+    // the cross-link wasn't drawn. The fix is a final pass that draws every
+    // edge whose endpoints are both already placed.
+    it("draws cross-link edges between visible nodes that aren't on the walk path", () => {
+        const data: CytoscapeData = {
+            elements: {
+                nodes: [
+                    { data: { id: "1", labels: "Frame", tick: 1 } },
+                    { data: { id: "2", labels: "Frame", tick: 2 } },
+                    { data: { id: "t", labels: "Transform" } },
+                ],
+                edges: [
+                    // Frame 1 has the outgoing Change edge to Transform.
+                    { data: { id: "e1", source: "1", target: "t", type: "Change" } },
+                    // Transform's other Change edge points at Frame 2.
+                    { data: { id: "e2", source: "t", target: "2", type: "Change" } },
+                    { data: { id: "e3", source: "1", target: "2", type: "NextFrame" } },
+                ],
+            },
+            meta: { root_id: 1, node_count: 3, edge_count: 3 },
+        };
+
+        // Expand frame 1 only -- the walk goes 1 -> Transform via Change.
+        const els = buildElements(data, new Set(["1"]));
+        const edges = els.filter((e) => e.group === "edges");
+
+        const edgeIds = new Set(edges.map((e) => String(e.data.id)));
+        // The (Frame 1 -> Transform) edge is added by the walk itself.
+        expect(edgeIds.has("e1")).toBe(true);
+        // The (Transform -> Frame 2) edge is the cross-link -- not on the
+        // walk path, but both endpoints are placed (Transform via the walk,
+        // Frame 2 as part of the timeline backbone). The final pass must
+        // draw it.
+        expect(edgeIds.has("e2")).toBe(true);
+        // And the NextFrame edge between the two frames.
+        expect(edgeIds.has("e3")).toBe(true);
+    });
+
+    // Regression sanity: the cross-link pass must NOT pull in edges between
+    // nodes that aren't on the canvas. If a node was filtered out (e.g.
+    // hidden by visible-types), its incident edges should stay hidden too.
+    it("does not draw edges to nodes that weren't placed", () => {
+        const data: CytoscapeData = {
+            elements: {
+                nodes: [
+                    { data: { id: "1", labels: "Frame", tick: 1 } },
+                    { data: { id: "intr", labels: "IntrinsicNode", name: "hp" } },
+                ],
+                edges: [
+                    { data: { id: "e1", source: "1", target: "intr", type: "FrameAttribute" } },
+                ],
+            },
+            meta: { root_id: 1, node_count: 2, edge_count: 1 },
+        };
+
+        // Frame 1 not expanded; default DEFAULT_HIDDEN_TYPES hides intrinsic.
+        const els = buildElements(data, new Set());
+        const placedNodeIds = new Set(
+            els.filter((e) => e.group === "nodes").map((e) => String(e.data.id)),
+        );
+        expect(placedNodeIds.has("intr")).toBe(false);
+        const edges = els.filter((e) => e.group === "edges");
+        // The edge to the hidden intrinsic must not be drawn.
+        expect(edges.some((e) => String(e.data.id) === "e1")).toBe(false);
+    });
 });
 
 /** Rich test data with all node types connected. */
@@ -643,7 +774,7 @@ function makeRichCytoscapeData(): CytoscapeData {
                 { data: { id: "3", labels: "TakeAction", action_id: 19 } },
                 { data: { id: "4", labels: "IntrinsicNode", name: "hp", raw_value: 15, normalized_value: 0.75 } },
                 { data: { id: "5", labels: "IntrinsicNode", name: "hunger", raw_value: 900, normalized_value: 0.45 } },
-                { data: { id: "6", labels: "Object", uuid: 12345, resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 } },
+                { data: { id: "6", labels: "Object", uuid: "12345", resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 } },
                 { data: { id: "7", labels: "FeatureGroup" } },
                 { data: { id: "8", labels: "FeatureNode", name: "glyph", value: "@", kind: "PHYSICAL" } },
                 { data: { id: "9", labels: "RelationshipGroup" } },
@@ -703,6 +834,97 @@ describe("Detail Panel", () => {
         expect(screen.getByText(/\(5, 10\)/)).toBeInTheDocument();
     });
 
+    // Regression: ObjectInstance detail panel used to show only position
+    // and feature counts -- the parent Object's identity (human_name and
+    // uuid) was unreachable from the panel even though the connected
+    // Object node was already loaded. The fix walks the ObservedAs edge
+    // to the Object and surfaces its name + uuid at the top of the panel.
+    it("ObjectInstance panel surfaces parent Object's human_name and uuid when both are loaded", () => {
+        const apiData: CytoscapeData = {
+            elements: {
+                nodes: [
+                    { data: { id: "oi", labels: "ObjectInstance", x: 23, y: 9, glyph: "@", object_uuid: "6853809301722933453" } },
+                    {
+                        data: {
+                            id: "obj",
+                            labels: "Object",
+                            uuid: "6853809301722933453",
+                            human_name: "rancorous-fey-devy",
+                            resolve_count: 189,
+                        },
+                    },
+                ],
+                edges: [
+                    { data: { id: "e", source: "oi", target: "obj", type: "ObservedAs" } },
+                ],
+            },
+            meta: { root_id: 0, node_count: 2, edge_count: 1 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "object-instance",
+            data: apiData.elements.nodes[0]!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={apiData}
+                actionMap={TEST_ACTION_MAP}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        // Parent Object identity rows. The label words may appear elsewhere
+        // in the surrounding panel chrome (e.g. another "object" word in
+        // a header), so accept >=1 occurrences.
+        expect(screen.getAllByText("object").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText("rancorous-fey-devy")).toBeInTheDocument();
+        expect(screen.getAllByText("uuid").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getAllByText("6853809301722933453").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("ObjectInstance panel falls back to its own object_uuid / human_name when Object isn't loaded", () => {
+        // Depth-1 fetch from a Frame fetches the ObjectInstance but not the
+        // parent Object. The instance still carries object_uuid and
+        // human_name (the server adds human_name to every node carrying a
+        // uuid), so the panel should fall back to those copies rather than
+        // showing nothing.
+        const apiData: CytoscapeData = {
+            elements: {
+                nodes: [{
+                    data: {
+                        id: "oi",
+                        labels: "ObjectInstance",
+                        x: 23,
+                        y: 9,
+                        object_uuid: "6853809301722933453",
+                        human_name: "rancorous-fey-devy",
+                    },
+                }],
+                edges: [],
+            },
+            meta: { root_id: 0, node_count: 1, edge_count: 0 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "object-instance",
+            data: apiData.elements.nodes[0]!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={apiData}
+                actionMap={TEST_ACTION_MAP}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        expect(screen.getByText("rancorous-fey-devy")).toBeInTheDocument();
+        expect(screen.getByText("6853809301722933453")).toBeInTheDocument();
+    });
+
     it("shows relationships table in ObjectInstance detail", () => {
         const selected: SelectedElement = {
             kind: "node",
@@ -722,7 +944,7 @@ describe("Detail Panel", () => {
         const selected: SelectedElement = {
             kind: "node",
             type: "object",
-            data: { id: "6", labels: "Object", uuid: 12345, resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
+            data: { id: "6", labels: "Object", uuid: "12345", resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
         };
         render(
             <DetailPanel selected={selected} apiData={richData} actionMap={TEST_ACTION_MAP} onClose={vi.fn()} onViewHistory={vi.fn()} />,
@@ -791,6 +1013,529 @@ describe("Detail Panel", () => {
         expect(screen.getAllByText("SituatedObjectInstance").length).toBeGreaterThanOrEqual(1);
         // Source label should be present
         expect(screen.getByText(/Frame 42/)).toBeInTheDocument();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Transform detail tests
+//
+// Regression: clicking on a Transform / ObjectTransform node used to show
+// only summary counts ("discrete changes: 1, continuous changes: 2") with no
+// indication of WHAT actually changed. The user couldn't tell what the
+// transform represented. The detail panel must walk TransformDetail edges
+// to its PropertyTransformNode children and surface the per-property changes.
+// ---------------------------------------------------------------------------
+
+/** Build a CytoscapeData containing a parent Transform, an ObjectTransform
+ *  child of the parent, and PropertyTransformNode children of the
+ *  ObjectTransform. Mirrors the real graph shape produced by Transformer
+ *  for an object that moved diagonally and changed motion direction. */
+function makeObjectTransformGraph(): CytoscapeData {
+    const nodes = [
+        { data: { id: "frame-prev", labels: "Frame", tick: 41 } },
+        { data: { id: "frame-cur", labels: "Frame", tick: 42 } },
+        { data: { id: "parent", labels: "Transform" } },
+        {
+            data: {
+                id: "ot",
+                labels: "ObjectTransform, Transform",
+                // 63-bit ROC UUID as a string. A number literal here would
+                // be silently truncated to ...000 by the JS parser, which
+                // is exactly the precision-loss bug this code is fixing.
+                object_uuid: "6853809301722933453",
+                num_discrete_changes: 1,
+                num_continuous_changes: 3,
+            },
+        },
+        {
+            data: {
+                id: "ptn-x",
+                labels: "PropertyTransformNode",
+                property_name: "x",
+                change_type: "continuous",
+                old_value: null,
+                new_value: null,
+                delta: -1,
+            },
+        },
+        {
+            data: {
+                id: "ptn-y",
+                labels: "PropertyTransformNode",
+                property_name: "y",
+                change_type: "continuous",
+                old_value: null,
+                new_value: null,
+                delta: 0,
+            },
+        },
+        {
+            data: {
+                id: "ptn-distance",
+                labels: "PropertyTransformNode",
+                property_name: "distance",
+                change_type: "continuous",
+                old_value: 1,
+                new_value: 6,
+                delta: 5,
+            },
+        },
+        {
+            data: {
+                id: "ptn-motion",
+                labels: "PropertyTransformNode",
+                property_name: "motion_direction",
+                change_type: "discrete",
+                old_value: "UP_LEFT",
+                new_value: "LEFT",
+                delta: null,
+            },
+        },
+    ];
+    const edges = [
+        { data: { id: "e1", source: "frame-prev", target: "parent", type: "Change" } },
+        { data: { id: "e2", source: "parent", target: "frame-cur", type: "Change" } },
+        { data: { id: "e3", source: "parent", target: "ot", type: "Change" } },
+        { data: { id: "e4", source: "ot", target: "ptn-x", type: "TransformDetail" } },
+        { data: { id: "e5", source: "ot", target: "ptn-y", type: "TransformDetail" } },
+        { data: { id: "e6", source: "ot", target: "ptn-distance", type: "TransformDetail" } },
+        { data: { id: "e7", source: "ot", target: "ptn-motion", type: "TransformDetail" } },
+    ];
+    return {
+        elements: { nodes, edges },
+        meta: { root_id: 0, node_count: nodes.length, edge_count: edges.length },
+    };
+}
+
+describe("findTransformFrameTicks", () => {
+    it("returns src and dst frame ticks via Change edges", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        // The bare parent Transform is the one connected to both frames.
+        const ticks = findTransformFrameTicks("parent", nodeMap, data.elements.edges);
+        expect(ticks).toEqual({ srcFrameTick: 41, dstFrameTick: 42 });
+    });
+
+    it("returns null on each side when frame edges aren't loaded", () => {
+        const ticks = findTransformFrameTicks(
+            "ot",
+            new Map(),
+            [],
+        );
+        expect(ticks).toEqual({ srcFrameTick: null, dstFrameTick: null });
+    });
+});
+
+describe("buildPropertyChangeRows", () => {
+    it("walks TransformDetail edges to PropertyTransformNode children", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const rows = buildPropertyChangeRows("ot", nodeMap, data.elements.edges);
+
+        expect(rows).toHaveLength(4);
+        // Stable sort: continuous (x, y, others) before discrete
+        expect(rows.map((r) => r.propertyName)).toEqual([
+            "x", "y", "distance", "motion_direction",
+        ]);
+    });
+
+    it("formats position deltas using only the delta field", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const rows = buildPropertyChangeRows("ot", nodeMap, data.elements.edges);
+        const x = rows.find((r) => r.propertyName === "x")!;
+        // x has only delta=-1; old_value/new_value are null. Output is just
+        // the signed delta, not "null -> null".
+        expect(x.summary).toBe("-1");
+
+        const y = rows.find((r) => r.propertyName === "y")!;
+        // Zero delta has no sign prefix -- "+0" would lie about direction.
+        expect(y.summary).toBe("0");
+    });
+
+    it("formats discrete changes as 'old -> new'", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const rows = buildPropertyChangeRows("ot", nodeMap, data.elements.edges);
+        const motion = rows.find((r) => r.propertyName === "motion_direction")!;
+        expect(motion.summary).toBe("UP_LEFT -> LEFT");
+        expect(motion.changeType).toBe("discrete");
+    });
+
+    it("formats distance changes with both endpoints AND the delta", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const rows = buildPropertyChangeRows("ot", nodeMap, data.elements.edges);
+        const dist = rows.find((r) => r.propertyName === "distance")!;
+        expect(dist.summary).toBe("1 -> 6 (+5)");
+    });
+
+    it("returns an empty list when the transform has no children loaded", () => {
+        const data = makeObjectTransformGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        // The bare parent Transform has Change edges (not TransformDetail).
+        const rows = buildPropertyChangeRows("parent", nodeMap, data.elements.edges);
+        expect(rows).toEqual([]);
+    });
+});
+
+describe("Transform Detail panel", () => {
+    const data = makeObjectTransformGraph();
+
+    it("shows the actual property changes for an ObjectTransform", () => {
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "transform",
+            data: data.elements.nodes.find((n) => n.data.id === "ot")!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={data}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+
+        // Header row identifies the transform kind. The label appears in
+        // both the panel title and the "kind" row, so accept >=1.
+        expect(screen.getAllByText("ObjectTransform").length).toBeGreaterThanOrEqual(1);
+        // The per-property change table is the new behaviour: each property
+        // appears with its actual change, not just a count.
+        expect(screen.getByText("Property changes")).toBeInTheDocument();
+        expect(screen.getByText("x")).toBeInTheDocument();
+        expect(screen.getByText("y")).toBeInTheDocument();
+        expect(screen.getByText("distance")).toBeInTheDocument();
+        expect(screen.getByText("motion_direction")).toBeInTheDocument();
+        // The actual change values (not just counts) must be visible.
+        expect(screen.getByText("-1")).toBeInTheDocument();
+        // y delta is 0 -- formatDelta omits the sign for zero.
+        expect(screen.getByText("0")).toBeInTheDocument();
+        expect(screen.getByText("1 -> 6 (+5)")).toBeInTheDocument();
+        expect(screen.getByText("UP_LEFT -> LEFT")).toBeInTheDocument();
+    });
+
+    it("hides the discrete/continuous count rows once children are loaded", () => {
+        // Regression: when the per-property table is shown, the redundant
+        // "discrete changes: N" and "continuous changes: N" rows are noise
+        // and used to confuse users. They only appear when children are
+        // unfetched (depth=1 frame load).
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "transform",
+            data: data.elements.nodes.find((n) => n.data.id === "ot")!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={data}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        expect(screen.queryByText(/discrete changes/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/continuous changes/)).not.toBeInTheDocument();
+    });
+
+    it("falls back to count rows when no PropertyTransformNode children are loaded", () => {
+        // Simulate the depth=1 frame fetch where TransformDetail edges
+        // weren't followed -- the user clicks the transform before
+        // expanding it. Counts are the only thing we can show.
+        const stripped: CytoscapeData = {
+            elements: {
+                nodes: data.elements.nodes.filter(
+                    (n) => !String(n.data.labels).includes("PropertyTransformNode"),
+                ),
+                edges: data.elements.edges.filter(
+                    (e) => e.data.type !== "TransformDetail",
+                ),
+            },
+            meta: { root_id: 0, node_count: 0, edge_count: 0 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "transform",
+            data: stripped.elements.nodes.find((n) => n.data.id === "ot")!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={stripped}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        expect(screen.getByText("discrete changes")).toBeInTheDocument();
+        expect(screen.getByText("continuous changes")).toBeInTheDocument();
+        expect(screen.queryByText("Property changes")).not.toBeInTheDocument();
+    });
+
+    it("shows IntrinsicTransform name and normalized change", () => {
+        const intrinsicData: CytoscapeData = {
+            elements: {
+                nodes: [
+                    {
+                        data: {
+                            id: "it",
+                            labels: "IntrinsicTransform, Transform",
+                            name: "hp",
+                            normalized_change: -0.125,
+                        },
+                    },
+                ],
+                edges: [],
+            },
+            meta: { root_id: 0, node_count: 1, edge_count: 0 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "transform",
+            data: intrinsicData.elements.nodes[0]!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={intrinsicData}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        expect(screen.getAllByText("IntrinsicTransform").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText("hp")).toBeInTheDocument();
+        expect(screen.getByText("-0.125")).toBeInTheDocument();
+    });
+
+    // Regression: clicking on a bare parent Transform used to render
+    // "kind: Transform" plus the from/to frame ticks and *nothing else*
+    // -- the user couldn't tell what the transform actually contained.
+    // The fix walks outgoing Change edges to find the child ObjectTransform
+    // and IntrinsicTransform nodes (the per-object/per-intrinsic changes
+    // grouped under this frame transition) and lists them.
+    it("bare Transform shows a frame-transition summary with child transforms", () => {
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "transform",
+            data: data.elements.nodes.find((n) => n.data.id === "parent")!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={data}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        // Frame ticks render via the existing srcFrame/dstFrame walk.
+        expect(screen.getByText(/from frame/)).toBeInTheDocument();
+        expect(screen.getByText(/to frame/)).toBeInTheDocument();
+        // The new "Frame transition with N change(s)" header.
+        expect(screen.getByText(/Frame transition with 1 change/)).toBeInTheDocument();
+        // The child ObjectTransform is listed by its kind.
+        expect(screen.getByText("object")).toBeInTheDocument();
+        // The change count summarises the property children.
+        expect(screen.getByText(/4 props/)).toBeInTheDocument();
+    });
+});
+
+describe("findTransformChildren", () => {
+    function makeMixedTransitionGraph(): CytoscapeData {
+        return {
+            elements: {
+                nodes: [
+                    { data: { id: "frame-prev", labels: "Frame", tick: 41 } },
+                    { data: { id: "frame-cur", labels: "Frame", tick: 42 } },
+                    { data: { id: "parent", labels: "Transform" } },
+                    {
+                        data: {
+                            id: "ot",
+                            labels: "ObjectTransform, Transform",
+                            object_uuid: "12345",
+                            human_name: "rancorous-fey-devy",
+                            num_discrete_changes: 1,
+                            num_continuous_changes: 2,
+                        },
+                    },
+                    {
+                        data: {
+                            id: "it",
+                            labels: "IntrinsicTransform, Transform",
+                            name: "hp",
+                            normalized_change: -0.125,
+                        },
+                    },
+                ],
+                edges: [
+                    { data: { id: "e1", source: "frame-prev", target: "parent", type: "Change" } },
+                    { data: { id: "e2", source: "parent", target: "frame-cur", type: "Change" } },
+                    { data: { id: "e3", source: "parent", target: "ot", type: "Change" } },
+                    { data: { id: "e4", source: "parent", target: "it", type: "Change" } },
+                ],
+            },
+            meta: { root_id: 0, node_count: 5, edge_count: 4 },
+        };
+    }
+
+    it("returns one entry per child Object/Intrinsic transform", () => {
+        const data = makeMixedTransitionGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const children = findTransformChildren("parent", nodeMap, data.elements.edges);
+        expect(children).toHaveLength(2);
+        expect(children.map((c) => c.kind).sort()).toEqual(["intrinsic", "object"]);
+    });
+
+    it("excludes Frame Change edges from the children list", () => {
+        // Sanity: the parent's Change edges to its src/dst Frame must NOT
+        // be confused with child transforms. The frame transition has 4
+        // outgoing Change edges (1 to each frame, 1 per child), and only
+        // the 2 non-frame ones should appear as children.
+        const data = makeMixedTransitionGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const children = findTransformChildren("parent", nodeMap, data.elements.edges);
+        for (const c of children) {
+            expect(c.id).not.toBe("frame-cur");
+            expect(c.id).not.toBe("frame-prev");
+        }
+    });
+
+    it("populates ObjectTransform fields (humanName, objectUuid, changeCount)", () => {
+        const data = makeMixedTransitionGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const children = findTransformChildren("parent", nodeMap, data.elements.edges);
+        const obj = children.find((c) => c.kind === "object")!;
+        expect(obj.humanName).toBe("rancorous-fey-devy");
+        expect(obj.objectUuid).toBe("12345");
+        expect(obj.changeCount).toBe(3); // discrete (1) + continuous (2)
+    });
+
+    it("populates IntrinsicTransform fields (intrinsicName, normalizedChange)", () => {
+        const data = makeMixedTransitionGraph();
+        const nodeMap = new Map(
+            data.elements.nodes.map((n) => [n.data.id as string, n.data]),
+        );
+        const children = findTransformChildren("parent", nodeMap, data.elements.edges);
+        const intr = children.find((c) => c.kind === "intrinsic")!;
+        expect(intr.intrinsicName).toBe("hp");
+        expect(intr.normalizedChange).toBe(-0.125);
+    });
+});
+
+describe("PropertyTransform Detail panel", () => {
+    // Regression: PropertyTransformNode used to be misclassified as
+    // 'transform' (substring match on the label) and routed to TransformDetail
+    // which had nothing to show for it -- the user saw "kind: Transform"
+    // and no actual change details. Now it has its own type and detail panel.
+    it("renders the actual property change for a PropertyTransformNode", () => {
+        const ptnData: CytoscapeData = {
+            elements: {
+                nodes: [{
+                    data: {
+                        id: "ptn",
+                        labels: "PropertyTransformNode",
+                        property_name: "distance",
+                        change_type: "continuous",
+                        old_value: 1,
+                        new_value: 6,
+                        delta: 5,
+                    },
+                }],
+                edges: [],
+            },
+            meta: { root_id: 0, node_count: 1, edge_count: 0 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "property-transform",
+            data: ptnData.elements.nodes[0]!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={ptnData}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        // The user must see the actual property name, change type, and values.
+        // "PropertyTransformNode" appears in both the panel title (default
+        // case in title switch falls back to data.labels) and the kind row.
+        expect(screen.getAllByText("PropertyTransformNode").length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText("distance")).toBeInTheDocument();
+        expect(screen.getByText("continuous")).toBeInTheDocument();
+        expect(screen.getByText("1")).toBeInTheDocument();
+        expect(screen.getByText("6")).toBeInTheDocument();
+        expect(screen.getByText("5")).toBeInTheDocument();
+        // CRITICAL: must NOT degenerate into the unhelpful "kind: Transform"
+        // single-row display from the old substring-match bug.
+        expect(screen.queryByText(/kind\s*Transform$/)).not.toBeInTheDocument();
+    });
+
+    it("renders a discrete change with old/new strings", () => {
+        const ptnData: CytoscapeData = {
+            elements: {
+                nodes: [{
+                    data: {
+                        id: "ptn",
+                        labels: "PropertyTransformNode",
+                        property_name: "motion_direction",
+                        change_type: "discrete",
+                        old_value: "UP_LEFT",
+                        new_value: "LEFT",
+                        delta: null,
+                    },
+                }],
+                edges: [],
+            },
+            meta: { root_id: 0, node_count: 1, edge_count: 0 },
+        };
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "property-transform",
+            data: ptnData.elements.nodes[0]!.data,
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={ptnData}
+                actionMap={[]}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        expect(screen.getByText("motion_direction")).toBeInTheDocument();
+        expect(screen.getByText("discrete")).toBeInTheDocument();
+        expect(screen.getByText("UP_LEFT")).toBeInTheDocument();
+        expect(screen.getByText("LEFT")).toBeInTheDocument();
     });
 });
 
@@ -985,7 +1730,7 @@ describe("Object History", () => {
         const selected: SelectedElement = {
             kind: "node",
             type: "object",
-            data: { id: "6", labels: "Object", uuid: 12345, resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
+            data: { id: "6", labels: "Object", uuid: "12345", resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
         };
         render(
             <DetailPanel
@@ -1006,7 +1751,7 @@ describe("Object History", () => {
         const selected: SelectedElement = {
             kind: "node",
             type: "object",
-            data: { id: "6", labels: "Object", uuid: 12345, resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
+            data: { id: "6", labels: "Object", uuid: "12345", resolve_count: 7, last_x: 5, last_y: 10, last_tick: 42 },
         };
         render(
             <DetailPanel
@@ -1019,7 +1764,85 @@ describe("Object History", () => {
             { wrapper: Wrapper },
         );
         fireEvent.click(screen.getByText("View History"));
-        expect(onViewHistory).toHaveBeenCalledWith(12345);
+        // Callback receives the uuid as a string -- never coerce to Number,
+        // that loses precision for 63-bit ROC UUIDs.
+        expect(onViewHistory).toHaveBeenCalledWith("12345");
+    });
+
+    // Regression: ROC Object UUIDs are 63-bit ints. JS Number.MAX_SAFE_INTEGER
+    // is 2^53 - 1 = 9007199254740991, so a 19-digit uuid like
+    // 6853809301722933453 silently rounds to 6853809301722933000 if it's
+    // ever stored as a number. The full pipeline -- wire format, type,
+    // state, and View History callback -- must keep it as a string so
+    // the trailing digits survive.
+    it("View History round-trips a 63-bit uuid as a string without precision loss", () => {
+        const BIG_UUID = "6853809301722933453";
+        const richData = makeRichCytoscapeData();
+        const onViewHistory = vi.fn();
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "object",
+            data: {
+                id: "-124",
+                labels: "Object",
+                uuid: BIG_UUID,
+                resolve_count: 189,
+                last_x: 23,
+                last_y: 9,
+                last_tick: 314,
+            },
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={richData}
+                actionMap={TEST_ACTION_MAP}
+                onClose={vi.fn()}
+                onViewHistory={onViewHistory}
+            />,
+            { wrapper: Wrapper },
+        );
+        fireEvent.click(screen.getByText("View History"));
+        expect(onViewHistory).toHaveBeenCalledWith(BIG_UUID);
+        // Sanity: the value the callback received is the *exact* string,
+        // not the JS-Number-truncated form ("6853809301722933000").
+        const arg = onViewHistory.mock.calls[0]![0] as string;
+        expect(typeof arg).toBe("string");
+        expect(arg).toBe(BIG_UUID);
+        expect(arg).not.toBe("6853809301722933000");
+        // The uuid is also rendered in the detail table -- check that
+        // the unmodified string lands in the DOM (no Number coercion).
+        expect(screen.getByText(BIG_UUID)).toBeInTheDocument();
+    });
+
+    it("renders human_name in the Object detail panel when present", () => {
+        const richData = makeRichCytoscapeData();
+        const selected: SelectedElement = {
+            kind: "node",
+            type: "object",
+            data: {
+                id: "-124",
+                labels: "Object",
+                uuid: "6853809301722933453",
+                human_name: "rancorous-fey-devy",
+                resolve_count: 189,
+                last_x: 23,
+                last_y: 9,
+                last_tick: 314,
+            },
+        };
+        render(
+            <DetailPanel
+                selected={selected}
+                apiData={richData}
+                actionMap={TEST_ACTION_MAP}
+                onClose={vi.fn()}
+                onViewHistory={vi.fn()}
+            />,
+            { wrapper: Wrapper },
+        );
+        // human_name appears in the detail table for users to see at a glance.
+        expect(screen.getAllByText("rancorous-fey-devy").length).toBeGreaterThanOrEqual(1);
     });
 
     it("does not show View History button for non-Object nodes", () => {
@@ -1040,6 +1863,98 @@ describe("Object History", () => {
             { wrapper: Wrapper },
         );
         expect(screen.queryByText("View History")).not.toBeInTheDocument();
+    });
+
+    // Regression: when entering Object History view, the dashboard used to
+    // leave expandedNodes empty. The buildElements walk only renders
+    // children of expanded nodes, so the user saw the timeline backbone
+    // (171 lonely Frame nodes for a long-lived object) and none of the
+    // ObjectInstances or the Object itself -- the very content the History
+    // view exists to show. The fix auto-expands every node in the history
+    // subgraph as soon as it arrives. This test asserts the post-effect
+    // expandedNodes set produces the right buildElements output.
+    it("buildElements renders ObjectInstances AND Object when all history nodes are expanded", () => {
+        const historyData: CytoscapeData = {
+            elements: {
+                nodes: [
+                    { data: { id: "f1", labels: "Frame", tick: 1 } },
+                    { data: { id: "f2", labels: "Frame", tick: 2 } },
+                    { data: { id: "oi1", labels: "ObjectInstance", x: 5, y: 5 } },
+                    { data: { id: "oi2", labels: "ObjectInstance", x: 6, y: 5 } },
+                    {
+                        data: {
+                            id: "obj",
+                            labels: "Object",
+                            uuid: "6853809301722933453",
+                            human_name: "rancorous-fey-devy",
+                            resolve_count: 2,
+                        },
+                    },
+                ],
+                edges: [
+                    { data: { id: "e1", source: "f1", target: "oi1", type: "SituatedObjectInstance" } },
+                    { data: { id: "e2", source: "f2", target: "oi2", type: "SituatedObjectInstance" } },
+                    { data: { id: "e3", source: "oi1", target: "obj", type: "ObservedAs" } },
+                    { data: { id: "e4", source: "oi2", target: "obj", type: "ObservedAs" } },
+                    { data: { id: "e5", source: "f1", target: "f2", type: "NextFrame" } },
+                ],
+            },
+            meta: { root_id: 0, node_count: 5, edge_count: 5 },
+        };
+
+        // The effect sets expandedNodes to every node id in historyData.
+        // Reproduce that here.
+        const expanded = new Set(historyData.elements.nodes.map((n) => String(n.data.id)));
+        const els = buildElements(historyData, expanded);
+
+        const placedNodeIds = new Set(
+            els.filter((e) => e.group === "nodes").map((e) => String(e.data.id)),
+        );
+        // All three node types render. The bug was that the Object never
+        // appeared because ObjectInstances weren't expanded, so the walk
+        // never followed their ObservedAs out-edge.
+        expect(placedNodeIds.has("f1")).toBe(true);
+        expect(placedNodeIds.has("f2")).toBe(true);
+        expect(placedNodeIds.has("oi1")).toBe(true);
+        expect(placedNodeIds.has("oi2")).toBe(true);
+        expect(placedNodeIds.has("obj")).toBe(true);
+    });
+
+    // Negative case: with an empty expandedNodes set (the OLD broken state
+    // after handleViewHistory cleared it), only the Frame backbone renders
+    // and the Object stays hidden. Pins the failure mode so a regression
+    // to empty-expand would be caught.
+    it("with empty expandedNodes the History view shows only the Frame backbone (regression baseline)", () => {
+        const historyData: CytoscapeData = {
+            elements: {
+                nodes: [
+                    { data: { id: "f1", labels: "Frame", tick: 1 } },
+                    { data: { id: "oi1", labels: "ObjectInstance", x: 5, y: 5 } },
+                    {
+                        data: {
+                            id: "obj",
+                            labels: "Object",
+                            uuid: "6853809301722933453",
+                            human_name: "rancorous-fey-devy",
+                        },
+                    },
+                ],
+                edges: [
+                    { data: { id: "e1", source: "f1", target: "oi1", type: "SituatedObjectInstance" } },
+                    { data: { id: "e2", source: "oi1", target: "obj", type: "ObservedAs" } },
+                ],
+            },
+            meta: { root_id: 0, node_count: 3, edge_count: 2 },
+        };
+        const els = buildElements(historyData, new Set());
+        const placedNodeIds = new Set(
+            els.filter((e) => e.group === "nodes").map((e) => String(e.data.id)),
+        );
+        expect(placedNodeIds.has("f1")).toBe(true);
+        // Without expansion, the buildElements walk doesn't reach
+        // ObjectInstance or Object -- this is the old broken state.
+        expect(placedNodeIds.has("oi1")).toBe(false);
+        expect(placedNodeIds.has("obj")).toBe(false);
     });
 });
 

@@ -1,7 +1,7 @@
 /** Event bus activity history -- stacked area chart of per-bus event counts over steps. */
 
 import { Text } from "@mantine/core";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import {
     Area,
     AreaChart,
@@ -38,7 +38,7 @@ interface EventHistoryProps {
     onStepClick?: (step: number) => void;
 }
 
-export function EventHistory({ run, game, currentStep, onStepClick }: Readonly<EventHistoryProps>) {
+function EventHistoryInner({ run, game, currentStep, onStepClick }: Readonly<EventHistoryProps>) {
     const { data: history } = useEventHistory(run, game);
 
     // Collect all unique bus names across all steps
@@ -131,3 +131,5 @@ export function EventHistory({ run, game, currentStep, onStepClick }: Readonly<E
     }
     return chart;
 }
+
+export const EventHistory = memo(EventHistoryInner);

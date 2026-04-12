@@ -89,30 +89,40 @@ export function ActionHistogram({ run, game }: Readonly<ActionHistogramProps>) {
         );
     }
 
-    const bins = buildBins(history, actionMap);
+    const allBins = buildBins(history, actionMap);
+    // Only show actions that were actually taken -- zero-count bins add
+    // no information and crowd the x-axis when the full action space is large.
+    const bins = allBins.filter((b) => b.count > 0);
 
     return (
         <div>
             <Text size="xs" fw={600} mb={4}>
                 Action Frequency
             </Text>
-            <ResponsiveContainer width="100%" height={240}>
+            <ResponsiveContainer width="100%" height={280}>
                 <BarChart
                     data={bins}
-                    margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+                    margin={{ top: 4, right: 8, bottom: 40, left: 0 }}
                 >
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis
-                        dataKey="action_id"
-                        tick={{ fontSize: 10, fill: "#888" }}
+                        dataKey="action_name"
+                        tick={({ x, y, payload }: { x: number; y: number; payload: { value: string } }) => (
+                            <text
+                                x={x}
+                                y={y}
+                                dy={4}
+                                textAnchor="end"
+                                fill="#888"
+                                fontSize={9}
+                                transform={`rotate(-45, ${x}, ${y})`}
+                            >
+                                {payload.value}
+                            </text>
+                        )}
                         tickLine={false}
-                        label={{
-                            value: "Action",
-                            position: "insideBottom",
-                            offset: -2,
-                            fontSize: 10,
-                            fill: "#888",
-                        }}
+                        interval={0}
+                        height={80}
                     />
                     <YAxis
                         scale="log"

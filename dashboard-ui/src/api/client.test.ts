@@ -40,13 +40,21 @@ describe("API client", () => {
     });
 
     describe("fetchRuns", () => {
-        it("fetches runs from /api/runs", async () => {
-            const runs = [{ name: "run1", games: 2, steps: 100 }];
+        it("fetches runs from /api/runs without include_all by default", async () => {
+            const runs = [{ name: "run1", games: 2, steps: 100, status: "ok" }];
             mockFetch.mockReturnValue(okJson(runs));
 
             const result = await fetchRuns();
             expect(result).toEqual(runs);
             expect(mockFetch).toHaveBeenCalledWith("/api/runs?min_steps=10");
+        });
+
+        it("passes include_all=true when requested", async () => {
+            mockFetch.mockReturnValue(okJson([]));
+            await fetchRuns(true);
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/runs?min_steps=10&include_all=true",
+            );
         });
 
         it("throws on non-ok response", async () => {

@@ -1,4 +1,4 @@
-import { screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 // Mock the query hooks to avoid actual API calls
@@ -9,8 +9,9 @@ vi.mock("../../api/queries", () => ({
 }));
 
 import { renderWithProviders } from "../../test-utils";
-import { TransportBar } from "./TransportBar";
+import { TransportBar, buildRunOption } from "./TransportBar";
 import { useRuns, useGames, useStepRange } from "../../api/queries";
+import type { RunSummary } from "../../types/api";
 
 const mockUseRuns = vi.mocked(useRuns);
 const mockUseGames = vi.mocked(useGames);
@@ -175,13 +176,17 @@ describe("TransportBar", () => {
         });
     });
 
-    // Regression (task 13): when useStepRange returns stale data but context
-    // has no data (undefined), the counter should fall back to context defaults
-    // (1 / 1) rather than showing a stale REST value. In live-following mode,
-    // Socket.io pushes update context directly, and REST data arrives later
-    // with a stale max. The fix ensures REST doesn't overwrite the live range.
-    describe("live-following step range", () => {
-        it("uses context range when REST data is undefined", () => {
+    // Phase 4: TanStack Query is the only data path. Socket.io is
+    // invalidation-only -- the ``step_added`` handler calls
+    // ``invalidateQueries`` and the ``useStepRange`` refetch delivers
+    // fresh data. So REST is always authoritative, whether the run is
+    // historical or tail-growing. The earlier "Socket.io pushes beat
+    // stale REST" guard belonged to Phase 3 (liveData/onNewStep) and
+    // caused TC-GAME-004: with the guard, a live run with autoFollow
+    // off showed a frozen slider max, so clicking GO LIVE snapped to
+    // a stale head instead of the real one.
+    describe("step range data source", () => {
+        it("falls back to context range when REST data is undefined", () => {
             mockUseStepRange.mockReturnValue({
                 data: undefined,
             } as ReturnType<typeof useStepRange>);
@@ -192,9 +197,22 @@ describe("TransportBar", () => {
         });
 
         it("shows REST range for historical mode", () => {
-            // In historical mode (default), REST data is authoritative
             mockUseStepRange.mockReturnValue({
                 data: { min: 1, max: 500 },
+            } as ReturnType<typeof useStepRange>);
+
+            renderWithProviders(<TransportBar />);
+            expect(screen.getByText("1 / 500")).toBeInTheDocument();
+        });
+
+        // TC-GAME-004 regression: when viewing a tail-growing live run,
+        // the slider max must reflect the fresh REST data as the range
+        // grows, NOT a frozen context snapshot. Otherwise clicking the
+        // GO LIVE badge (after the user broke auto-follow) snaps to a
+        // stale head that is hundreds of steps behind the true one.
+        it("shows REST range for tail-growing live run (TC-GAME-004)", () => {
+            mockUseStepRange.mockReturnValue({
+                data: { min: 1, max: 500, tail_growing: true },
             } as ReturnType<typeof useStepRange>);
 
             renderWithProviders(<TransportBar />);
@@ -227,5 +245,111 @@ describe("TransportBar", () => {
             const wasPrevented = !slider.dispatchEvent(event);
             expect(wasPrevented).toBe(true);
         });
+    });
+
+    // ---------------------------------------------------------------
+    // "Show all runs" toggle (regression for missing-runs-in-dropdown)
+    //
+    // Three protections must hold simultaneously:
+    //   1. The toggle starts off and reads "Show all" so the user can find it.
+    //   2. The dropdown labels mark non-ok runs ("[short]"/"[empty]"/etc).
+    //   3. If the active run is not in the default list (e.g. URL param
+    //      points at a corrupt run), the toggle auto-flips to true so
+    //      the dropdown is not silently blank.
+    // ---------------------------------------------------------------
+    describe("show-all-runs toggle and status badges", () => {
+        beforeEach(() => {
+            // Reset localStorage between tests so persistence does
+            // not leak across cases.
+            window.localStorage.clear();
+        });
+
+        it("renders the Show all checkbox", () => {
+            renderWithProviders(<TransportBar />);
+            expect(screen.getByLabelText("Show all")).toBeInTheDocument();
+        });
+
+        it("buildRunOption tags non-ok runs", () => {
+            const ok: RunSummary = {
+                name: "20260408120000-rancorous-fey-devy",
+                games: 1,
+                steps: 314,
+                status: "ok",
+            };
+            const short: RunSummary = {
+                name: "20260408120100-tiny-foo-bar",
+                games: 1,
+                steps: 5,
+                status: "short",
+            };
+            const empty: RunSummary = {
+                name: "20260408120200-zero-foo-bar",
+                games: 0,
+                steps: 0,
+                status: "empty",
+            };
+            const corrupt: RunSummary = {
+                name: "20260408120300-bad-foo-bar",
+                games: 0,
+                steps: 0,
+                status: "corrupt",
+                error: "DuckLake catalog open failed",
+            };
+            const okLabel = buildRunOption(ok).label;
+            expect(okLabel).toContain("rancorous-fey-devy");
+            // ok labels carry only the date prefix [MM/DD HH:MM] -- no status tag
+            expect(okLabel).not.toMatch(/\[(short|empty|corrupt|missing)\]/);
+            expect(buildRunOption(short).label).toContain("[short]");
+            expect(buildRunOption(empty).label).toContain("[empty]");
+            expect(buildRunOption(corrupt).label).toContain("[corrupt]");
+        });
+
+        it("buildRunOption falls back to ok when status is omitted", () => {
+            const r: RunSummary = {
+                name: "20260101000000-foo-bar-baz",
+                games: 1,
+                steps: 50,
+            };
+            const opt = buildRunOption(r);
+            expect(opt.label).not.toMatch(/\[(short|empty|corrupt|missing)\]/);
+            expect(opt.label).toContain("[01/01 00:00]");
+        });
+
+        it("calls useRuns with includeAll=false by default", () => {
+            mockUseRuns.mockClear();
+            renderWithProviders(<TransportBar />);
+            // First render after stubGlobal
+            expect(mockUseRuns).toHaveBeenCalledWith(false);
+        });
+
+        it("calls useRuns with includeAll=true after toggling Show all", async () => {
+            mockUseRuns.mockReturnValue({
+                data: [],
+            } as unknown as ReturnType<typeof useRuns>);
+            renderWithProviders(<TransportBar />);
+            const checkbox = screen.getByLabelText("Show all") as HTMLInputElement;
+            expect(checkbox.checked).toBe(false);
+            fireEvent.click(checkbox);
+            await waitFor(() => {
+                expect(checkbox.checked).toBe(true);
+            });
+            // After toggling, the most recent useRuns call must be true.
+            const calls = mockUseRuns.mock.calls;
+            const lastCall = calls[calls.length - 1];
+            expect(lastCall?.[0]).toBe(true);
+        });
+
+        it(
+            "remembers the show-all setting via localStorage across remounts",
+            () => {
+                window.localStorage.setItem("roc.dashboard.showAllRuns", "1");
+                mockUseRuns.mockClear();
+                renderWithProviders(<TransportBar />);
+                // First call must already pass true because the saved setting wins.
+                expect(mockUseRuns.mock.calls[0]?.[0]).toBe(true);
+                const checkbox = screen.getByLabelText("Show all") as HTMLInputElement;
+                expect(checkbox.checked).toBe(true);
+            },
+        );
     });
 });

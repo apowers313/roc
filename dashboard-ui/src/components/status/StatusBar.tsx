@@ -1,14 +1,22 @@
 /** Status bar -- compact row of key game metrics + live badge. */
 
-import { Badge, Group, Progress, Text } from "@mantine/core";
+import { Badge, Group, Progress, Text, Tooltip } from "@mantine/core";
 
+import { useStepRange } from "../../api/queries";
 import { useDashboard } from "../../state/context";
 import type { StepData } from "../../types/step-data";
 
 interface StatusBarProps {
     data: StepData | undefined;
-    playbackState: string;
+    autoFollow: boolean;
     onGoLive?: () => void;
+    /**
+     * Error from the most recent step fetch, if any. Surfaced as a
+     * red ERROR badge so failed REST calls are not silently rendered
+     * as "no data" -- the recurring "errors not visible in the UI"
+     * complaint. Pass `null` (or omit) when there is no error.
+     */
+    fetchError?: unknown;
 }
 
 function hpColor(hp: number, hpMax: number): string {
@@ -19,14 +27,37 @@ function hpColor(hp: number, hpMax: number): string {
     return "red";
 }
 
-export function StatusBar({ data, playbackState, onGoLive }: Readonly<StatusBarProps>) {
-    const { liveGameActive } = useDashboard();
+export function StatusBar({
+    data,
+    autoFollow,
+    onGoLive,
+    fetchError,
+}: Readonly<StatusBarProps>) {
+    // tail_growing on the current run's step-range is the ONLY
+    // liveness signal. autoFollow determines whether we render the
+    // LIVE vs GO LIVE badge.
+    const { run } = useDashboard();
+    const { data: stepRange } = useStepRange(run);
+    const tailGrowing = stepRange?.tail_growing ?? false;
     const metrics = data?.game_metrics;
-    const isLive = playbackState === "live_following";
-    // Show GO LIVE whenever a live game is running and we're not following it.
-    // This covers historical mode (user navigated away), live_paused, and
-    // live_catchup -- any state where clicking would return to live.
-    const canGoLive = !isLive && liveGameActive;
+    // LIVE badge shows when the run is tail-growing AND we are
+    // following it. GO LIVE shows when the run is tail-growing but
+    // the user has navigated away (autoFollow=false).
+    const isLive = tailGrowing && autoFollow;
+    const canGoLive = tailGrowing && !autoFollow;
+    // The API returns game_number=0 with screen=null when no row exists for
+    // the requested step (out-of-range URL/chart-click navigation). Surface
+    // this as an explicit "no data" state instead of "Step N | Game 0",
+    // which looks like a real reading and confuses users into thinking the
+    // game has more steps than it does.
+    const isMissingData =
+        data != null && data.game_number === 0 && data.screen == null;
+    const errorMessage =
+        fetchError instanceof Error
+            ? fetchError.message
+            : fetchError != null
+                ? String(fetchError)
+                : null;
 
     return (
         <Group gap="md" px={8} py={4}>
@@ -45,6 +76,13 @@ export function StatusBar({ data, playbackState, onGoLive }: Readonly<StatusBarP
                 >
                     GO LIVE
                 </Badge>
+            )}
+            {errorMessage && (
+                <Tooltip label={errorMessage} withinPortal>
+                    <Badge color="red" size="xs" variant="filled">
+                        ERROR
+                    </Badge>
+                </Tooltip>
             )}
 
             {metrics ? (
@@ -79,6 +117,10 @@ export function StatusBar({ data, playbackState, onGoLive }: Readonly<StatusBarP
                     <StatItem label="Energy" value={metrics.energy} />
                     <StatItem label="Hunger" value={metrics.hunger} />
                 </>
+            ) : isMissingData ? (
+                <Text size="xs" c="dimmed">
+                    No data at step {data.step}
+                </Text>
             ) : (
                 <Text size="xs" c="dimmed">
                     Step {data?.step ?? "--"} | Game{" "}

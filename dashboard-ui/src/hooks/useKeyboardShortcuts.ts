@@ -33,13 +33,18 @@ export function useKeyboardShortcuts(handlers: KeyboardHandlers): void {
     useHotkeys("ctrl+right", handlers.jumpToEnd, NAV_OPTS);
     useHotkeys("shift+right", handlers.stepForward10, NAV_OPTS);
     useHotkeys("shift+left", handlers.stepBack10, NAV_OPTS);
-    useHotkeys("shift+/", handlers.toggleHelp); // ? key
+    // Use key code names (not symbols) for keys that react-hotkeys-hook
+    // mis-maps. The library's mappedKeys has '-': 'slash' (wrong), so
+    // symbol-based bindings like "-" match the wrong physical key.
+    // Code-based names like "minus" and "slash" match correctly via
+    // mapKey(e.code) which lowercases "Minus" -> "minus", etc.
+    useHotkeys("shift+slash", handlers.toggleHelp); // ? key
     useHotkeys("b", handlers.toggleBookmark);
     useHotkeys("]", handlers.nextBookmark);
     useHotkeys("[", handlers.prevBookmark);
     useHotkeys("l", handlers.goLive);
-    useHotkeys("shift+=", handlers.speedUp); // + key
+    useHotkeys("shift+equal", handlers.speedUp); // + key
     useHotkeys("=", handlers.speedUp);
-    useHotkeys("-", handlers.speedDown);
+    useHotkeys("minus", handlers.speedDown);
     useHotkeys("g", handlers.cycleGame);
 }

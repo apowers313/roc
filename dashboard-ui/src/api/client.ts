@@ -19,8 +19,19 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
     return res.json() as Promise<T>;
 }
 
-export async function fetchRuns(): Promise<RunSummary[]> {
-    return fetchJson<RunSummary[]>(`${BASE}/runs?min_steps=10`);
+/**
+ * Fetch the list of runs.
+ *
+ * @param includeAll When true, asks the server to return every run on
+ *   disk -- including ones with status `short`, `empty`, or `corrupt`
+ *   that would normally be hidden. The "Show all runs" toggle in the
+ *   transport bar passes this through. This is the recommended way to
+ *   debug a "where did my run go?" report -- if a run is on disk at
+ *   all, it will appear here.
+ */
+export async function fetchRuns(includeAll = false): Promise<RunSummary[]> {
+    const qs = includeAll ? "?min_steps=10&include_all=true" : "?min_steps=10";
+    return fetchJson<RunSummary[]>(`${BASE}/runs${qs}`);
 }
 
 export async function fetchGames(run: string): Promise<GameSummary[]> {
@@ -280,7 +291,14 @@ export interface ObjectHistoryTransform {
 }
 
 export interface ObjectHistoryInfo {
-    uuid: number;
+    /** Object UUID. String, not number, because ROC UUIDs are 63-bit ints
+     *  that exceed JS Number.MAX_SAFE_INTEGER (2^53 - 1). Parsing them as
+     *  numbers would silently truncate the trailing digits. */
+    uuid: string;
+    /** Stable human-readable name derived from the uuid via FlexiHumanHash,
+     *  e.g. "rancorous-fey-devy". Use this for display; the raw uuid is
+     *  for queries and equality checks. */
+    human_name?: string;
     resolve_count: number;
 }
 
@@ -316,8 +334,11 @@ export async function fetchFrameGraph(
 
 export async function fetchObjectHistoryGraph(
     run: string,
-    uuid: number,
+    uuid: string,
 ): Promise<CytoscapeData> {
+    // uuid is a string because ROC Object UUIDs are 63-bit ints. A numeric
+    // path param would force the caller to pass a `number` here, which
+    // would already have been truncated by JSON.parse upstream.
     return fetchJson<CytoscapeData>(
         `${BASE}/runs/${encodeURIComponent(run)}/graph/object/${uuid}`,
     );

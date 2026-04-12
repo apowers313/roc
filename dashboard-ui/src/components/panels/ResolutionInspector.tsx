@@ -1,7 +1,7 @@
 /** Resolution Inspector -- structured display of object resolution decisions. */
 
 import { Badge, Group, SegmentedControl, Stack, Table, Text, UnstyledButton } from "@mantine/core";
-import { useState, type ReactNode } from "react";
+import { memo, useState, type ReactNode } from "react";
 
 import { InfoCard } from "../common/InfoCard";
 import { ObjectLink } from "../common/ObjectLink";
@@ -359,7 +359,7 @@ function CycleSummaryTable({ cycles }: Readonly<{ cycles: Record<string, unknown
     );
 }
 
-export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>) {
+function ResolutionInspectorInner({ data }: Readonly<ResolutionInspectorProps>) {
     const { togglePoint, points } = useHighlight();
     const [selectedCycle, setSelectedCycle] = useState(0);
     const cycles = data?.resolution_cycles;
@@ -498,3 +498,11 @@ export function ResolutionInspector({ data }: Readonly<ResolutionInspectorProps>
         </Stack>
     );
 }
+
+// ResolutionInspector is 500+ lines with nested Tables and InfoCards
+// that rebuild on every step change. Wrap it in ``React.memo`` so the
+// reconciliation stops at this boundary when the parent re-renders
+// without a new ``data`` reference (same step, sibling state change,
+// etc.). TanStack Query returns the same object reference for cached
+// hits, so this meaningfully cuts work during rapid step navigation.
+export const ResolutionInspector = memo(ResolutionInspectorInner);

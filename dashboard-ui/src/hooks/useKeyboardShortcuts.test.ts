@@ -86,7 +86,7 @@ describe("useKeyboardShortcuts", () => {
 
     it("registers ? for keyboard help toggle", () => {
         renderHook(() => useKeyboardShortcuts(handlers));
-        invoke("shift+/");
+        invoke("shift+slash");
         expect(handlers.toggleHelp).toHaveBeenCalledOnce();
     });
 
@@ -128,7 +128,7 @@ describe("useKeyboardShortcuts", () => {
 
     it("registers Shift+= for speed up", () => {
         renderHook(() => useKeyboardShortcuts(handlers));
-        invoke("shift+=");
+        invoke("shift+equal");
         expect(handlers.speedUp).toHaveBeenCalledOnce();
     });
 
@@ -140,7 +140,7 @@ describe("useKeyboardShortcuts", () => {
 
     it("registers - for speed down", () => {
         renderHook(() => useKeyboardShortcuts(handlers));
-        invoke("-");
+        invoke("minus");
         expect(handlers.speedDown).toHaveBeenCalledOnce();
     });
 

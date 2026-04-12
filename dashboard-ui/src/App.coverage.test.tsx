@@ -7,27 +7,32 @@
 import { screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
+let mockGameStateValue: { state: string; run_name: string | null } | null = null;
+
 vi.mock("socket.io-client");
 vi.mock("./api/queries");
 vi.mock("./hooks/usePrefetchWindow");
-vi.mock("./hooks/useLiveUpdates");
+vi.mock("./hooks/useRunSubscription", () => ({
+    useRunSubscription: vi.fn(),
+    useGameState: vi.fn(() => mockGameStateValue),
+}));
 vi.mock("./api/client");
 
 import { renderWithProviders, makeStepData, makeGridData, stubDefaultFetch } from "./test-utils";
 import { App } from "./App";
 import { useStepData, useGames } from "./api/queries";
-import {
-    getCapturedOnNewStep,
-    resetLiveUpdatesMock,
-    setMockLiveStatusValue,
-} from "./hooks/__mocks__/useLiveUpdates";
+import { fetchStepRange } from "./api/client";
+import { useGameState } from "./hooks/useRunSubscription";
 
 const mockUseStepData = vi.mocked(useStepData);
 const mockUseGames = vi.mocked(useGames);
+const mockUseGameState = vi.mocked(useGameState);
+const mockFetchStepRange = vi.mocked(fetchStepRange);
 
 describe("App (additional coverage)", () => {
     beforeEach(() => {
-        resetLiveUpdatesMock();
+        mockGameStateValue = null;
+        mockUseGameState.mockReturnValue(null);
         stubDefaultFetch();
         mockUseStepData.mockReturnValue({
             data: undefined,
@@ -175,11 +180,7 @@ describe("App (additional coverage)", () => {
                 ],
             } as ReturnType<typeof useGames>);
 
-            const fetchMock = vi.fn().mockResolvedValue({
-                ok: true,
-                json: () => Promise.resolve({ min: 47, max: 121 }),
-            });
-            vi.stubGlobal("fetch", fetchMock);
+            mockFetchStepRange.mockResolvedValue({ min: 47, max: 121 });
 
             renderWithProviders(<App />);
 
@@ -187,13 +188,15 @@ describe("App (additional coverage)", () => {
                 fireEvent.keyDown(document, { key: "g" });
             });
 
+            // cycleGame now routes through queryClient.fetchQuery which
+            // invokes fetchStepRange from ./api/client (mocked). Verify
+            // the mock was called with the new game number.
             await waitFor(() => {
-                const calls = fetchMock.mock.calls.map((c: unknown[]) => c[0]);
-                const hasStepRangeCall = calls.some(
-                    (url: unknown) => typeof url === "string" && url.includes("step-range"),
-                );
-                expect(hasStepRangeCall).toBe(true);
+                expect(mockFetchStepRange).toHaveBeenCalled();
             });
+            const calls = mockFetchStepRange.mock.calls;
+            const hasGameCall = calls.some((c) => c[1] === 2);
+            expect(hasGameCall).toBe(true);
         });
 
         it("does nothing when no games are available", () => {
@@ -213,7 +216,7 @@ describe("App (additional coverage)", () => {
                 ],
             } as ReturnType<typeof useGames>);
 
-            vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+            mockFetchStepRange.mockRejectedValue(new Error("Network error"));
 
             renderWithProviders(<App />);
 
@@ -225,22 +228,14 @@ describe("App (additional coverage)", () => {
 
     describe("goLive callback", () => {
         it("go live via L key when liveRunName is set", () => {
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 50,
-                game_number: 1,
-                step_min: 1,
-                step_max: 50,
-                game_numbers: [1],
-            });
+            mockUseGameState.mockReturnValue({ state: "running", run_name: "live-run" });
 
             renderWithProviders(<App />);
             fireEvent.keyDown(document, { key: "l" });
         });
 
         it("go live does nothing when liveRunName is empty", () => {
-            setMockLiveStatusValue(null);
+            mockUseGameState.mockReturnValue(null);
 
             renderWithProviders(<App />);
             fireEvent.keyDown(document, { key: "l" });
@@ -249,15 +244,7 @@ describe("App (additional coverage)", () => {
 
     describe("liveStatus effects", () => {
         it("sets liveRunName and liveGameNumber from active live status", () => {
-            setMockLiveStatusValue({
-                active: true,
-                run_name: "live-run",
-                step: 25,
-                game_number: 2,
-                step_min: 1,
-                step_max: 25,
-                game_numbers: [1, 2],
-            });
+            mockUseGameState.mockReturnValue({ state: "running", run_name: "live-run" });
 
             renderWithProviders(<App />);
             // Should auto-select the live run without crashing
@@ -277,16 +264,10 @@ describe("App (additional coverage)", () => {
         });
     });
 
-    describe("onNewStep callback (live push handling)", () => {
-        it("stores live data from push", () => {
-            renderWithProviders(<App />);
-            expect(getCapturedOnNewStep()).toBeDefined();
-
-            act(() => {
-                getCapturedOnNewStep()!(makeStepData({ step: 5, game_number: 1 }));
-            });
-        });
-    });
+    // Phase 4: ``onNewStep`` callback was deleted from App.tsx. The data
+    // refresh path now flows through ``useRunSubscription`` (TanStack
+    // Query invalidation). The unit coverage lives in
+    // ``hooks/useRunSubscription.test.tsx``.
 
     describe("handleChartStepClick", () => {
         it("renders chart containers without crashing", () => {

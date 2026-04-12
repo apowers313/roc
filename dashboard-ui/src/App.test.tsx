@@ -4,6 +4,10 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 vi.mock("socket.io-client");
 vi.mock("./api/queries");
 vi.mock("./hooks/usePrefetchWindow");
+vi.mock("./hooks/useRunSubscription", () => ({
+    useRunSubscription: vi.fn(),
+    useGameState: vi.fn(() => null),
+}));
 
 import { renderWithProviders, makeStepData, makeGridData } from "./test-utils";
 import { App } from "./App";

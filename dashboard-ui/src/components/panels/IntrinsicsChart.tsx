@@ -1,6 +1,7 @@
 /** Intrinsics trend chart -- normalized intrinsic values over time. */
 
 import { Text } from "@mantine/core";
+import { memo } from "react";
 import {
     CartesianGrid,
     Legend,
@@ -28,7 +29,7 @@ interface IntrinsicsChartProps {
     onStepClick?: (step: number) => void;
 }
 
-export function IntrinsicsChart({ run, game, currentStep, onStepClick }: Readonly<IntrinsicsChartProps>) {
+function IntrinsicsChartInner({ run, game, currentStep, onStepClick }: Readonly<IntrinsicsChartProps>) {
     const { data: history } = useIntrinsicsHistory(run, game);
 
     if (!history || history.length === 0) {
@@ -104,3 +105,5 @@ export function IntrinsicsChart({ run, game, currentStep, onStepClick }: Readonl
     }
     return chart;
 }
+
+export const IntrinsicsChart = memo(IntrinsicsChartInner);
