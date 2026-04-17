@@ -106,12 +106,20 @@ def init_data_dir(data_dir: Path) -> None:
     and ``start_dashboard()`` to wire the singleton ``RunRegistry`` to
     the on-disk run directory. Idempotent: a second call with the same
     directory is a no-op.
+
+    Also registers resource gauges and starts the idle-sweeper thread so
+    long-running servers don't leak DuckLake connections. Both are
+    idempotent and the sweeper is skipped under pytest.
     """
     global _run_registry, _run_reader
     if _run_registry is not None and _run_registry.data_dir == data_dir:
         return
     _run_registry = RunRegistry(data_dir)
     _run_reader = None  # rebuilt lazily against the new registry
+    from roc.reporting.resource_metrics import register_resource_gauges, start_idle_sweeper
+
+    register_resource_gauges()
+    start_idle_sweeper()
 
 
 def push_step_from_game(step_data: StepData) -> None:

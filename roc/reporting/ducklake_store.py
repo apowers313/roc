@@ -15,6 +15,32 @@ import duckdb
 import pandas as pd
 import pyarrow as pa
 
+# Counters are created lazily on first use to avoid a circular import:
+# ``observability`` imports ``parquet_exporter`` which imports this module.
+_conn_opened: Any = None
+_conn_closed: Any = None
+
+
+def _record_conn(opened: bool, read_only: bool) -> None:
+    """Increment the open/close counter. Lazy-creates the OTel instruments."""
+    global _conn_opened, _conn_closed
+    try:
+        if _conn_opened is None:
+            from roc.reporting.observability import Observability
+
+            _conn_opened = Observability.meter.create_counter(
+                "roc.ducklake.connections_opened",
+                description="DuckLake connections opened; label mode=read|write",
+            )
+            _conn_closed = Observability.meter.create_counter(
+                "roc.ducklake.connections_closed",
+                description="DuckLake connections closed; label mode=read|write",
+            )
+        counter = _conn_opened if opened else _conn_closed
+        counter.add(1, {"mode": "read" if read_only else "write"})
+    except Exception:
+        pass
+
 
 class DuckLakeStore:
     """Unified DuckLake read/write store for a single run.
@@ -40,12 +66,18 @@ class DuckLakeStore:
         self._lock = threading.Lock()
         self._alias = alias
 
-        self._conn = duckdb.connect()
+        self._read_only = read_only
+        self._closed = False
+        config: dict[str, Any] = {}
+        if read_only:
+            config["threads"] = 1
+        self._conn = duckdb.connect(config=config)
         self._conn.execute("INSTALL ducklake;")
         self._conn.execute("LOAD ducklake;")
         catalog = str(self._catalog_path).replace("'", "''")
         data = str(self._data_path).replace("'", "''")
         self._conn.execute(f"ATTACH 'ducklake:{catalog}' AS {alias} (DATA_PATH '{data}')")
+        _record_conn(opened=True, read_only=read_only)
         if not read_only:
             # Enable data inlining: small inserts (< 500 rows) are stored
             # in the catalog rather than creating individual parquet files.
@@ -195,11 +227,15 @@ class DuckLakeStore:
     def close(self) -> None:
         """Detach the catalog and close the connection."""
         with self._lock:
+            if self._closed:
+                return
             try:
                 self._conn.execute(f"DETACH {self._alias}")
             except duckdb.Error:
                 pass
             self._conn.close()
+            self._closed = True
+            _record_conn(opened=False, read_only=self._read_only)
 
     # -- Internal helpers --
 

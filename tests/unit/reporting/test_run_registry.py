@@ -475,3 +475,74 @@ class TestRunRegistryListFiltering:
         names = {r.name for r in results}
         assert "ok-run" in names
         assert "empty-run" in names
+
+
+class TestRunRegistrySweepIdle:
+    def test_sweep_closes_idle_store_and_preserves_summary(self, tmp_path: Path) -> None:
+        _seed_run(tmp_path, "run-1", steps=10)
+        reg = RunRegistry(tmp_path)
+        entry = reg.get("run-1")
+        assert entry is not None
+        assert entry.store is not None
+        # Force the entry to look idle.
+        entry.last_access -= 1000
+        closed = reg.sweep_idle(idle_ttl=1.0)
+        assert closed == 1
+        # Store is closed; summary preserved. Read via the registry so the
+        # type narrowing from the earlier assertion doesn't confuse mypy.
+        swept = reg._entries["run-1"]
+        assert swept.store is None
+        assert swept.run_store is None
+        assert swept.owns_store is False
+        assert swept.summary.steps == 10
+
+    def test_sweep_skips_growing_entries(self, tmp_path: Path) -> None:
+        _seed_run(tmp_path, "run-1", steps=10)
+        reg = RunRegistry(tmp_path)
+        first = reg.get("run-1")
+        assert first is not None
+        # Simulate a live writer on this run and idle age.
+        reg.mark_growing("run-1", growing=True)
+        entry = reg.get("run-1")
+        assert entry is not None
+        entry.last_access -= 1000
+        closed = reg.sweep_idle(idle_ttl=1.0)
+        assert closed == 0
+        assert reg._entries["run-1"].store is not None
+
+    def test_sweep_skips_recently_accessed_entries(self, tmp_path: Path) -> None:
+        _seed_run(tmp_path, "run-1", steps=10)
+        reg = RunRegistry(tmp_path)
+        reg.get("run-1")  # touches last_access to now
+        closed = reg.sweep_idle(idle_ttl=60.0)
+        assert closed == 0
+
+    def test_lazy_reopen_after_sweep(self, tmp_path: Path) -> None:
+        _seed_run(tmp_path, "run-1", steps=7)
+        reg = RunRegistry(tmp_path)
+        entry = reg.get("run-1")
+        assert entry is not None
+        entry.last_access -= 1000
+        assert reg.sweep_idle(idle_ttl=1.0) == 1
+        # Next get() should reopen the store lazily.
+        reopened = reg.get("run-1")
+        assert reopened is not None
+        assert reopened.store is not None
+        assert reopened.range.max == 7
+
+    def test_sweep_preserves_subscribers(self, tmp_path: Path) -> None:
+        _seed_run(tmp_path, "run-1", steps=5)
+        reg = RunRegistry(tmp_path)
+        received: list[int] = []
+        unsub = reg.subscribe("run-1", lambda step: received.append(step))
+        entry = reg.get("run-1")
+        assert entry is not None
+        entry.last_access -= 1000
+        reg.sweep_idle(idle_ttl=1.0)
+        # After sweep the entry is still there with subscribers preserved.
+        entry_after = reg._entries["run-1"]
+        assert len(entry_after.subscribers) == 1
+        reopened = reg.get("run-1")
+        assert reopened is not None
+        assert reopened.subscribers == entry_after.subscribers
+        unsub()

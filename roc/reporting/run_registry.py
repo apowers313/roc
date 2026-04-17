@@ -21,6 +21,7 @@ active run. See ``roc/reporting/CLAUDE.md`` for the load-bearing invariant.
 from __future__ import annotations
 
 import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
@@ -59,6 +60,7 @@ class _RunEntry:
     mtime: float
     owns_store: bool = False
     subscribers: list[Callable[[int], None]] = field(default_factory=list)
+    last_access: float = field(default_factory=time.monotonic)
 
 
 class RunRegistry:
@@ -96,6 +98,7 @@ class RunRegistry:
         with self._lock:
             entry = self._entries.get(name)
             if entry is not None:
+                entry.last_access = time.monotonic()
                 # When tail_growing is True, the writer owns the catalog
                 # file. We MUST NOT try to reopen ``read_only=True`` here
                 # -- DuckDB rejects the second attach with a unique file
@@ -112,7 +115,8 @@ class RunRegistry:
                 # Without this, the entry is stuck at 0/0 forever and
                 # ``/step-range`` / ``/step/N`` return stale values
                 # ("run store unavailable") for the rest of the process
-                # lifetime.
+                # lifetime. Also covers the sweeper-evicted case where
+                # ``sweep_idle`` closed the store for an idle run.
                 if entry.store is None and not entry.range.tail_growing:
                     fresh = self._load(name)
                     if fresh is not None:
@@ -477,6 +481,50 @@ class RunRegistry:
                 entry.store.close()
             except Exception:
                 pass
+
+    # -------------------------------------------------------------------
+    # Idle eviction
+    # -------------------------------------------------------------------
+
+    def sweep_idle(self, *, idle_ttl: float) -> int:
+        """Close read-only stores idle longer than ``idle_ttl`` seconds.
+
+        Each DuckLakeStore holds ~31 OS threads in DuckDB's task scheduler
+        plus ~125 mmap regions. Keeping one open per historical run
+        exhausts both over the lifetime of a long-running server.
+
+        This method closes the DuckDB connection on entries that:
+        - own their store (``read_only=True`` load path),
+        - are not currently being written to (``tail_growing == False``),
+        - have not been accessed for more than ``idle_ttl`` seconds.
+
+        The ``_RunEntry`` itself, its subscribers, and its cached summary
+        are preserved. The next ``get()`` finds ``store is None`` and
+        lazy-reopens via the existing closed-run load path.
+
+        Returns the number of stores closed.
+        """
+        now = time.monotonic()
+        closed_count = 0
+        with self._lock:
+            for entry in self._entries.values():
+                if not entry.owns_store:
+                    continue
+                if entry.store is None:
+                    continue
+                if entry.range.tail_growing:
+                    continue
+                if now - entry.last_access <= idle_ttl:
+                    continue
+                try:
+                    entry.store.close()
+                except Exception:
+                    pass
+                entry.store = None
+                entry.run_store = None
+                entry.owns_store = False
+                closed_count += 1
+        return closed_count
 
 
 def _noop_unsubscribe() -> None:
