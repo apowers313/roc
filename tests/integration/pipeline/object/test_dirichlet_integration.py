@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from roc.perception.location import XLoc, YLoc
+from roc.expmods.object_resolution.dirichlet_categorical import DirichletCategoricalResolution
 from roc.pipeline.object.object import (
-    DirichletCategoricalResolution,
     Object,
     ResolutionContext,
     _feature_to_objects,

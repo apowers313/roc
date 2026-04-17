@@ -6,9 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from roc.expmods.prediction_candidate.object_based import ObjectBasedPrediction
 from roc.pipeline.temporal.predict import (
     NoPrediction,
-    ObjectBasedPrediction,
     PredictionCandidateFramesExpMod,
     PredictionConfidenceExpMod,
 )

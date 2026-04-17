@@ -21,13 +21,13 @@ from roc.perception.feature_extractors.shape import Shape, ShapeFeature
 from roc.perception.feature_extractors.single import Single, SingleFeature
 from roc.db.graphdb import Node
 from roc.perception.location import XLoc, YLoc
+from roc.expmods.object_resolution.symmetric_difference import SymmetricDifferenceResolution
 from roc.pipeline.object.object import (
     FeatureGroup,
     Object,
     ObjectResolver,
     ResolutionContext,
     ResolvedObject,
-    SymmetricDifferenceResolution,
 )
 from roc.perception.base import FeatureNode, VisionData
 

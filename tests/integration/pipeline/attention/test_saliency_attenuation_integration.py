@@ -9,10 +9,8 @@ import pandas as pd
 from strictly_typed_pandas import DataSet
 
 from roc.pipeline.attention.attention import SaliencyMap, VisionAttentionSchema
-from roc.pipeline.attention.saliency_attenuation import (
-    ActiveInferenceAttenuation,
-    LinearDeclineAttenuation,
-)
+from roc.expmods.saliency_attenuation.active_inference import ActiveInferenceAttenuation
+from roc.expmods.saliency_attenuation.linear_decline import LinearDeclineAttenuation
 
 
 def make_focus_points(

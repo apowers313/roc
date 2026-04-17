@@ -7,7 +7,7 @@ from typing import Generator
 import pytest
 
 from roc.framework.config import Config
-from roc.framework.expmod import ExpMod, expmod_loaded, expmod_modtype_current, expmod_registry
+from roc.framework.expmod import ExpMod, expmod_modtype_current, expmod_registry
 
 
 @pytest.fixture(autouse=True)
@@ -72,14 +72,10 @@ def clean_expmod_state():
     """
     orig_registry_snapshot = {k: set(v.keys()) for k, v in expmod_registry.items()}
     orig_current = dict(expmod_modtype_current)
-    orig_loaded = dict(expmod_loaded)
 
     yield
 
     _restore_expmod_registry(expmod_registry, orig_registry_snapshot)
 
-    # Restore current and loaded
     expmod_modtype_current.clear()
     expmod_modtype_current.update(orig_current)
-    expmod_loaded.clear()
-    expmod_loaded.update(orig_loaded)

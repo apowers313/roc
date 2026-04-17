@@ -9,8 +9,8 @@ import pytest
 
 from roc.db.graphdb import NodeId
 from roc.perception.location import XLoc, YLoc
+from roc.expmods.object_resolution.dirichlet_categorical import DirichletCategoricalResolution
 from roc.pipeline.object.object import (
-    DirichletCategoricalResolution,
     Object,
     ResolutionContext,
     _feature_to_objects,

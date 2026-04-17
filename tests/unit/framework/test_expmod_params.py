@@ -4,60 +4,71 @@
 
 import pytest
 
-from roc.framework.expmod import ExpMod, expmod_registry
+from roc.framework.expmod import ExpMod, ExpModConfig, SharedConfigGroup, expmod_registry
 
 
 class TestParamsDict:
-    def test_params_dict_returns_public_attrs(self):
-        class TestExpMod(ExpMod):
-            modtype = "test-params-public"
-            name = "test"
+    def test_returns_schema_defaults(self):
+        class Cfg(ExpModConfig):
             threshold: float = 0.5
 
-            def __init__(self) -> None:
-                super().__init__()
-                self.threshold = 0.5
+        class Mod(ExpMod):
+            modtype = "test-params-schema"
 
-        _ = TestExpMod
-        instance = expmod_registry["test-params-public"]["test"]
+        class Impl(Mod):
+            name = "test"
+            config_schema = Cfg
+
+        _ = Impl
+        instance = expmod_registry["test-params-schema"]["test"]
         result = instance.params_dict()
         assert "threshold" in result
         assert result["threshold"] == pytest.approx(0.5)
 
-    def test_params_dict_excludes_private(self):
-        class TestExpMod(ExpMod):
-            modtype = "test-params-private"
+    def test_excludes_internal_state(self):
+        class Mod(ExpMod):
+            modtype = "test-params-no-internal"
+
+        class Impl(Mod):
             name = "test"
 
             def __init__(self) -> None:
                 super().__init__()
                 self._internal = "secret"
-                self.visible = 42
 
-        _ = TestExpMod
-        instance = expmod_registry["test-params-private"]["test"]
+        _ = Impl
+        instance = expmod_registry["test-params-no-internal"]["test"]
         result = instance.params_dict()
         assert "_internal" not in result
-        assert "visible" in result
-        assert result["visible"] == 42
 
-    def test_params_dict_excludes_callables(self):
-        class TestExpMod(ExpMod):
-            modtype = "test-params-callable"
+    def test_shared_group_included(self):
+        class Group(SharedConfigGroup):
+            group_name = "test-params-group"
+            scale: int = 9
+
+        class Mod(ExpMod):
+            modtype = "test-params-with-shared"
+
+        class Impl(Mod):
             name = "test"
+            shared_config_schemas = (Group,)
 
             def __init__(self) -> None:
                 super().__init__()
-                self.value = 10
-                self.my_func = lambda: 42
+                # Simulate activation populating shared_configs
+                self.shared_configs["test-params-group"] = Group()
 
-        _ = TestExpMod
-        instance = expmod_registry["test-params-callable"]["test"]
+        _ = Impl
+        instance = expmod_registry["test-params-with-shared"]["test"]
         result = instance.params_dict()
-        assert "value" in result
-        assert "my_func" not in result
+        assert "shared.test-params-group" in result
+        assert result["shared.test-params-group"] == {"scale": 9}
 
-    def test_concrete_expmod_params(self):
+    def test_concrete_linear_decline_params(self):
+        """``LinearDeclineAttenuation`` exposes its config schema via ``params_dict()``."""
+        # Trigger registration
+        from roc.expmods.saliency_attenuation import linear_decline  # noqa: F401
+
         instance = expmod_registry["saliency-attenuation"]["linear-decline"]
         result = instance.params_dict()
         assert "capacity" in result

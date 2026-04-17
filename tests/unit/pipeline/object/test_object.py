@@ -7,13 +7,13 @@ from unittest.mock import MagicMock, PropertyMock, patch
 import pytest
 
 from roc.perception.location import XLoc, YLoc
+from roc.expmods.object_resolution.symmetric_difference import SymmetricDifferenceResolution
 from roc.pipeline.object.object import (
     FeatureGroup,
     Object,
     ObjectCache,
     ResolutionContext,
     ResolvedObject,
-    SymmetricDifferenceResolution,
 )
 
 

@@ -8,11 +8,11 @@ import pytest
 
 from roc.framework.clock import Clock
 from roc.perception.location import XLoc, YLoc
+from roc.expmods.object_resolution.symmetric_difference import SymmetricDifferenceResolution
 from roc.pipeline.object.object import (
     Object,
     ObjectResolver,
     ResolutionContext,
-    SymmetricDifferenceResolution,
     _feature_to_objects,
 )
 from roc.perception.base import FeatureKind

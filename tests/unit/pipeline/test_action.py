@@ -6,7 +6,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roc.pipeline.action import ActionRequest, DefaultActionPass, TakeAction
+from roc.expmods.action.default_pass import DefaultActionPass
+from roc.pipeline.action import ActionRequest, TakeAction
 
 
 @pytest.fixture(autouse=True)

@@ -10,11 +10,9 @@ from unittest.mock import MagicMock
 
 from roc.pipeline.attention.attention import SaliencyMap, VisionAttentionSchema
 from roc.framework.expmod import expmod_registry
-from roc.pipeline.attention.saliency_attenuation import (
-    LinearDeclineAttenuation,
-    NoAttenuation,
-    SaliencyAttenuationExpMod,
-)
+from roc.expmods.saliency_attenuation.linear_decline import LinearDeclineAttenuation
+from roc.expmods.saliency_attenuation.none import NoAttenuation
+from roc.pipeline.attention.saliency_attenuation import SaliencyAttenuationExpMod
 
 
 def make_focus_points(

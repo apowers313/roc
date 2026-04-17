@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 from roc.pipeline.attention.attention import SaliencyMap, VisionAttentionSchema
 from roc.framework.expmod import expmod_registry
-from roc.pipeline.attention.saliency_attenuation import (
+from roc.expmods.saliency_attenuation.active_inference import (
     ActiveInferenceAttenuation,
     LocationBelief,
     StateVocabulary,
