@@ -172,8 +172,43 @@ class EventBus[EventData]:
         """
         return BusConnection[EventData](self, component)
 
+    def reset(self) -> None:
+        """Reset the bus for reuse across game runs.
+
+        Replaces the Subject (which may have been completed by prior
+        ``Component.shutdown`` calls) and clears the cache so stale
+        events from a previous run are not visible to the next one.
+        Re-attaches the cache subscriber to the fresh Subject.
+        """
+        self.subject = rx.Subject[Event[EventData]]()
+        if self.cache is not None:
+            self.cache.clear()
+            self.subject.subscribe(lambda e: self.cache.append(e))  # type: ignore
+
     @staticmethod
     def clear_names() -> None:
         """Clears all EventBusses that have been registered, mostly used for testing."""
         with _eventbus_lock:
             eventbus_names.clear()
+
+    @classmethod
+    def reset_all_buses(cls) -> None:
+        """Reset every known EventBus so they can be reused in the next game run.
+
+        Iterates the component registry, finds class-level ``bus``
+        attributes, and calls ``reset()`` on each unique EventBus
+        instance. This must run between game runs (after
+        ``Component.reset()``, before ``EventBus.clear_names()``)
+        so that stale Subject/cache state from the prior run does not
+        leak into the next one.
+        """
+        from .component import component_registry
+
+        seen: set[int] = set()
+        for comp_cls in component_registry.values():
+            for attr_name in vars(comp_cls):
+                attr = getattr(comp_cls, attr_name, None)
+                if isinstance(attr, cls) and id(attr) not in seen:
+                    seen.add(id(attr))
+                    attr.reset()
+        logger.debug("Reset {} EventBus instances for next run", len(seen))

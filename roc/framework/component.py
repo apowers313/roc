@@ -133,8 +133,6 @@ class Component(ABC):
         logger.debug(f"Component {self.name}:{self.type} shutting down.")
 
         for conn in self.bus_conns:
-            for obs in self.bus_conns[conn].attached_bus.subject.observers:
-                obs.on_completed()
             self.bus_conns[conn].close()
 
     @property

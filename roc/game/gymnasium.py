@@ -1160,6 +1160,7 @@ def _game_main(
         # then tear down the Observability singleton (which closes the
         # DuckLake store and regenerates instance_id for the next run).
         Component.reset()
+        EventBus.reset_all_buses()
         EventBus.clear_names()
         State.reset_init()
         Observability.reset()
