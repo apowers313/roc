@@ -105,7 +105,10 @@ class Predict(Component):
 
 
 class PredictionCandidateFramesExpMod(ExpMod):
-    """Base class for modules that find candidate frames for prediction."""
+    """Base class for modules that find candidate frames for prediction.
+
+    Concrete implementations live under ``roc/expmods/prediction_candidate/``.
+    """
 
     modtype = "prediction-candidate"
 
@@ -116,7 +119,10 @@ class PredictionCandidateFramesExpMod(ExpMod):
 
 
 class PredictionConfidenceExpMod(ExpMod):
-    """Base class for modules that score how confident a prediction is."""
+    """Base class for modules that score how confident a prediction is.
+
+    Concrete implementations live under ``roc/expmods/prediction_confidence/``.
+    """
 
     modtype = "prediction-confidence"
 
@@ -124,19 +130,3 @@ class PredictionConfidenceExpMod(ExpMod):
     def calculate_confidence(self, f: Frame) -> float:
         """Returns a confidence score for a predicted frame."""
         ...
-
-
-class ObjectBasedPrediction(PredictionCandidateFramesExpMod):
-    """Finds prediction candidates by looking up frames associated with the current objects."""
-
-    name = "object-based"
-
-    def get_candidates(self, frame: Frame) -> list[Frame]:
-        """Returns all frames that share objects with the given frame."""
-        ret: list[Frame] = []
-
-        objs = frame.objects
-        for obj in objs:
-            ret.extend(obj.frames)
-
-        return ret

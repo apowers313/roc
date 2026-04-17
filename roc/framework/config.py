@@ -144,26 +144,15 @@ class Config(BaseSettings):
     nethack_extra_options: list[str] = ["autoopen"]
     nethack_max_turns: int = Field(default=100000)
     # experiment modules
-    expmod_dirs: list[str] = ["experiments/modules"]
-    expmods: list[str] = []
     expmods_use: list[tuple[str, str]] = [("action", "weighted")]
+    # Per-ExpMod and shared configuration overrides.
+    # Keys:
+    #   "<modtype>.<name>"     -> overrides for a specific ExpMod's config_schema
+    #   "shared.<group_name>"  -> overrides for a SharedConfigGroup
+    # Values not specified here fall back to the Pydantic model defaults.
+    expmod_config: dict[str, dict[str, Any]] = Field(default_factory=dict)
     # attention config
     attention_cycles: int = 4
-    # saliency-attenuation/linear-decline config
-    saliency_attenuation_capacity: int = 5
-    saliency_attenuation_radius: int = 3
-    saliency_attenuation_max_penalty: float = 1.0
-    saliency_attenuation_max_attenuation: float = 0.9
-    # saliency-attenuation/active-inference config
-    saliency_attenuation_ai_max_states: int = 64
-    saliency_attenuation_ai_max_locations: int = 32
-    saliency_attenuation_ai_max_attenuation: float = 0.9
-    saliency_attenuation_ai_saliency_weight: float = 0.5
-    saliency_attenuation_ai_omega_alpha_prior: float = 2.0
-    saliency_attenuation_ai_omega_beta_prior: float = 1.0
-    saliency_attenuation_ai_zeta_alpha_prior: float = 2.0
-    saliency_attenuation_ai_zeta_beta_prior: float = 1.0
-    saliency_attenuation_ai_b_self_transition: float = 0.9
     # component config
     perception_components: list[tuple[str, str]] = Field(
         default=[

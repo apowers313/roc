@@ -5,7 +5,7 @@ The ExpMod system lets you define interchangeable implementations of agent behav
 core code. Implementations are selected by setting (modtype, name) pairs in config.
 
 Architecture:
-    - Define an abstract base by subclassing ExpMod with a ``modtype`` class attribute.
+    - Define an abstract base by subclassing ``ExpMod`` with a ``modtype`` class attribute.
     - Define concrete implementations by subclassing the base with a ``name`` attribute.
     - Implementations auto-register on class definition via ``__init_subclass__``.
     - Consuming code calls ``MyBase.get(default="name").method()`` to dispatch to the
@@ -20,96 +20,103 @@ Example:
             def do_thing(self) -> int: ...
 
 
+        class MyConfig(ExpModConfig):
+            threshold: float = 0.5
+
+
         class MyImpl(MyExpMod):
             name = "simple"
+            config_schema = MyConfig
 
             def do_thing(self) -> int:
-                return 42
+                return int(self.config.threshold * 100)
 
     Use it from consuming code::
 
         result = MyExpMod.get(default="simple").do_thing()
 
-Configuration (in Config):
-    - ``expmod_dirs``: directories to scan for module files (default: ``experiments/modules/``)
-    - ``expmods``: filenames to dynamically import
-    - ``expmods_use``: list of ``(modtype, name)`` tuples to activate
+Configuration:
+    Each ExpMod can declare a ``config_schema`` (a ``ExpModConfig`` subclass) with its
+    private fields, and ``shared_config_schemas`` (a tuple of ``SharedConfigGroup``
+    subclasses) for fields that multiple ExpMods read. Values come from the main
+    ``Config.expmod_config`` dict:
 
-Per-ExpMod configuration:
-    ExpMods that need tunable parameters should add individual fields to
-    ``Config`` with a descriptive prefix (e.g. ``saliency_attenuation_radius``).
-    The ExpMod reads these in its ``__init__`` via ``Config.get()``, falling
-    back to class-attribute defaults if Config is not yet initialized.
+        - Private: ``Config.expmod_config["<modtype>.<name>"]`` (dict of overrides)
+        - Shared: ``Config.expmod_config["shared.<group_name>"]`` (dict of overrides)
 
-    This keeps parameters discoverable, type-checked, and settable via
-    environment variables (e.g. ``roc_saliency_attenuation_radius=5``).
+    Shared groups are instantiated once per unique ``group_name`` and shared by every
+    ExpMod that references that group. Defaults come from the Pydantic model.
 
-    Example::
-
-        # In config.py:
-        my_expmod_threshold: float = 0.5
-
-
-        # In the ExpMod:
-        class MyImpl(MyExpMod):
-            name = "fancy"
-            threshold: float = 0.5  # default
-
-            def __init__(self) -> None:
-                super().__init__()
-                try:
-                    self.threshold = Config.get().my_expmod_threshold
-                except Exception:
-                    pass  # Config not initialized during import-time registration
-
-Module-level state:
-    - ``expmod_registry``: maps modtype -> name -> ExpMod instance
-    - ``expmod_modtype_current``: tracks which name is active per modtype
-    - ``expmod_loaded``: tracks dynamically imported module objects
+Dependencies:
+    An ExpMod may declare ``depends_on`` as a tuple of ``(modtype, name)`` pairs. At
+    ``ExpMod.init()`` time every active ExpMod's dependency tree is walked transitively;
+    any unsatisfied dependency or cycle raises.
 """
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from collections import Counter, defaultdict
-from pathlib import Path
-from types import ModuleType
-from typing import Any, Self, cast
+from typing import Any, ClassVar, Iterator, Self, cast
+
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from roc.framework.config import Config
 
-expmod_registry: dict[str, dict[str, ExpMod]] = defaultdict(dict)
+
+class ExpModConfig(BaseModel):
+    """Base class for per-ExpMod configuration schemas."""
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class SharedConfigGroup(ExpModConfig):
+    """Configuration shared across multiple ExpMods.
+
+    Subclasses must set ``group_name`` as a ``ClassVar[str]``. The same group_name
+    may be referenced by multiple ExpMods; they all receive the same instance.
+    """
+
+    group_name: ClassVar[str] = ""
+
+
+class ExpModDependencyError(Exception):
+    """Raised when an ExpMod's declared dependencies are not satisfied by ``expmods_use``."""
+
+
+class ExpModDependencyCycleError(ExpModDependencyError):
+    """Raised when ``depends_on`` relationships among active ExpMods form a cycle."""
+
+
+expmod_registry: dict[str, dict[str, "ExpMod"]] = defaultdict(dict)
 expmod_modtype_current: dict[str, str | None] = defaultdict(lambda: None)
-expmod_loaded: dict[str, ModuleType] = {}
+_shared_instances: dict[str, SharedConfigGroup] = {}
 
 
 class ExpMod:
     """Base class for experiment modules that can be swapped at runtime.
 
-    Subclasses register themselves automatically by ``modtype`` and ``name``, allowing
-    different implementations to be selected via configuration. To create a new modtype,
-    subclass ExpMod directly and set ``modtype``. To create an implementation, subclass
-    the modtype base and set ``name``.
+    Subclasses register themselves automatically by ``modtype`` and ``name``. To create
+    a new modtype, subclass ExpMod directly and set ``modtype``. To create an
+    implementation, subclass the modtype base and set ``name``.
 
     Attributes:
-        modtype: Identifies the category of behavior (e.g. "action", "prediction-candidate").
-            Must be set by every subclass.
-        name: Identifies a specific implementation within a modtype (e.g. "pass", "weighted").
-            Must be set by concrete implementations (not required on abstract bases that
-            directly subclass ExpMod).
+        modtype: Identifies the category of behavior (e.g. "action").
+        name: Identifies a specific implementation within a modtype (e.g. "pass").
+        config_schema: Optional ``ExpModConfig`` subclass describing this ExpMod's
+            private configuration. Defaults and validation come from the model.
+        shared_config_schemas: Tuple of ``SharedConfigGroup`` subclasses this ExpMod
+            reads configuration from.
+        depends_on: Tuple of ``(modtype, name)`` pairs that must also be active.
     """
 
     modtype: str = str()
     name: str = str()
 
-    def __init_subclass__(cls) -> None:
-        """Auto-register subclasses into the expmod_registry.
+    config_schema: ClassVar[type[ExpModConfig] | None] = None
+    shared_config_schemas: ClassVar[tuple[type[SharedConfigGroup], ...]] = ()
+    depends_on: ClassVar[tuple[tuple[str, str], ...]] = ()
 
-        Validates that ``modtype`` is always set and that ``name`` is set for concrete
-        implementations (classes that don't directly subclass ExpMod). Raises on duplicate
-        registrations. Instantiates the class and stores it in ``expmod_registry[modtype][name]``.
-        """
+    def __init_subclass__(cls) -> None:
         if cls.modtype is ExpMod.modtype:
             raise NotImplementedError(f"{cls.__name__} must implement class attribute 'modtype'")
 
@@ -118,30 +125,42 @@ class ExpMod:
 
         if cls.name in expmod_registry[cls.modtype]:
             raise ValueError(
-                f"ExpMod.register attempting to register duplicate name '{cls.name}' for module '{cls.modtype}'"
+                f"ExpMod.register attempting to register duplicate name '{cls.name}' "
+                f"for module '{cls.modtype}'"
             )
         expmod_registry[cls.modtype][cls.name] = cls()
 
-    def params_dict(self) -> dict[str, Any]:
-        """Return public, non-callable instance attributes as a dict.
+    def __init__(self) -> None:
+        self.config: ExpModConfig = (
+            self.config_schema() if self.config_schema is not None else ExpModConfig()
+        )
+        self.shared_configs: dict[str, SharedConfigGroup] = {}
 
-        Returns:
-            Dictionary of parameter names to their values.
+    def params_dict(self) -> dict[str, Any]:
+        """Return the resolved configuration as a flat dict (for logging/display).
+
+        Private config fields appear under their own names; shared groups appear under
+        ``shared.<group_name>`` mapped to the group's ``model_dump()``.
         """
-        return {k: v for k, v in self.__dict__.items() if not k.startswith("_") and not callable(v)}
+        out: dict[str, Any] = {}
+        if self.config_schema is not None:
+            out.update(self.config.model_dump())
+        for schema in self.shared_config_schemas:
+            gname = schema.group_name
+            group = self.shared_configs.get(gname)
+            if group is not None:
+                out[f"shared.{gname}"] = group.model_dump()
+        return out
 
     @classmethod
     def get(cls, default: str | None = None) -> Self:
-        """Returns the currently active module for this modtype.
+        """Return the active implementation for this modtype.
 
         Args:
-            default: Fallback module name if none has been set.
+            default: Fallback name if none has been activated via config.
 
         Raises:
-            Exception: If no module is set and no default is provided.
-
-        Returns:
-            The active ExpMod instance for this modtype.
+            LookupError: If no module is active and no default is provided.
         """
         modtype = cls.modtype
         name: str | None = (
@@ -156,14 +175,11 @@ class ExpMod:
 
     @classmethod
     def set(cls, name: str, modtype: str | None = None) -> None:
-        """Sets the active module for a given modtype.
+        """Activate an implementation for a given modtype.
 
         Args:
             name: The registered name of the module to activate.
-            modtype: The module type category. Defaults to the calling class's modtype.
-
-        Raises:
-            Exception: If the modtype or name is not registered.
+            modtype: The module type category; defaults to the calling class's modtype.
         """
         if modtype is None:
             modtype = cls.modtype
@@ -179,86 +195,145 @@ class ExpMod:
         expmod_modtype_current[modtype] = name
 
     @staticmethod
-    def import_file(filename: str, basepath: str = "") -> ModuleType:
-        """Dynamically imports a Python file as an experiment module.
-
-        Args:
-            filename: The filename to import.
-            basepath: Directory to prepend to the filename.
-
-        Returns:
-            The imported module.
-        """
-        module_name = f"roc:expmod:{filename}"
-        filepath = Path(basepath) / filename
-
-        spec = importlib.util.spec_from_file_location(module_name, filepath)
-        assert spec is not None
-        assert spec.loader is not None
-
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-        return module
-
-    @staticmethod
     def init() -> None:
-        """Load and activate experiment modules from configuration.
+        """Activate experiment modules, load their configs, verify dependencies, and print.
 
-        Searches for module files listed in ``Config.expmods`` across all directories
-        in ``Config.expmod_dirs`` (plus the current directory). Each directory is tried
-        in order for any modules not yet found. After loading, activates implementations
-        listed in ``Config.expmods_use``.
+        Idempotent: re-running activates the same set cleanly because ``ExpMod.set()``
+        simply re-points the current name, and configs are rebuilt from main Config.
 
         Raises:
-            FileNotFoundError: If any listed module file cannot be found in any search path.
-            ValueError: If ``expmods_use`` contains duplicate modtype entries.
+            ValueError: duplicate modtype entries in ``expmods_use`` or invalid config.
+            ExpModDependencyError: unsatisfied dependency or dependency cycle among
+                active ExpMods.
         """
         settings = Config.get()
-        _load_expmod_files(settings)
         _activate_expmods(settings)
-
-
-def _load_expmod_files(settings: Config) -> None:
-    """Load module files from configured search paths.
-
-    Idempotent: files already present in ``expmod_loaded`` are skipped. This
-    makes ``ExpMod.init()`` safe to call multiple times in the same process
-    (e.g. back-to-back game runs under the unified server), which would
-    otherwise re-execute the file and trigger duplicate ``__init_subclass__``
-    registrations.
-    """
-    mods = [m for m in settings.expmods if m not in expmod_loaded]
-    if not mods:
-        return
-
-    basepaths = settings.expmod_dirs.copy()
-    basepaths.insert(0, "")
-
-    missing_mods: list[str] = []
-    for base in basepaths:
-        for mod in mods:
-            file = mod if mod.endswith(".py") else mod + ".py"
-            try:
-                expmod_loaded[mod] = ExpMod.import_file(file, base)
-            except FileNotFoundError:
-                missing_mods.append(mod)
-        mods = missing_mods.copy()
-        missing_mods.clear()
-
-    if len(mods) > 0:
-        raise FileNotFoundError(f"could not load experiment modules: {mods}")
+        _load_configs(settings)
+        _check_dependencies()
+        print_active_expmods()
 
 
 def _activate_expmods(settings: Config) -> None:
-    """Activate experiment modules from configuration, checking for duplicates."""
-    mod_name_count = Counter([m[0] for m in settings.expmods_use])
-    duplicate_names = {k: v for k, v in mod_name_count.items() if v > 1}
-    if len(duplicate_names) > 0:
-        dupes = ", ".join(duplicate_names.keys())
+    """Call ``ExpMod.set`` for every ``(modtype, name)`` entry in ``expmods_use``."""
+    mod_name_count = Counter(m[0] for m in settings.expmods_use)
+    duplicate_names = [k for k, v in mod_name_count.items() if v > 1]
+    if duplicate_names:
+        dupes = ", ".join(duplicate_names)
         raise ValueError(f"ExpMod.init found multiple attempts to set the same modules: {dupes}")
 
-    for mod_tn in settings.expmods_use:
-        t, n = mod_tn
-        ExpMod.set(name=n, modtype=t)
+    for modtype, name in settings.expmods_use:
+        ExpMod.set(name=name, modtype=modtype)
+
+
+def _iter_active() -> Iterator[tuple[str, str]]:
+    """Yield ``(modtype, name)`` for every currently activated ExpMod."""
+    for modtype, name in expmod_modtype_current.items():
+        if name is not None:
+            yield (modtype, name)
+
+
+def _load_configs(settings: Config) -> None:
+    """Materialize per-ExpMod and shared config instances from ``settings.expmod_config``.
+
+    Shared groups are instantiated once per unique ``group_name`` and shared across
+    every active ExpMod that references that group.
+    """
+    _shared_instances.clear()
+
+    for modtype, name in _iter_active():
+        expmod = expmod_registry[modtype][name]
+
+        if expmod.config_schema is not None:
+            key = f"{modtype}.{name}"
+            overrides = settings.expmod_config.get(key, {})
+            try:
+                expmod.config = expmod.config_schema(**overrides)
+            except ValidationError as e:
+                raise ValueError(
+                    f"invalid config for ExpMod '{modtype}.{name}' "
+                    f"(from Config.expmod_config[{key!r}]): {e}"
+                ) from e
+
+        expmod.shared_configs = {}
+        for schema in expmod.shared_config_schemas:
+            gname = schema.group_name
+            if not gname:
+                raise ValueError(
+                    f"SharedConfigGroup {schema.__name__} used by ExpMod "
+                    f"'{modtype}.{name}' is missing a non-empty 'group_name' ClassVar"
+                )
+            if gname not in _shared_instances:
+                key = f"shared.{gname}"
+                overrides = settings.expmod_config.get(key, {})
+                try:
+                    _shared_instances[gname] = schema(**overrides)
+                except ValidationError as e:
+                    raise ValueError(
+                        f"invalid shared config '{gname}' (from Config.expmod_config[{key!r}]): {e}"
+                    ) from e
+            expmod.shared_configs[gname] = _shared_instances[gname]
+
+
+def _check_dependencies() -> None:
+    """Walk ``depends_on`` transitively for every active ExpMod and verify satisfaction."""
+    active = set(_iter_active())
+    for modtype, name in active:
+        expmod = expmod_registry[modtype][name]
+        _walk_deps(expmod, active, set(), [(modtype, name)])
+
+
+def _walk_deps(
+    expmod: ExpMod,
+    active: set[tuple[str, str]],
+    visited: set[tuple[str, str]],
+    chain: list[tuple[str, str]],
+) -> None:
+    """Recursive dependency walk. Raises on unmet deps or cycles."""
+    key = (expmod.modtype, expmod.name)
+    if key in visited:
+        cycle = " -> ".join(f"({t},{n})" for t, n in chain)
+        raise ExpModDependencyCycleError(f"ExpMod dependency cycle: {cycle}")
+    visited.add(key)
+
+    for dep_modtype, dep_name in expmod.depends_on:
+        if dep_modtype not in expmod_registry or dep_name not in expmod_registry[dep_modtype]:
+            raise ExpModDependencyError(
+                f"ExpMod '({expmod.modtype},{expmod.name})' declares dependency on "
+                f"'({dep_modtype},{dep_name})' which is not registered"
+            )
+        if (dep_modtype, dep_name) not in active:
+            chain_str = " -> ".join(f"({t},{n})" for t, n in chain)
+            raise ExpModDependencyError(
+                f"ExpMod dependency not satisfied: {chain_str} requires "
+                f"({dep_modtype},{dep_name}) to be in Config.expmods_use"
+            )
+        dep = expmod_registry[dep_modtype][dep_name]
+        _walk_deps(dep, active, visited, chain + [(dep_modtype, dep_name)])
+
+
+def print_active_expmods() -> None:
+    """Print a banner listing active ExpMods and their resolved configuration.
+
+    Called at the end of ``ExpMod.init()`` to aid reproducibility: the exact
+    (modtype, name, config) tuple for every active experiment is printed to stdout.
+    """
+    active = sorted(_iter_active())
+    if not active:
+        print("Active ExpMods: (none)")  # noqa: T201
+        return
+
+    print("Active ExpMods:")  # noqa: T201
+    for modtype, name in active:
+        expmod = expmod_registry[modtype][name]
+        print(f"  {modtype} = {name}")  # noqa: T201
+        if expmod.config_schema is not None:
+            for field, value in expmod.config.model_dump().items():
+                print(f"    {field} = {value}")  # noqa: T201
+        for schema in expmod.shared_config_schemas:
+            gname = schema.group_name
+            group = expmod.shared_configs.get(gname)
+            if group is None:
+                continue
+            print(f"    [shared:{gname}]")  # noqa: T201
+            for field, value in group.model_dump().items():
+                print(f"      {field} = {value}")  # noqa: T201

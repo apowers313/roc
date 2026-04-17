@@ -4,11 +4,12 @@
 from threading import Thread
 from typing import Any
 
-# not used here, but the files have to be loaded in order for the components to
-# be registered
+# not used here, but the files have to be loaded in order for the components
+# (and ExpMod subclasses) to register themselves via __init_subclass__
 import roc.perception.feature_extractors
 import roc.framework.logger as roc_logger
 import roc.pipeline.attention.saliency_attenuation
+import roc.expmods
 
 from .pipeline.action import Action, ActionData
 from .framework.component import Component

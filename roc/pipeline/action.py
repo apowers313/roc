@@ -51,7 +51,10 @@ class Action(Component):
 
 
 class DefaultActionExpMod(ExpMod):
-    """Base class for experiment modules that determine the agent's action."""
+    """Base class for experiment modules that determine the agent's action.
+
+    Concrete implementations live under ``roc/expmods/action/``.
+    """
 
     modtype = "action"
 
@@ -59,14 +62,3 @@ class DefaultActionExpMod(ExpMod):
     def get_action(self) -> int:
         """Returns the action ID to take."""
         ...
-
-
-# @DefaultActionExpMod.register("pass")
-class DefaultActionPass(DefaultActionExpMod):
-    """Default action module that always passes (does nothing)."""
-
-    name = "pass"
-
-    def get_action(self) -> int:
-        """Default action for Nethack that passes (the `.` character in the game)"""
-        return 19

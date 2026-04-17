@@ -402,7 +402,8 @@ def _emit_attenuation_log(
 
 def _add_flavor_fields(log_record: dict[str, Any], attenuation: Any) -> None:
     """Add attenuation-flavor-specific fields to the log record."""
-    from .saliency_attenuation import ActiveInferenceAttenuation, LinearDeclineAttenuation
+    from roc.expmods.saliency_attenuation.active_inference import ActiveInferenceAttenuation
+    from roc.expmods.saliency_attenuation.linear_decline import LinearDeclineAttenuation
 
     if isinstance(attenuation, LinearDeclineAttenuation):
         log_record["history"] = [
