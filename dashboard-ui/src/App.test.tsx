@@ -33,7 +33,6 @@ describe("App", () => {
         mockUseStepData.mockReturnValue({
             data: undefined,
             isLoading: false,
-            isPlaceholderData: false,
         } as unknown as ReturnType<typeof useStepData>);
     });
 
@@ -47,18 +46,17 @@ describe("App", () => {
         expect(screen.getByText("Log Messages")).toBeInTheDocument();
     });
 
-    it("shows loading text when loading with no data", () => {
+    it("shows loading bar when loading with no data", () => {
         mockUseStepData.mockReturnValue({
             data: undefined,
             isLoading: true,
-            isPlaceholderData: false,
         } as unknown as ReturnType<typeof useStepData>);
 
         renderWithProviders(<App />);
-        expect(screen.getByText("Loading...")).toBeInTheDocument();
+        expect(screen.getByLabelText("Loading step data")).toBeInTheDocument();
     });
 
-    it("does not show loading when data is present", () => {
+    it("does not show loading bar when data is present", () => {
         const data = makeStepData({
             screen: makeGridData(),
             game_metrics: { hp: 10, hp_max: 20, score: 50 },
@@ -66,11 +64,10 @@ describe("App", () => {
         mockUseStepData.mockReturnValue({
             data,
             isLoading: false,
-            isPlaceholderData: false,
         } as unknown as ReturnType<typeof useStepData>);
 
         renderWithProviders(<App />);
-        expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+        expect(screen.queryByLabelText("Loading step data")).not.toBeInTheDocument();
     });
 
     it("renders transport bar and status bar", () => {

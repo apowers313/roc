@@ -39,18 +39,17 @@ export function useGames(run: string) {
     });
 }
 
-export function useStepData(run: string, step: number, game?: number) {
+export function useStepData(
+    run: string,
+    step: number,
+    game?: number,
+) {
     return useQuery({
         queryKey: ["step", run, step, game],
         queryFn: () => fetchStep(run, step, game),
         enabled: run !== "" && step > 0,
         staleTime: Infinity, // step data is immutable
         retry: false, // don't retry on rapid navigation cancellations
-        // Keep previous step's data visible while the next step loads.
-        // This prevents flicker (alternating "No data" / data) during
-        // playback.  Safe because the DuckLake catalog always returns
-        // correct data for each query key.
-        placeholderData: keepPreviousData,
     });
 }
 

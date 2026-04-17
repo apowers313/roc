@@ -19,40 +19,58 @@ const DEBOUNCE_MS = 50;
 
 export interface PrefetchOptions {
     radius?: number;
+    tailGrowing?: boolean;
 }
 
 export function usePrefetchWindow(
     run: string,
-    step: number,
     stepMin: number,
     stepMax: number,
     game?: number,
     options?: PrefetchOptions,
 ): void {
     const radius = options?.radius ?? DEFAULT_RADIUS;
+    const tailGrowing = options?.tailGrowing ?? false;
     const queryClient = useQueryClient();
     const abortRef = useRef<AbortController | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    // Snapshot stepMax once when the run first loads or when tailGrowing
+    // flips to false (run finished). While a game is actively writing
+    // (tailGrowing=true), freeze the sweep target so every new step
+    // does NOT re-trigger a full prefetch sweep. The live head is
+    // already fetched individually by useStepData; the prefetch window
+    // only needs to warm the cache for historical scrubbing.
+    const frozenMax = useRef(0);
+    if (!tailGrowing || frozenMax.current === 0) {
+        frozenMax.current = stepMax;
+    }
+    const effectMax = tailGrowing ? frozenMax.current : stepMax;
+
     useEffect(() => {
-        // Abort any in-flight prefetch requests and cancel pending sweep
         if (abortRef.current) abortRef.current.abort();
         if (timerRef.current) clearTimeout(timerRef.current);
 
-        if (!run || step <= 0) return;
+        if (!run || effectMax <= 0) return;
 
         const controller = new AbortController();
         abortRef.current = controller;
 
+        const center = Math.floor((stepMin + effectMax) / 2);
+
         timerRef.current = setTimeout(() => {
-            void sweep({ run, center: step, stepMin, stepMax, game, radius, queryClient, signal: controller.signal });
+            void sweep({
+                run, center, stepMin, stepMax: effectMax,
+                game, radius, queryClient, signal: controller.signal,
+            });
         }, DEBOUNCE_MS);
 
         return () => {
             controller.abort();
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, [queryClient, run, step, stepMin, stepMax, game, radius]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [queryClient, run, stepMin, effectMax, game, radius]);
 }
 
 interface SweepParams {

@@ -5,7 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="/roc-icon-192.png" />
     <link rel="apple-touch-icon" href="/roc-icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>ROC</title>
+    <style>
+      /* PWA app-like feel: suppress iOS tap highlight and prevent
+         accidental text selection on interactive chrome (toolbar,
+         buttons, slider). Content panels remain selectable. */
+      * { -webkit-tap-highlight-color: transparent; }
+      button, [role="slider"], nav, header, [data-shell] {
+        -webkit-user-select: none;
+        user-select: none;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

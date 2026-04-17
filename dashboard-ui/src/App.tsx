@@ -7,6 +7,7 @@ import {
     Button,
     Grid,
     Group,
+    Progress,
     Text,
 } from "@mantine/core";
 import {
@@ -137,7 +138,7 @@ export function App() {
     // is empirically the smallest that prevents piling up useless
     // Cytoscape reconcile passes without making the graph feel
     // disconnected from the slider.
-    const debouncedGraphStep = useDebouncedValue(step, 200);
+    const debouncedGraphStep = useDebouncedValue(step, 200, run);
 
     // Debounced step for history panels that only use ``currentStep``
     // to draw a marker/reference line (IntrinsicsChart, GraphHistory,
@@ -146,7 +147,7 @@ export function App() {
     // scrubbing -- the bulk of the TC-PERF-001 budget was being spent
     // re-rendering these charts once per step when they only need the
     // final resting position.
-    const debouncedHistoryStep = useDebouncedValue(step, 150);
+    const debouncedHistoryStep = useDebouncedValue(step, 150, run);
 
     // Per-game step ranges, derived from the contiguous-step-numbering
     // convention (game N starts where game N-1 ended). Used by AllObjects
@@ -169,14 +170,18 @@ export function App() {
 
     // Track whether we've auto-selected the live run
     const liveRunSelected = useRef(false);
-    // Track the run name from the initial URL (if any). Used to avoid
-    // overriding explicit URL navigation to a specific run/step, while
-    // still allowing auto-navigation to a NEW game the user starts.
-    // Declared up here (instead of further down) because
+    // Track the run/game/step from the initial URL (if any). Used to
+    // avoid overriding explicit URL navigation to a specific position,
+    // while still allowing auto-navigation to a NEW game the user
+    // starts. Declared up here (instead of further down) because
     // ``handleBrowseRuns`` clears it -- the callback's TDZ requires
     // the binding to be initialized before the useCallback runs.
-    const initialUrlRun = useRef<string | null>(
-        new URLSearchParams(globalThis.location.search).get("run"),
+    const _initParams = new URLSearchParams(globalThis.location.search);
+    const initialUrlRun = useRef<string | null>(_initParams.get("run"));
+    // True when the URL had explicit game AND step params -- indicates a
+    // page restore (PWA discard/reload) rather than a bare "?run=X" link.
+    const initialUrlHasPosition = useRef(
+        _initParams.has("game") && _initParams.has("step"),
     );
     // BUG-M4: state for the bookmark guard. The guard itself uses
     // ``stepDataReadyRef`` (declared below alongside ``stepDataReady``)
@@ -228,6 +233,7 @@ export function App() {
         // block live-run auto-selection forever in this session).
         globalThis.history.replaceState(null, "", globalThis.location.pathname);
         initialUrlRun.current = null;
+        initialUrlHasPosition.current = false;
         setRun("");
         setGame(1);
         setStep(1);
@@ -516,6 +522,14 @@ export function App() {
     // flip autoFollow on).
     const prevLiveRunName = useRef<string | null>(null);
     useEffect(() => {
+        // eslint-disable-next-line no-console
+        console.log("[AutoNav] effect", JSON.stringify({
+            state: gameState?.state, run_name: gameState?.run_name,
+            prevLive: prevLiveRunName.current,
+            urlRun: initialUrlRun.current, urlHasPos: initialUrlHasPosition.current,
+            liveSelected: liveRunSelected.current,
+        }));
+
         if (!gameState || gameState.state !== "running" || !gameState.run_name) return;
 
         const isNewRun = gameState.run_name !== prevLiveRunName.current;
@@ -529,6 +543,20 @@ export function App() {
             initialUrlRun.current &&
             gameState.run_name !== initialUrlRun.current
         ) {
+            return;
+        }
+
+        // Page-restore guard: when the URL has full navigation state
+        // (run + game + step) and the run matches the live session,
+        // this is a PWA discard/reload -- the user's position was
+        // already restored from the URL by DashboardProvider. Do NOT
+        // reset game/step to 1. Mark the live run as selected so
+        // future game starts can still auto-navigate, then bail.
+        if (initialUrlRun.current && initialUrlHasPosition.current) {
+            liveRunSelected.current = true;
+            prevLiveRunName.current = gameState.run_name;
+            initialUrlRun.current = null;
+            initialUrlHasPosition.current = false;
             return;
         }
 
@@ -548,17 +576,22 @@ export function App() {
         }
     }, [gameState, setRun, setGame, setStep, setAutoFollow]);
 
-    // REST data fetch. No debounce: with keepPreviousData the previous
-    // step stays visible while the next one loads, so rapid step changes
-    // don't cause flicker. DuckLake queries complete in ~8ms, well within
-    // the playback interval.
+    // REST data fetch. Once the prefetch batch has landed (2-3s after
+    // page load), every step in the +-100 window is a cache hit and
+    // isLoading is false immediately. Before that, isLoading is true
+    // and the UI shows a loading bar instead of stale placeholder data.
     const {
         data: restData,
-        isLoading,
-        isPlaceholderData,
+        isLoading: stepIsLoading,
         isError: stepIsError,
         error: stepError,
     } = useStepData(run, step, game || undefined);
+
+    // eslint-disable-next-line no-console
+    console.log("[App] useStepData", JSON.stringify({
+        step, game, stepIsLoading,
+        hasData: restData != null, hasScreen: restData?.screen != null,
+    }));
 
     // Surface fetch errors to the remote logger so failures show up in
     // the iPad debug session even when the user can't see the dev tools.
@@ -584,9 +617,17 @@ export function App() {
         }
     }, [stepIsError, stepError, run, step, game]);
 
-    // Signal to the play timer that the current step's real data has
-    // arrived (not just placeholder from the previous step).
-    const stepDataReady = restData !== undefined && !isPlaceholderData;
+    // When the final step of a stopped run has no data (incomplete
+    // write during game shutdown), auto-step back so the user sees
+    // real data instead of an empty/error state.
+    useEffect(() => {
+        if (stepIsError && step === stepMax && step > stepMin) {
+            setStep(step - 1);
+        }
+    }, [stepIsError, step, stepMax, stepMin, setStep]);
+
+    // Signal to the play timer that the current step's real data has arrived.
+    const stepDataReady = restData !== undefined;
     const stepDataReadyRef = useRef(stepDataReady);
     stepDataReadyRef.current = stepDataReady;
 
@@ -620,7 +661,7 @@ export function App() {
         [setStep, setAutoFollow],
     );
 
-    usePrefetchWindow(run, step, stepMin, stepMax, game || undefined);
+    usePrefetchWindow(run, stepMin, stepMax, game || undefined, { tailGrowing });
 
     return (
         <AppShell header={{ height: 140 }} padding="xs">
@@ -681,10 +722,14 @@ export function App() {
                     fetchError={stepIsError ? stepError : null}
                 />
 
-                {isLoading && !data && (
-                    <Text size="xs" c="dimmed" p="md">
-                        Loading...
-                    </Text>
+                {stepIsLoading && (
+                    <Progress
+                        size="xs"
+                        value={100}
+                        animated
+                        color="blue"
+                        aria-label="Loading step data"
+                    />
                 )}
 
                 <PopoutToolbar>

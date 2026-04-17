@@ -112,7 +112,7 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
     }, [showAllRuns]);
 
     const { data: runs } = useRuns(showAllRuns);
-    const { data: games } = useGames(run);
+    const { data: games, status: gamesStatus, fetchStatus: gamesFetchStatus, error: gamesError } = useGames(run);
     const { data: stepRangeData } = useStepRange(run, game || undefined);
 
     // Diagnostic logging: every time the run list arrives, log a
@@ -137,6 +137,28 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
             }),
         );
     }, [runs, showAllRuns]);
+
+    // Diagnostic logging: every time the games list changes, log the
+    // state so we can diagnose empty-dropdown issues from the iPad's
+    // remote logs. Tagged "[Games]" for easy grep.
+    useEffect(() => {
+        // eslint-disable-next-line no-console
+        console.log(
+            "[Games] update",
+            JSON.stringify({
+                run: run || null,
+                queryStatus: gamesStatus,
+                fetchStatus: gamesFetchStatus,
+                error: gamesError ? String(gamesError) : null,
+                count: games?.length ?? null,
+                games: games?.map((g) => ({
+                    game: g.game_number,
+                    steps: g.steps,
+                })) ?? null,
+                selectedGame: game,
+            }),
+        );
+    }, [run, games, gamesStatus, gamesFetchStatus, gamesError, game]);
 
     // If the URL pointed at a run that the default ("ok"-only) list
     // does not contain, automatically widen to include_all so the
@@ -320,6 +342,7 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                     size="xs"
                     placeholder="Run"
                     searchable
+                    comboboxProps={{ withinPortal: false }}
                     value={run || null}
                     onChange={(v) => {
                         if (v) {
@@ -353,6 +376,7 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                 <Select
                     size="xs"
                     placeholder="Game"
+                    comboboxProps={{ withinPortal: false }}
                     value={game ? String(game) : null}
                     onChange={(v) => {
                         if (v) {

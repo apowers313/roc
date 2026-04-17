@@ -80,7 +80,6 @@ describe("Bookmark guard when no step data (BUG-M4)", () => {
         mockUseStepData.mockReturnValue({
             data: undefined,
             isLoading: false,
-            isPlaceholderData: false,
             isError: true,
             error: new Error("API error: 500 Internal Server Error"),
         } as unknown as ReturnType<typeof useStepData>);
@@ -112,56 +111,12 @@ describe("Bookmark guard when no step data (BUG-M4)", () => {
         });
     });
 
-    it("does not call toggleBookmark when data is placeholder from prior run", async () => {
-        // BUG-M4 follow-up: TanStack Query's ``placeholderData:
-        // keepPreviousData`` keeps the previous query's data while a
-        // new query is loading or errored. When the user navigates from
-        // a working run to a broken run, ``data`` is non-null but
-        // ``isPlaceholderData`` is true -- the original guard checked
-        // ``data == null`` and missed this case. The fixed guard uses
-        // ``stepDataReadyRef`` which is gated on ``!isPlaceholderData``.
-        globalThis.history.replaceState(null, "", "/?run=broken-after-good&game=1&step=10");
-
-        mockUseStepData.mockReturnValue({
-            // Stale data from a previous run kept as placeholder.
-            data: { step: 10, game_number: 1 } as unknown,
-            isLoading: false,
-            isPlaceholderData: true,
-            isError: true,
-            error: new Error("API error: 404 Not Found"),
-        } as unknown as ReturnType<typeof useStepData>);
-
-        mockUseGames.mockReturnValue({
-            data: undefined,
-            isError: false,
-            error: null,
-        } as unknown as ReturnType<typeof useGames>);
-
-        renderWithProviders(<App />);
-
-        const btn = await waitFor(() =>
-            screen.getByRole("button", { name: /add bookmark/i }),
-        );
-        fireEvent.click(btn);
-
-        // Hook NOT called -- placeholder data is not real data.
-        expect(mockToggleBookmark).not.toHaveBeenCalled();
-
-        // Notification visible.
-        await waitFor(() => {
-            expect(
-                screen.getByText(/cannot bookmark.*no step loaded/i),
-            ).toBeInTheDocument();
-        });
-    });
-
     it("calls toggleBookmark normally when step data is present", async () => {
         globalThis.history.replaceState(null, "", "/?run=good-run&game=1&step=10");
 
         mockUseStepData.mockReturnValue({
             data: { step: 10, game_number: 1 } as unknown,
             isLoading: false,
-            isPlaceholderData: false,
             isError: false,
             error: null,
         } as unknown as ReturnType<typeof useStepData>);

@@ -43,17 +43,17 @@ describe("usePrefetchWindow", () => {
     it("does not prefetch when run is empty", () => {
         const { Wrapper } = createWrapper();
         renderHook(
-            () => usePrefetchWindow("", 50, 1, 100),
+            () => usePrefetchWindow("", 1, 100),
             { wrapper: Wrapper },
         );
         act(() => { vi.advanceTimersByTime(500); });
         expect(mockFetchStepsBatch).not.toHaveBeenCalled();
     });
 
-    it("does not prefetch when step is 0", () => {
+    it("does not prefetch when stepMax is 0", () => {
         const { Wrapper } = createWrapper();
         renderHook(
-            () => usePrefetchWindow("run1", 0, 1, 100),
+            () => usePrefetchWindow("run1", 0, 0),
             { wrapper: Wrapper },
         );
         act(() => { vi.advanceTimersByTime(500); });
@@ -62,8 +62,9 @@ describe("usePrefetchWindow", () => {
 
     it("fetches batch of steps after debounce", () => {
         const { Wrapper } = createWrapper();
+        // stepMin=1, stepMax=100 -> center=50
         renderHook(
-            () => usePrefetchWindow("run1", 50, 1, 100),
+            () => usePrefetchWindow("run1", 1, 100),
             { wrapper: Wrapper },
         );
 
@@ -80,7 +81,7 @@ describe("usePrefetchWindow", () => {
     it("uses batch size of 50 for efficiency", () => {
         const { Wrapper } = createWrapper();
         renderHook(
-            () => usePrefetchWindow("run1", 50, 1, 100),
+            () => usePrefetchWindow("run1", 1, 100),
             { wrapper: Wrapper },
         );
 
@@ -93,8 +94,9 @@ describe("usePrefetchWindow", () => {
 
     it("respects stepMin and stepMax bounds", () => {
         const { Wrapper } = createWrapper();
+        // stepMin=1, stepMax=10 -> center=5
         renderHook(
-            () => usePrefetchWindow("run1", 3, 1, 10),
+            () => usePrefetchWindow("run1", 1, 10),
             { wrapper: Wrapper },
         );
 
@@ -107,14 +109,15 @@ describe("usePrefetchWindow", () => {
             }
         }
 
+        // Center step (5) should not be in the fetch list
         const allSteps = mockFetchStepsBatch.mock.calls.flatMap((c) => c[1]);
-        expect(allSteps).not.toContain(3);
+        expect(allSteps).not.toContain(5);
     });
 
     it("passes AbortSignal to fetchStepsBatch", () => {
         const { Wrapper } = createWrapper();
         renderHook(
-            () => usePrefetchWindow("run1", 50, 1, 100),
+            () => usePrefetchWindow("run1", 1, 100),
             { wrapper: Wrapper },
         );
 
@@ -126,11 +129,11 @@ describe("usePrefetchWindow", () => {
         expect(signal!.aborted).toBe(false);
     });
 
-    it("aborts in-flight requests on step change", () => {
+    it("aborts in-flight requests on run change", () => {
         const { Wrapper } = createWrapper();
         const { rerender } = renderHook(
-            ({ step }) => usePrefetchWindow("run1", step, 1, 200),
-            { wrapper: Wrapper, initialProps: { step: 50 } },
+            ({ run }) => usePrefetchWindow(run, 1, 200),
+            { wrapper: Wrapper, initialProps: { run: "run1" } },
         );
 
         act(() => { vi.advanceTimersByTime(400); });
@@ -139,8 +142,8 @@ describe("usePrefetchWindow", () => {
         const firstSignal = mockFetchStepsBatch.mock.calls[0]![3] as AbortSignal;
         expect(firstSignal.aborted).toBe(false);
 
-        // Change step -- should abort the old signal
-        rerender({ step: 100 });
+        // Change run -- should abort the old signal
+        rerender({ run: "run2" });
         expect(firstSignal.aborted).toBe(true);
 
         // New sweep should use a fresh signal
@@ -155,11 +158,12 @@ describe("usePrefetchWindow", () => {
     it("skips steps that are already cached", () => {
         const { Wrapper, queryClient } = createWrapper();
 
+        // Center will be 50, so 49 and 51 would normally be fetched
         queryClient.setQueryData(["step", "run1", 49, undefined], { step: 49 });
         queryClient.setQueryData(["step", "run1", 51, undefined], { step: 51 });
 
         renderHook(
-            () => usePrefetchWindow("run1", 50, 1, 100),
+            () => usePrefetchWindow("run1", 1, 100),
             { wrapper: Wrapper },
         );
 
@@ -181,8 +185,9 @@ describe("usePrefetchWindow", () => {
             new Promise((r) => { resolveRequest = r; }),
         );
 
+        // stepMin=48, stepMax=52 -> center=50
         renderHook(
-            () => usePrefetchWindow("run1", 50, 48, 52),
+            () => usePrefetchWindow("run1", 48, 52),
             { wrapper: Wrapper },
         );
 

@@ -1,5 +1,7 @@
 /** Colored character grid renderer for game screen and saliency map. */
 
+import { useEffect, useRef } from "react";
+
 import type { GridData } from "../../types/step-data";
 import { useHighlight } from "../../state/highlight";
 
@@ -68,8 +70,13 @@ function buildGridHtml(data: GridData, highlights?: Map<string, string>): string
 
 /**
  * Renders a 2D character grid with per-cell foreground and background colors.
- * Uses dangerouslySetInnerHTML for performance -- building 1659 React elements
- * per render is slower than a single HTML string.
+ * Uses innerHTML for performance -- building 1659 React elements per render
+ * is slower than a single HTML string.
+ *
+ * Sets innerHTML via a ref + useEffect instead of dangerouslySetInnerHTML
+ * so we can force a repaint after each update. Safari/WebKit skips repainting
+ * fixed-dimension elements when only innerHTML changes; reading offsetHeight
+ * after the write forces the repaint.
  *
  * Reads from HighlightContext to render outlined markers on highlighted cells.
  *
@@ -78,15 +85,32 @@ function buildGridHtml(data: GridData, highlights?: Map<string, string>): string
  */
 export function CharGrid({ data, highlightRowOffset = 0 }: Readonly<CharGridProps>) {
     const { points } = useHighlight();
+    const preRef = useRef<HTMLPreElement>(null);
 
     const highlightMap = points.length > 0
         ? new Map(points.map((p) => [`${p.x},${p.y + highlightRowOffset}`, p.color]))
         : undefined;
 
     const html = buildGridHtml(data, highlightMap);
+    const htmlLen = html.length;
+    const snippet = html.slice(-80);
+
+    // eslint-disable-next-line no-console
+    console.log("[CharGrid] render", JSON.stringify({ htmlLen, snippet }));
+
+    useEffect(() => {
+        if (preRef.current) {
+            preRef.current.innerHTML = html;
+            // Force Safari/WebKit to repaint after innerHTML change.
+            void preRef.current.offsetHeight;
+            // eslint-disable-next-line no-console
+            console.log("[CharGrid] innerHTML set", JSON.stringify({ htmlLen }));
+        }
+    }, [html, htmlLen]);
 
     return (
         <pre
+            ref={preRef}
             style={{
                 fontFamily: "'DejaVu Sans Mono', monospace",
                 fontSize: "9px",
@@ -97,7 +121,6 @@ export function CharGrid({ data, highlightRowOffset = 0 }: Readonly<CharGridProp
                 overflow: "auto",
                 width: "fit-content",
             }}
-            dangerouslySetInnerHTML={{ __html: html }}
         />
     );
 }

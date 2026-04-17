@@ -43,7 +43,7 @@ const LAYOUT_ANIMATION_MS = 400;
 const PINNED_BORDER_COLOR = "#FCC419";
 
 const NODE_COUNT_WARNING_THRESHOLD = 200;
-const STEP_DEBOUNCE_MS = 300;
+// Step debouncing moved to App.tsx (useDebouncedValue with resetKey).
 // fcose computes positions; "preset" is just a no-op kickstart layout that
 // react-cytoscapejs uses on initial mount. The real layout runs imperatively
 // in a useEffect after each elements update.
@@ -1818,22 +1818,17 @@ function GraphVisualizationInner({ run, step, game }: Readonly<GraphVisualizatio
     const [historyUuid, setHistoryUuid] = useState<string | null>(null);
     const isHistoryView = historyUuid != null;
 
-    // Debounce step changes during rapid scrubbing to avoid excessive API calls.
-    // Reset immediately on run change to prevent stale cross-run requests
-    // (e.g. step 507 from a 573-step run firing against a 13-step run).
-    const [debouncedStep, setDebouncedStep] = useState(step);
-    const [prevRun, setPrevRun] = useState(run);
-    if (run !== prevRun) {
-        setPrevRun(run);
-        setDebouncedStep(step);
-    }
-    useEffect(() => {
-        const timer = setTimeout(() => setDebouncedStep(step), STEP_DEBOUNCE_MS);
-        return () => clearTimeout(timer);
-    }, [step]);
+    // Step debouncing is handled by the parent (App.tsx passes
+    // ``useDebouncedValue(step, 200, run)``). The parent's hook resets
+    // immediately on run change (via resetKey) so no stale cross-run
+    // step can leak into the query. A second debounce layer here would
+    // re-introduce the same stale-state-on-run-switch race it claims to
+    // prevent, because React render-time setState does not update the
+    // return value until the NEXT render -- long enough for useFrameGraph
+    // to fire one request with (newRun, oldStep).
 
     // Depth 1: frame + direct neighbors. Deeper nodes fetched on expand.
-    const { data, isLoading } = useFrameGraph(run, debouncedStep, game, 1);
+    const { data, isLoading } = useFrameGraph(run, step, game, 1);
     const { data: actionMapData } = useActionMap(run);
     const actionMap = actionMapData ?? [];
 

@@ -187,8 +187,9 @@ describe("GraphVisualization", () => {
         expect(screen.getByTestId("cytoscape-component")).toBeInTheDocument();
     });
 
-    it("re-fetches when step changes after debounce", () => {
-        vi.useFakeTimers();
+    it("re-fetches immediately when step prop changes (no internal debounce)", () => {
+        // Step debouncing is handled by the parent (App.tsx) via
+        // useDebouncedValue. GraphVisualization uses the step prop directly.
         mockUseFrameGraph.mockReturnValue({
             data: makeCytoscapeData(),
             isLoading: false,
@@ -199,7 +200,6 @@ describe("GraphVisualization", () => {
             { wrapper: Wrapper },
         );
 
-        // Initial render uses step=1 (debounced state initializes to prop)
         expect(mockUseFrameGraph).toHaveBeenCalledWith("test-run", 1, undefined, 1);
 
         rerender(
@@ -208,19 +208,15 @@ describe("GraphVisualization", () => {
             </Wrapper>,
         );
 
-        // After debounce timer fires, hook should be called with step=2
-        vi.advanceTimersByTime(300);
+        // No debounce: hook immediately called with step=2
         expect(mockUseFrameGraph).toHaveBeenCalledWith("test-run", 2, undefined, 1);
-
-        vi.useRealTimers();
     });
 
-    it("resets debounced step immediately on run change to avoid stale cross-run requests", () => {
+    it("uses new step immediately on run change -- no stale cross-run requests", () => {
         // Bug regression: switching from a 573-step run at step 507 to a
         // 13-step run must NOT fire a request for step 507 on the new run.
-        // The debounced step must reset to the new step prop immediately
-        // when the run changes.
-        vi.useFakeTimers();
+        // With no internal debounce, the step prop arrives already correct
+        // from the parent's useDebouncedValue(step, 200, run) reset.
         mockUseFrameGraph.mockReturnValue({
             data: makeCytoscapeData(),
             isLoading: false,
@@ -231,7 +227,6 @@ describe("GraphVisualization", () => {
             { wrapper: Wrapper },
         );
 
-        // Initial render: step=507 on long-run
         expect(mockUseFrameGraph).toHaveBeenCalledWith("long-run", 507, undefined, 1);
 
         // Switch to a short run with step reset to 1
@@ -242,21 +237,11 @@ describe("GraphVisualization", () => {
         );
 
         // The hook must NEVER be called with step=507 on the new run.
-        // This catches the case where the debounced step from the old run
-        // leaks into a request against the new run's API endpoint.
         expect(mockUseFrameGraph).not.toHaveBeenCalledWith(
             "short-run", 507, expect.anything(), expect.anything(),
         );
         // It MUST have been called with the correct step on the new run
         expect(mockUseFrameGraph).toHaveBeenCalledWith("short-run", 1, undefined, 1);
-
-        // After debounce fires, should still be step=1 on short-run
-        vi.advanceTimersByTime(300);
-        const latestCall = mockUseFrameGraph.mock.calls[mockUseFrameGraph.mock.calls.length - 1];
-        expect(latestCall?.[0]).toBe("short-run");
-        expect(latestCall?.[1]).toBe(1);
-
-        vi.useRealTimers();
     });
 
     it("passes game parameter to useFrameGraph", () => {
