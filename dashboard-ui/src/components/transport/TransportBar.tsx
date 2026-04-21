@@ -247,7 +247,9 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                         setStepRange(d.min, d.max);
                     }
                 })
-                .catch(() => {});
+                .catch((err) => {
+                    console.error("[TransportBar] step-range fetch failed (auto-select):", err);
+                });
         }
     }, [runs, run, game, setRun, setStepRange, queryClient]);
 
@@ -261,6 +263,8 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
     stepMaxRef.current = stepMax;
     const playingRef = useRef(playing);
     playingRef.current = playing;
+    const speedRef = useRef(speed);
+    speedRef.current = speed;
 
     useEffect(() => {
         if (!playing) return;
@@ -280,16 +284,15 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                 setPlaying(false);
             } else {
                 setStep(next);
-                // Schedule next advance after the speed interval
-                timerRef.current = setTimeout(advance, speed);
+                timerRef.current = setTimeout(advance, speedRef.current);
             }
         };
 
-        timerRef.current = setTimeout(advance, speed);
+        timerRef.current = setTimeout(advance, speedRef.current);
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
-    }, [playing, speed, setStep, setPlaying, stepDataReadyRef]);
+    }, [playing, setStep, setPlaying, stepDataReadyRef]);
 
     const togglePlay = useCallback(() => {
         setPlaying(!playing);
@@ -367,7 +370,9 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                                         setStepRange(d.min, d.max);
                                     }
                                 })
-                                .catch(() => {});
+                                .catch((err) => {
+                                    console.error("[TransportBar] step-range fetch failed (run select):", err);
+                                });
                         }
                     }}
                     data={runOptions}
@@ -399,8 +404,8 @@ export function TransportBar({ connected, stepDataReadyRef }: Readonly<Transport
                                         setStep(d.min);
                                     }
                                 })
-                                .catch(() => {
-                                    setStep(1);
+                                .catch((err) => {
+                                    console.error("[TransportBar] step-range fetch failed (game select):", err);
                                 });
                         }
                     }}

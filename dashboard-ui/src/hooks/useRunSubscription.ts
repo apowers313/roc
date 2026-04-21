@@ -8,10 +8,11 @@
  * dashboard can auto-navigate to a freshly started game.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { io, type Socket } from "socket.io-client";
 
 import { useCacheInvalidation } from "./useCacheInvalidation";
+import type { CacheInvalidator } from "./useCacheInvalidation";
 
 interface StepAddedPayload {
     run: string;
@@ -34,6 +35,12 @@ export interface GameState {
 // Singleton Socket.io connection shared across all hook instances. The
 // dashboard only ever talks to one server, so we share one socket.
 let _socket: Socket | null = null;
+let _connected = false;
+let _connectedListeners = new Set<() => void>();
+
+function notifyConnectedListeners() {
+    for (const cb of _connectedListeners) cb();
+}
 
 function getSocket(): Socket {
     if (_socket == null) {
@@ -41,9 +48,32 @@ function getSocket(): Socket {
             path: "/socket.io",
             transports: ["polling", "websocket"],
         });
+        _connected = _socket.connected ?? false;
+
+        _socket.on("connect", () => {
+            console.log("[Socket.io] connected");
+            _connected = true;
+            notifyConnectedListeners();
+            if (_reconnectCache) {
+                _reconnectCache.invalidateAllStepRanges();
+                _reconnectCache.invalidateRunList();
+            }
+        });
+        _socket.on("disconnect", (reason) => {
+            console.warn("[Socket.io] disconnected:", reason);
+            _connected = false;
+            notifyConnectedListeners();
+        });
+        _socket.on("connect_error", (err) => {
+            console.warn("[Socket.io] connect_error:", err.message);
+            _connected = false;
+            notifyConnectedListeners();
+        });
     }
     return _socket;
 }
+
+let _reconnectCache: CacheInvalidator | null = null;
 
 /** Reset the singleton socket. Test-only. */
 export function __resetSocketForTesting(): void {
@@ -51,6 +81,9 @@ export function __resetSocketForTesting(): void {
         _socket.disconnect();
     }
     _socket = null;
+    _connected = false;
+    _reconnectCache = null;
+    _connectedListeners = new Set();
 }
 
 /**
@@ -64,6 +97,7 @@ export function __resetSocketForTesting(): void {
  */
 export function useRunSubscription(run: string): void {
     const cache = useCacheInvalidation();
+    _reconnectCache = cache;
 
     useEffect(() => {
         if (!run) return;
@@ -126,33 +160,43 @@ export function useGameState(): GameState | null {
         // errors without its own local fetch (single source of truth
         // for game state).
         let cancelled = false;
-        void fetch("/api/game/status")
-            .then((r) => (r.ok ? r.json() : null))
-            .then((data: unknown) => {
+        const fetchGameStatus = async (attempts = 3, delay = 500) => {
+            for (let i = 0; i < attempts; i++) {
                 if (cancelled) return;
-                if (
-                    data != null &&
-                    typeof data === "object" &&
-                    "state" in data &&
-                    typeof (data as { state: unknown }).state === "string"
-                ) {
-                    const parsed = data as {
-                        state: string;
-                        run_name?: string | null;
-                        exit_code?: number | null;
-                        error?: string | null;
-                    };
-                    setState({
-                        state: parsed.state,
-                        run_name: parsed.run_name ?? null,
-                        exit_code: parsed.exit_code ?? null,
-                        error: parsed.error ?? null,
-                    });
+                try {
+                    const r = await fetch("/api/game/status");
+                    if (!r.ok) throw new Error(`${r.status}`);
+                    const data = await r.json() as unknown;
+                    if (cancelled) return;
+                    if (
+                        data != null &&
+                        typeof data === "object" &&
+                        "state" in data &&
+                        typeof (data as { state: unknown }).state === "string"
+                    ) {
+                        const parsed = data as {
+                            state: string;
+                            run_name?: string | null;
+                            exit_code?: number | null;
+                            error?: string | null;
+                        };
+                        setState({
+                            state: parsed.state,
+                            run_name: parsed.run_name ?? null,
+                            exit_code: parsed.exit_code ?? null,
+                            error: parsed.error ?? null,
+                        });
+                    }
+                    return;
+                } catch {
+                    if (i < attempts - 1) {
+                        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+                    }
                 }
-            })
-            .catch(() => {
-                // Swallow -- the Socket.io handler is the fallback path.
-            });
+            }
+            console.warn("[useGameState] /api/game/status unreachable after 3 attempts");
+        };
+        void fetchGameStatus();
 
         return () => {
             cancelled = true;
@@ -161,4 +205,18 @@ export function useGameState(): GameState | null {
     }, [cache]);
 
     return state;
+}
+
+function subscribeConnected(cb: () => void): () => void {
+    getSocket();
+    _connectedListeners.add(cb);
+    return () => { _connectedListeners.delete(cb); };
+}
+
+function getConnectedSnapshot(): boolean {
+    return _connected;
+}
+
+export function useSocketConnected(): boolean {
+    return useSyncExternalStore(subscribeConnected, getConnectedSnapshot);
 }

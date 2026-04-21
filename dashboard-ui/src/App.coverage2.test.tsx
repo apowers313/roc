@@ -24,6 +24,7 @@ vi.mock("./hooks/usePrefetchWindow");
 vi.mock("./hooks/useRunSubscription", () => ({
     useRunSubscription: vi.fn(),
     useGameState: vi.fn(() => mockGameStateValue),
+    useSocketConnected: vi.fn(() => true),
 }));
 vi.mock("./api/client");
 

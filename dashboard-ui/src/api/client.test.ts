@@ -355,6 +355,51 @@ describe("API client", () => {
         });
     });
 
+    describe("fetchJson error detail", () => {
+        it("includes JSON detail field from server error response", async () => {
+            mockFetch.mockResolvedValue(
+                new Response(
+                    JSON.stringify({ detail: "DuckLake lock timeout" }),
+                    { status: 500, statusText: "Internal Server Error" },
+                ),
+            );
+            await expect(fetchStep("run1", 1)).rejects.toThrow(
+                "API error: 500 Internal Server Error -- DuckLake lock timeout",
+            );
+        });
+
+        it("includes full JSON body when detail field is absent", async () => {
+            mockFetch.mockResolvedValue(
+                new Response(
+                    JSON.stringify({ error: "bad request" }),
+                    { status: 400, statusText: "Bad Request" },
+                ),
+            );
+            await expect(fetchStep("run1", 1)).rejects.toThrow(
+                'API error: 400 Bad Request -- {"error":"bad request"}',
+            );
+        });
+
+        it("falls back to text body when response is not JSON", async () => {
+            mockFetch.mockResolvedValue(
+                new Response("upstream timeout", {
+                    status: 502,
+                    statusText: "Bad Gateway",
+                }),
+            );
+            await expect(fetchStep("run1", 1)).rejects.toThrow(
+                "API error: 502 Bad Gateway -- upstream timeout",
+            );
+        });
+
+        it("still throws basic message when body is unreadable", async () => {
+            mockFetch.mockReturnValue(errorResponse(503, "Service Unavailable"));
+            await expect(fetchStep("run1", 1)).rejects.toThrow(
+                "API error: 503 Service Unavailable",
+            );
+        });
+    });
+
     describe("fetchStepsBatch with signal", () => {
         it("passes AbortSignal to fetch", async () => {
             const data = { "1": { step: 1 } };

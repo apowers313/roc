@@ -48,17 +48,24 @@ function GameMenu() {
     const gameState = useGameState();
     const [numGames, setNumGames] = useState<number>(5);
     const [loading, setLoading] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     const startGame = useCallback(async () => {
         setLoading(true);
+        setActionError(null);
         try {
-            await fetch(`/api/game/start?num_games=${numGames}`, {
+            const res = await fetch(`/api/game/start?num_games=${numGames}`, {
                 method: "POST",
             });
-            // No manual refresh: the server emits a game_state_changed
-            // Socket.io event and useGameState picks it up. Same for stop.
-        } catch {
-            // ignore
+            if (!res.ok) {
+                const msg = `Start game failed: ${res.status} ${res.statusText}`;
+                console.error(msg);
+                setActionError(msg);
+            }
+        } catch (err) {
+            const msg = `Start game failed: ${err instanceof Error ? err.message : String(err)}`;
+            console.error(msg);
+            setActionError(msg);
         } finally {
             setLoading(false);
         }
@@ -66,10 +73,18 @@ function GameMenu() {
 
     const stopGame = useCallback(async () => {
         setLoading(true);
+        setActionError(null);
         try {
-            await fetch("/api/game/stop", { method: "POST" });
-        } catch {
-            // ignore
+            const res = await fetch("/api/game/stop", { method: "POST" });
+            if (!res.ok) {
+                const msg = `Stop game failed: ${res.status} ${res.statusText}`;
+                console.error(msg);
+                setActionError(msg);
+            }
+        } catch (err) {
+            const msg = `Stop game failed: ${err instanceof Error ? err.message : String(err)}`;
+            console.error(msg);
+            setActionError(msg);
         } finally {
             setLoading(false);
         }
@@ -108,10 +123,10 @@ function GameMenu() {
                     <GameStatusLabel isRunning={isRunning} isStopping={isStopping} />
                 </Menu.Label>
 
-                {error && !isRunning && (
+                {(error || actionError) && !isRunning && (
                     <Menu.Label>
                         <Text size="xs" c="red">
-                            {error}
+                            {actionError ?? error}
                         </Text>
                     </Menu.Label>
                 )}

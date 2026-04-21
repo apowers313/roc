@@ -7,6 +7,7 @@ vi.mock("./hooks/usePrefetchWindow");
 vi.mock("./hooks/useRunSubscription", () => ({
     useRunSubscription: vi.fn(),
     useGameState: vi.fn(() => null),
+    useSocketConnected: vi.fn(() => true),
 }));
 
 import { renderWithProviders, makeStepData, makeGridData } from "./test-utils";

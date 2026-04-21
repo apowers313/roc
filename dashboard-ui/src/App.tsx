@@ -79,7 +79,7 @@ import { useDebouncedValue } from "./hooks/useDebouncedValue";
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
 import { usePrefetchWindow } from "./hooks/usePrefetchWindow";
 import { useRemoteLogger } from "./hooks/useRemoteLogger";
-import { useRunSubscription, useGameState } from "./hooks/useRunSubscription";
+import { useRunSubscription, useGameState, useSocketConnected } from "./hooks/useRunSubscription";
 import { useDashboard } from "./state/context";
 
 /** Safely convert an unknown value to a display string, handling objects. */
@@ -326,7 +326,7 @@ export function App() {
         }
     }, [tailGrowing, autoFollow, restMax, step, setStep]);
 
-    const connected = true; // Socket.io connection managed by useRunSubscription
+    const connected = useSocketConnected();
 
     // Keyboard shortcut handlers
     const stepForward = useCallback(() => {
@@ -404,7 +404,9 @@ export function App() {
                             setStepRange(d.min, d.max);
                         }
                     })
-                    .catch(() => {});
+                    .catch((err) => {
+                        console.error("[Bookmarks] game navigation failed:", err);
+                    });
             }
             setStep(bookmark.step);
         },
@@ -482,8 +484,8 @@ export function App() {
                     setStep(d.min);
                 }
             })
-            .catch(() => {
-                setStep(1);
+            .catch((err) => {
+                console.error("[CycleGame] step-range fetch failed:", err);
             });
     }, [games, game, setGame, run, setStep, setStepRange, setAutoFollow, queryClient]);
 
@@ -661,7 +663,7 @@ export function App() {
         [setStep, setAutoFollow],
     );
 
-    usePrefetchWindow(run, stepMin, stepMax, game || undefined, { tailGrowing });
+    usePrefetchWindow(run, stepMin, stepMax, step, game || undefined, { tailGrowing });
 
     return (
         <AppShell header={{ height: 140 }} padding="xs">

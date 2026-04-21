@@ -14,7 +14,20 @@ async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
     const opts: RequestInit | undefined = signal ? { signal } : undefined;
     const res = opts ? await fetch(url, opts) : await fetch(url);
     if (!res.ok) {
-        throw new Error(`API error: ${res.status} ${res.statusText}`);
+        let detail = "";
+        try {
+            const text = await res.text();
+            try {
+                const body = JSON.parse(text);
+                detail = body?.detail ?? text;
+            } catch {
+                detail = text;
+            }
+        } catch { /* empty */ }
+        const msg = detail
+            ? `API error: ${res.status} ${res.statusText} -- ${detail}`
+            : `API error: ${res.status} ${res.statusText}`;
+        throw new Error(msg);
     }
     return res.json() as Promise<T>;
 }
@@ -44,10 +57,12 @@ export async function fetchStep(
     run: string,
     step: number,
     game?: number,
+    signal?: AbortSignal,
 ): Promise<StepData> {
     const params = game == null ? "" : `?game=${game}`;
     return fetchJson<StepData>(
         `${BASE}/runs/${encodeURIComponent(run)}/step/${step}${params}`,
+        signal,
     );
 }
 
@@ -322,6 +337,7 @@ export async function fetchFrameGraph(
     tick: number,
     game?: number,
     depth?: number,
+    signal?: AbortSignal,
 ): Promise<CytoscapeData> {
     const params = new URLSearchParams();
     if (game != null) params.set("game", String(game));
@@ -329,6 +345,7 @@ export async function fetchFrameGraph(
     const qs = params.toString();
     return fetchJson<CytoscapeData>(
         `${BASE}/runs/${encodeURIComponent(run)}/graph/frame/${tick}${qsSuffix(qs)}`,
+        signal,
     );
 }
 

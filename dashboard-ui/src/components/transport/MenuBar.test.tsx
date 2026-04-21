@@ -18,6 +18,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 vi.mock("../../hooks/useRunSubscription", () => ({
     useGameState: vi.fn(() => ({ state: "idle", run_name: null })),
     useRunSubscription: vi.fn(),
+    useSocketConnected: vi.fn(() => true),
 }));
 
 import { renderWithProviders } from "../../test-utils";
@@ -152,14 +153,27 @@ describe("MenuBar", () => {
         });
     });
 
-    it("tolerates a rejected /api/game/start fetch", async () => {
+    it("shows error message when start game fetch is rejected", async () => {
         vi.mocked(globalThis.fetch).mockRejectedValue(new Error("Network down"));
         renderWithProviders(<MenuBar />);
         openMenu();
         fireEvent.click(await screen.findByText("Start Game"));
-        // Should not crash. The Start Game button stays in the DOM.
         await waitFor(() => {
-            expect(screen.getByText("Start Game")).toBeInTheDocument();
+            expect(screen.getByText("Start game failed: Network down")).toBeInTheDocument();
+        });
+    });
+
+    it("shows error message when start game returns non-ok", async () => {
+        vi.mocked(globalThis.fetch).mockResolvedValue(
+            new Response(null, { status: 500, statusText: "Internal Server Error" }),
+        );
+        renderWithProviders(<MenuBar />);
+        openMenu();
+        fireEvent.click(await screen.findByText("Start Game"));
+        await waitFor(() => {
+            expect(
+                screen.getByText("Start game failed: 500 Internal Server Error"),
+            ).toBeInTheDocument();
         });
     });
 

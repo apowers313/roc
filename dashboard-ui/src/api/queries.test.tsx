@@ -249,7 +249,7 @@ describe("TanStack Query hooks", () => {
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true));
             expect(result.current.data).toEqual(data);
-            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 42, undefined, undefined);
+            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 42, undefined, undefined, expect.any(AbortSignal));
         });
 
         it("passes game and depth parameters to fetchFrameGraph", async () => {
@@ -264,7 +264,7 @@ describe("TanStack Query hooks", () => {
             });
 
             await waitFor(() => expect(result.current.isSuccess).toBe(true));
-            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 5, 2, 3);
+            expect(mockFetchFrameGraph).toHaveBeenCalledWith("run1", 5, 2, 3, expect.any(AbortSignal));
         });
 
         it("does not fetch when run is empty", () => {

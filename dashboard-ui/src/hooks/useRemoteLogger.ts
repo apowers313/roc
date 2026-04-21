@@ -24,7 +24,7 @@ function envVar(name: string, fallback: string): string {
 }
 
 const DEFAULT_CONFIG: RemoteLoggerConfig = {
-    serverUrl: envVar("VITE_REMOTE_LOG_URL", "https://dev.ato.ms:9080"),
+    serverUrl: envVar("VITE_REMOTE_LOG_URL", "https://dev.ato.ms:9083"),
     projectMarker: envVar("VITE_REMOTE_LOG_MARKER", "roc-dashboard"),
     enabled: envVar("VITE_REMOTE_LOG_ENABLED", "true") !== "false",
 };
@@ -60,6 +60,20 @@ export function useRemoteLogger(config: Partial<RemoteLoggerConfig> = {}): void 
             projectMarker: merged.projectMarker,
         });
         clientRef.current = client;
+
+        fetch(`${merged.serverUrl}/status`)
+            .then((r) => {
+                if (!r.ok) {
+                    console.warn(
+                        `[RemoteLogger] server at ${merged.serverUrl} returned ${r.status}`,
+                    );
+                }
+            })
+            .catch(() => {
+                console.warn(
+                    `[RemoteLogger] unreachable at ${merged.serverUrl} -- remote logging disabled`,
+                );
+            });
 
         // Intercept console methods and forward to remote logger
         const originals = new Map<string, ConsoleFn>();

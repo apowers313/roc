@@ -38,6 +38,7 @@ vi.mock("./hooks/usePrefetchWindow");
 vi.mock("./hooks/useRunSubscription", () => ({
     useRunSubscription: vi.fn(),
     useGameState: vi.fn(() => null),
+    useSocketConnected: vi.fn(() => true),
 }));
 vi.mock("./api/client");
 

@@ -14,7 +14,7 @@ import { useEffect, useRef } from "react";
 import { fetchStepsBatch } from "../api/client";
 
 const DEFAULT_RADIUS = 100;
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 10;
 const DEBOUNCE_MS = 50;
 
 export interface PrefetchOptions {
@@ -26,6 +26,7 @@ export function usePrefetchWindow(
     run: string,
     stepMin: number,
     stepMax: number,
+    step: number,
     game?: number,
     options?: PrefetchOptions,
 ): void {
@@ -34,6 +35,9 @@ export function usePrefetchWindow(
     const queryClient = useQueryClient();
     const abortRef = useRef<AbortController | null>(null);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sweepRangeRef = useRef<{ center: number; radius: number; run: string } | null>(null);
+    const stepRef = useRef(step);
+    stepRef.current = step;
 
     // Snapshot stepMax once when the run first loads or when tailGrowing
     // flips to false (run finished). While a game is actively writing
@@ -47,30 +51,45 @@ export function usePrefetchWindow(
     }
     const effectMax = tailGrowing ? frozenMax.current : stepMax;
 
-    useEffect(() => {
+    function launchSweep(center: number): void {
         if (abortRef.current) abortRef.current.abort();
         if (timerRef.current) clearTimeout(timerRef.current);
 
-        if (!run || effectMax <= 0) return;
-
         const controller = new AbortController();
         abortRef.current = controller;
-
-        const center = Math.floor((stepMin + effectMax) / 2);
+        sweepRangeRef.current = { center, radius, run };
 
         timerRef.current = setTimeout(() => {
             void sweep({
                 run, center, stepMin, stepMax: effectMax,
                 game, radius, queryClient, signal: controller.signal,
+            }).then(() => {
+                sweepRangeRef.current = null;
             });
         }, DEBOUNCE_MS);
+    }
 
+    // Structural changes: always restart the sweep.
+    useEffect(() => {
+        if (!run || effectMax <= 0) return;
+        launchSweep(stepRef.current);
         return () => {
-            controller.abort();
+            if (abortRef.current) abortRef.current.abort();
             if (timerRef.current) clearTimeout(timerRef.current);
+            sweepRangeRef.current = null;
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [queryClient, run, stepMin, effectMax, game, radius]);
+
+    // Step changes: only restart if step leaves the in-flight range.
+    useEffect(() => {
+        const inFlight = sweepRangeRef.current;
+        if (!inFlight || inFlight.run !== run) return;
+        if (step >= inFlight.center - inFlight.radius
+            && step <= inFlight.center + inFlight.radius) return;
+        launchSweep(step);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
 }
 
 interface SweepParams {
@@ -117,6 +136,7 @@ async function fetchBatch(
         return true;
     } catch (err: unknown) {
         if (err instanceof DOMException && err.name === "AbortError") return false;
+        console.warn("[Prefetch] batch failed:", err);
         return false;
     }
 }

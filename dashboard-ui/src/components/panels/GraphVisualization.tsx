@@ -2267,6 +2267,7 @@ function GraphVisualizationInner({ run, step, game }: Readonly<GraphVisualizatio
                             });
                         })
                         .catch((err) => {
+                            console.error("[GraphViz] node expand failed:", err);
                             dbg("fetch:error", { nodeId, err: String(err) });
                         })
                         .finally(() => {

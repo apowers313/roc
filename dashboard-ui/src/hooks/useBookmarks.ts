@@ -27,7 +27,8 @@ export function useBookmarks(run: string): UseBookmarksReturn {
             .then((data) => {
                 if (!cancelled) setBookmarks(data);
             })
-            .catch(() => {
+            .catch((err) => {
+                console.error("[Bookmarks] load failed:", err);
                 if (!cancelled) setBookmarks([]);
             });
         return () => { cancelled = true; };
@@ -36,7 +37,9 @@ export function useBookmarks(run: string): UseBookmarksReturn {
     const persist = useCallback(
         (updated: Bookmark[]) => {
             if (run) {
-                void saveBookmarks(run, updated);
+                saveBookmarks(run, updated).catch((err) => {
+                    console.error("[Bookmarks] save failed:", err);
+                });
             }
         },
         [run],

@@ -46,7 +46,7 @@ export function useStepData(
 ) {
     return useQuery({
         queryKey: ["step", run, step, game],
-        queryFn: () => fetchStep(run, step, game),
+        queryFn: ({ signal }) => fetchStep(run, step, game, signal),
         enabled: run !== "" && step > 0,
         staleTime: Infinity, // step data is immutable
         retry: false, // don't retry on rapid navigation cancellations
@@ -178,7 +178,7 @@ export function useObjectHistory(run: string, objectId: number | null) {
 export function useFrameGraph(run: string, tick: number, game?: number, depth?: number) {
     return useQuery({
         queryKey: ["frame-graph", run, tick, game, depth],
-        queryFn: () => fetchFrameGraph(run, tick, game, depth),
+        queryFn: ({ signal }) => fetchFrameGraph(run, tick, game, depth, signal),
         enabled: run !== "" && tick > 0,
         staleTime: Infinity, // graph data is immutable per run/tick
         retry: false,
