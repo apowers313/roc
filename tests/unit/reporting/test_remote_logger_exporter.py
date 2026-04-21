@@ -122,6 +122,33 @@ class TestRemoteLoggerExporterWithOTel:
         assert received[0]["logs"][0]["message"] == "otel message"
 
 
+class TestRemoteLoggerExporterHealthCheck:
+    def test_logs_warning_when_server_unreachable(self, caplog):
+        """Init should log a warning when the remote logger server is unreachable."""
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="roc.reporting.remote_logger_exporter"):
+            RemoteLoggerExporter(
+                url="http://localhost:1/log",
+                session_id="health-check-test",
+                timeout=0.5,
+            )
+        assert any("unreachable" in r.message for r in caplog.records)
+
+    def test_logs_info_when_server_reachable(self, httpserver, caplog):
+        """Init should log info when the remote logger server responds to /status."""
+        import logging
+
+        httpserver.expect_request("/status", method="GET").respond_with_data("ok")
+        httpserver.expect_request("/log", method="POST").respond_with_data("ok")
+        with caplog.at_level(logging.INFO, logger="roc.reporting.remote_logger_exporter"):
+            RemoteLoggerExporter(
+                url=httpserver.url_for("/log"),
+                session_id="health-check-ok",
+            )
+        assert any("reachable" in r.message.lower() for r in caplog.records)
+
+
 class TestRemoteLoggerExporterEdgeCases:
     def test_none_body_becomes_empty_string(self, httpserver):
         """A record with None body should produce an empty message string."""

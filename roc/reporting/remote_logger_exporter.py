@@ -58,6 +58,19 @@ class RemoteLoggerExporter(LogExporter):
             self._ssl_ctx.check_hostname = False
             self._ssl_ctx.verify_mode = ssl.CERT_NONE
 
+        # Health check: verify the remote logger server is reachable.
+        # Derive the status URL from the log URL (e.g. https://host:port/log -> /status).
+        import logging
+
+        logger = logging.getLogger(__name__)
+        status_url = url.rsplit("/", 1)[0] + "/status" if "/" in url else url + "/status"
+        try:
+            req = urllib.request.Request(status_url, method="GET")
+            urllib.request.urlopen(req, timeout=self._timeout, context=self._ssl_ctx)  # nosec B310
+            logger.info("Remote logger reachable at %s", status_url)
+        except Exception:
+            logger.warning("Remote logger unreachable at %s -- logs will be lost", status_url)
+
     def export(self, batch: Sequence[Any]) -> LogRecordExportResult:
         """Export log records to the Remote Logger endpoint.
 

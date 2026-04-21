@@ -838,6 +838,16 @@ class TestGetStepsBatch:
             mod._run_reader = orig_reader
 
 
+    def test_returns_500_on_internal_error(self, client: TestClient, live_buffer: RunWriter) -> None:
+        with patch(
+            "roc.reporting.api_server._get_reader",
+            return_value=MagicMock(get_steps_batch=MagicMock(side_effect=RuntimeError("db crash"))),
+        ):
+            resp = client.get("/api/runs/test-live-run/steps?steps=1,2")
+        assert resp.status_code == 500
+        assert "failed" in resp.json()["detail"].lower()
+
+
 class TestGetStepRangeWithData:
     """Test GET /api/runs/{run}/step-range returning actual data (not 404)."""
 

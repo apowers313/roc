@@ -7,9 +7,12 @@ and reads (SELECT) with automatic schema evolution.
 
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import duckdb
 import pandas as pd
@@ -78,6 +81,11 @@ class DuckLakeStore:
         data = str(self._data_path).replace("'", "''")
         self._conn.execute(f"ATTACH 'ducklake:{catalog}' AS {alias} (DATA_PATH '{data}')")
         _record_conn(opened=True, read_only=read_only)
+        try:
+            self._conn.execute("SELECT 1").fetchone()
+        except Exception:
+            logger.error("DuckLake connection validation failed for %s", run_dir)
+            raise
         if not read_only:
             # Enable data inlining: small inserts (< 500 rows) are stored
             # in the catalog rather than creating individual parquet files.
@@ -207,7 +215,7 @@ class DuckLakeStore:
                 if mask.any():
                     results[s][table] = df[mask].reset_index(drop=True)
         except Exception:
-            pass
+            logger.debug("table query failed for %s steps=%s", table, steps, exc_info=True)
 
     def has_table(self, table: str) -> bool:
         """Check whether a table exists in the DuckLake catalog."""

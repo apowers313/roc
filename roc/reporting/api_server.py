@@ -348,7 +348,8 @@ def get_steps_batch(
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     except Exception:
-        batch = {}
+        logger.exception("batch step query failed for run={} steps={}", run_name, steps)
+        raise HTTPException(status_code=500, detail="Batch step query failed")
     result: dict[str, Any] = {
         str(s): _convert_numpy(dataclasses.asdict(sd)) for s, sd in batch.items()
     }
@@ -620,8 +621,11 @@ def get_object_history(run_name: str, object_id: int) -> JSONResponse:
         from roc.pipeline.object.object import Object
 
         obj = Object.load(NodeId(object_id))
-    except Exception:
+    except (KeyError, ValueError):
         raise HTTPException(status_code=404, detail="Object not found")
+    except Exception:
+        logger.exception("object load failed for id=%s", object_id)
+        raise HTTPException(status_code=500, detail="Object load failed")
 
     states = _collect_object_states(obj)
     transforms = _collect_object_transforms(obj)
@@ -659,6 +663,7 @@ def get_bookmarks(run_name: str) -> list[Bookmark]:
         data = json.loads(bookmarks_file.read_text())
         return [Bookmark(**b) for b in data]
     except Exception:
+        logger.exception("bookmark load failed for run=%s", run_name)
         return []
 
 
@@ -687,6 +692,7 @@ def save_bookmarks(run_name: str, bookmarks: list[Bookmark]) -> dict[str, str]:
 # ``set_game_manager``/``get_game_manager`` so the single-ownership
 # contract is enforced in one place and the read path is discoverable.
 _game_manager: Any = None
+_game_manager_lock = threading.Lock()
 
 
 def set_game_manager(mgr: Any) -> None:
@@ -699,16 +705,18 @@ def set_game_manager(mgr: Any) -> None:
     were how TC-GAME-004-class drifts crept in.
     """
     global _game_manager
-    if mgr is not None and _game_manager is not None and _game_manager is not mgr:
-        raise RuntimeError(
-            "GameManager already installed; clear it first with set_game_manager(None)",
-        )
-    _game_manager = mgr
+    with _game_manager_lock:
+        if mgr is not None and _game_manager is not None and _game_manager is not mgr:
+            raise RuntimeError(
+                "GameManager already installed; clear it first with set_game_manager(None)",
+            )
+        _game_manager = mgr
 
 
 def get_game_manager() -> Any:
     """Return the active GameManager, or ``None`` if none is installed."""
-    return _game_manager
+    with _game_manager_lock:
+        return _game_manager
 
 
 class GameStatus(BaseModel):
@@ -853,7 +861,7 @@ async def subscribe_run(sid: str, run: str) -> None:
             )
         except Exception:
             # Socket errors must not break the writer's push.
-            pass
+            logger.debug("socket.io emit failed", exc_info=True)
 
     unsubscribe = reader.subscribe(run, _on_step)
     _sio_subscriptions[sid] = unsubscribe
@@ -980,7 +988,7 @@ def _emit_game_state_changed(status: dict[str, Any]) -> None:
                 _sio_loop,
             )
     except Exception:
-        pass
+        logger.debug("socket.io emit failed", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

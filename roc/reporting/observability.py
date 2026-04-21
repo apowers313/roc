@@ -166,10 +166,31 @@ class Observability(metaclass=ObservabilityBase):
         roc_logger.init()
         global _disable_for_pytest_scanning
 
+        if settings.observability_logging and not _disable_for_pytest_scanning:
+            self._check_otel_endpoint(settings.observability_host)
+
         self._init_logging(settings)
         self._init_metrics(settings)
         self._init_tracing(settings)
         self._init_profiling(settings)
+
+    @staticmethod
+    def _check_otel_endpoint(host: str) -> None:
+        """Log a warning if the OTel collector endpoint is unreachable."""
+        import socket as _socket
+
+        try:
+            parts = host.rsplit(":", 1)
+            addr = parts[0]
+            port = int(parts[1]) if len(parts) > 1 else 4317
+            sock = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+            sock.settimeout(2)
+            sock.connect((addr, port))
+            sock.close()
+        except Exception:
+            roc_logger.logger.warning(
+                "OTel collector unreachable at {} -- telemetry will be lost", host
+            )
 
     def _init_logging(self, settings: Config) -> None:
         """Initialize OTel logging, remote log, parquet, and event logger."""

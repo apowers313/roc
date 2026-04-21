@@ -254,6 +254,7 @@ class RunReader:
             result: dict[str, Any] = json.loads(schema_path.read_text())
             return result
         except Exception:
+            logger.warning("schema.json parse failed for run=%s", run)
             return None
 
     def get_action_map(self, run: str) -> list[dict[str, Any]] | None:
@@ -270,6 +271,7 @@ class RunReader:
             result: list[dict[str, Any]] = json.loads(action_map_path.read_text())
             return result
         except Exception:
+            logger.warning("action_map.json parse failed for run=%s", run)
             return None
 
     def list_runs(

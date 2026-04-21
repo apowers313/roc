@@ -88,6 +88,15 @@ def _count_graphdb_cache(_: CallbackOptions) -> Iterable[Observation]:
     ]
 
 
+def _count_threads(_: CallbackOptions) -> Iterable[Observation]:
+    try:
+        pid = os.getpid()
+        os_threads = len(os.listdir(f"/proc/{pid}/task"))
+    except OSError:
+        os_threads = threading.active_count()
+    return [Observation(os_threads)]
+
+
 def _count_feature_to_objects(_: CallbackOptions) -> Iterable[Observation]:
     try:
         from roc.pipeline.object.object import _feature_to_objects
@@ -126,6 +135,11 @@ def register_resource_gauges() -> None:
         "roc.pipeline.feature_to_objects",
         callbacks=[_count_feature_to_objects],
         description="Object-resolver reverse index; grows across games",
+    )
+    meter.create_observable_gauge(
+        "roc.process.thread_count",
+        callbacks=[_count_threads],
+        description="OS thread count for the ROC server process",
     )
     _registered = True
 
