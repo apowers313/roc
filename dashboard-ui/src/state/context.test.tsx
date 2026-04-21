@@ -119,6 +119,29 @@ describe("DashboardProvider / useDashboard", () => {
         expect(result.current.playing).toBe(true);
     });
 
+    it("playing is always false on mount regardless of sessionStorage", () => {
+        sessionStorage.setItem("roc-dashboard-playing", "true");
+        try {
+            const { result } = renderHook(() => useDashboard(), { wrapper });
+            expect(result.current.playing).toBe(false);
+        } finally {
+            sessionStorage.removeItem("roc-dashboard-playing");
+        }
+    });
+
+    it("setPlaying does not write to sessionStorage", () => {
+        sessionStorage.removeItem("roc-dashboard-playing");
+
+        const { result } = renderHook(() => useDashboard(), { wrapper });
+
+        act(() => result.current.setPlaying(true));
+        expect(result.current.playing).toBe(true);
+        expect(sessionStorage.getItem("roc-dashboard-playing")).toBeNull();
+
+        act(() => result.current.setPlaying(false));
+        expect(sessionStorage.getItem("roc-dashboard-playing")).toBeNull();
+    });
+
     it("throws when used outside provider", () => {
         expect(() => {
             renderHook(() => useDashboard());

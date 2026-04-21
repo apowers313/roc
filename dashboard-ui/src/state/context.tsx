@@ -74,7 +74,6 @@ function writeUrlParams(run: string, game: number, step: number) {
 // ---------------------------------------------------------------------------
 
 const SESSION_SPEED_KEY = "roc-dashboard-speed";
-const SESSION_PLAYING_KEY = "roc-dashboard-playing";
 const SESSION_AUTOFOLLOW_KEY = "roc-dashboard-autofollow";
 
 function readSessionSpeed(): number {
@@ -90,19 +89,6 @@ function readSessionSpeed(): number {
 
 function writeSessionSpeed(speed: number) {
     try { sessionStorage.setItem(SESSION_SPEED_KEY, String(speed)); }
-    catch { /* private browsing */ }
-}
-
-function readSessionPlaying(): boolean {
-    try {
-        const v = sessionStorage.getItem(SESSION_PLAYING_KEY);
-        if (v != null) return v === "true";
-    } catch { /* private browsing */ }
-    return initialPlayback.playing;
-}
-
-function writeSessionPlaying(playing: boolean) {
-    try { sessionStorage.setItem(SESSION_PLAYING_KEY, String(playing)); }
     catch { /* private browsing */ }
 }
 
@@ -164,7 +150,7 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
         console.log("[Context] stepRangeReady =", v);
         rawSetStepRangeReady(v);
     }, []);
-    const [rawPlaying, setRawPlaying] = useState(readSessionPlaying);
+    const [rawPlaying, setRawPlaying] = useState(initialPlayback.playing);
     const [rawAutoFollow, setRawAutoFollow] = useState(readSessionAutoFollow);
     const [rawSpeed, setRawSpeed] = useState(readSessionSpeed);
 
@@ -172,7 +158,6 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
     const playing = rawPlaying;
     const setPlaying = useCallback((p: boolean) => {
         setRawPlaying(p);
-        writeSessionPlaying(p);
     }, []);
     const autoFollow = rawAutoFollow;
     const setAutoFollow = useCallback((af: boolean) => {
@@ -247,7 +232,6 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
     useEffect(() => {
         const flush = () => {
             try {
-                writeSessionPlaying(playing);
                 writeSessionAutoFollow(autoFollow);
                 sessionStorage.setItem(
                     "roc-dashboard-scroll",
@@ -257,7 +241,7 @@ export function DashboardProvider({ children }: Readonly<{ children: ReactNode }
         };
         document.addEventListener("freeze", flush);
         return () => document.removeEventListener("freeze", flush);
-    }, [playing, autoFollow]);
+    }, [autoFollow]);
 
     // Expose setStep for e2e testing (Playwright can call globalThis.__testSetStep)
     useEffect(() => {
