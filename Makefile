@@ -113,11 +113,13 @@ mypy:
 # XSS matters
 # 73456: virtualenv package are vulnerable to command injection - temporarily
 # disable until "poetry update" is fixed
+# SFTY-20260122-20373: pytest <9.0.3 /tmp/pytest-of-{user} local privilege
+# escalation (CVE-2025-71176) - single-user dev server, not a shared system
 
 .PHONY: check-safety
 check-safety:
 	uv sync
-	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715 -i SFTY-20260218-01424
+	uv run safety check --full-report -i 51457 -i 67599 -i 70612 -i 72715 -i SFTY-20260218-01424 -i SFTY-20260122-20373
 	uv run bandit -ll --recursive roc tests
 
 .PHONY: update-dev-deps
