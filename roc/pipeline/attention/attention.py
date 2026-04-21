@@ -4,6 +4,7 @@ should received focus
 
 from __future__ import annotations
 
+import threading
 from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
@@ -435,6 +436,10 @@ class VisionAttention(Attention):
         self.att_conn = self.connect_bus(Attention.bus)
         self.saliency_map = SaliencyMap()
         self.settled: set[str] = set()
+        # Lock serializes _handle_settled against concurrent ThreadPoolScheduler
+        # threads.  Without it, multiple threads can pass the "all settled" check
+        # before any thread clears the set, triggering duplicate attention cycles.
+        self._settled_lock = threading.Lock()
 
     def event_filter(self, e: PerceptionEvent) -> bool:
         """Accept VisualFeature, Settled, and VisionData events."""
@@ -464,18 +469,19 @@ class VisionAttention(Attention):
 
     def _handle_settled(self, src_id: Any) -> None:
         """Track settled extractors and trigger attention cycles once all have settled."""
-        self.settled.add(str(src_id))
-        unsettled = set(FeatureExtractor.list()) - self.settled
-        if len(unsettled) > 0:
-            return
+        with self._settled_lock:
+            self.settled.add(str(src_id))
+            unsettled = set(FeatureExtractor.list()) - self.settled
+            if len(unsettled) > 0:
+                return
 
-        assert self.saliency_map is not None
-        cycle_metadata = self._run_attention_cycles()
-        self.att_conn.send(AttentionSettled(cycle_metadata=cycle_metadata))
+            assert self.saliency_map is not None
+            cycle_metadata = self._run_attention_cycles()
+            self.att_conn.send(AttentionSettled(cycle_metadata=cycle_metadata))
 
-        # reset
-        self.settled.clear()
-        self.saliency_map = SaliencyMap()
+            # reset
+            self.settled.clear()
+            self.saliency_map = SaliencyMap()
 
     def _run_attention_cycles(self) -> list[dict[str, Any]]:
         """Run all attention cycles, emitting focus data for each, and return cycle metadata."""
