@@ -16,7 +16,8 @@ There is no pre-planned final design. The dashboard expands indefinitely as new 
 - **Prefetch window: radius=100, batch=50, debounce=50ms** -- empirically tuned. Fills 200-step cache in ~2 seconds (4 HTTP requests). AbortController cancels in-flight batches on navigation to prevent stale request buildup.
 - **TanStack Query is the only client store for server data** -- Components never hold parallel state for step data, step ranges, run lists, or live status. Socket.io is invalidation-only -- it tells the query cache when to refetch but never writes data directly into React state.
 - **Mantine Drawer for popout panels (not Modal or draggable)** -- zero new dependencies, non-blocking (main accordion stays interactive), shares DashboardContext so click-to-navigate works unchanged. If drag-and-drop is needed later, only the container wrapper changes.
-- **HTTP callback IPC (not DuckLake polling)** -- DuckDB file-level locking prevents cross-process reads while the game writes. Game subprocess POSTs StepData to the server's /api/internal/step endpoint instead.
+- **In-process game thread (not subprocess)** -- the game runs as a daemon thread inside the server process. StepData flows through `push_step_from_game()` -> `RunWriter` with no serialization or IPC. All caches (StepCache, GraphCache) are shared via the process heap.
+- **Playing state is NOT persisted to sessionStorage** -- speed, autoFollow, and scroll position are persisted for iOS page-discard recovery, but `playing` is always `false` on cold load. Auto-play on a cold page causes blank-screen flickering because the TanStack Query cache is empty and each step advance shows a blank screen while data fetches (1-3s per step). The user presses play when ready.
 
 ## Invariants
 
@@ -99,3 +100,24 @@ After any UI change -- new panel, modified layout, data flow change:
 | Perceived step transition | <200ms |
 
 History queries (metrics, events, intrinsics) use staleTime of 5 minutes -- they grow during live play but do not need real-time freshness.
+
+## Error Handling
+
+Errors must be surfaced, not swallowed. Every `.catch()` block must either:
+1. Show the error to the user (inline text, menu label, or console.error for remote logger visibility)
+2. Log to `console.error`/`console.warn` so the remote logger captures it
+
+Never write `.catch(() => {})` -- this is the anti-pattern that made the dashboard "unreliable" by hiding every failure as "no data". Specific rules:
+
+- **fetchJson** reads the response body on error and includes server detail in the thrown Error message.
+- **Game start/stop** (MenuBar) shows the error in the Game dropdown menu.
+- **Socket.io** has `connect`/`disconnect`/`connect_error` listeners. The connection dot in the TransportBar reflects actual socket state, not hardcoded `true`.
+- **Bookmark save** awaits the POST and logs on failure.
+- **Step-range fetches** log to console.error with context about which operation failed.
+
+## Connectivity Validation
+
+External dependencies must be health-checked on init:
+
+- **Remote logger**: `useRemoteLogger` fetches `/status` on client init. If unreachable, logs `console.warn` so the failure is visible even without remote logging.
+- **Socket.io**: `useSocketConnected()` exposes reactive connection state via `useSyncExternalStore`. On reconnect, all step-range and run-list queries are invalidated.

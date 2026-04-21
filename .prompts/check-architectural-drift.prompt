@@ -49,6 +49,7 @@
     ### Invariant 6: No raw threads in pipeline components
     - Search pipeline component files for `threading.Thread`, `threading.Lock`, `threading.Event`
     - Verify threading usage is confined to roc/reporting/ and game_manager.py
+    - **Known exception**: `roc/pipeline/attention/attention.py` uses `threading.Lock` (not Thread) to serialize `_handle_settled` against concurrent ThreadPoolScheduler threads. This prevents a TOCTOU race where multiple threads trigger duplicate attention cycles. The Lock does not create threads -- it synchronizes the threads that RxPY's scheduler already creates.
 
     ### Invariant 7: Config singleton
     - Search for `Config()` direct construction (not `Config.get()` or `Config.init()`)

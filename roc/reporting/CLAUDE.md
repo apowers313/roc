@@ -133,16 +133,36 @@ on ROC's data structures. The dashboard is a scientific instrument, not just a d
   separate live read path. Use `RunReader.get_*()` and let the cache layer handle hot vs
   cold.
 
+## Error Handling Patterns
+
+Server-side error handling follows two patterns:
+
+**Intentional silent catch (game loop stability):**
+- `ParquetExporter` export/listener chain: `except: pass` -- a reporting failure must never crash or slow the experiment. This is load-bearing; do not add logging that blocks.
+- `state.py` enrichment handlers: `except: pass` -- non-critical display data.
+- `gymnasium.py` graph export, action map: log + continue -- game loop stability.
+- Socket.io emit: `except: logger.debug(...)` -- client notification failure is non-critical but should be visible in debug logs.
+
+**Must-surface errors (API endpoints):**
+- Batch step query (`/api/runs/{run}/steps`): returns HTTP 500 with detail on DuckLake errors, not empty 200.
+- Bookmark GET: logs exception before returning empty list on parse errors.
+- Object load: returns 404 for KeyError/ValueError, 500 for other exceptions.
+- `DuckLakeStore._query_table_for_steps`: logs at debug level so table-level failures are traceable.
+
+**Fire-and-forget exporters must log failures at debug level.** `RemoteLoggerExporter` and Socket.io emit both catch exceptions to avoid crashing the writer thread. They must log at `debug` level so failures are visible in server logs without cluttering normal output. The `RemoteLoggerExporter` also performs a `/status` health check on init and warns if unreachable.
+
+**`_game_manager` access is protected by `_game_manager_lock`.** Concurrent calls to `set_game_manager()` and `get_game_manager()` from different threads are serialized.
+
 ## Interfaces
 
 - **StateComponent listens on all pipeline buses** (attention, object, intrinsic,
   significance, action, transformer, predict, perception). It is a Component but NOT
   auto-loaded -- initialized explicitly by `State.init()`.
 
-- **Game subprocess -> POST /api/internal/step -> RunWriter -> StepCache + ParquetExporter**:
-  The game subprocess POSTs StepData to the server's callback endpoint. The receiving handler
-  invokes `RunWriter.push_step` which fans out to the in-process cache, the async DuckLake
-  exporter, and any subscribers.
+- **Game thread -> `push_step_from_game()` -> RunWriter -> StepCache + ParquetExporter**:
+  The game runs as a daemon thread in the server process. It pushes StepData via
+  `push_step_from_game()` which invokes `RunWriter.push_step`, fanning out to the
+  in-process cache, the async DuckLake exporter, and any subscribers. No IPC or HTTP.
 
 - **`RunReader` -> REST -> browser** for data; **`RunRegistry` subscribers -> Socket.io ->
   browser** for invalidation notifications. Socket.io payloads contain only `{run, step}`,

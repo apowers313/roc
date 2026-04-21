@@ -453,6 +453,20 @@ Do NOT silently skip blocked tests and claim the run passed.
    **Expected**: Each cycle shows a visually different saliency map
    **Verify**: Take screenshots of cycle 1 and last cycle -- they must differ
 
+### TC-SECT-008a: Attention cycle count matches configuration
+**Priority**: Critical
+**Regression for**: B7-001 (TOCTOU race in _handle_settled triples attention cycles)
+**Steps**:
+1. Query the API for saliency_cycles at several steps:
+   `curl -sk https://localhost:9043/api/runs/{RUN}/step/{STEP}` for steps 1, 5, 10, 20
+2. Count the number of entries in the `saliency_cycles` array for each step
+   **Expected**: Each step has exactly 4 saliency cycles (matching `attention_cycles` config default of 4). Must NOT be 8, 12, or any other multiple of 4.
+   **Verify**: `len(step_data.saliency_cycles) == 4` for all checked steps
+3. Verify all cycles have complete metadata (focused_point, pre_ior_peak, post_ior_peak)
+   **Expected**: Every cycle entry has focused_point, pre_ior_peak, and post_ior_peak keys -- not just the first 4
+   **Verify**: Check that no cycle entry is missing these keys
+   **If this fails**: The _settled_lock in VisionAttention._handle_settled is missing or broken. Multiple ThreadPoolScheduler threads are passing the "all extractors settled" check concurrently, each triggering a full round of attention cycles. See roc/pipeline/attention/attention.py.
+
 ### TC-SECT-009: Object Resolution
 **Priority**: High
 **Regression for**: B1-001 (off-by-one), B2-019 (glyph shows "-")
@@ -765,12 +779,33 @@ Do NOT silently skip blocked tests and claim the run passed.
 
 ### TC-PERF-001: Step navigation speed from cache
 **Priority**: High
-**Regression for**: B1-002 (1 second per step)
+**Regression for**: B1-002 (1 second per step), B8-001 (prefetch centered on range midpoint)
+**Preconditions**: A run with 1000+ steps exists (e.g., snuffly-sandy-natale with 4767 steps in game 1)
 **Steps**:
-1. Navigate to step 50 and wait 3 seconds (allow prefetch to complete)
-2. Measure time to navigate 10 steps forward:
-   **Verify**: Evaluate JS: record timestamp, advance 10 steps, record timestamp
-   **Expected**: Total elapsed time under 500ms for 10 steps (under 50ms each from cache)
+1. Enable CDP network throttling to simulate real device conditions:
+   ```js
+   const client = await page.context().newCDPSession(page);
+   await client.send('Network.emulateNetworkConditions', {
+     offline: false,
+     downloadThroughput: 1.5 * 1024 * 1024 / 8,
+     uploadThroughput: 750 * 1024 / 8,
+     latency: 40,
+   });
+   ```
+2. Navigate to step 50 of the large run and wait 5 seconds (allow prefetch to fill the +-100 window)
+3. Measure time to navigate 10 steps forward:
+   **Verify**: Evaluate JS: record `performance.now()` before each step advance, record after render settles.
+   **Expected**: Each step completes under 500ms (cache hit even with 40ms network RTT). If any step takes over 1000ms, the prefetch window is likely not centered on the current step.
+4. Disable throttling:
+   ```js
+   await client.send('Network.emulateNetworkConditions', {
+     offline: false,
+     downloadThroughput: -1,
+     uploadThroughput: -1,
+     latency: 0,
+   });
+   ```
+5. Check console for zero errors during throttled navigation
 
 ### TC-PERF-002: No console errors during rapid navigation
 **Priority**: Medium

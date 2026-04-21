@@ -45,7 +45,7 @@ These rules must never be violated regardless of local convenience. They are the
 
 5. **Database access is layered.** Graph operations go through `Node`/`Edge` API in `roc/db/graphdb.py` (never raw mgclient). Analytics/storage goes through `DuckLakeStore` in `ducklake_store.py` (never raw duckdb). No other modules make direct database calls.
 
-6. **Pipeline components must not create raw threads.** Code under `roc/pipeline/` and `roc/perception/` must not import `threading` -- all concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Threading primitives are permitted in supporting layers where they serve a documented purpose: `roc/reporting/` (background exporters, StepCache, API server), `roc/game/` (game loop daemon thread, stop signaling, legacy breakpoint Lock), `roc/db/graphdb.py` (cache and connection locks), `roc/framework/event.py` and `roc/framework/component.py` (registry locks), and `roc/__init__.py` (Jupyter execution mode). When adding threading anywhere outside `roc/pipeline/` or `roc/perception/`, document the reason in the relevant subsystem `CLAUDE.md`.
+6. **Pipeline components must not create raw threads.** Code under `roc/pipeline/` and `roc/perception/` must not import `threading` -- all concurrency in the event pipeline flows through RxPY's `ThreadPoolScheduler`. Threading primitives are permitted in supporting layers where they serve a documented purpose: `roc/reporting/` (background exporters, StepCache, API server), `roc/game/` (game loop daemon thread, stop signaling, legacy breakpoint Lock), `roc/db/graphdb.py` (cache and connection locks), `roc/framework/event.py` and `roc/framework/component.py` (registry locks), and `roc/__init__.py` (Jupyter execution mode). **One pipeline exception**: `roc/pipeline/attention/attention.py` uses `threading.Lock` (not Thread) to serialize `_handle_settled` against concurrent ThreadPoolScheduler threads -- without it, a TOCTOU race causes 3x duplicate attention cycles. When adding threading anywhere outside `roc/pipeline/` or `roc/perception/`, document the reason in the relevant subsystem `CLAUDE.md`.
 
 7. **Config is a singleton accessed via `Config.get()`.** Never construct `Config()` directly. `Config.init()` initializes the singleton; `Config.get()` retrieves it. During pytest, env vars and `.env` are deliberately ignored to isolate tests.
 
@@ -277,7 +277,7 @@ The `roc/reporting/` package provides a full observability stack:
 - `StateComponent` listens on all event buses, tracks current state, emits structured OTel events.
 - `StepBuffer`: thread-safe ring buffer (~2000 capacity) for live step data.
 - `DataStore`: unified query layer. Live runs use in-memory `_GameIndex` per game; historical runs query DuckLake via `RunStore`.
-- Game subprocess POSTs StepData to dashboard server via HTTP callback (`/api/internal/step`).
+- Game thread pushes StepData via `push_step_from_game()` -> `RunWriter` (in-process, no IPC).
 
 **Remote Logging** (remote_logger_exporter.py):
 - OTel LogExporter that POSTs records to remote logger MCP server for live monitoring.
@@ -333,7 +333,7 @@ Defined in `pyproject.toml [project.scripts]`:
 | `dashboard` | `roc.cli.dashboard_cli:main` | Standalone historical dashboard viewer (no game management). |
 | `cleanup` | `roc.cli.cleanup_cli:main` | Clean up empty/short game runs from data directory. |
 
-The `server` command spawns games as subprocesses (`uv run play --no-dashboard-enabled --dashboard-callback-url=...`) and manages their lifecycle via `GameManager` (`roc/game/game_manager.py`). State machine: idle -> initializing -> running -> stopping. Cooperative shutdown via REST, then SIGTERM, then SIGKILL.
+The `server` command runs games as daemon threads within the server process via `GameManager` (`roc/game/game_manager.py`). All Python objects (GraphCache, StepCache, RunWriter) are shared via the process heap -- no serialization or IPC. State machine: idle -> initializing -> running -> stopping. Cooperative shutdown via `threading.Event`, with a join timeout fallback.
 
 ## Debugging Tools
 
@@ -424,7 +424,7 @@ The debug dashboard is a React app in `dashboard-ui/` with a FastAPI + Socket.io
 
 - **Frontend**: React + Mantine (compact-mantine theme) + TanStack Query + Vite + Recharts + Socket.io client
 - **Backend**: FastAPI REST API + Socket.io invalidation notifications + DuckLake historical queries
-- **Data flow**: Game subprocess POSTs StepData to server via HTTP callback. Server writes through `RunWriter` to a hot cache (`StepCache`) and asynchronously to DuckLake. Frontend reads via REST through `RunReader`, which checks the cache first then falls back to DuckLake. Socket.io broadcasts step-added notifications that the frontend uses to invalidate query caches; it never delivers data directly into React state.
+- **Data flow**: Game thread pushes StepData via `push_step_from_game()` in-process. `RunWriter` fans out to a hot cache (`StepCache`) and asynchronously to DuckLake. Frontend reads via REST through `RunReader`, which checks the cache first then falls back to DuckLake. Socket.io broadcasts step-added notifications that the frontend uses to invalidate query caches; it never delivers data directly into React state.
 - **Server management**: All servers managed by servherd. Use `make run` / `make stop`.
 
 ### Server Architecture (One Server, One URL)
@@ -445,7 +445,7 @@ Key endpoint groups (all under `/api`):
 - **Schema/Objects**: `GET /runs/{run}/schema`, `GET /runs/{run}/all-objects`, `GET /runs/{run}/action-map`
 - **Bookmarks**: `GET/POST /runs/{run}/bookmarks`
 - **Game lifecycle**: `GET /game/status`, `POST /game/start`, `POST /game/stop`
-- **Internal** (game subprocess callback): `POST /internal/step`
+- **Internal**: `push_step_from_game()` (in-process, called from game thread)
 
 ## Testing Notes
 
