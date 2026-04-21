@@ -40,6 +40,7 @@ from roc.pipeline.significance import Significance, SignificanceData
 from roc.pipeline.temporal.transformer import TransformResult, Transformer
 
 _state_init_done = False
+_att_raw_sub: Any = None
 
 
 def _get_otel_logger() -> Any:
@@ -89,7 +90,10 @@ class State[StateType](ABC):
     @staticmethod
     def reset_init() -> None:
         """Reset state tracking so init() can be called again on the next game run."""
-        global _state_init_done
+        global _state_init_done, _att_raw_sub
+        if _att_raw_sub is not None:
+            _att_raw_sub.dispose()
+            _att_raw_sub = None
         _state_init_done = False
 
     @staticmethod
@@ -112,7 +116,8 @@ class State[StateType](ABC):
             if isinstance(e.data, VisionAttentionData):
                 _accumulate_saliency_cycle(e.data)
 
-        Attention.bus.subject.subscribe(att_evt_handler)
+        global _att_raw_sub
+        _att_raw_sub = Attention.bus.subject.subscribe(att_evt_handler)
 
         # object
         obj_conn = ObjectResolver.bus.connect(state_component)

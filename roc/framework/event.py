@@ -206,9 +206,10 @@ class EventBus[EventData]:
 
         seen: set[int] = set()
         for comp_cls in component_registry.values():
-            for attr_name in vars(comp_cls):
-                attr = getattr(comp_cls, attr_name, None)
-                if isinstance(attr, cls) and id(attr) not in seen:
-                    seen.add(id(attr))
-                    attr.reset()
+            for parent in comp_cls.__mro__:
+                for attr_name in vars(parent):
+                    attr = getattr(parent, attr_name, None)
+                    if isinstance(attr, cls) and id(attr) not in seen:
+                        seen.add(id(attr))
+                        attr.reset()
         logger.debug("Reset {} EventBus instances for next run", len(seen))

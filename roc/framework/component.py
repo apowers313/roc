@@ -240,6 +240,10 @@ class Component(ABC):
             # already shut down above; clearing only drops the weak refs.
             component_set.clear()
 
+            from roc.perception.base import fe_list
+
+            fe_list.clear()
+
 
 WrappedComponentBase = TypeVar("WrappedComponentBase", bound=Component)
 component_registry: dict[ComponentKey, type[Component]] = {}
