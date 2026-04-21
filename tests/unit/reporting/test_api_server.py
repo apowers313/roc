@@ -837,8 +837,9 @@ class TestGetStepsBatch:
             mod._run_registry = orig_registry
             mod._run_reader = orig_reader
 
-
-    def test_returns_500_on_internal_error(self, client: TestClient, live_buffer: RunWriter) -> None:
+    def test_returns_500_on_internal_error(
+        self, client: TestClient, live_buffer: RunWriter
+    ) -> None:
         with patch(
             "roc.reporting.api_server._get_reader",
             return_value=MagicMock(get_steps_batch=MagicMock(side_effect=RuntimeError("db crash"))),

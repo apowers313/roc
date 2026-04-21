@@ -109,8 +109,7 @@ class TestAttentionCycleCount:
         ]
 
         assert len(data_events) == 8, (
-            f"Expected 8 VisionAttentionData events (4 per step x 2 steps), "
-            f"got {len(data_events)}"
+            f"Expected 8 VisionAttentionData events (4 per step x 2 steps), got {len(data_events)}"
         )
         assert len(settled_events) == 2
 
@@ -132,8 +131,7 @@ class TestAttentionCycleCount:
             data_events = [
                 c.args[0]
                 for c in s.output.call_args_list
-                if isinstance(c.args[0], Event)
-                and isinstance(c.args[0].data, VisionAttentionData)
+                if isinstance(c.args[0], Event) and isinstance(c.args[0].data, VisionAttentionData)
             ]
 
             assert len(data_events) == 4, (
